@@ -14,6 +14,8 @@
 -export([get_oidc_nonce/1]).
 -export([is_oidc_nonce/2]).
 
+-export([set_user/2]).
+
 -export([get_used_redirect/1]).
 -export([set_used_redirect/2]).
 
@@ -84,6 +86,10 @@ get_oidc_provider(Pid) ->
 set_oidc_provider(OP, Pid) ->
     gen_server:call(Pid, {set_oidc_provider, OP}).
 
+-spec set_user(User ::any(), Pid :: pid()) -> ok.
+set_user(User, Pid) ->
+    gen_server:call(Pid, {set_user, User}).
+
 -spec is_logged_in(Pid :: pid()) -> true | false.
 is_logged_in(Pid) ->
     gen_server:call(Pid, is_logged_in).
@@ -130,6 +136,8 @@ handle_call(get_oidc_provider, _From, #state{op=OP,max_age=MA}=State) ->
 	{reply, {ok, OP}, State, ?TIMEOUT(MA)};
 handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State) ->
 	{reply, ok, State#state{op=OP}, ?TIMEOUT(MA)};
+handle_call({set_user, User}, _From, #state{max_age=MA}=State) ->
+	{reply, ok, State#state{user=User}, ?TIMEOUT(MA)};
 handle_call(is_logged_in, _From, #state{user=none, max_age=MA}=State) ->
 	{reply, false, State, ?TIMEOUT(MA)};
 handle_call(is_logged_in, _From, #state{user=_, max_age=MA}=State) ->
