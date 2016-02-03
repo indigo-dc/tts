@@ -143,7 +143,6 @@ retreive_oidc_token_if_state_fits(false, _AuthCode, Session, Req, State) ->
     show_error_page(Desc, Session, Req, State).
 
 handle_oidc_token({ok, Token},Session, Req, State) ->
-    %TODO: get the OIDC token and extract user information and greet the user 
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
     IdToken = oidcc:parse_and_validate_token(Token,OpenIdProviderId ,OidcNonce),
@@ -161,7 +160,7 @@ show_error_page(_ErrorDescription, Session,Req,State) ->
 
 
 get_user({ok,Token}) ->
-    tts_user_mgnt:lookup_user(Token);
+    tts_user:lookup_user(Token);
 get_user(_) ->
     {error, invalid_token}.
 
