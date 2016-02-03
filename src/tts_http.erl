@@ -44,7 +44,7 @@ show_user_page_or_login(true, Req, Session, State) ->
 show_user_page_or_login(false, Req, Session, State) ->
     show_select_page(Req, Session, State).
 
-show_select_page(Req, _Session, State) ->
+show_select_page(Req, Session, State) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     GetIdAndDesc = fun({Id, Pid}, List) ->
                            {ok,#{description := Desc}} =
@@ -52,25 +52,36 @@ show_select_page(Req, _Session, State) ->
                            [ [ Id, Desc ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc,[],OIDCList)),
-    {ok, Body} = tts_ui_login_dtl:render([{oidc_op_list,OpList}]),
-    Req2 = cowboy_req:set_resp_body(Body,Req),    
-	{ok, Req3} = cowboy_req:reply(200, Req2),
-	{ok, Req3, State}.
+    case length(OpList) of 
+        1 ->
+            [[OpenIdProviderId,_]] = OpList,
+            redirect_to_auth_server(Req,Session,OpenIdProviderId,State);
+        _ ->
+            {ok, Body} = tts_ui_login_dtl:render([{oidc_op_list,OpList}]),
+            Req2 = cowboy_req:set_resp_body(Body,Req),    
+            {ok, Req3} = cowboy_req:reply(200, Req2),
+            {ok, Req3, State}
+    end.
 
 
 show_user_page(Req, _Session, State) ->
-    cowboy_req:reply(302, [{<<"location">>, <<"/user">>}],Req),
-    {ok, Req, State}.
+    UserPath = ?CONFIG(ep_user),
+    {ok, Req2} = cowboy_req:reply(302, [{<<"location">>, UserPath}],Req),
+    {ok, Req2, State}.
 
 redirect_to_auth_server(Req, Session, State) ->
     {ok, BodyQs, Req2} = cowboy_req:body_qs(Req), 
     {_, OpenIdProvider} = lists:keyfind(<<"id">>,1,BodyQs),
+    redirect_to_auth_server(Req2, Session, OpenIdProvider, State).
+
+
+redirect_to_auth_server(Req, Session, OpenIdProvider, State) ->
     ok = tts_session:set_oidc_provider(OpenIdProvider,Session),
     {ok, OidcState} = tts_session:get_oidc_state(Session),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
     {ok, Redirection} = oidcc:create_redirect_url(OpenIdProvider,OidcState, OidcNonce),
-    cowboy_req:reply(302, [{<<"server">>, <<"Hiawatha">>},
-                           {<<"location">>, Redirection}],Req2),
+    {ok, Req2} = cowboy_req:reply(302, [{<<"server">>, <<"Hiawatha">>},
+                           {<<"location">>, Redirection}],Req),
     {ok, Req2, State}.
 
 get_session(Req) ->
@@ -136,10 +147,8 @@ handle_oidc_token({ok, Token},Session, Req, State) ->
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
     IdToken = oidcc:parse_and_validate_token(Token,OpenIdProviderId ,OidcNonce),
-    Body = io_lib:format("the token are ~p",[IdToken]),
-    Req2 = cowboy_req:set_resp_body(Body,Req),
-    {ok, Req3} = cowboy_req:reply(200, Req2), 
-    {ok, Req3, State};
+    ok = set_user(get_user(IdToken),Session),
+    show_user_page(Req, Session, State);
 handle_oidc_token({error, Error}, Session, Req, State) ->
     show_error_page(Error, Session, Req, State).
 
@@ -150,6 +159,16 @@ show_error_page(_ErrorDescription, Session,Req,State) ->
 	{ok, Req3} = cowboy_req:reply(400, Req2),
     {ok, Req3, State}.
 
+
+get_user({ok,Token}) ->
+    tts_user_mgnt:lookup_user(Token);
+get_user(_) ->
+    {error, invalid_token}.
+
+set_user({ok, User},Session) ->
+    tts_session:set_user(User, Session);
+set_user(_,_Session) ->
+    ok.
 
 
 extract_qs(Req) ->
