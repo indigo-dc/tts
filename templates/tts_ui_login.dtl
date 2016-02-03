@@ -1,0 +1,16 @@
+<html>
+    <body>
+        Please select your openid authorization server below
+        <table>
+        {% for id, description in oidc_op_list %}
+            <tr>
+            <form method="post" action="/oauth/redirect">
+            <input type="hidden" name="id" value="{{ id }}" >
+                <td> {{ description }}  </td> 
+                <td> <button type="submit">Select </button> </a></td> 
+            </form> 
+            </tr>
+        {% endfor %}
+        </table>
+    </body>
+</html>
