@@ -52,7 +52,7 @@ return_port(Port) ->
 
 local_protocol() ->
     return_http(?CONFIG(ssl)).
-return_http(<<"false">>) ->
+return_http(false) ->
     <<"http://">>;
 return_http(_) ->
     <<"https://">>.
