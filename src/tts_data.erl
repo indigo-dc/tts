@@ -12,6 +12,13 @@
         ]).
 
 -export([
+         user_create_new/2,
+         user_get_pid/1,
+         user_delete/1,
+         user_inspect/0
+        ]).
+
+-export([
          oidc_add_op/5,
          oidc_op_set/3,
          oidc_get_op/1,
@@ -21,10 +28,12 @@
 
 -define(TTS_SESSIONS,tts_sessions).
 -define(TTS_OIDCP,tts_oidcp).
+-define(TTS_USER,tts_user).
 
 -define(TTS_TABLES,[
                     ?TTS_SESSIONS,
-                    ?TTS_OIDCP
+                    ?TTS_OIDCP,
+                    ?TTS_USER
                    ]).
 
 init() ->
@@ -38,7 +47,7 @@ sessions_create_new(ID) ->
 
 -spec sessions_get_pid(ID :: binary()) -> {ok, Pid :: pid()} | {error, Reason :: atom()}.
 sessions_get_pid(ID) ->
-    validate_session_pid(lookup(?TTS_SESSIONS, ID)).
+    validate_pid_value(lookup(?TTS_SESSIONS, ID)).
 
 -spec sessions_update_pid(ID :: binary(), Pid :: pid()) -> ok.
 sessions_update_pid(ID,Pid) ->
@@ -52,6 +61,27 @@ sessions_delete(ID) ->
 -spec sessions_inspect() -> ok. 
 sessions_inspect() ->
     iterate_through_table_and_print(?TTS_SESSIONS).
+
+% functions for user management 
+
+-spec user_create_new(ID :: binary(), Pid::pid()) -> ok | {error, Reason :: atom()}.
+user_create_new(Id,Pid) ->
+    return_ok_or_error(insert_new(?TTS_USER,{Id,Pid})).
+
+
+-spec user_get_pid(ID :: binary()) -> {ok, Pid :: pid()} | {error, Reason :: atom()}.
+user_get_pid(Id) ->
+    validate_pid_value(lookup(?TTS_USER,Id)).
+
+-spec user_delete(ID :: binary()) -> true.
+user_delete(Id) ->
+    delete(?TTS_USER,Id).
+
+-spec user_inspect() -> ok. 
+user_inspect() ->
+    iterate_through_table_and_print(?TTS_USER).
+
+
 
 % functions for oidc management
 -spec oidc_add_op(Identifier::binary(), Description::binary(), ClientId ::
@@ -97,10 +127,12 @@ return_ok_or_error(true) ->
 return_ok_or_error(false) ->
     {error, already_used}.
 
-validate_session_pid({ok,Data}) when is_atom(Data) ->
+validate_pid_value({ok,_Id,Pid}) when is_pid(Pid) ->
+    {ok, Pid};
+validate_pid_value({ok,_Id,_Pid}) ->
     {error, not_set};
-validate_session_pid(Result) ->
-    Result.
+validate_pid_value({error, _} = Error) ->
+    Error.
 
 
 create_tables() ->
