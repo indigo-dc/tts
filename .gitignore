@@ -6,3 +6,4 @@ deps/
 _rel/
 doc/
 .erlang.mk/
+.tts.plt
