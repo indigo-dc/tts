@@ -97,11 +97,14 @@ read_other_configs() ->
     read_other_configs(get_(config_path, undefined)). 
 
 read_other_configs(undefined) ->
-    erlang:error(no_config_path);
+    error_logger:error_msg("no configuration path found, path scanned are
+                           ~p",[generate_path_list()]),
+    erlang:halt(2);
 read_other_configs(Path) ->
-    apply_main_settings(),
-    read_op_config(Path),
-    set_oidc_ops(),
+    ok = apply_main_settings(),
+    ok = read_op_config(Path),
+    ok = set_oidc_ops(),
+    ok = start_cowboy(),
     ok.
 
 
@@ -136,7 +139,6 @@ apply_main_settings() ->
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
     set_config(local_endpoint,LocalEndpoint),
-    ok = start_cowboy(),
     ok.
 
 read_op_config(Path) ->
@@ -180,7 +182,6 @@ register_files(Name,Files) ->
     register_single_config(Name,only_first(Files)).  
 
 register_single_config(_Name, "") ->
-    erlang:halt(2),
     ok;
 register_single_config(Name, File) ->
     ok = econfig:register_config(Name,[File]),
@@ -191,17 +192,20 @@ generate_file_list(File) ->
     use_or_generate_file_list(get_(config_path,undefined), File).
 
 use_or_generate_file_list(undefined,File) ->
-    Home = init:get_argument(home),
-    generate_list_with_home(File,Home);
+    append_filename(File, generate_path_list());
 use_or_generate_file_list(ConfigPath,File) ->
-    [filename:join(ConfigPath,File)].
+    append_filename(File, [ConfigPath]).
 
 
-generate_list_with_home(File,{ok, [[HomeDir]]}) ->
+generate_path_list() ->
+    Home = init:get_argument(home),
+    generate_path_list(Home).
+generate_path_list({ok,[[HomeDir]] }) ->
     LocalPath = filename:join(HomeDir,?HOMEPATH),
-    append_filename(File,[LocalPath | ?GLOBALPATH]);
-generate_list_with_home(File, _) ->
-   append_filename(File,?GLOBALPATH).
+    [LocalPath | ?GLOBALPATH];
+generate_path_list(_) ->
+    ?GLOBALPATH.
+
 
 append_filename(File,Paths) ->
     AppendFile = fun(Path, List) ->
