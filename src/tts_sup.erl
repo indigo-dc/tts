@@ -9,16 +9,23 @@ start_link() ->
 
 init([]) ->
 	Procs = [
-             session_supervisor(),
+             sessions_supervisor(),
+             userss_supervisor(),
              config_worker()
             ],
     Flags = #{},
 	{ok, {Flags,  Procs}}.
 
 
-session_supervisor() ->
+sessions_supervisor() ->
     #{ id => sessions_sup, 
        start => {tts_sessions_sup, start_link, []},
+       type => supervisor
+     }.
+
+userss_supervisor() ->
+    #{ id => userss_sup, 
+       start => {tts_userss_sup, start_link, []},
        type => supervisor
      }.
 
