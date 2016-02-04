@@ -4,7 +4,7 @@
 %% API.
 -export([start_link/0]).
 
--export([get_user/1]).
+-export([get_user/2]).
 
 %% gen_server.
 -export([init/1]).
@@ -23,15 +23,18 @@
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec get_user(UserId :: binary()) -> {ok, pid()} | {error, term()}.
-get_user(UserId) ->
-    load_or_return_user(UserId).
+-spec get_user(UserSuject :: binary(), Issuer :: binary()) -> {ok, pid()} | {error, term()}.
+get_user(UserSubject, Issuer) ->
+    load_or_return_user({UserSubject, Issuer}).
 
 %% gen_server.
 
 init([]) ->
 	{ok, #state{}}.
 
+handle_call({create,User}, _From, State) ->
+    Result = create_new_user(User),
+    {reply, Result, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
@@ -49,29 +52,50 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-load_or_return_user(Id) ->
-    load_or_return_user(lookup_user(Id),Id).
+load_or_return_user(User) ->
+    load_or_return_user(lookup_user(User),User).
 
-load_or_return_user({ok, Pid}, _UserId) ->
+load_or_return_user({ok, Pid}, _User) ->
     {ok, Pid};
-load_or_return_user({error, not_found}, UserId) ->
-    load_user(UserId);
-load_or_return_user(Error, _UserId) ->
+load_or_return_user({error, not_found}, User) ->
+    UserProcess = create_user(User),
+    Data = retrieve_user_data(User),
+    ok = update_user_with_data(Data,UserProcess),
+    UserProcess;
+load_or_return_user(Error, _User) ->
     Error.
 
 
-load_user(_UserId) ->
+create_user(User) ->
+    gen_server:call(?MODULE,{create,User}).
+
+create_new_user(User) ->
+    {ok, Pid} = tts_user_sup:add_user(User),
+    case add_new_user_entry(User,Pid) of
+        true -> 
+            {ok, Pid};
+        false ->
+            ok = tts_user:stop(Pid),
+            lookup_user(User)
+    end.
+
+retrieve_user_data(_User) ->
+    %TODO: implement
+    {ok, #{user => <<"guest">>, uid => 1111, gid => 1111}}.
+
+update_user_with_data({ok, _Map},{ok, _UserPid})  ->
+    %TODO: implement
+    ok;
+update_user_with_data(_,_) ->
     ok.
-
-
-
+    
 
 %% 
 %% functions with data access
 %%
 
-%% add_new_user_entry(ID,Pid) ->
-%%    tts_data:user_create_new(ID,Pid). 
+add_new_user_entry(ID,Pid) ->
+   tts_data:user_create_new(ID,Pid). 
 
 lookup_user(ID) ->
    tts_data:user_get_pid(ID). 
