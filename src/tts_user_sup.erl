@@ -9,8 +9,8 @@
 start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-add_user(UserSubject) ->
-    supervisor:start_child(?MODULE,[UserSubject]).
+add_user(User) ->
+    supervisor:start_child(?MODULE,[User]).
 
 init([]) ->
     User = #{ 
