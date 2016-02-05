@@ -63,9 +63,10 @@ retreive_oidc_token_if_state_fits(false, Req, State) ->
 handle_oidc_token({ok, Token}, Req, #state{session=Session}=State) ->
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
-    IdToken = oidcc:parse_and_validate_token(Token,OpenIdProviderId ,OidcNonce),
-    ok = set_user(get_user(IdToken),Session),
-    redirect_to(user_page, Req, State);
+    ok = tts_session:clear_oidc_state_nonce(Session),
+    VerToken = oidcc:parse_and_validate_token(Token,OpenIdProviderId ,OidcNonce),
+    try_to_set_user(VerToken, Req,State);
+    %% redirect_to(user_page, Req, State);
 handle_oidc_token({error, Error}, Req, State) ->
     show_error_page(Error, Req, State).
 
@@ -103,6 +104,20 @@ show_user_page(Req, #state{session=Session}=State) ->
     {ok, Body} = tts_user_dtl:render(Params), 
     show_html(Body, Req, State). 
 
+
+try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}}}, Req, State) ->
+    set_valid_user(tts_user_mgr:get_user(Subject, Issuer), Req, State);
+try_to_set_user(_, Req, State) ->
+    Error = <<"Invalid Token">>,
+    show_error_page(Error, Req, State).
+
+
+set_valid_user({ok, Pid},Req,#state{session = Session } = State) ->
+    ok = tts_session:set_user(Pid, Session),
+    redirect_to(user_page,Req,State);
+set_valid_user(_,Req,State) ->
+    Error = <<"Invalid/Unknown User">>,
+    show_error_page(Error, Req, State).
 
 redirect_to(auth_server, Req, #state{op_id = OpenIdProvider, session=Session} = State) ->
     {ok, OidcState} = tts_session:get_oidc_state(Session),
@@ -203,15 +218,4 @@ create_map_from_proplist(List) ->
                         maps:put(AtomKey,Value,Map)
                 end,
     lists:foldl(KeyToAtom,#{},List).
-
-
-get_user({ok,Token}) ->
-    tts_user:lookup_user(Token);
-get_user(_) ->
-    {error, invalid_token}.
-
-set_user({ok, User},Session) ->
-    tts_session:set_user(User, Session);
-set_user(_,_Session) ->
-    ok.
 
