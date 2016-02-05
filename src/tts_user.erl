@@ -4,7 +4,7 @@
 -include("tts.hrl").
 
 %% API.
--export([start_link/0]).
+-export([start_link/2]).
 -export([set_user_info/2]).
 -export([get_user_info/1]).
 -export([get_credential_list/1]).
@@ -21,6 +21,8 @@
 -export([code_change/3]).
 
 -record(state, {
+          sub = undefined,
+          iss = undefined,
           user_info = #{},
           credentials = [],
           sessions = []
@@ -28,9 +30,9 @@
 
 %% API.
 
--spec start_link() -> {ok, pid()}.
-start_link() ->
-	gen_server:start_link(?MODULE, [], []).
+-spec start_link(Subject::binary(), Issuer::binary()) -> {ok, pid()}.
+start_link(Subject, Issuer) ->
+	gen_server:start_link(?MODULE, [Subject, Issuer], []).
 
 -spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
 set_user_info(Info, Pid) ->
@@ -54,8 +56,8 @@ add_token(TokenMap, Pid) ->
 
 %% gen_server.
 
-init([]) ->
-	{ok, #state{}, 5000}.
+init([Subject, Issuer]) ->
+	{ok, #state{sub = Subject, iss = Issuer}, 5000}.
 
 handle_call({set_user_info,UserInfo}, _From, State) ->
     {reply, ok, State#state{user_info=UserInfo}};
