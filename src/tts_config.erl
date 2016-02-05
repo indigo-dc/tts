@@ -243,9 +243,11 @@ start_cowboy() ->
     EpRedirect = ?CONFIG(ep_redirect),
     EpReturn = ?CONFIG(ep_return),
     EpApi = ?CONFIG(ep_api),
+    EpUser = ?CONFIG(ep_user),
     Dispatch = [{'_', [
                        {EpApi,tts_rest, []},
                        {EpMain, tts_http, []},
+                       {EpUser, tts_http, []},
                        {EpRedirect, tts_http, []},
                        {EpReturn, tts_http, []}
                       ]}],
