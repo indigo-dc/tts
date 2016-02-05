@@ -116,6 +116,7 @@ try_to_set_user(_, Req, State) ->
 
 set_valid_user({ok, Pid},Req,#state{session = Session, token=Token } = State) ->
     ok = tts_user:add_token(Token,Pid),
+    ok = tts_user:connect_session(Session,Pid),
     ok = tts_session:set_user(Pid, Session),
     redirect_to(user_page,Req,State);
 set_valid_user(_,Req,State) ->
