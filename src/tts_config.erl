@@ -121,6 +121,7 @@ apply_main_settings() ->
     SSL = get_boolean_value(main,"","SSL", true),
     LogLevel = get_string_value(main,"","LogLevel", "Warning"),
     LogFile = get_binary_value(main,"","LogFile", "tts.log"),
+    UserTimeout = get_integer_value(main,"","UserTimeout", 300),
    
     set_config(log_level,LogLevel),
     set_config(log_file,LogFile),
@@ -134,6 +135,7 @@ apply_main_settings() ->
     set_config(ep_redirect,EpRedirect),
     set_config(ep_return,EpReturn),
     set_config(ssl,SSL),
+    set_config(user_timeout,UserTimeout * 1000),
     LProt = local_protocol(),
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
@@ -229,6 +231,9 @@ get_string_value(Name,Section,Key,Default) ->
 
 get_binary_value(Name,Section,Key,Default) ->
     binary:list_to_bin(get_string_value(Name,Section,Key,Default)).
+
+get_integer_value(Name,Section,Key,Default) ->
+    econfig:get_integer(Name,Section,Key,Default).
 
 get_boolean_value(Name, Section, Key, Default) ->
     econfig:get_boolean(Name, Section, Key, Default).
