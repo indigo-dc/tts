@@ -25,7 +25,7 @@ sessions_supervisor() ->
 
 userss_supervisor() ->
     #{ id => userss_sup, 
-       start => {tts_userss_sup, start_link, []},
+       start => {tts_users_sup, start_link, []},
        type => supervisor
      }.
 
