@@ -179,6 +179,7 @@ extract_args(Req) ->
     {ok, Req5, State}.
 
 update_cookie_lifetime(Req,#state{session_max_age = MaxAge, session_id = ID}) ->
+    %TODO: is using SSL make it secure only
     Opts = [ {http_only, true}, {max_age, MaxAge}, {path, <<"/">>}],
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, ID, Opts, Req),
     {ok, Req2}.  
