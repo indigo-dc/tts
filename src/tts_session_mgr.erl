@@ -30,9 +30,11 @@ start_link() ->
 new_session() -> 
     gen_server:call(?MODULE, new_session).
 
--spec get_session(ID :: uuid:uuid()) -> {ok, pid()} | {error, not_found}.
+-spec get_session(ID :: uuid:uuid() | undefined) -> {ok, pid()}.
+get_session(undefined) ->
+    new_session();
 get_session(ID) ->
-    lookup_session_pid(ID).
+    lookup_or_create_session_pid(ID).
 
 -spec session_closing(ID :: binary()) -> ok.
 session_closing(ID) ->
@@ -79,6 +81,12 @@ repeat_id_gen_if_needed(ok,ID,_State) ->
 repeat_id_gen_if_needed(_,_ID,State) ->
     get_unique_id(State).
 
+lookup_or_create_session_pid({ok, Pid}) ->
+    {ok, Pid};
+lookup_or_create_session_pid({error, _}) ->
+    new_session(); 
+lookup_or_create_session_pid(ID) ->
+    lookup_or_create_session_pid(lookup_session_pid(ID)).
 
 %% 
 %% functions with data access
