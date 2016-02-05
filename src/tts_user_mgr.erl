@@ -58,9 +58,10 @@ load_or_return_user(User) ->
 load_or_return_user({ok, Pid}, _User) ->
     {ok, Pid};
 load_or_return_user({error, not_found}, User) ->
-    {ok, UserProcess} = create_user(User),
+    {ok, UserPid} = create_user(User),
     {ok, Data} = retrieve_user_data(User),
-    update_user_with_data(Data,UserProcess);
+    ok = tts_user:set_user_info(Data,UserPid),
+    {ok, UserPid};
 load_or_return_user(Error, _User) ->
     Error.
 
@@ -80,11 +81,8 @@ create_new_user(User) ->
 
 retrieve_user_data(_User) ->
     %TODO: implement
-    {ok, #{user => <<"guest">>, uid => 1111, gid => 1111}}.
+    {ok, #{username => <<"guest">>, uid => 1111, gid => 1111}}.
 
-update_user_with_data(_Map, UserPid)  ->
-    %TODO: implement
-    {ok, UserPid}.
     
 
 %% 
