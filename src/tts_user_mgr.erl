@@ -58,10 +58,9 @@ load_or_return_user(User) ->
 load_or_return_user({ok, Pid}, _User) ->
     {ok, Pid};
 load_or_return_user({error, not_found}, User) ->
-    UserProcess = create_user(User),
-    Data = retrieve_user_data(User),
-    ok = update_user_with_data(Data,UserProcess),
-    UserProcess;
+    {ok, UserProcess} = create_user(User),
+    {ok, Data} = retrieve_user_data(User),
+    update_user_with_data(Data,UserProcess);
 load_or_return_user(Error, _User) ->
     Error.
 
@@ -83,11 +82,9 @@ retrieve_user_data(_User) ->
     %TODO: implement
     {ok, #{user => <<"guest">>, uid => 1111, gid => 1111}}.
 
-update_user_with_data({ok, _Map},{ok, _UserPid})  ->
+update_user_with_data(_Map, UserPid)  ->
     %TODO: implement
-    ok;
-update_user_with_data(_,_) ->
-    ok.
+    {ok, UserPid}.
     
 
 %% 
