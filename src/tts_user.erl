@@ -61,6 +61,10 @@ init([Subject, Issuer]) ->
 
 handle_call({set_user_info,UserInfo}, _From, State) ->
     {reply, ok, State#state{user_info=UserInfo}};
+handle_call(get_user_info, _From, #state{user_info=UserInfo}=State) ->
+    {reply, {ok, UserInfo}, State};
+handle_call(get_credential_list, _From, #state{credentials=Creds}=State) ->
+    {reply, {ok, Creds}, State};
 handle_call({connect_session,Session}, _From,#state{sessions=Sessions} = State) ->
     MRef = monitor(process, Session),
     NewSessions = [ {Session, MRef} | lists:keydelete(Session,1,Sessions) ],
