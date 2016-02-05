@@ -127,9 +127,9 @@ return_ok_or_error(true) ->
 return_ok_or_error(false) ->
     {error, already_used}.
 
-validate_pid_value({ok,_Id,Pid}) when is_pid(Pid) ->
+validate_pid_value({ok,{_Id,Pid}}) when is_pid(Pid) ->
     {ok, Pid};
-validate_pid_value({ok,_Id,_Pid}) ->
+validate_pid_value({ok,{_Id,_Pid}}) ->
     {error, not_set};
 validate_pid_value({error, _} = Error) ->
     Error.
