@@ -93,8 +93,14 @@ show_select_page(Req, State) ->
             show_html(Body, Req, State)
     end.
 
-show_user_page(Req, State) ->
-    {ok, Body} = tts_user_dtl:render([]), 
+show_user_page(Req, #state{session=Session}=State) ->
+    {ok,User} = tts_session:get_user(Session),
+    {ok, UserInfo} = tts_user:get_user_info(User),
+    #{username := UserName } = UserInfo,
+    {ok, Credentials} = tts_user:get_credential_list(User),
+    Params = [{username, UserName},
+              {credential_list, Credentials}],
+    {ok, Body} = tts_user_dtl:render(Params), 
     show_html(Body, Req, State). 
 
 
