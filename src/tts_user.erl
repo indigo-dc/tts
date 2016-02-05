@@ -1,10 +1,13 @@
 -module(tts_user).
 -behaviour(gen_server).
 
+-include("tts.hrl").
+
 %% API.
 -export([start_link/0]).
--export([set_info/2]).
+-export([set_user_info/2]).
 -export([connect_session/2]).
+-export([add_token/2]).
 
 
 %% gen_server.
@@ -16,7 +19,8 @@
 -export([code_change/3]).
 
 -record(state, {
-          info = #{},
+          user_info = #{},
+          credentials = [],
           sessions = []
 }).
 
@@ -26,22 +30,32 @@
 start_link() ->
 	gen_server:start_link(?MODULE, [], []).
 
-set_info(Info, Pid) ->
-    gen_server:call(Pid,{set_info,Info}).
+-spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
+set_user_info(Info, Pid) ->
+    gen_server:call(Pid,{set_user_info,Info}).
 
+-spec connect_session(Session :: pid(), Pid :: pid()) -> ok.
 connect_session(Session, Pid) ->
     gen_server:call(Pid,{connect_session,Session}).
+
+-spec add_token(TokenMap :: map(), Pid :: pid()) -> ok.
+add_token(TokenMap, Pid) ->
+    gen_server:call(Pid,{add_token_map,TokenMap}).
+
 %% gen_server.
 
 init([]) ->
-	{ok, #state{}}.
+	{ok, #state{}, 5000}.
 
-handle_call({set_info,Info}, _From, State) ->
-    {reply, ok, State#state{info=Info}};
+handle_call({set_user_info,UserInfo}, _From, State) ->
+    {reply, ok, State#state{user_info=UserInfo}};
 handle_call({connect_session,Session}, _From,#state{sessions=Sessions} = State) ->
     MRef = monitor(process, Session),
     NewSessions = [ {Session, MRef} | lists:keydelete(Session,1,Sessions) ],
     {reply, ok, State#state{sessions=NewSessions}};
+handle_call({add_token_map,TokenMap}, _From, State) ->
+    {ok, NewState} = update_token(TokenMap,State),
+    {reply, ok, NewState};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
@@ -51,6 +65,8 @@ handle_cast(_Msg, State) ->
 handle_info({'DOWN', MonitorRef, process, _Object, _Info}, #state{sessions=Sessions}=State) ->
     NewSessions = remove_session_from_list(MonitorRef,Sessions),
     shutdown_if_done(NewSessions,State);
+handle_info(timeout, State) ->
+    {stop,normal,State};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
@@ -66,7 +82,7 @@ shutdown_if_done([],State) ->
         true ->
             {noreply,NewState};
         false ->
-            {stop, normal, NewState}
+            {noreply, NewState, ?CONFIG(user_timeout)}
     end;
 shutdown_if_done(Sessions,State) ->
     {noreply,State#state{sessions=Sessions}}.
@@ -75,6 +91,9 @@ has_unexpired_token(_State) ->
     %TODO: implement
     false.
 
+update_token(_TokenMap, State) ->
+    % TODO: implement
+    {ok, State}.
 
 remove_session_from_list(MonitorRef,Sessions) ->
     lists:keydelete(MonitorRef,2,Sessions).
