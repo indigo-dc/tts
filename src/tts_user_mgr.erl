@@ -71,9 +71,9 @@ create_user(User) ->
 create_new_user(User) ->
     {ok, Pid} = tts_user_sup:add_user(User),
     case add_new_user_entry(User,Pid) of
-        true -> 
+        ok -> 
             {ok, Pid};
-        false ->
+        _ ->
             ok = tts_user:stop(Pid),
             lookup_user(User)
     end.
