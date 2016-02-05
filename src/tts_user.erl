@@ -6,6 +6,8 @@
 %% API.
 -export([start_link/0]).
 -export([set_user_info/2]).
+-export([get_user_info/1]).
+-export([get_credential_list/1]).
 -export([connect_session/2]).
 -export([add_token/2]).
 
@@ -33,6 +35,14 @@ start_link() ->
 -spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
 set_user_info(Info, Pid) ->
     gen_server:call(Pid,{set_user_info,Info}).
+
+-spec get_user_info(Pid :: pid()) -> {ok, UserInfo :: map()}.
+get_user_info(Pid) ->
+    gen_server:call(Pid,get_user_info).
+
+-spec get_credential_list(Pid :: pid()) -> {ok, CredentialList :: list()}.
+get_credential_list(Pid) ->
+    gen_server:call(Pid,get_credential_list).
 
 -spec connect_session(Session :: pid(), Pid :: pid()) -> ok.
 connect_session(Session, Pid) ->
