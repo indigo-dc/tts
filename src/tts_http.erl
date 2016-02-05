@@ -16,6 +16,7 @@
           header = undefined,
           qs = #{},
           body_qs = [],
+          token = #{},
           op_id = undefined
 }).
 
@@ -105,14 +106,16 @@ show_user_page(Req, #state{session=Session}=State) ->
     show_html(Body, Req, State). 
 
 
-try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}}}, Req, State) ->
-    set_valid_user(tts_user_mgr:get_user(Subject, Issuer), Req, State);
+try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}} = Token}, Req, State) ->
+    set_valid_user(tts_user_mgr:get_user(Subject, Issuer), Req,
+                   State#state{token = Token});
 try_to_set_user(_, Req, State) ->
     Error = <<"Invalid Token">>,
     show_error_page(Error, Req, State).
 
 
-set_valid_user({ok, Pid},Req,#state{session = Session } = State) ->
+set_valid_user({ok, Pid},Req,#state{session = Session, token=Token } = State) ->
+    ok = tts_user:add_token(Token,Pid),
     ok = tts_session:set_user(Pid, Session),
     redirect_to(user_page,Req,State);
 set_valid_user(_,Req,State) ->
