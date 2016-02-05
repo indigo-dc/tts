@@ -4,7 +4,7 @@
 -include("tts.hrl").
 
 %% API.
--export([start_link/2]).
+-export([start_link/1]).
 -export([set_user_info/2]).
 -export([get_user_info/1]).
 -export([get_credential_list/1]).
@@ -30,8 +30,8 @@
 
 %% API.
 
--spec start_link(Subject::binary(), Issuer::binary()) -> {ok, pid()}.
-start_link(Subject, Issuer) ->
+-spec start_link(User :: term()) -> {ok, pid()}.
+start_link({Subject, Issuer}) ->
 	gen_server:start_link(?MODULE, [Subject, Issuer], []).
 
 -spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
