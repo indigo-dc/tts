@@ -246,10 +246,10 @@ start_cowboy() ->
     EpUser = ?CONFIG(ep_user),
     Dispatch = [{'_', [
                        {EpApi,tts_rest, []},
-                       {EpMain, tts_http, []},
-                       {EpUser, tts_http, []},
-                       {EpRedirect, tts_http, []},
-                       {EpReturn, tts_http, []}
+                       {EpMain, tts_http_prep, []},
+                       {EpUser, tts_http_prep, []},
+                       {EpRedirect, tts_http_prep, []},
+                       {EpReturn, tts_http_prep, []}
                       ]}],
 
     SSL = ?CONFIG(ssl),
