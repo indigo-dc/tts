@@ -24,7 +24,7 @@ init(_, Req, _Opts) ->
 handle(Req,#state{bad_request=true} = State) ->
     show_result(#{error => bad_request}, Req, State);
 handle(Req,#state{req_map=ReqMap} = State) ->
-    {ok, Result} = tts_http:handle(ReqMap),
+    Result = tts_http:handle(ReqMap),
     show_result(Result,Req,State).
 
 
