@@ -17,11 +17,11 @@ handle(#{path := ep_user, method := get} = ReqMap) ->
     
 
 redirect_to_auth_server(#{body_qs:=BodyQs} = ReqMap) ->
-    case lists:keyfind(<<"id">>,1,BodyQs) of
-        {_, OpenIdProvider} ->
-            redirect_to(auth_server, maps:put(op_id ,OpenIdProvider,ReqMap));
-        _ -> 
-            redirect_to(main, ReqMap)
+    case maps:get(id,BodyQs,undefined) of
+        undefined -> 
+            redirect_to(main, ReqMap);
+        OpenIdProvider ->
+            redirect_to(auth_server, maps:put(op_id ,OpenIdProvider,ReqMap))
     end.
 
 
