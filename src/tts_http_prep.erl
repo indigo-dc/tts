@@ -34,10 +34,11 @@ show_result(#{error := _Error} = Result,Req,#state{req_map=ReqMap} = State) ->
     Body = maps:get(body,Result,<<"">>),
     {ok, Req2} = perform_cookie_action(Cookie,Req,ReqMap),
     show_html(Body, Status, Req2, State);
-show_result(#{status := 200, body := Body} = Result,Req,#state{req_map=ReqMap} = State) ->
+show_result(#{body := Body} = Result,Req,#state{req_map=ReqMap} = State) ->
+    Status = maps:get(status, Result, 200),
     Cookie = maps:get(cookie,Result,clear),
     {ok, Req2} = perform_cookie_action(Cookie,Req,ReqMap),
-    show_html(Body, 200, Req2, State);
+    show_html(Body, Status, Req2, State);
 show_result(#{status := 302, header := Header} = Result,Req,#state{req_map=ReqMap} = State) ->
     Cookie = maps:get(cookie,Result,clear),
     {ok, Req2} = perform_cookie_action(Cookie,Req,ReqMap),
