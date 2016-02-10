@@ -9,29 +9,39 @@
 -include("tts.hrl").
 -record(state, {
           path = undefined,
+          method = undefined,
           session = undefine,
           session_id = undefine,
           session_max_age = undefined,
           logged_in = false,
           header = undefined,
           qs = #{},
-          body_qs = [],
+          body_qs = #{},
           token = #{},
-          op_id = undefined
+          op_id = undefined,
+          bad_request = false
 }).
 
 -define(COOKIE,<<"tts_session">>).
 
 init(_, Req, _Opts) ->
-    extract_args(Req).   
+    try extract_args(Req) of
+        {ok, Req2, State} -> {ok, Req2, State}
+    catch 
+        _:_ -> {ok, Req, #state{bad_request=true}}
+    end.   
 
+handle(Req,#state{bad_request=true} = State) ->
+    show_error_page(bad_request, Req, State);
 handle(Req,#state{path=ep_redirect} = State) ->
     redirect_to_auth_server(Req, State);
 handle(Req,#state{path=ep_return} = State) ->
     login_user_with_authcode(Req,State);
 handle(Req,#state{path=ep_main} = State) ->
     redirect_to_user_page_or_login(Req, State);
-handle(Req,#state{path=ep_user} = State) ->
+handle(Req,#state{path=ep_user, method=post} = State) ->
+    handle_user_action(Req,State);
+handle(Req,#state{path=ep_user, method=get} = State) ->
     show_user_page(Req, State).
     
 
@@ -92,8 +102,16 @@ show_select_page(Req, State) ->
             redirect_to(auth_server, Req, State#state{op_id = OpenIdProviderId});
         _ ->
             {ok, Body} = tts_ui_login_dtl:render([{oidc_op_list,OpList}]),
-            show_html(Body, Req, State)
+            show_html_and_update_cookie(Body, Req, State)
     end.
+
+
+handle_user_action(Req, #state{body_qs=#{action := logout}, session=Session} = State) ->
+    {ok, Req2}=clear_cookie_and_close_session(Session, Req),
+    redirect_to(ep_main,Req2,State);
+handle_user_action(Req, State) ->
+    show_user_page(Req,State).
+
 
 show_user_page(Req, #state{session=Session}=State) ->
     {ok,User} = tts_session:get_user(Session),
@@ -103,7 +121,7 @@ show_user_page(Req, #state{session=Session}=State) ->
     Params = [{username, UserName},
               {credential_list, Credentials}],
     {ok, Body} = tts_user_dtl:render(Params), 
-    show_html(Body, Req, State). 
+    show_html_and_update_cookie(Body, Req, State). 
 
 
 try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}} = Token}, Req, State) ->
@@ -146,81 +164,108 @@ create_redirection(Url, Req, State) ->
     {ok, Req3} = cowboy_req:reply(302, [{<<"location">>, Url}],Req2),
     {ok, Req3, State}.
 
-show_html(Body, Req, State) ->
+show_html_and_update_cookie(Body, Req, State) ->
     {ok, Req2} = update_cookie_lifetime(Req,State),
-    Req3 = cowboy_req:set_resp_body(Body,Req2),    
-    {ok, Req4} = cowboy_req:reply(200, Req3),
-    {ok, Req4, State}.
+    only_show_html(Body, Req2, State).
 
+only_show_html(Body, Req, State) ->
+    Req2 = cowboy_req:set_resp_body(Body,Req),    
+    {ok, Req3} = cowboy_req:reply(200, Req2),
+    {ok, Req3, State}.
 
 terminate(_Reason, _Req, _State) ->
 	ok.
 
+-define(HTTPMETHODMAPPING, [
+                        {<<"GET">>, get},
+                        {<<"POST">>, post}
+                       ]).
+
+-define(PATHMAPPING, [
+                        {?CONFIG(ep_redirect), ep_redirect},
+                        {?CONFIG(ep_return), ep_return},
+                        {?CONFIG(ep_user), ep_user}
+                       ]).
+
+-define(QSMAPPING,[
+                    {<<"code">>, code},
+                    {<<"error">>, error},
+                    {<<"state">>, state},
+                    {<<"action">>, action, value},
+                    {<<"logout">>, logout},
+                    {<<"id">>, id}
+                   ]).
 
 extract_args(Req) ->
     {Path,Req2} = cowboy_req:path(Req), 
-    AtomPath = path_to_atom(Path),
-    {QsMap, Req3} = extract_qs(Req2),
+    AtomPath = map_to_atom(Path,?PATHMAPPING,ep_main),
+    {QsList, Req3} = cowboy_req:qs_vals(Req2),
+    QsMap = create_map_from_proplist(QsList),
     {CookieSessionId,Req4} = cowboy_req:cookie(?COOKIE,Req3),
     {ok, Session} = tts_session_mgr:get_session(CookieSessionId),
     LoggedIn = tts_session:is_logged_in(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     {ok, MaxAge} = tts_session:get_max_age(Session),
-    {ok, BodyQs, Req5} = cowboy_req:body_qs(Req4), 
+    {ok, BodyQsList, Req5} = cowboy_req:body_qs(Req4), 
+    BodyQsMap = create_map_from_proplist(BodyQsList),
+    {Method, Req6} = cowboy_req:method(Req5),
+    AtomMethod = map_to_atom(Method, ?HTTPMETHODMAPPING), 
     State =#state{
               path = AtomPath,
+              method = AtomMethod,
               session = Session,
               session_id = SessionId,
               logged_in = LoggedIn,
               session_max_age = MaxAge,
               qs = QsMap,
-              body_qs = BodyQs
+              body_qs = BodyQsMap
              },
-    {ok, Req5, State}.
+    {ok, Req6, State}.
 
 update_cookie_lifetime(Req,#state{session_max_age = MaxAge, session_id = ID}) ->
-    %TODO: is using SSL make it secure only
-    Opts = [ {http_only, true}, {max_age, MaxAge}, {path, <<"/">>}],
+    Opts = create_cookie_opts(MaxAge),
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, ID, Opts, Req),
     {ok, Req2}.  
 
 clear_cookie_and_close_session(Req,#state{session = Session}) ->
-    Opts = [{max_age, 0}, {http_only, true}, {path, <<"/">>}],
+    Opts = create_cookie_opts(0),
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, <<"deleted">>, Opts, Req),
     ok = tts_session:close(Session),
     {ok, Req2}.
 
-path_to_atom(Path) ->
-    EpRedirect = ?CONFIG(ep_redirect),
-    EpReturn = ?CONFIG(ep_return),
-    EpUser = ?CONFIG(ep_user),
-    case Path of 
-       EpRedirect -> ep_redirect;
-       EpReturn -> ep_return;
-       EpUser -> ep_user;
-        _ -> ep_main
+
+create_cookie_opts(MaxAge) ->
+    BasicOpts = [ {http_only, true}, {max_age, MaxAge}, {path, <<"/">>}],
+    case ?CONFIG(ssl) of 
+        true ->
+            [{secure, true} | BasicOpts];
+        _ ->
+            BasicOpts
     end.
 
-
-extract_qs(Req) ->
-    {TupleList, Req2} = cowboy_req:qs_vals(Req),
-    Map = create_map_from_proplist(TupleList),
-    {Map, Req2}.
-
      
--define(KEYMAPPING,[
-                    {<<"code">>, code},
-                    {<<"error">>, error},
-                    {<<"state">>, state}
-                   ]).
 
 create_map_from_proplist(List) ->
     KeyToAtom = fun({Key,Value},Map) ->
-                        AtomKey = case lists:keyfind(Key,1,?KEYMAPPING) of
-                                      {Key, AKey} -> AKey;
-                                      false -> Key 
-                                  end,
-                        maps:put(AtomKey,Value,Map)
+                        {NewKey, NewVal} 
+                        = case map_to_atom(Key, ?QSMAPPING) of
+                              {val_too, AKey} -> 
+                                  {AKey, map_to_atom(Value, ?QSMAPPING)};
+                              AKey -> 
+                                  {AKey, Value}
+                          end,
+                        maps:put(NewKey,NewVal,Map)
                 end,
     lists:foldl(KeyToAtom,#{},List).
 
+
+map_to_atom(Item, Mapping) ->
+    map_to_atom(Item, Mapping, Item).
+
+map_to_atom(Item, Mapping, Default) ->
+    case lists:keyfind(Item,1,Mapping) of
+        {Item, AItem} -> AItem;
+        {Item, AItem, value} -> {val_too,AItem};
+        {Item, AItem, _} -> AItem;
+        false -> Default 
+    end.
