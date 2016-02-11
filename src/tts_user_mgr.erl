@@ -62,14 +62,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 load_or_return_user(UserMap) ->
-    UserId = gen_user_id(UserMap),
-    load_or_return_user(lookup_user(UserId),UserMap).
+    % TODO: might be better to look it up and have a cached translation
+    load_or_return_user(find_corresponding_user(UserMap),UserMap).
 
 load_or_return_user({ok, Pid}, _UserMap) ->
     {ok, Pid};
 load_or_return_user({error, not_found}, UserMap) ->
-    {ok, UserPid} = create_user(UserMap),
     {ok, Data} = retrieve_user_data(UserMap),
+    {ok, UserPid} = create_user(UserMap),
     ok = tts_user:set_user_info(Data,UserPid),
     {ok, UserPid};
 load_or_return_user(Error, _UserMap) ->
@@ -89,6 +89,10 @@ create_new_user(UserMap) ->
             ok = tts_user:stop(Pid),
             lookup_user(UserMap)
     end.
+
+find_corresponding_user(UserMap) ->
+    % very simple implementation for now, yet should use idh
+    lookup_user(gen_user_id(UserMap)).
 
 retrieve_user_data(_User) ->
     %TODO: implement
