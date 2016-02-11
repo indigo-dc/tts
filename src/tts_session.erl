@@ -166,7 +166,7 @@ handle_call({compare_oidc_nonce, _}, _From, #state{ max_age=MA } = State) ->
 handle_call(clear_oidc_state_nonce, _From, #state{ max_age=MA } = State) ->
 	{reply, ok, State#state{oidc_state=cleared,oidc_nonce=cleared}, ?TIMEOUT(MA)};
 handle_call(close, _From, State) ->
-	{stop, normal, State};
+	{stop, normal, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
