@@ -57,7 +57,7 @@ start_link(ID) ->
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
-	gen_server:call(Pid, close).
+	gen_server:cast(Pid, close).
 
 -spec get_id(Pid :: pid()) -> {ok, ID::binary()}.
 get_id(Pid) ->
@@ -165,21 +165,21 @@ handle_call({compare_oidc_nonce, _}, _From, #state{ max_age=MA } = State) ->
 	{reply, false, State, ?TIMEOUT(MA)};
 handle_call(clear_oidc_state_nonce, _From, #state{ max_age=MA } = State) ->
 	{reply, ok, State#state{oidc_state=cleared,oidc_nonce=cleared}, ?TIMEOUT(MA)};
-handle_call(close, _From, State) ->
-	{stop, normal, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
+handle_cast(close, State) ->
+    {stop,normal,State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-handle_info(timeout, State) ->
-    {stop,normal,State};
+handle_info(timeout, #state{id=ID} = State) ->
+    tts_session_mgr:session_wants_to_close(ID), 
+    {noreply,State,5000};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
-terminate(_Reason, #state{id=ID}) ->
-    tts_session_mgr:session_closing(ID), 
+terminate(_Reason, _State) ->
 	ok.
 
 code_change(_OldVsn, State, _Extra) ->
