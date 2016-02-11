@@ -15,7 +15,6 @@
          user_create_new/2,
          user_get_pid/1,
          user_delete/1,
-         user_delete_pid/1,
          user_inspect/0
         ]).
 
@@ -67,7 +66,7 @@ sessions_inspect() ->
 
 -spec user_create_new(ID :: binary(), Pid::pid()) -> ok | {error, Reason :: atom()}.
 user_create_new(Id,Pid) ->
-    return_ok_or_error(insert_new(?TTS_USER,[{Id,Pid},{Pid,Id}])).
+    return_ok_or_error(insert_new(?TTS_USER,{Id,Pid})).
 
 
 -spec user_get_pid(ID :: binary()) -> {ok, Pid :: pid()} | {error, Reason :: atom()}.
@@ -76,11 +75,8 @@ user_get_pid(Id) ->
 
 -spec user_delete(ID :: binary()) -> true.
 user_delete(Id) ->
-    delete_kv_vk(?TTS_USER,Id).
+    delete(?TTS_USER,Id).
 
--spec user_delete_pid(Pid :: pid()) -> true.
-user_delete_pid(Pid) ->
-    delete_kv_vk(?TTS_USER,Pid).
 
 -spec user_inspect() -> ok. 
 user_inspect() ->
@@ -171,17 +167,6 @@ iterate_through_table_and_print(Table, Key) ->
     
 delete(Table, Key) ->
     true = ets:delete(Table,Key).
-
-delete_kv_vk(Table, Key) ->
-    case ets:lookup(Table,Key) of
-        [{Key,Value}] ->
-            delete(Table, Key),
-            delete(Table, Value);
-        [] ->
-            {error, not_found};
-        _ ->
-            {error, to_many}
-    end.
 
 
 
