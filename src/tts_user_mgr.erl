@@ -4,7 +4,7 @@
 %% API.
 -export([start_link/0]).
 -export([get_user/2]).
--export([user_shutting_down/1]).
+-export([user_wants_to_shutdown/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -27,9 +27,9 @@ start_link() ->
 get_user(UserSubject, Issuer) ->
     load_or_return_user(#{ sub => UserSubject, iss => Issuer}).
 
--spec user_shutting_down(ID :: binary()) -> ok.
-user_shutting_down(ID) ->
-    gen_server:call(?MODULE,{delete_user,ID}).
+-spec user_wants_to_shutdown(ID :: binary()) -> ok.
+user_wants_to_shutdown(ID) ->
+    gen_server:call(?MODULE,{user_wants_to_shutdown,ID}).
 
 %% gen_server.
 
@@ -39,8 +39,10 @@ init([]) ->
 handle_call({create,UserId}, _From, State) ->
     Result = create_new_user(UserId),
     {reply, Result, State};
-handle_call({delet_user,ID}, _From, State) ->
-    delete_user(ID),
+handle_call({user_wants_to_shutdown,ID}, _From, State) ->
+    {ok,Pid} = lookup_user(ID),
+    true = delete_user(ID),
+    ok = tts_user:shutdown(Pid),
     {reply, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
@@ -83,7 +85,7 @@ create_new_user(UserMap) ->
     case add_new_user_entry(UserId,Pid) of
         ok -> 
             {ok, Pid};
-        _ ->
+        {error, already_exists} ->
             ok = tts_user:stop(Pid),
             lookup_user(UserMap)
     end.
@@ -106,5 +108,5 @@ lookup_user(ID) ->
    tts_data:user_get_pid(ID). 
 
 delete_user(ID) ->
-    tts_data:user_delete(ID),
-    ok.
+    tts_data:user_delete(ID).
+
