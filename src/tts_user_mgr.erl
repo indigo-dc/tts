@@ -25,7 +25,7 @@ start_link() ->
 
 -spec get_user(UserSuject :: binary(), Issuer :: binary()) -> {ok, pid()} | {error, term()}.
 get_user(UserSubject, Issuer) ->
-    load_or_return_user(#{ sub => UserSubject, iss => Issuer}).
+    load_and_return_user(#{ sub => UserSubject, iss => Issuer}).
 
 -spec user_wants_to_shutdown(ID :: binary()) -> ok.
 user_wants_to_shutdown(ID) ->
@@ -61,45 +61,37 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-load_or_return_user(UserMap) ->
-    % TODO: might be better to look it up and have a cached translation
-    load_or_return_user(find_corresponding_user(UserMap),UserMap).
+load_and_return_user(UserMap) ->
+    UserInfo = tts_idh:lookup_user(UserMap),
+    create_user(UserInfo).
 
-load_or_return_user({ok, Pid}, _UserMap) ->
+create_user({ok, UserId, UserInfo}) ->
+    create_or_return_pid(lookup_user(UserId),UserId,UserInfo);
+create_user({error, not_found}) ->
+    {error, not_found}.
+
+create_or_return_pid({ok,Pid},_UserId,_UserInfo)->
     {ok, Pid};
-load_or_return_user({error, not_found}, UserMap) ->
-    {ok, Data} = retrieve_user_data(UserMap),
-    {ok, UserPid} = create_user(UserMap),
-    ok = tts_user:set_user_info(Data,UserPid),
+create_or_return_pid({error, not_found},UserId,UserInfo) ->
+    {ok, UserPid} = gen_server:call(?MODULE,{create,UserId}),
+    ok = tts_user:set_user_info(UserInfo,UserPid),
     {ok, UserPid};
-load_or_return_user(Error, _UserMap) ->
+create_or_return_pid(Error, _UserId, _UserInfo) ->
     Error.
 
 
-create_user(UserMap) ->
-    gen_server:call(?MODULE,{create,UserMap}).
 
-create_new_user(UserMap) ->
-    UserId = gen_user_id(UserMap),
+create_new_user(UserId) ->
     {ok, Pid} = tts_user_sup:add_user(UserId),
     case add_new_user_entry(UserId,Pid) of
         ok -> 
             {ok, Pid};
         {error, already_exists} ->
             ok = tts_user:stop(Pid),
-            lookup_user(UserMap)
+            lookup_user(UserId)
     end.
 
-find_corresponding_user(UserMap) ->
-    % very simple implementation for now, yet should use idh
-    lookup_user(gen_user_id(UserMap)).
 
-retrieve_user_data(_User) ->
-    %TODO: implement
-    {ok, #{username => <<"guest">>, uid => 1111, gid => 1111}}.
-
-gen_user_id(#{sub := Sub, iss := Iss})  ->
-    {Sub,Iss}.
 
 %% 
 %% functions with data access
