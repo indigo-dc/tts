@@ -87,6 +87,7 @@ handle_info(_Info, State) ->
 	{noreply, State}.
 
 terminate(_Reason, _State) ->
+    tts_user_mgr:remove_user_by_pid(self()),
 	ok.
 
 code_change(_OldVsn, State, _Extra) ->
