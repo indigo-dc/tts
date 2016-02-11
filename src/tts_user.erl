@@ -23,6 +23,7 @@
 -record(state, {
           sub = undefined,
           iss = undefined,
+          id = undefined,
           user_info = #{},
           credentials = [],
           sessions = []
@@ -30,9 +31,9 @@
 
 %% API.
 
--spec start_link(User :: term()) -> {ok, pid()}.
-start_link({Subject, Issuer}) ->
-	gen_server:start_link(?MODULE, [Subject, Issuer], []).
+-spec start_link(UserId :: any()) -> {ok, pid()}.
+start_link(UserId) ->
+	gen_server:start_link(?MODULE, [UserId], []).
 
 -spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
 set_user_info(Info, Pid) ->
@@ -56,8 +57,8 @@ add_token(TokenMap, Pid) ->
 
 %% gen_server.
 
-init([Subject, Issuer]) ->
-	{ok, #state{sub = Subject, iss = Issuer}, 5000}.
+init([UserId]) ->
+	{ok, #state{id = UserId }, 5000}.
 
 handle_call({set_user_info,UserInfo}, _From, State) ->
     {reply, ok, State#state{user_info=UserInfo}};
@@ -86,8 +87,8 @@ handle_info(timeout, State) ->
 handle_info(_Info, State) ->
 	{noreply, State}.
 
-terminate(_Reason, _State) ->
-    tts_user_mgr:remove_user_by_pid(self()),
+terminate(_Reason, #state{id = Id}) ->
+    tts_user_mgr:user_shutting_down(Id),
 	ok.
 
 code_change(_OldVsn, State, _Extra) ->
