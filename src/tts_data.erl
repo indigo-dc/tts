@@ -126,7 +126,7 @@ oidc_op_inspect() ->
 return_ok_or_error(true) ->
     ok;
 return_ok_or_error(false) ->
-    {error, already_used}.
+    {error, already_exists}.
 
 validate_pid_value({ok,{_Id,Pid}}) when is_pid(Pid) ->
     {ok, Pid};
