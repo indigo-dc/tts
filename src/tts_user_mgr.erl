@@ -5,6 +5,7 @@
 -export([start_link/0]).
 
 -export([get_user/2]).
+-export([remove_user_by_pid/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -27,6 +28,10 @@ start_link() ->
 get_user(UserSubject, Issuer) ->
     load_or_return_user({UserSubject, Issuer}).
 
+-spec remove_user_by_pid(Pid :: pid()) -> ok.
+remove_user_by_pid(Pid) ->
+    gen_server:call(?MODULE,{delete_user_pid,Pid}).
+
 %% gen_server.
 
 init([]) ->
@@ -35,6 +40,9 @@ init([]) ->
 handle_call({create,User}, _From, State) ->
     Result = create_new_user(User),
     {reply, Result, State};
+handle_call({delet_user_pid,Pid}, _From, State) ->
+    delete_user_pid(Pid),
+    {reply, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
@@ -98,6 +106,6 @@ lookup_user(ID) ->
 %% set_pid_for_id(ID,Pid) ->
 %%    tts_data:user_update_pid(ID,Pid). 
 
-%% delete_session(ID) ->
-%%     tts_data:user_delete(ID),
-%%     ok.
+delete_user_pid(Pid) ->
+    tts_data:user_delete_pid(Pid),
+    ok.
