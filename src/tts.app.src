@@ -17,7 +17,7 @@
         uri,
         base64url,
         oidcc,
-        runtime_tools
+        eper
                    ]},
 	{mod, {tts_app, []}}
 ]}.
