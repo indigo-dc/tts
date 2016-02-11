@@ -10,6 +10,7 @@
 -export([get_credential_list/1]).
 -export([connect_session/2]).
 -export([add_token/2]).
+-export([shutdown/1]).
 
 
 %% gen_server.
@@ -55,6 +56,12 @@ connect_session(Session, Pid) ->
 add_token(TokenMap, Pid) ->
     gen_server:call(Pid,{add_token_map,TokenMap}).
 
+
+-spec shutdown(Pid :: pid()) -> ok.
+shutdown(Pid) -> 
+    gen_server:cast(Pid,shutdown).
+
+
 %% gen_server.
 
 init([UserId]) ->
@@ -76,19 +83,21 @@ handle_call({add_token_map,TokenMap}, _From, State) ->
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
+handle_cast(shutdown, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
 handle_info({'DOWN', MonitorRef, process, _Object, _Info}, #state{sessions=Sessions}=State) ->
     NewSessions = remove_session_from_list(MonitorRef,Sessions),
     shutdown_if_done(NewSessions,State);
-handle_info(timeout, State) ->
-    {stop,normal,State};
+handle_info(timeout, #state{id = Id} = State) ->
+    ok = tts_user_mgr:user_wants_to_shutdown(Id),
+    {noreply,State,5000};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
-terminate(_Reason, #state{id = Id}) ->
-    tts_user_mgr:user_shutting_down(Id),
+terminate(_Reason, _State) ->
 	ok.
 
 code_change(_OldVsn, State, _Extra) ->
