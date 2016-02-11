@@ -3,9 +3,8 @@
 
 %% API.
 -export([start_link/0]).
-
 -export([get_user/2]).
--export([remove_user_by_pid/1]).
+-export([user_shutting_down/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -26,22 +25,22 @@ start_link() ->
 
 -spec get_user(UserSuject :: binary(), Issuer :: binary()) -> {ok, pid()} | {error, term()}.
 get_user(UserSubject, Issuer) ->
-    load_or_return_user({UserSubject, Issuer}).
+    load_or_return_user(#{ sub => UserSubject, iss => Issuer}).
 
--spec remove_user_by_pid(Pid :: pid()) -> ok.
-remove_user_by_pid(Pid) ->
-    gen_server:call(?MODULE,{delete_user_pid,Pid}).
+-spec user_shutting_down(ID :: binary()) -> ok.
+user_shutting_down(ID) ->
+    gen_server:call(?MODULE,{delete_user,ID}).
 
 %% gen_server.
 
 init([]) ->
 	{ok, #state{}}.
 
-handle_call({create,User}, _From, State) ->
-    Result = create_new_user(User),
+handle_call({create,UserId}, _From, State) ->
+    Result = create_new_user(UserId),
     {reply, Result, State};
-handle_call({delet_user_pid,Pid}, _From, State) ->
-    delete_user_pid(Pid),
+handle_call({delet_user,ID}, _From, State) ->
+    delete_user(ID),
     {reply, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
@@ -60,38 +59,41 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-load_or_return_user(User) ->
-    load_or_return_user(lookup_user(User),User).
+load_or_return_user(UserMap) ->
+    UserId = gen_user_id(UserMap),
+    load_or_return_user(lookup_user(UserId),UserMap).
 
-load_or_return_user({ok, Pid}, _User) ->
+load_or_return_user({ok, Pid}, _UserMap) ->
     {ok, Pid};
-load_or_return_user({error, not_found}, User) ->
-    {ok, UserPid} = create_user(User),
-    {ok, Data} = retrieve_user_data(User),
+load_or_return_user({error, not_found}, UserMap) ->
+    {ok, UserPid} = create_user(UserMap),
+    {ok, Data} = retrieve_user_data(UserMap),
     ok = tts_user:set_user_info(Data,UserPid),
     {ok, UserPid};
-load_or_return_user(Error, _User) ->
+load_or_return_user(Error, _UserMap) ->
     Error.
 
 
-create_user(User) ->
-    gen_server:call(?MODULE,{create,User}).
+create_user(UserMap) ->
+    gen_server:call(?MODULE,{create,UserMap}).
 
-create_new_user(User) ->
-    {ok, Pid} = tts_user_sup:add_user(User),
-    case add_new_user_entry(User,Pid) of
+create_new_user(UserMap) ->
+    UserId = gen_user_id(UserMap),
+    {ok, Pid} = tts_user_sup:add_user(UserId),
+    case add_new_user_entry(UserId,Pid) of
         ok -> 
             {ok, Pid};
         _ ->
             ok = tts_user:stop(Pid),
-            lookup_user(User)
+            lookup_user(UserMap)
     end.
 
 retrieve_user_data(_User) ->
     %TODO: implement
     {ok, #{username => <<"guest">>, uid => 1111, gid => 1111}}.
 
-    
+gen_user_id(#{sub := Sub, iss := Iss})  ->
+    {Sub,Iss}.
 
 %% 
 %% functions with data access
@@ -103,9 +105,6 @@ add_new_user_entry(ID,Pid) ->
 lookup_user(ID) ->
    tts_data:user_get_pid(ID). 
 
-%% set_pid_for_id(ID,Pid) ->
-%%    tts_data:user_update_pid(ID,Pid). 
-
-delete_user_pid(Pid) ->
-    tts_data:user_delete_pid(Pid),
+delete_user(ID) ->
+    tts_data:user_delete(ID),
     ok.
