@@ -1,0 +1,24 @@
+{application, tts, [
+	{description, ""},
+	{vsn, "rolling"},
+    {id, "git"},
+	{modules, []},
+	{registered, [tts_sup]},
+	{applications, [
+        kernel,
+        stdlib,
+        sasl,
+        cowboy,
+        crypto,
+        econfig,
+        jsx,
+        ejwt,
+        erlydtl,
+        uri,
+        base64url,
+        oidcc,
+        eldap,
+        eper
+                   ]},
+	{mod, {tts_app, []}}
+]}.

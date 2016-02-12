@@ -1,0 +1,22 @@
+<html>
+    <body>
+        <h1>Welcome</h1>
+        this is your user page, you are logged in as {{ username }}.
+        <table>
+        {% for id, description in credential_list %}
+            <tr>
+            <form method="post" action="{{ ep_user }}">
+            <input type="hidden" name="id" value="{{ id }}" >
+            <input type="hidden" name="action" value="revoke" >
+                <td> {{ description }}  </td> 
+                <td> <button type="submit">Revoke</button></td> 
+            </form> 
+            </tr>
+        {% endfor %}
+        </table>
+        <form method="post" action="{{ ep_user }}">
+        <input type="hidden" name="action" value="logout" >
+        <button type="submit">Logout</button> 
+        </form> 
+    </body>
+</html>
