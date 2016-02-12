@@ -159,12 +159,13 @@ apply_idh_settings() ->
                 <<"ldap">> -> ldap;
                 _ -> undefined
             end,
-    set_config(idh_type,AType),
     set_config(idh_host,Host),
     set_config(idh_port,Port),
     set_config(idh_base,Base),
     set_config(idh_user,User),
     set_config(idh_passwd,Pass),
+    % set the type as the last config, tts_idh relies on that
+    set_config(idh_type,AType),
     ok.
     
 
