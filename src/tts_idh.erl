@@ -14,6 +14,7 @@
 -export([code_change/3]).
 
 -include("tts.hrl").
+-include_lib("eldap/include/eldap.hrl").
 
 -record(state, {
           type = undefined,
@@ -86,6 +87,17 @@ create_ldap_filter(#{iss := BinIssuer, sub := BinSubject} ) ->
     IndigoId = binary:bin_to_list(BinIndigoId),
     eldap:equalityMatch("indigoId",IndigoId). 
 
+convert_ldap_result({ok,#eldap_search_result{entries = []}}) ->
+    {error, not_found};
+convert_ldap_result({ok,#eldap_search_result{entries =
+                                             [#eldap_entry{object_name=Name,
+                                                           attributes=Attributes}]}}) ->
+    ToAtom = fun(Key, Value, Map) ->
+                     AKey = list_to_atom(Key),
+                     maps:put(AKey,Value,Map)
+             end,
+    UserInfo = maps:fold(ToAtom,#{},maps:from_list(Attributes)),
+    {ok, Name, UserInfo};
 convert_ldap_result(_Result) ->
     {error, not_supported}.
 

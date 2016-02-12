@@ -22,10 +22,11 @@
 -export([code_change/3]).
 
 -record(state, {
-          sub = undefined,
-          iss = undefined,
           id = undefined,
-          user_info = #{},
+          uid = undefined,
+          uidNumber = undefined,
+          gidNumber = undefined,
+          homeDirectory = undefined,
           credentials = [],
           sessions = []
 }).
@@ -68,8 +69,28 @@ init([UserId]) ->
 	{ok, #state{id = UserId }, 5000}.
 
 handle_call({set_user_info,UserInfo}, _From, State) ->
-    {reply, ok, State#state{user_info=UserInfo}};
-handle_call(get_user_info, _From, #state{user_info=UserInfo}=State) ->
+    #{ uid := Uid,
+       uidNumber := UidNumber,
+       gidNumber := GidNumber,
+       homeDirectory := Dir
+     } = UserInfo,
+    NewState = State#state{ uid = Uid,
+                            uidNumber = UidNumber,
+                            gidNumber = GidNumber,
+                            homeDirectory =Dir }, 
+
+    {reply, ok, NewState};
+handle_call(get_user_info, _From, State) ->
+    #state{ uid = Uid,
+                            uidNumber = UidNumber,
+                            gidNumber = GidNumber,
+                            homeDirectory =Dir } = State, 
+
+    UserInfo = #{ uid => Uid,
+       uidNumber => UidNumber,
+       gidNumber => GidNumber,
+       homeDirectory => Dir
+     },
     {reply, {ok, UserInfo}, State};
 handle_call(get_credential_list, _From, #state{credentials=Creds}=State) ->
     {reply, {ok, Creds}, State};
