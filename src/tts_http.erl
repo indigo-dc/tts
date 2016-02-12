@@ -88,7 +88,7 @@ handle_user_action(ReqMap) ->
 show_user_page(#{session := Session}) ->
     {ok,User} = tts_session:get_user(Session),
     {ok, UserInfo} = tts_user:get_user_info(User),
-    #{username := UserName } = UserInfo,
+    #{uid := UserName } = UserInfo,
     {ok, Credentials} = tts_user:get_credential_list(User),
     Params = [{username, UserName},
               {credential_list, Credentials}],
