@@ -72,7 +72,7 @@ perform_ldap_lookup(Map, #state{config=Config} = State) ->
        base := Base
      } = Config,
     Filter = create_ldap_filter(Map),
-    {ok, Handle} = eldap:open(Host,[{port,Port}]),
+    {ok, Handle} = eldap:open([Host],[{port,Port}]),
     ok = eldap:simple_bind(Handle,User,Pass),
     LdapResult = eldap:search(Handle,[{base, Base}, 
                                   {filter, Filter},
