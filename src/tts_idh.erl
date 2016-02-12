@@ -102,7 +102,7 @@ set_config(true,_State) ->
               },
     {noreply,State};
 set_config(false,State) ->
-    {noreply,State,2000}.
+    {noreply,State,60000}.
 
 config_exists() ->
     case ?CONFIG(idh_type,undefined) of
