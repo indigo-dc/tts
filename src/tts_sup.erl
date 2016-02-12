@@ -11,6 +11,7 @@ init([]) ->
 	Procs = [
              sessions_supervisor(),
              userss_supervisor(),
+             idh(),
              config_worker()
             ],
     Flags = #{},
@@ -33,4 +34,9 @@ config_worker() ->
     #{ id => config,
        start => {tts_config, start_link, []},
        restart => transient
+     }.
+
+idh() ->
+    #{ id => idh,
+       start => {tts_idh, start_link, []}
      }.
