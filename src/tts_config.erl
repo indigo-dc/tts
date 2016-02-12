@@ -153,18 +153,15 @@ apply_idh_settings() ->
     Port = get_integer_value(main,"IDH","Port",389),
     Base = get_string_value(main,"IDH","Base",undefined),
     User = get_string_value(main,"IDH","User",undefined),
-    Pass = get_string_value(main,"IDH","Pass",undefined),
+    Pass = get_string_value(main,"IDH","Passwd",undefined),
 
-    AType = case Type of 
-                <<"ldap">> -> ldap;
-                _ -> undefined
-            end,
     set_config(idh_host,Host),
     set_config(idh_port,Port),
     set_config(idh_base,Base),
     set_config(idh_user,User),
     set_config(idh_passwd,Pass),
     % set the type as the last config, tts_idh relies on that
+    AType = list_to_existing_atom(Type), 
     set_config(idh_type,AType),
     ok.
     
