@@ -82,9 +82,9 @@ perform_ldap_lookup(Map, #state{config=Config} = State) ->
     {Result, State}.
 
 create_ldap_filter(#{iss := BinIssuer, sub := BinSubject} ) ->
-    Issuer = binary:bin_to_list(BinIssuer),
-    Subject = binary:bin_to_list(BinSubject),
-    eldap:substrings("indigoId",[Issuer, Subject]). 
+    BinIndigoId = << BinIssuer/binary, <<" ">>/binary, BinSubject/binary >>,
+    IndigoId = binary:bin_to_list(BinIndigoId),
+    eldap:equalityMatch("indigoId",IndigoId). 
 
 convert_ldap_result(_Result) ->
     {error, not_supported}.
