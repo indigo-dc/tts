@@ -125,7 +125,8 @@ apply_main_settings() ->
     LogLevel = get_string_value(main,"","LogLevel", "Warning"),
     LogFile = get_binary_value(main,"","LogFile", "tts.log"),
     UserTimeout = get_integer_value(main,"","UserTimeout", 300),
-   
+  
+
     set_config(log_level,LogLevel),
     set_config(log_file,LogFile),
 
@@ -143,7 +144,29 @@ apply_main_settings() ->
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
     set_config(local_endpoint,LocalEndpoint),
+    apply_idh_settings(),
     ok.
+
+apply_idh_settings() ->
+    Type = get_string_value(main,"IDH","Type",undefined),
+    Host = get_string_value(main,"IDH","Host",undefined),
+    Port = get_integer_value(main,"IDH","Port",389),
+    Base = get_string_value(main,"IDH","Base",undefined),
+    User = get_string_value(main,"IDH","User",undefined),
+    Pass = get_string_value(main,"IDH","Pass",undefined),
+
+    AType = case Type of 
+                <<"ldap">> -> ldap;
+                _ -> undefined
+            end,
+    set_config(idh_type,AType),
+    set_config(idh_host,Host),
+    set_config(idh_port,Port),
+    set_config(idh_base,Base),
+    set_config(idh_user,User),
+    set_config(idh_passwd,Pass),
+    ok.
+    
 
 read_op_config(Path) ->
     Files = [filename:join(Path,"oidc_provider.conf")],
