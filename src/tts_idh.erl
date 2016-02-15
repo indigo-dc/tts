@@ -172,9 +172,9 @@ parse_file(File) ->
     parse_lines(Line,IoDev,{[],[]}).
 
 
-parse_lines(eof,IoDev,List) ->
+parse_lines(eof,IoDev,{Map, User}) ->
     file:close(IoDev),
-    lists:reverse(List);
+    {lists:reverse(Map), lists:reverse(User)};
 parse_lines({error,_},IoDev,_List) ->
     file:close(IoDev),
     [];
