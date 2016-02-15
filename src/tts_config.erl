@@ -29,6 +29,9 @@
 -record(state, {
 }).
 
+-define(OIDC_SECTION,"OIDC").
+-define(IDH_SECTION,"IDH").
+
 %% API.
 
 -spec start_link() -> {ok, pid()}.
@@ -159,11 +162,11 @@ apply_main_settings() ->
 
 
 apply_oidc_settings() ->
-    Id = get_binary_value(oidc_op,"OIDC","Id",""),
-    Desc = get_binary_value(oidc_op,"OIDC","Description",""),
-    ClientId = get_binary_value(oidc_op,"OIDC","ClientId",""),
-    Secret = get_binary_value(oidc_op,"OIDC","Secret",""),
-    ConfigEndpoint = get_binary_value(oidc_op,"OIDC","ConfigEndpoint",""),
+    Id = get_binary_value(main,?OIDC_SECTION,"Id",""),
+    Desc = get_binary_value(main,?OIDC_SECTION,"Description",""),
+    ClientId = get_binary_value(main,?OIDC_SECTION,"ClientId",""),
+    Secret = get_binary_value(main,?OIDC_SECTION,"Secret",""),
+    ConfigEndpoint = get_binary_value(main,?OIDC_SECTION,"ConfigEndpoint",""),
     LocalEndpoint = ?CONFIG(local_endpoint),
     OpEntries = [{"Description", Desc}, 
                  {"Id" ,Id}, 
@@ -191,12 +194,12 @@ apply_oidc_settings() ->
 
 
 apply_idh_settings() ->
-    Type = get_string_value(main,"IDH","Type",undefined),
-    Host = get_string_value(main,"IDH","Host",undefined),
-    Port = get_integer_value(main,"IDH","Port",389),
-    Base = get_string_value(main,"IDH","Base",undefined),
-    User = get_string_value(main,"IDH","User",undefined),
-    Pass = get_string_value(main,"IDH","Passwd",undefined),
+    Type = get_string_value(main,?IDH_SECTION,"Type",undefined),
+    Host = get_string_value(main,?IDH_SECTION,"Host",undefined),
+    Port = get_integer_value(main,?IDH_SECTION,"Port",389),
+    Base = get_string_value(main,?IDH_SECTION,"Base",undefined),
+    User = get_string_value(main,?IDH_SECTION,"User",undefined),
+    Pass = get_string_value(main,?IDH_SECTION,"Passwd",undefined),
 
     set_config(idh_host,Host),
     set_config(idh_port,Port),
