@@ -28,7 +28,7 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
--spec lookup_user(Map :: map()) -> {ok, UserId :: list(), Info :: map()} | {error, Reason :: term}.
+-spec lookup_user(Map :: map()) -> {ok, UserId :: term(), Info :: map()} | {error, Reason :: term}.
 lookup_user(Map) ->
     gen_server:call(?MODULE, {lookup_user, Map}).
 
@@ -108,15 +108,15 @@ perform_file_lookup(#{iss := Iss, sub := Sub}, #state{config=Config} = State) ->
     #{ data := Data } = Config,
     case lists:keyfind({Iss, Sub},1,Data) of
         false -> {{error, not_found},State};
-        E -> EntryMap = data_entry_to_map(E),
+        E -> EntryMap = data_entry_to_result(E),
              {{ok, EntryMap}, State}
     end.
 
-data_entry_to_map({_, Uid, UidNumber, GidNumber, HomeDir}) ->
-    #{uid => Uid, 
-      uidNumber => UidNumber, 
-      gidNumber => GidNumber, 
-      homeDirectory => HomeDir}.
+data_entry_to_result({_, Uid, UidNumber, GidNumber, HomeDir}) ->
+    {UidNumber, #{uid => Uid, 
+            uidNumber => UidNumber, 
+            gidNumber => GidNumber, 
+            homeDirectory => HomeDir}}.
 
 update_config(#state{type = undefined} = State) ->
    set_config(config_exists(),State);
