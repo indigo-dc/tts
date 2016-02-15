@@ -89,28 +89,37 @@ code_change(_OldVsn, State, _Extra) ->
 %%%
 
 read_configs() -> 
-    read_main_config(),
-    read_other_configs().
+    ok = read_main_config(),
+    ok = read_plugin_configs(),
+    ok = start_cowboy().
 
-
-read_other_configs() ->
-    read_other_configs(get_(config_path, undefined)). 
-
-read_other_configs(undefined) ->
-    error_logger:error_msg("no configuration path found, path scanned are
-                           ~p",[generate_path_list()]),
-    erlang:halt(2);
-read_other_configs(Path) ->
-    ok = apply_main_settings(),
-    ok = read_op_config(Path),
-    ok = set_oidc_ops(),
-    ok = start_cowboy(),
-    ok.
 
 
 read_main_config() ->
     Files = generate_file_list("main.conf"),
-    register_files(main,Files).
+    ok = register_files(main,Files),
+    ok = ensure_config_found(),
+    ok = apply_main_settings().
+
+ensure_config_found() ->
+    ensure_config_found(get_(config_path, undefined)).
+
+ensure_config_found(undefined) ->
+    return_error(2,"no configuration path found, path scanned are ~p",[generate_path_list()]);
+ensure_config_found(_Defined) ->
+    ok.
+
+read_plugin_configs() ->
+    read_plugin_configs(get_(config_path, undefined)). 
+
+read_plugin_configs(_Path) ->
+    % TODO: implement
+    ok.
+
+return_error(Number, Format, Params) ->
+    error_logger:error_msg(Format,Params),
+    erlang:halt(Number).
+
 
 apply_main_settings() ->
     HostName = get_binary_value(main,"","HostName","localhost"),
@@ -144,8 +153,42 @@ apply_main_settings() ->
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
     set_config(local_endpoint,LocalEndpoint),
+    apply_oidc_settings(),
     apply_idh_settings(),
     ok.
+
+
+apply_oidc_settings() ->
+    Id = get_binary_value(oidc_op,"OIDC","Id",""),
+    Desc = get_binary_value(oidc_op,"OIDC","Description",""),
+    ClientId = get_binary_value(oidc_op,"OIDC","ClientId",""),
+    Secret = get_binary_value(oidc_op,"OIDC","Secret",""),
+    ConfigEndpoint = get_binary_value(oidc_op,"OIDC","ConfigEndpoint",""),
+    LocalEndpoint = ?CONFIG(local_endpoint),
+    OpEntries = [{"Description", Desc}, 
+                 {"Id" ,Id}, 
+                 {"ClientId" ,ClientId}, 
+                 {"Secret" ,Secret}, 
+                 {"ConfigEndpoint" ,ConfigEndpoint}],
+    IsEmpty = fun({K, V},In) ->
+                      case V of
+                          <<>> -> [K | In];
+                          "" -> [K | In];
+                          _ -> In
+                      end
+              end,
+    case lists:foldl(IsEmpty,[],OpEntries) of
+        [] -> 
+            oidcc:add_openid_provider(Id, Desc, ClientId,
+                                      Secret,
+                                      ConfigEndpoint, 
+                                      LocalEndpoint);
+        List ->
+            return_error(3,"the configuration of the OpenID Connect endpoint is
+                         missing/malformed. The following values are missing:
+                         ~p",List)
+    end.
+
 
 apply_idh_settings() ->
     Type = get_string_value(main,"IDH","Type",undefined),
@@ -166,42 +209,6 @@ apply_idh_settings() ->
     ok.
     
 
-read_op_config(Path) ->
-    Files = [filename:join(Path,"oidc_provider.conf")],
-    register_files(oidc_op,Files).
-    
-
-set_oidc_ops() ->
-    OPs = econfig:sections(oidc_op),
-    IsEmpty = fun({K, V},In) ->
-                      case V of
-                          <<>> -> [K | In];
-                          "" -> [K | In];
-                          _ -> In
-                      end
-              end,
-    AddValidOps = fun(OpId,_List) ->
-                          Id = binary:list_to_bin(OpId),
-                          Desc = get_binary_value(oidc_op,OpId,"Description",""),
-                          ClientId = get_binary_value(oidc_op,OpId,"ClientId",""),
-                          Secret = get_binary_value(oidc_op,OpId,"Secret",""),
-                          ConfigEndpoint = get_binary_value(oidc_op,OpId,"ConfigEndpoint",""),
-                          LocalEndpoint = ?CONFIG(local_endpoint),
-                          OpEntries = [{"Description", Desc}, 
-                                       {"ClientId" ,ClientId}, 
-                                       {"Secret" ,Secret}, 
-                                       {"ConfigEndpoint" ,ConfigEndpoint}],
-                          case lists:foldl(IsEmpty,[],OpEntries) of
-                              [] -> 
-                                  oidcc:add_openid_provider(Id, Desc, ClientId,
-                                                            Secret,
-                                                            ConfigEndpoint, 
-                                                            LocalEndpoint);
-                              _List -> noop
-                          end
-                  end,
-    lists:foldl(AddValidOps,[],OPs).
-    
 
 register_files(Name,Files) ->
     register_single_config(Name,only_first(Files)).  
