@@ -60,6 +60,8 @@ code_change(_OldVsn, State, _Extra) ->
 
 perform_lookup(ldap, Map, State) ->
     perform_ldap_lookup(Map,State);
+perform_lookup(file,Map,State) ->
+    perform_file_lookup(Map,State);
 perform_lookup(_,_,State) ->
     {{error, not_supported}, State}.
 
@@ -102,6 +104,20 @@ convert_ldap_result(_Result) ->
     {error, not_supported}.
 
 
+perform_file_lookup(#{iss := Iss, sub := Sub}, #state{config=Config} = State) ->
+    #{ data := Data } = Config,
+    case lists:keyfind({Iss, Sub},1,Data) of
+        false -> {{error, not_found},State};
+        E -> EntryMap = data_entry_to_map(E),
+             {{ok, EntryMap}, State}
+    end.
+
+data_entry_to_map({_, Uid, UidNumber, GidNumber, HomeDir}) ->
+    #{uid => Uid, 
+      uidNumber => UidNumber, 
+      gidNumber => GidNumber, 
+      homeDirectory => HomeDir}.
+
 update_config(#state{type = undefined} = State) ->
    set_config(config_exists(),State);
 update_config(State) ->
@@ -131,5 +147,49 @@ generate_config(ldap) ->
        passwd => ?CONFIG(idh_passwd),
        base => ?CONFIG(idh_base)
      };
+generate_config(file) ->
+    File = ?CONFIG(idh_file),
+    #{ file => File ,
+       data => parse_file(File)
+     };
 generate_config(_) ->
     #{}.
+
+
+parse_file(undefined) ->
+    [];
+parse_file(File) ->
+    {ok, IoDev} = file:open(File,[read, binary]),
+    Line = file:read_line(IoDev),
+    parse_lines(Line,IoDev,[]).
+
+
+parse_lines(eof,IoDev,List) ->
+    file:close(IoDev),
+    lists:reverse(List);
+parse_lines({error,_},IoDev,_List) ->
+    file:close(IoDev),
+    [];
+parse_lines({ok,Line},IoDev,List) ->
+    NewLine = file:read_line(IoDev),
+    NewList = parse_line(Line,List),
+    parse_lines(NewLine,IoDev,NewList).
+
+parse_line(Line,List) ->
+    case jsx:is_json(Line) of
+        true -> 
+            Entry = jsx:decode(Line,[return_maps,{labels,attempt_atom}]),
+            verify_and_add(Entry,List);
+        false ->
+            List
+    end.
+
+verify_and_add(#{iss := Iss, sub := Sub, uid := Uid, uidNumber := UidNumber,
+                 gidNumber := GidNumber, homeDirectory := HomeDir}, List ) when
+      is_binary(Iss), is_binary(Sub), is_binary(Uid), is_integer(UidNumber),
+      is_integer(GidNumber), is_binary(HomeDir) ->
+    [{{Iss, Sub}, Uid, UidNumber, GidNumber, HomeDir} | List];
+verify_and_add(_Entry, List) ->
+    List.
+
+

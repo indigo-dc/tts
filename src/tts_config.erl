@@ -194,23 +194,37 @@ apply_oidc_settings() ->
 
 
 apply_idh_settings() ->
-    Type = get_string_value(main,?IDH_SECTION,"Type",undefined),
+    OType = get_string_value(main,?IDH_SECTION,"Type",undefined),
+    Type = try list_to_existing_atom(OType) of
+               T -> T
+           catch
+               _:_ -> OType
+           end,
+    set_idh_type_settings(Type), 
+    % set the type as the last config, tts_idh relies on that
+    set_config(idh_type,Type),
+    ok.
+    
+
+
+set_idh_type_settings(ldap) ->
     Host = get_string_value(main,?IDH_SECTION,"Host",undefined),
     Port = get_integer_value(main,?IDH_SECTION,"Port",389),
     Base = get_string_value(main,?IDH_SECTION,"Base",undefined),
     User = get_string_value(main,?IDH_SECTION,"User",undefined),
     Pass = get_string_value(main,?IDH_SECTION,"Passwd",undefined),
-
     set_config(idh_host,Host),
     set_config(idh_port,Port),
     set_config(idh_base,Base),
     set_config(idh_user,User),
-    set_config(idh_passwd,Pass),
-    % set the type as the last config, tts_idh relies on that
-    AType = list_to_existing_atom(Type), 
-    set_config(idh_type,AType),
-    ok.
-    
+    set_config(idh_passwd,Pass);
+set_idh_type_settings(file) ->
+    File = get_string_value(main,?IDH_SECTION,"File","idh_mapping.conf"),
+    set_config(idh_file,get_abs_file_or(File,undefined));
+set_idh_type_settings(Type) ->
+    return_error(4,"unknown IDH type ~p",[Type]).
+
+
 
 
 register_files(Name,Files) ->
@@ -311,6 +325,13 @@ set_config(log_file, FileName) ->
     _AbsFileName = get_abs_file(FileName);
 set_config(Key, Value) ->
     application:set_env(tts,Key,Value).
+
+get_abs_file_or(File, Other) ->
+    AbsFile = get_abs_file(File),
+    case filelib:is_file(AbsFile) of
+        true -> AbsFile;
+        false -> Other 
+    end.
 
 get_abs_file(FileName) ->
     get_abs_file(is_absolute(FileName), FileName).
