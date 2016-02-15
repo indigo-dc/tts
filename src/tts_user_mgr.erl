@@ -25,7 +25,7 @@ start_link() ->
 
 -spec get_user(UserSuject :: binary(), Issuer :: binary()) -> {ok, pid()} | {error, term()}.
 get_user(UserSubject, Issuer) ->
-    load_and_return_user(#{ sub => UserSubject, iss => Issuer}).
+    load_and_return_user(UserSubject, Issuer).
 
 -spec user_wants_to_shutdown(ID :: binary()) -> ok.
 user_wants_to_shutdown(ID) ->
@@ -61,23 +61,23 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-load_and_return_user(UserMap) ->
-    UserInfo = tts_idh:lookup_user(UserMap),
-    create_user(UserInfo).
-
-create_user({ok, UserId, UserInfo}) ->
-    create_or_return_pid(lookup_user(UserId),UserId,UserInfo);
-create_user({error, not_found}) ->
-    {error, not_found}.
-
-create_or_return_pid({ok,Pid},_UserId,_UserInfo)->
+load_and_return_user(Subject,Issuer) ->
+    load_user_if_needed(lookup_user({Subject,Issuer}), Subject, Issuer).
+   
+load_user_if_needed({ok,Pid},_, _) ->
     {ok, Pid};
-create_or_return_pid({error, not_found},UserId,UserInfo) ->
+load_user_if_needed({error, not_found}, Subject, Issuer) ->
+    UserMap = #{sub => Subject, iss => Issuer},
+    UserInfo = tts_idh:lookup_user(UserMap),
+    create_user({Subject, Issuer}, UserInfo).
+
+create_user(UserId, {ok, UserInfo}) ->
+    % TODO: maybe add a way to add multiple representations
     {ok, UserPid} = gen_server:call(?MODULE,{create,UserId}),
     ok = tts_user:set_user_info(UserInfo,UserPid),
     {ok, UserPid};
-create_or_return_pid(Error, _UserId, _UserInfo) ->
-    Error.
+create_user(_, {error, not_found}) ->
+    {error, not_found}.
 
 
 
