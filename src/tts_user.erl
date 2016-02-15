@@ -4,7 +4,7 @@
 -include("tts.hrl").
 
 %% API.
--export([start_link/1]).
+-export([start_link/0]).
 -export([set_user_info/2]).
 -export([get_user_info/1]).
 -export([get_credential_list/1]).
@@ -22,20 +22,20 @@
 -export([code_change/3]).
 
 -record(state, {
-          id = undefined,
           uid = undefined,
           uidNumber = undefined,
           gidNumber = undefined,
           homeDirectory = undefined,
+          user_ids = [],
           credentials = [],
           sessions = []
 }).
 
 %% API.
 
--spec start_link(UserId :: any()) -> {ok, pid()}.
-start_link(UserId) ->
-	gen_server:start_link(?MODULE, [UserId], []).
+-spec start_link() -> {ok, pid()}.
+start_link() ->
+	gen_server:start_link(?MODULE, [], []).
 
 -spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
 set_user_info(Info, Pid) ->
@@ -65,31 +65,37 @@ shutdown(Pid) ->
 
 %% gen_server.
 
-init([UserId]) ->
-	{ok, #state{id = UserId }, 5000}.
+init([]) ->
+	{ok, #state{}, 5000}.
 
 handle_call({set_user_info,UserInfo}, _From, State) ->
     #{ uid := Uid,
        uidNumber := UidNumber,
        gidNumber := GidNumber,
-       homeDirectory := Dir
+       homeDirectory := Dir,
+       user_ids := UserIds
      } = UserInfo,
     NewState = State#state{ uid = Uid,
                             uidNumber = UidNumber,
                             gidNumber = GidNumber,
-                            homeDirectory =Dir }, 
+                            homeDirectory =Dir,
+                            user_ids = UserIds
+                          }, 
 
     {reply, ok, NewState};
 handle_call(get_user_info, _From, State) ->
     #state{ uid = Uid,
-                            uidNumber = UidNumber,
-                            gidNumber = GidNumber,
-                            homeDirectory =Dir } = State, 
+            uidNumber = UidNumber,
+            gidNumber = GidNumber,
+            homeDirectory =Dir,
+            user_ids = UserIds
+          } = State, 
 
     UserInfo = #{ uid => Uid,
        uidNumber => UidNumber,
        gidNumber => GidNumber,
-       homeDirectory => Dir
+       homeDirectory => Dir,
+       user_ids => UserIds
      },
     {reply, {ok, UserInfo}, State};
 handle_call(get_credential_list, _From, #state{credentials=Creds}=State) ->
@@ -112,8 +118,8 @@ handle_cast(_Msg, State) ->
 handle_info({'DOWN', MonitorRef, process, _Object, _Info}, #state{sessions=Sessions}=State) ->
     NewSessions = remove_session_from_list(MonitorRef,Sessions),
     shutdown_if_done(NewSessions,State);
-handle_info(timeout, #state{id = Id} = State) ->
-    ok = tts_user_mgr:user_wants_to_shutdown(Id),
+handle_info(timeout, State) ->
+    ok = tts_user_mgr:user_wants_to_shutdown(self()),
     {noreply,State,5000};
 handle_info(_Info, State) ->
 	{noreply, State}.
