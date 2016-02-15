@@ -4,13 +4,13 @@
 -export([start_link/0]).
 -export([init/1]).
 
--export([add_user/1]).
+-export([add_user/0]).
 
 start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-add_user(User) ->
-    supervisor:start_child(?MODULE,[User]).
+add_user() ->
+    supervisor:start_child(?MODULE,[]).
 
 init([]) ->
     User = #{ 
