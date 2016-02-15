@@ -28,7 +28,7 @@ start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 
--spec lookup_user(Map :: map()) -> {ok, UserId :: term(), Info :: map()} | {error, Reason :: term}.
+-spec lookup_user(Map :: map()) -> {ok, Info :: map()} | {error, Reason :: term}.
 lookup_user(Map) ->
     gen_server:call(?MODULE, {lookup_user, Map}).
 
@@ -92,14 +92,13 @@ create_ldap_filter(#{iss := BinIssuer, sub := BinSubject} ) ->
 convert_ldap_result({ok,#eldap_search_result{entries = []}}) ->
     {error, not_found};
 convert_ldap_result({ok,#eldap_search_result{entries =
-                                             [#eldap_entry{object_name=Name,
-                                                           attributes=Attributes}]}}) ->
+                                             [#eldap_entry{ attributes=Attributes}]}}) ->
     ToAtom = fun(Key, Value, Map) ->
                      AKey = list_to_atom(Key),
                      maps:put(AKey,Value,Map)
              end,
     UserInfo = maps:fold(ToAtom,#{},maps:from_list(Attributes)),
-    {ok, Name, UserInfo};
+    {ok, UserInfo};
 convert_ldap_result(_Result) ->
     {error, not_supported}.
 
@@ -108,12 +107,12 @@ perform_file_lookup(#{iss := Iss, sub := Sub}, #state{config=Config} = State) ->
     #{ data := Data } = Config,
     case lists:keyfind({Iss, Sub},1,Data) of
         false -> {{error, not_found},State};
-        E -> EntryMap = data_entry_to_result(E),
-             {{ok, EntryMap}, State}
+        E -> Result = data_entry_to_result(E),
+             {Result, State}
     end.
 
 data_entry_to_result({_, Uid, UidNumber, GidNumber, HomeDir}) ->
-    {UidNumber, #{uid => Uid, 
+    {ok, #{uid => Uid, 
             uidNumber => UidNumber, 
             gidNumber => GidNumber, 
             homeDirectory => HomeDir}}.
