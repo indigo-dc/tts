@@ -107,17 +107,16 @@ perform_file_lookup(#{iss := Iss, sub := Sub}, #state{config=Config} = State) ->
     #{ mappings := Mappings, users := Users } = Config,
     case lists:keyfind({Iss, Sub},1,Mappings) of
         false -> {{error, no_mapping},State};
-        {_, User} -> case lists:keyfind(User,1,Users) of
+        {_, Uid} -> case lists:keyfind(Uid,1,Users) of
                          false -> {{error, user_not_found},State};
                          E -> Result = data_entry_to_result(E,Mappings),
                              {Result, State}
                      end
     end.
 
-data_entry_to_result({User, Uid, UidNumber, GidNumber, HomeDir},Mappings) ->
-    Uids = [ID || {ID, U} <- Mappings, U == User ],
+data_entry_to_result({Uid, UidNumber, GidNumber, HomeDir},Mappings) ->
+    Uids = [ID || {ID, U} <- Mappings, U == Uid ],
     {ok, #{
-            user => User,
             uid => Uid, 
             user_ids => Uids,
             uidNumber => UidNumber, 
@@ -175,12 +174,12 @@ parse_file(File) ->
 parse_lines(eof,IoDev,{Map, User}) ->
     file:close(IoDev),
     {lists:reverse(Map), lists:reverse(User)};
-parse_lines({error,_},IoDev,_List) ->
+parse_lines({error,_},IoDev,_Tuple) ->
     file:close(IoDev),
     [];
-parse_lines({ok,Line},IoDev,List) ->
+parse_lines({ok,Line},IoDev,Tuple) ->
     NewLine = file:read_line(IoDev),
-    NewList = parse_line(Line,List),
+    NewList = parse_line(Line,Tuple),
     parse_lines(NewLine,IoDev,NewList).
 
 parse_line(Line,Tuple) ->
@@ -192,15 +191,13 @@ parse_line(Line,Tuple) ->
             Tuple 
     end.
 
-verify_and_add(#{user := User, uid := Uid, uidNumber := UidNumber,
-                 gidNumber := GidNumber, homeDirectory := HomeDir}, {Mappings,
-                                                                     Users} ) when
-      is_binary(User), is_binary(Uid), is_integer(UidNumber),
-      is_integer(GidNumber), is_binary(HomeDir) ->
-    {Mappings, [{User, Uid, UidNumber, GidNumber, HomeDir} | Users]};
-verify_and_add(#{iss := Iss, sub := Sub, user := User}, {Mappings, Users}) when
-      is_binary(Iss), is_binary(Sub), is_binary(User) ->
-    {[{{Iss, Sub}, User} | Mappings], Users};
+verify_and_add(#{uid := Uid, uidNumber := UidNumber, gidNumber := GidNumber, homeDirectory := HomeDir}, 
+               {Mappings, Users} ) when
+      is_binary(Uid), is_integer(UidNumber),is_integer(GidNumber), is_binary(HomeDir) ->
+    {Mappings, [{Uid, UidNumber, GidNumber, HomeDir} | Users]};
+verify_and_add(#{iss := Iss, sub := Sub, uid := Uid}, {Mappings, Users}) when
+      is_binary(Iss), is_binary(Sub), is_binary(Uid) ->
+    {[{{Iss, Sub}, Uid} | Mappings], Users};
 verify_and_add(_Entry, Tuple) ->
     Tuple.
 
