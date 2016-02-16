@@ -8,16 +8,16 @@ handle(#{path := ep_redirect } = ReqMap) ->
     redirect_to_auth_server(ReqMap);
 handle(#{path := ep_return} = ReqMap) ->
     login_user_with_authcode(ReqMap);
-handle(#{path := ep_main} = ReqMap) ->
-    redirect_to_user_page_or_login(ReqMap);
-handle(#{path := ep_user, method := post} = ReqMap) ->
+handle(#{path := ep_main, logged_in := true} = ReqMap) ->
+    redirect_to(user_page, ReqMap);
+handle(#{path := ep_user, method := post, logged_in := true} = ReqMap) ->
     handle_user_action(ReqMap);
-handle(#{path := ep_user, method := post, post_action := request } = ReqMap) ->
-    request_credential(ReqMap);
-handle(#{path := ep_user, method := post, post_action := revoke } = ReqMap) ->
-    revoke_credential(ReqMap);
-handle(#{path := ep_user, method := get} = ReqMap) ->
-    show_user_page_or_redirect(ReqMap).
+handle(#{path := ep_user, method := get, logged_in := true, session := Session}) ->
+    show_user_page(Session);
+handle(#{path := ep_main} = ReqMap) ->
+    show_select_page(ReqMap);
+handle( ReqMap) ->
+    redirect_to(ep_main, ReqMap).
     
 
 redirect_to_auth_server(#{body_qs:=BodyQs} = ReqMap) ->
@@ -58,12 +58,6 @@ handle_oidc_token({error, Error}, ReqMap) ->
     show_error_page(Error, ReqMap).
 
 
-
-redirect_to_user_page_or_login(#{logged_in := true}=ReqMap) ->
-    redirect_to(user_page, ReqMap);
-redirect_to_user_page_or_login(ReqMap) ->
-    show_select_page(ReqMap).
-
 show_select_page(ReqMap) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     GetIdAndDesc = fun({Id, Pid}, List) ->
@@ -82,19 +76,15 @@ show_select_page(ReqMap) ->
     end.
 
 
+handle_user_action(#{body_qs:=#{action := request}} = ReqMap) ->
+   request_credential(ReqMap); 
+handle_user_action(#{body_qs:=#{action := revoke}} = ReqMap) ->
+   revoke_credential(ReqMap); 
 handle_user_action(#{body_qs:=#{action := logout}, session:=Session} = ReqMap) ->
     ok = tts_session:close(Session),
     maps:put(cookie, clear, redirect_to(ep_main,ReqMap));
 handle_user_action(ReqMap) ->
     show_user_page(ReqMap).
-
-
-show_user_page_or_redirect(#{session := Session}) ->
-    show_user_page_or_redirect(tts_session:is_logged_in(Session),Session). 
-show_user_page_or_redirect(true, Session) ->
-    show_user_page(Session);
-show_user_page_or_redirect(_, _) ->
-    redirect_to(ep_main,#{}).
 
 
 request_credential(#{session := Session}) ->
