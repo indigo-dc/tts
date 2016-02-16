@@ -13,7 +13,7 @@ handle(#{path := ep_main} = ReqMap) ->
 handle(#{path := ep_user, method := post} = ReqMap) ->
     handle_user_action(ReqMap);
 handle(#{path := ep_user, method := get} = ReqMap) ->
-    show_user_page(ReqMap).
+    show_user_page_or_redirect(ReqMap).
     
 
 redirect_to_auth_server(#{body_qs:=BodyQs} = ReqMap) ->
@@ -85,7 +85,14 @@ handle_user_action(ReqMap) ->
     show_user_page(ReqMap).
 
 
-show_user_page(#{session := Session}) ->
+show_user_page_or_redirect(#{session := Session}) ->
+    show_user_page_or_redirect(tts_session:is_logged_in(Session),Session). 
+show_user_page_or_redirect(true, Session) ->
+    show_user_page(Session);
+show_user_page_or_redirect(_, _) ->
+    redirect_to(ep_main,#{}).
+
+show_user_page(Session) ->
     {ok,User} = tts_session:get_user(Session),
     {ok, UserInfo} = tts_user:get_user_info(User),
     #{uid := UserName } = UserInfo,
