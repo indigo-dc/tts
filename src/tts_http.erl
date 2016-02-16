@@ -112,7 +112,7 @@ try_to_set_user(_, ReqMap) ->
 
 
 set_valid_user({ok, UserPid},#{session := Session, token:=Token } = ReqMap) ->
-    ok = tts_session:add_token(Token,Session),
+    ok = tts_session:set_token(Token,Session),
     ok = tts_user:connect_session(Session,UserPid),
     ok = tts_session:set_user(UserPid, Session),
     redirect_to(user_page,ReqMap);
