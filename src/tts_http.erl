@@ -12,6 +12,10 @@ handle(#{path := ep_main} = ReqMap) ->
     redirect_to_user_page_or_login(ReqMap);
 handle(#{path := ep_user, method := post} = ReqMap) ->
     handle_user_action(ReqMap);
+handle(#{path := ep_user, method := post, post_action := request } = ReqMap) ->
+    request_credential(ReqMap);
+handle(#{path := ep_user, method := post, post_action := revoke } = ReqMap) ->
+    revoke_credential(ReqMap);
 handle(#{path := ep_user, method := get} = ReqMap) ->
     show_user_page_or_redirect(ReqMap).
     
@@ -91,6 +95,13 @@ show_user_page_or_redirect(true, Session) ->
     show_user_page(Session);
 show_user_page_or_redirect(_, _) ->
     redirect_to(ep_main,#{}).
+
+
+request_credential(#{session := Session}) ->
+    show_user_page(Session).
+
+revoke_credential(#{session := Session}) ->
+    show_user_page(Session).
 
 show_user_page(Session) ->
     {ok,User} = tts_session:get_user(Session),
