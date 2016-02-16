@@ -9,7 +9,7 @@
 -export([get_user_info/1]).
 -export([get_credential_list/1]).
 -export([connect_session/2]).
--export([add_token/2]).
+-export([add_credential/2]).
 -export([shutdown/1]).
 
 
@@ -20,16 +20,6 @@
 -export([handle_info/2]).
 -export([terminate/2]).
 -export([code_change/3]).
-
--record(state, {
-          uid = undefined,
-          uidNumber = undefined,
-          gidNumber = undefined,
-          homeDirectory = undefined,
-          user_ids = [],
-          credentials = [],
-          sessions = []
-}).
 
 %% API.
 
@@ -53,9 +43,9 @@ get_credential_list(Pid) ->
 connect_session(Session, Pid) ->
     gen_server:call(Pid,{connect_session,Session}).
 
--spec add_token(TokenMap :: map(), Pid :: pid()) -> ok.
-add_token(TokenMap, Pid) ->
-    gen_server:call(Pid,{add_token_map,TokenMap}).
+-spec add_credential(CredentialMap :: map(), Pid :: pid()) -> ok.
+add_credential(CredentialMap, Pid) ->
+    gen_server:call(Pid,{add_credential_map,CredentialMap}).
 
 
 -spec shutdown(Pid :: pid()) -> ok.
@@ -64,6 +54,17 @@ shutdown(Pid) ->
 
 
 %% gen_server.
+
+-record(state, {
+          uid = undefined,
+          uidNumber = undefined,
+          gidNumber = undefined,
+          homeDirectory = undefined,
+          user_ids = [],
+          token = [],
+          credentials = [],
+          sessions = []
+}).
 
 init([]) ->
 	{ok, #state{}, 5000}.
@@ -104,8 +105,8 @@ handle_call({connect_session,Session}, _From,#state{sessions=Sessions} = State) 
     MRef = monitor(process, Session),
     NewSessions = [ {Session, MRef} | lists:keydelete(Session,1,Sessions) ],
     {reply, ok, State#state{sessions=NewSessions}};
-handle_call({add_token_map,TokenMap}, _From, State) ->
-    {ok, NewState} = update_token(TokenMap,State),
+handle_call({add_credential_map,CredentialMap},_From,State) ->
+    {ok, NewState} = add_credential_to_state(CredentialMap,State),
     {reply, ok, NewState};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
@@ -145,9 +146,16 @@ has_unexpired_token(_State) ->
     %TODO: implement
     false.
 
-update_token(_TokenMap, State) ->
-    % TODO: implement
-    {ok, State}.
+add_credential_to_state(#{ token := T } = Cred, State) ->
+    %TODO: change for keyfind will perform better
+    #state{ token = TokenList, credentials = CredList} = State,
+    NewTokenList = [T | TokenList],
+    NewCredList = [Cred | CredList],
+    NewState = State#state{
+                    token = NewTokenList,
+                    credentials = NewCredList
+                },
+    {ok, NewState}.
 
 remove_session_from_list(MonitorRef,Sessions) ->
     lists:keydelete(MonitorRef,2,Sessions).
