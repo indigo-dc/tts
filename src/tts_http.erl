@@ -95,10 +95,15 @@ show_user_page_or_redirect(_, _) ->
 show_user_page(Session) ->
     {ok,User} = tts_session:get_user(Session),
     {ok, UserInfo} = tts_user:get_user_info(User),
-    #{uid := UserName } = UserInfo,
+    #{uid := Uid } = UserInfo,
     {ok, Credentials} = tts_user:get_credential_list(User),
-    Params = [{username, UserName},
-              {credential_list, Credentials}],
+    {ok, ServiceMapList} = tts_plugin:get_service_list_for_user(Uid),
+    ServiceList = [ [Id, Type, Host, Desc] ||
+                    #{id:=Id,type:=Type,host:=Host,desc:=Desc} <- ServiceMapList],
+    Params = [{username, Uid},
+              {credential_list, Credentials},
+              {service_list, ServiceList}
+             ],
     {ok, Body} = tts_user_dtl:render(Params),
     #{body => Body, status => 200, cookie => update}.
 
