@@ -12,10 +12,10 @@
         ]).
 
 -export([
-         user_create_new/2,
          user_get_pid/1,
-         user_delete/1,
-         user_inspect/0
+         user_delete_mappings/1,
+         user_inspect/0,
+         user_insert_mappings/1
         ]).
 
 -export([
@@ -64,18 +64,21 @@ sessions_inspect() ->
 
 % functions for user management 
 
--spec user_create_new(ID :: binary(), Pid::pid()) -> ok | {error, Reason :: atom()}.
-user_create_new(Id,Pid) ->
-    return_ok_or_error(insert_new(?TTS_USER,{Id,Pid})).
+-spec user_insert_mappings([{ID :: binary(), Pid :: pid()}])  -> ok | {error, Reason :: atom()}.
+user_insert_mappings(Mappings) ->
+    return_ok_or_error(insert_new(?TTS_USER,Mappings)).
 
 
 -spec user_get_pid(ID :: binary()) -> {ok, Pid :: pid()} | {error, Reason :: atom()}.
 user_get_pid(Id) ->
     validate_pid_value(lookup(?TTS_USER,Id)).
 
--spec user_delete(ID :: binary()) -> true.
-user_delete(Id) ->
-    delete(?TTS_USER,Id).
+-spec user_delete_mappings([ID :: binary()]) -> true.
+user_delete_mappings([]) ->
+    true;
+user_delete_mappings([Id | T]) ->
+    delete(?TTS_USER,Id),
+    user_delete_mappings(T).
 
 
 -spec user_inspect() -> ok. 

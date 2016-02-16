@@ -25,28 +25,29 @@ start_link() ->
 
 -spec get_user(UserSuject :: binary(), Issuer :: binary()) -> {ok, pid()} | {error, term()}.
 get_user(UserSubject, Issuer) ->
-    load_and_return_user(#{ sub => UserSubject, iss => Issuer}).
+    load_and_return_user(UserSubject, Issuer).
 
--spec user_wants_to_shutdown(ID :: binary()) -> ok.
-user_wants_to_shutdown(ID) ->
-    gen_server:call(?MODULE,{user_wants_to_shutdown,ID}).
+-spec user_wants_to_shutdown(Pid :: pid()) -> ok.
+user_wants_to_shutdown(Pid) ->
+    gen_server:cast(?MODULE,{user_wants_to_shutdown,Pid}).
 
 %% gen_server.
 
 init([]) ->
 	{ok, #state{}}.
 
-handle_call({create,UserId}, _From, State) ->
-    Result = create_new_user(UserId),
+handle_call({create,UserIdList}, _From, State) ->
+    Result = create_new_user(UserIdList),
     {reply, Result, State};
-handle_call({user_wants_to_shutdown,ID}, _From, State) ->
-    {ok,Pid} = lookup_user(ID),
-    true = delete_user(ID),
-    ok = tts_user:shutdown(Pid),
-    {reply, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
+handle_cast({user_wants_to_shutdown,Pid}, State) ->
+    {ok, UserInfo} = tts_user:get_user_info(Pid),
+    #{user_ids := UserIDs} = UserInfo,
+    true = delete_user_mappings(UserIDs),
+    ok = tts_user:shutdown(Pid),
+    {noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -61,29 +62,30 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-load_and_return_user(UserMap) ->
+load_and_return_user(Subject,Issuer) ->
+    load_user_if_needed(lookup_user({Issuer, Subject}), Subject, Issuer).
+   
+load_user_if_needed({ok,Pid},_, _) ->
+    {ok, Pid};
+load_user_if_needed({error, not_found}, Subject, Issuer) ->
+    UserMap = #{sub => Subject, iss => Issuer},
     UserInfo = tts_idh:lookup_user(UserMap),
     create_user(UserInfo).
 
-create_user({ok, UserId, UserInfo}) ->
-    create_or_return_pid(lookup_user(UserId),UserId,UserInfo);
+create_user({ok, UserInfo}) ->
+    UserIds = maps:get(user_ids,UserInfo,[]),
+    {ok, UserPid} = gen_server:call(?MODULE,{create,UserIds}),
+    ok = tts_user:set_user_info(UserInfo,UserPid),
+    {ok, UserPid};
 create_user({error, not_found}) ->
     {error, not_found}.
 
-create_or_return_pid({ok,Pid},_UserId,_UserInfo)->
-    {ok, Pid};
-create_or_return_pid({error, not_found},UserId,UserInfo) ->
-    {ok, UserPid} = gen_server:call(?MODULE,{create,UserId}),
-    ok = tts_user:set_user_info(UserInfo,UserPid),
-    {ok, UserPid};
-create_or_return_pid(Error, _UserId, _UserInfo) ->
-    Error.
 
 
-
-create_new_user(UserId) ->
-    {ok, Pid} = tts_user_sup:add_user(UserId),
-    case add_new_user_entry(UserId,Pid) of
+create_new_user(UserIdList) ->
+    {ok, Pid} = tts_user_sup:add_user(),
+    [UserId |_] = UserIdList,
+    case add_new_user_entries(UserIdList,Pid) of
         ok -> 
             {ok, Pid};
         {error, already_exists} ->
@@ -97,12 +99,16 @@ create_new_user(UserId) ->
 %% functions with data access
 %%
 
-add_new_user_entry(ID,Pid) ->
-   tts_data:user_create_new(ID,Pid). 
+%% add_new_user_entry(ID,Pid) ->
+%%    tts_data:user_create_new(ID,Pid). 
+%%
+add_new_user_entries(IDs,Pid) ->
+    Entries = [{ID,Pid} || ID <- IDs], 
+    tts_data:user_insert_mappings(Entries). 
 
 lookup_user(ID) ->
    tts_data:user_get_pid(ID). 
 
-delete_user(ID) ->
-    tts_data:user_delete(ID).
+delete_user_mappings(IDs) ->
+    tts_data:user_delete_mappings(IDs).
 
