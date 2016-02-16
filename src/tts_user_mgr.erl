@@ -63,24 +63,21 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 load_and_return_user(Subject,Issuer) ->
-    load_user_if_needed(lookup_user({Subject,Issuer}), Subject, Issuer).
+    load_user_if_needed(lookup_user({Issuer, Subject}), Subject, Issuer).
    
 load_user_if_needed({ok,Pid},_, _) ->
     {ok, Pid};
 load_user_if_needed({error, not_found}, Subject, Issuer) ->
     UserMap = #{sub => Subject, iss => Issuer},
     UserInfo = tts_idh:lookup_user(UserMap),
-    create_user({Subject, Issuer}, UserInfo).
+    create_user(UserInfo).
 
-create_user(UserId, {ok, UserInfo}) ->
-    % TODO: maybe add a way to add multiple representations
+create_user({ok, UserInfo}) ->
     UserIds = maps:get(user_ids,UserInfo,[]),
-    NewUserIds = [UserId | UserIds],
-    NewUserInfo = maps:put(user_ids,NewUserIds,UserInfo),
-    {ok, UserPid} = gen_server:call(?MODULE,{create,NewUserIds}),
-    ok = tts_user:set_user_info(NewUserInfo,UserPid),
+    {ok, UserPid} = gen_server:call(?MODULE,{create,UserIds}),
+    ok = tts_user:set_user_info(UserInfo,UserPid),
     {ok, UserPid};
-create_user(_, {error, not_found}) ->
+create_user({error, not_found}) ->
     {error, not_found}.
 
 
