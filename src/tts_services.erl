@@ -1,12 +1,12 @@
--module(tts_plugin).
+-module(tts_services).
 
--export([get_service_list_for_user/1]).
+-export([get_list_for_user/1]).
 %% -export([request_credential/1]).
-%% -export([delete_credential/1]).
+%% -export([revoke_credential/1]).
 %% -export([security_incident/1]).
 
 
-get_service_list_for_user(_Uid) ->
+get_list_for_user(_Uid) ->
     SshService = #{ id => <<"service1">>,
                     description => <<"a simple ssh service">>,
                     host => <<"tts.data.kit.edu">>,
