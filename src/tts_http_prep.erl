@@ -74,6 +74,8 @@ terminate(_Reason, _Req, _State) ->
                     {<<"error">>, error},
                     {<<"state">>, state},
                     {<<"action">>, action, value},
+                    {<<"request">>, request},
+                    {<<"revoke">>, revoke},
                     {<<"logout">>, logout},
                     {<<"id">>, id}
                    ]).
@@ -90,6 +92,7 @@ extract_args(Req) ->
     {ok, MaxAge} = tts_session:get_max_age(Session),
     {ok, BodyQsList, Req5} = cowboy_req:body_qs(Req4), 
     BodyQsMap = create_map_from_proplist(BodyQsList),
+    PostAction = maps:get(action,BodyQsMap,undefined),
     {Method, Req6} = cowboy_req:method(Req5),
     AtomMethod = map_to_atom(Method, ?HTTPMETHODMAPPING), 
     ReqMap = #{
@@ -100,7 +103,8 @@ extract_args(Req) ->
               logged_in => LoggedIn,
               session_max_age => MaxAge,
               qs => QsMap,
-              body_qs => BodyQsMap
+              body_qs => BodyQsMap,
+              post_action => PostAction
              },
     {ok, Req6, #state{req_map = ReqMap}}.
 
