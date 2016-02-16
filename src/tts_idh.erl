@@ -81,7 +81,7 @@ perform_ldap_lookup(Map, #state{config=Config} = State) ->
                                   {filter, Filter},
                                   {attributes,["uid","uidNumber","gidNumber","homeDirectory"]}]),
     ok = eldap:close(Handle),
-    Result = convert_ldap_result(LdapResult),
+    Result = convert_ldap_result(LdapResult,Map),
     {Result, State}.
 
 create_ldap_filter(#{iss := BinIssuer, sub := BinSubject} ) ->
@@ -89,17 +89,20 @@ create_ldap_filter(#{iss := BinIssuer, sub := BinSubject} ) ->
     IndigoId = binary:bin_to_list(BinIndigoId),
     eldap:equalityMatch("indigoId",IndigoId). 
 
-convert_ldap_result({ok,#eldap_search_result{entries = []}}) ->
+convert_ldap_result({ok,#eldap_search_result{entries = []}},_Map) ->
     {error, not_found};
 convert_ldap_result({ok,#eldap_search_result{entries =
-                                             [#eldap_entry{ attributes=Attributes}]}}) ->
+                                             [#eldap_entry{
+                                                 attributes=Attributes}]}},
+                    #{iss := Issuer, sub := Subject}) ->
     ToAtom = fun(Key, Value, Map) ->
                      AKey = list_to_atom(Key),
                      maps:put(AKey,Value,Map)
              end,
     UserInfo = maps:fold(ToAtom,#{},maps:from_list(Attributes)),
-    {ok, UserInfo};
-convert_ldap_result(_Result) ->
+    UserInfo2 = maps:put(user_ids,[{Issuer,Subject}],UserInfo),
+    {ok, UserInfo2};
+convert_ldap_result(_Result,_Map) ->
     {error, not_supported}.
 
 
