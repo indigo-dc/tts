@@ -97,9 +97,9 @@ show_user_page(Session) ->
     {ok, UserInfo} = tts_user:get_user_info(User),
     #{uid := Uid } = UserInfo,
     {ok, Credentials} = tts_user:get_credential_list(User),
-    {ok, ServiceMapList} = tts_plugin:get_service_list_for_user(Uid),
+    {ok, ServiceMapList} = tts_services:get_list_for_user(Uid),
     ServiceList = [ [Id, Type, Host, Desc] ||
-                    #{id:=Id,type:=Type,host:=Host,desc:=Desc} <- ServiceMapList],
+                    #{id:=Id,type:=Type,host:=Host,description:=Desc} <- ServiceMapList],
     Params = [{username, Uid},
               {credential_list, Credentials},
               {service_list, ServiceList}
