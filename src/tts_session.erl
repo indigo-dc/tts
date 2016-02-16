@@ -14,6 +14,9 @@
 -export([get_oidc_nonce/1]).
 -export([is_oidc_nonce/2]).
 
+-export([set_token/2]).
+-export([get_token/1]).
+
 -export([set_user/2]).
 -export([get_user/1]).
 
@@ -34,16 +37,6 @@
 -export([handle_info/2]).
 -export([terminate/2]).
 -export([code_change/3]).
-
--record(state, {
-          id = unkonwn,
-          oidc_state = none,
-          oidc_nonce = none,
-          user = none,
-          op = none,
-          used_redirect = none,
-          max_age = 900
-}).
 
 % calculate the miliseconds from max_age
 -define(TIMEOUT(MaxAge), MaxAge*1000).
@@ -70,6 +63,14 @@ get_max_age(Pid) ->
 -spec set_max_age(MaxAge :: pos_integer(), Pid :: pid()) -> ok.
 set_max_age(MaxAge, Pid) ->
     gen_server:call(Pid, {set_max_age, MaxAge}).
+
+-spec get_token(Pid :: pid()) -> {ok, Token::map()}.
+get_token(Pid) ->
+    gen_server:call(Pid, get_token).
+
+-spec set_token(Token :: map(), Pid :: pid()) -> ok.
+set_token(Token, Pid) ->
+    gen_server:call(Pid, {set_token, Token}).
 
 -spec get_used_redirect(Pid :: pid()) -> {ok, binary()} | none.
 get_used_redirect(Pid) ->
@@ -121,6 +122,17 @@ clear_oidc_state_nonce(Pid) ->
    
 %% gen_server.
 
+-record(state, {
+          id = unkonwn,
+          oidc_state = none,
+          oidc_nonce = none,
+          user = none,
+          op = none,
+          used_redirect = none,
+          token = none,
+          max_age = 900
+}).
+
 
 init(ID) ->
     OidcState = create_random_state(16),
@@ -145,6 +157,10 @@ handle_call({set_user, User}, _From, #state{max_age=MA}=State) ->
 	{reply, ok, State#state{user=User}, ?TIMEOUT(MA)};
 handle_call(get_user, _From, #state{max_age=MA, user=User}=State) ->
 	{reply, {ok, User}, State, ?TIMEOUT(MA)};
+handle_call({set_Token, Token}, _From, #state{max_age=MA}=State) ->
+	{reply, ok, State#state{token=Token}, ?TIMEOUT(MA)};
+handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
+	{reply, {ok, Token}, State, ?TIMEOUT(MA)};
 handle_call(is_logged_in, _From, #state{user=none, max_age=MA}=State) ->
 	{reply, false, State, ?TIMEOUT(MA)};
 handle_call(is_logged_in, _From, #state{user=_, max_age=MA}=State) ->
