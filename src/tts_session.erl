@@ -157,7 +157,7 @@ handle_call({set_user, User}, _From, #state{max_age=MA}=State) ->
 	{reply, ok, State#state{user=User}, ?TIMEOUT(MA)};
 handle_call(get_user, _From, #state{max_age=MA, user=User}=State) ->
 	{reply, {ok, User}, State, ?TIMEOUT(MA)};
-handle_call({set_Token, Token}, _From, #state{max_age=MA}=State) ->
+handle_call({set_token, Token}, _From, #state{max_age=MA}=State) ->
 	{reply, ok, State#state{token=Token}, ?TIMEOUT(MA)};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
 	{reply, {ok, Token}, State, ?TIMEOUT(MA)};
