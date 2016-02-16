@@ -18,7 +18,7 @@
         {% else %}
         You do not have any credentials
         {% endif %}
-        <\br>
+        <br>
         {% if service_list %}
         <table>
         {% for id,type,host, description in service_list %}
@@ -37,7 +37,7 @@
         {% else %}
         You are not able to request any credentials 
         {% endif %}
-        <\br>
+        <br>
         <form method="post" action="{{ ep_user }}">
         <input type="hidden" name="action" value="logout" >
         <button type="submit">Logout</button> 
