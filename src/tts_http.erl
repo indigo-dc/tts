@@ -111,10 +111,10 @@ try_to_set_user(_, ReqMap) ->
     show_error_page(Error, ReqMap).
 
 
-set_valid_user({ok, Pid},#{session := Session, token:=Token } = ReqMap) ->
-    ok = tts_user:add_token(Token,Pid),
-    ok = tts_user:connect_session(Session,Pid),
-    ok = tts_session:set_user(Pid, Session),
+set_valid_user({ok, UserPid},#{session := Session, token:=Token } = ReqMap) ->
+    ok = tts_session:add_token(Token,Session),
+    ok = tts_user:connect_session(Session,UserPid),
+    ok = tts_session:set_user(UserPid, Session),
     redirect_to(user_page,ReqMap);
 set_valid_user(_,ReqMap) ->
     Error = <<"Invalid/Unknown User">>,
