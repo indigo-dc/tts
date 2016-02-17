@@ -29,11 +29,12 @@ get_user_info(UserId) ->
     retrieve_user_info(UserId).
 
 
+%% gen_server.
+%% TODO: implement a cleaning preferably in tts_data or similar
 
 -record(state, {
 }).
 
-%% gen_server.
 -include("tts.hrl").
 
 init([]) ->
