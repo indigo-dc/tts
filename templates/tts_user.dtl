@@ -7,7 +7,7 @@
         {% for id, description in credential_list %}
             <tr>
             <form method="post" action="{{ ep_user }}">
-            <input type="hidden" name="id" value="{{ id }}" >
+            <input type="hidden" name="credential_id" value="{{ id }}" >
             <input type="hidden" name="action" value="revoke" >
                 <td> {{ description }}  </td> 
                 <td> <button type="submit">Revoke</button></td> 
@@ -24,7 +24,7 @@
         {% for id,type,host, description in service_list %}
             <tr>
             <form method="post" action="{{ ep_user }}">
-            <input type="hidden" name="id" value="{{ id }}" >
+            <input type="hidden" name="servic_id" value="{{ id }}" >
             <input type="hidden" name="action" value="request" >
                 <td> {{ type }}  </td> 
                 <td> {{ host }}  </td> 

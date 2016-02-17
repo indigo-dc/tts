@@ -10,7 +10,7 @@ start_link() ->
 init([]) ->
 	Procs = [
              sessions_supervisor(),
-             plugin_supervisor(),
+             service_supervisor(),
              idh(),
              user_cache(),
              config_worker()
@@ -25,9 +25,9 @@ sessions_supervisor() ->
        type => supervisor
      }.
 
-plugin_supervisor() ->
-    #{ id => plugin_sup, 
-       start => {tts_plugin_sup, start_link, []},
+service_supervisor() ->
+    #{ id => service_sup, 
+       start => {tts_service_sup, start_link, []},
        type => supervisor
      }.
 

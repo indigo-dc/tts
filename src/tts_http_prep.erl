@@ -77,6 +77,8 @@ terminate(_Reason, _Req, _State) ->
                     {<<"request">>, request},
                     {<<"revoke">>, revoke},
                     {<<"logout">>, logout},
+                    {<<"service_id">>, service_id},
+                    {<<"credential_id">>, credential_id},
                     {<<"id">>, id}
                    ]).
 

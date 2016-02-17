@@ -87,7 +87,11 @@ handle_user_action(ReqMap) ->
     show_user_page(ReqMap).
 
 
-request_credential(#{session := Session}) ->
+request_credential(#{session := Session, service_id:=ServiceId}) ->
+    {ok,UserId} = tts_session:get_user(Session),
+    {ok,UserInfo} = tts_user_cache:get_user_info(UserId),
+    {ok,Token} = tts_session:get_token(Session),
+    tts_services:request_credential(ServiceId,UserInfo,Token,[]),
     show_user_page(Session).
 
 revoke_credential(#{session := Session}) ->
