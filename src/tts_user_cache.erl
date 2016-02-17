@@ -1,4 +1,4 @@
--module(tts_user_mgr).
+-module(tts_user_cache).
 -behaviour(gen_server).
 
 %% API.
