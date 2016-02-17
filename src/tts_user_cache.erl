@@ -29,7 +29,7 @@ get_user_id(UserSubject, Issuer) ->
 
 -spec get_user_info(UserId :: binary() ) -> {ok, UserInfo :: map()} | {error, term()}.
 get_user_info(UserId) ->
-    lookup_user(UserId).
+    retrieve_user_info(UserId).
 
 %% gen_server.
 
@@ -37,7 +37,7 @@ init([]) ->
 	{ok, #state{}}.
 
 handle_call({insert,UserInfo}, _From, State) ->
-    Result = atomic_insert_new_user(UserInfo),
+    Result = sync_insert_new_user(UserInfo),
     {reply, Result, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
@@ -67,17 +67,16 @@ load_user_if_needed({error, not_found}, Subject, Issuer) ->
     insert_user(UserInfo).
 
 insert_user({ok, UserInfo}) ->
-    {ok, UserPid} = gen_server:call(?MODULE,{insert,UserInfo}),
-    ok = tts_user:set_user_info(UserInfo,UserPid),
-    {ok, UserPid};
+    {ok, UserId} = gen_server:call(?MODULE,{insert,UserInfo}),
+    {ok, UserId};
 insert_user({error, not_found}) ->
     {error, not_found}.
 
 
 
-atomic_insert_new_user(UserInfo) ->
+sync_insert_new_user(UserInfo) ->
     UserIdList = maps:get(user_ids,UserInfo,[]),
-    [UserId |_] = UserIdList,
+    UserId = maps:get(uid, UserInfo),
     case add_new_user_entries(UserIdList,UserId,UserInfo) of
         ok -> 
             {ok, UserId};
@@ -88,11 +87,19 @@ atomic_insert_new_user(UserInfo) ->
 
 
 add_new_user_entries(Mappings,UserId, UserInfo) ->
-    Entries = [{Mapping,UserId} || Mapping <- Mappings], 
-    tts_data:user_insert_mappings([{UserId,UserInfo}|Entries]). 
+    Timestamp = 1234,
+    ok = tts_data:user_insert_data(UserId,UserInfo,Timestamp),
+    ok = tts_data:user_insert_mappings(Mappings). 
 
 lookup_user(IssSub) ->
-   tts_data:user_get_pid(IssSub). 
+   tts_data:user_lookup_id(IssSub). 
+
+retrieve_user_info(Id) ->
+    case tts_data:user_get_data(Id) of
+        {ok, {Id, UserInfo, _TimeStamp}} ->
+            {ok, UserInfo};
+        Other -> Other
+    end.
 
 %% delete_user_mappings(IssSubList) ->
 %%     tts_data:user_delete_mappings(IssSubList).
