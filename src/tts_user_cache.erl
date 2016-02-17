@@ -88,7 +88,7 @@ sync_insert_new_user(UserInfo) ->
 
 add_new_user_entries(IssSubList,UserId, UserInfo) ->
     Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
-    Timestamp = 1234,
+    Timestamp = erlang:timestamp(),
     ok = tts_data:user_insert_data(UserId,UserInfo,Timestamp),
     ok = tts_data:user_insert_mappings(Mappings). 
 
