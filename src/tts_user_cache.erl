@@ -14,9 +14,6 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
--record(state, {
-}).
-
 %% API.
 
 -spec start_link() -> {ok, pid()}.
@@ -31,7 +28,13 @@ get_user_id(UserSubject, Issuer) ->
 get_user_info(UserId) ->
     retrieve_user_info(UserId).
 
+
+
+-record(state, {
+}).
+
 %% gen_server.
+-include("tts.hrl").
 
 init([]) ->
 	{ok, #state{}}.
@@ -75,9 +78,8 @@ insert_user({error, not_found}) ->
 
 
 sync_insert_new_user(UserInfo) ->
-    UserIdList = maps:get(user_ids,UserInfo,[]),
     UserId = maps:get(uid, UserInfo),
-    case add_new_user_entries(UserIdList,UserId,UserInfo) of
+    case add_new_user_entry(UserInfo) of
         ok -> 
             {ok, UserId};
         {error, already_exists} ->
@@ -85,10 +87,13 @@ sync_insert_new_user(UserInfo) ->
     end.
 
 
+%% functions with data access
 
-add_new_user_entries(IssSubList,UserId, UserInfo) ->
+add_new_user_entry(UserInfo) ->
+    IssSubList = maps:get(user_ids,UserInfo,[]),
+    UserId = maps:get(uid, UserInfo),
     Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
-    Timestamp = erlang:timestamp(),
+    Timestamp = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
     ok = tts_data:user_insert_data(UserId,UserInfo,Timestamp),
     ok = tts_data:user_insert_mappings(Mappings). 
 
@@ -102,6 +107,9 @@ retrieve_user_info(Id) ->
         Other -> Other
     end.
 
-%% delete_user_mappings(IssSubList) ->
-%%     tts_data:user_delete_mappings(IssSubList).
+%% delete_user(UserInfo) ->
+%%     MappingList = maps:get(user_ids,UserInfo,[]),
+%%     UserId = maps:get(uid, UserInfo),
+%%     tts_data:user_delete_mappings(MappingList),
+%%     tts_data:user_delete_data(UserId).
 
