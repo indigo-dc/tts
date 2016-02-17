@@ -12,8 +12,7 @@
 start_debug() ->
     %debug these modules
     ListOfModules = [ "tts_http", 
-                      "tts_user",
-                      "tts_user_mgr",
+                      "tts_user_cache",
                       "tts_session",
                       "tts_session_mgr",
                       "tts_idh"
