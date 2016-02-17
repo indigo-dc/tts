@@ -96,7 +96,7 @@ revoke_credential(#{session := Session}) ->
 show_user_page(Session) ->
     {ok,UserId} = tts_session:get_user(Session),
     {ok, Credentials} = tts_services:get_credential_list(UserId),
-    {ok, ServiceMapList} = tts_services:get_list_for_user(UserId),
+    {ok, ServiceMapList} = tts_services:get_service_list(UserId),
     ServiceList = [ [Id, Type, Host, Desc] ||
                     #{id:=Id,type:=Type,host:=Host,description:=Desc} <- ServiceMapList],
     Params = [{username, UserId},
