@@ -94,14 +94,12 @@ revoke_credential(#{session := Session}) ->
     show_user_page(Session).
 
 show_user_page(Session) ->
-    {ok,User} = tts_session:get_user(Session),
-    {ok, UserInfo} = tts_user:get_user_info(User),
-    #{uid := Uid } = UserInfo,
-    {ok, Credentials} = tts_user:get_credential_list(User),
-    {ok, ServiceMapList} = tts_services:get_list_for_user(Uid),
+    {ok,UserId} = tts_session:get_user(Session),
+    {ok, Credentials} = tts_services:get_credential_list(UserId),
+    {ok, ServiceMapList} = tts_services:get_list_for_user(UserId),
     ServiceList = [ [Id, Type, Host, Desc] ||
                     #{id:=Id,type:=Type,host:=Host,description:=Desc} <- ServiceMapList],
-    Params = [{username, Uid},
+    Params = [{username, UserId},
               {credential_list, Credentials},
               {service_list, ServiceList}
              ],
@@ -110,17 +108,16 @@ show_user_page(Session) ->
 
 
 try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}} = Token}, ReqMap) ->
-    set_valid_user(tts_user_mgr:get_user(Subject,
+    set_valid_user(tts_user_cache:get_user(Subject,
                                          Issuer),maps:put(token,Token,ReqMap));
 try_to_set_user(_, ReqMap) ->
     Error = <<"Invalid Token">>,
     show_error_page(Error, ReqMap).
 
 
-set_valid_user({ok, UserPid},#{session := Session, token:=Token } = ReqMap) ->
+set_valid_user({ok, UserId},#{session := Session, token:=Token } = ReqMap) ->
     ok = tts_session:set_token(Token,Session),
-    ok = tts_user:connect_session(Session,UserPid),
-    ok = tts_session:set_user(UserPid, Session),
+    ok = tts_session:set_user(UserId, Session),
     redirect_to(user_page,ReqMap);
 set_valid_user(_,ReqMap) ->
     Error = <<"Invalid/Unknown User">>,
