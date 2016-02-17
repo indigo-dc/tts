@@ -38,9 +38,6 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-% calculate the miliseconds from max_age
--define(TIMEOUT(MaxAge), MaxAge*1000).
-
 
 %% API.
 
@@ -121,7 +118,7 @@ clear_oidc_state_nonce(Pid) ->
     gen_server:call(Pid, clear_oidc_state_nonce).
    
 %% gen_server.
-
+-include("tts.hrl").
 -record(state, {
           id = unkonwn,
           oidc_state = none,
@@ -130,57 +127,59 @@ clear_oidc_state_nonce(Pid) ->
           op = none,
           used_redirect = none,
           token = none,
-          max_age = 900
+          max_age = 10
 }).
 
 
 init(ID) ->
     OidcState = create_random_state(16),
     OidcNonce = create_random_state(64),
-	{ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce}}.
+    MaxAge = ?CONFIG(session_timeout),
+	{ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
+                max_age=MaxAge}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
-	{reply, {ok, Id}, State, ?TIMEOUT(MA)};
+	{reply, {ok, Id}, State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
-	{reply, {ok, MA}, State, ?TIMEOUT(MA)};
+	{reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
-	{reply, {ok, MA}, State#state{max_age=MA}, ?TIMEOUT(MA)};
+	{reply, {ok, MA}, State#state{max_age=MA}, MA};
 handle_call(get_used_redirect, _From, #state{used_redirect=Redir,max_age=MA}=State) ->
-	{reply, {ok, Redir}, State, ?TIMEOUT(MA)};
+	{reply, {ok, Redir}, State, MA};
 handle_call({set_used_redirect, Redir}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{used_redirect=Redir}, ?TIMEOUT(MA)};
+	{reply, ok, State#state{used_redirect=Redir}, MA};
 handle_call(get_oidc_provider, _From, #state{op=OP,max_age=MA}=State) ->
-	{reply, {ok, OP}, State, ?TIMEOUT(MA)};
+	{reply, {ok, OP}, State, MA};
 handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{op=OP}, ?TIMEOUT(MA)};
+	{reply, ok, State#state{op=OP}, MA};
 handle_call({set_user, User}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{user=User}, ?TIMEOUT(MA)};
+	{reply, ok, State#state{user=User}, MA};
 handle_call(get_user, _From, #state{max_age=MA, user=User}=State) ->
-	{reply, {ok, User}, State, ?TIMEOUT(MA)};
+	{reply, {ok, User}, State, MA};
 handle_call({set_token, Token}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{token=Token}, ?TIMEOUT(MA)};
+	{reply, ok, State#state{token=Token}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
-	{reply, {ok, Token}, State, ?TIMEOUT(MA)};
+	{reply, {ok, Token}, State, MA};
 handle_call(is_logged_in, _From, #state{user=none, max_age=MA}=State) ->
-	{reply, false, State, ?TIMEOUT(MA)};
+	{reply, false, State, MA};
 handle_call(is_logged_in, _From, #state{user=_, max_age=MA}=State) ->
-	{reply, true, State, ?TIMEOUT(MA)};
+	{reply, true, State, MA};
 handle_call(get_oidc_state, _From, #state{oidc_state=OidcState, max_age=MA}=State) ->
-	{reply, {ok, OidcState}, State, ?TIMEOUT(MA)};
+	{reply, {ok, OidcState}, State, MA};
 handle_call({compare_oidc_state, OidcState}, _From,
             #state{oidc_state=OidcState, max_age=MA}=State) ->
-	{reply, true, State, ?TIMEOUT(MA)};
+	{reply, true, State, MA};
 handle_call({compare_oidc_state, _}, _From, #state{ max_age=MA } = State) ->
-	{reply, false, State, ?TIMEOUT(MA)};
+	{reply, false, State, MA};
 handle_call(get_oidc_nonce, _From, #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-	{reply, {ok, OidcNonce}, State, ?TIMEOUT(MA)};
+	{reply, {ok, OidcNonce}, State, MA};
 handle_call({compare_oidc_nonce, OidcNonce}, _From,
             #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-	{reply, true, State, ?TIMEOUT(MA)};
+	{reply, true, State, MA};
 handle_call({compare_oidc_nonce, _}, _From, #state{ max_age=MA } = State) ->
-	{reply, false, State, ?TIMEOUT(MA)};
+	{reply, false, State, MA};
 handle_call(clear_oidc_state_nonce, _From, #state{ max_age=MA } = State) ->
-	{reply, ok, State#state{oidc_state=cleared,oidc_nonce=cleared}, ?TIMEOUT(MA)};
+	{reply, ok, State#state{oidc_state=cleared,oidc_nonce=cleared}, MA};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
