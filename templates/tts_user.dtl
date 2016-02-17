@@ -24,7 +24,7 @@
         {% for id,type,host, description in service_list %}
             <tr>
             <form method="post" action="{{ ep_user }}">
-            <input type="hidden" name="servic_id" value="{{ id }}" >
+            <input type="hidden" name="service_id" value="{{ id }}" >
             <input type="hidden" name="action" value="request" >
                 <td> {{ type }}  </td> 
                 <td> {{ host }}  </td> 
