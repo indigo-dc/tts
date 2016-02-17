@@ -15,7 +15,9 @@ start_debug() ->
                       "tts_user_cache",
                       "tts_session",
                       "tts_session_mgr",
-                      "tts_idh"
+                      "tts_idh",
+                      "tts_services",
+                      "tts_service_worker"
                     ],
     start_debug(ListOfModules).
 
