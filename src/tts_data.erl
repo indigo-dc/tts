@@ -12,10 +12,14 @@
         ]).
 
 -export([
-         user_get_pid/1,
+         user_lookup_id/1,
+         user_insert_mappings/1,
          user_delete_mappings/1,
+         user_get_data/1,
+         user_insert_data/3,
+         user_delete_data/1,
          user_inspect/0,
-         user_insert_mappings/1
+         user_mapping_inspect/0
         ]).
 
 -export([
@@ -29,10 +33,12 @@
 -define(TTS_SESSIONS,tts_sessions).
 -define(TTS_OIDCP,tts_oidcp).
 -define(TTS_USER,tts_user).
+-define(TTS_USER_MAPPING,tts_user_mapping).
 
 -define(TTS_TABLES,[
                     ?TTS_SESSIONS,
                     ?TTS_OIDCP,
+                    ?TTS_USER_MAPPING,
                     ?TTS_USER
                    ]).
 
@@ -47,7 +53,7 @@ sessions_create_new(ID) ->
 
 -spec sessions_get_pid(ID :: binary()) -> {ok, Pid :: pid()} | {error, Reason :: atom()}.
 sessions_get_pid(ID) ->
-    validate_pid_value(lookup(?TTS_SESSIONS, ID)).
+    return_value(lookup(?TTS_SESSIONS, ID)).
 
 -spec sessions_update_pid(ID :: binary(), Pid :: pid()) -> ok.
 sessions_update_pid(ID,Pid) ->
@@ -64,28 +70,43 @@ sessions_inspect() ->
 
 % functions for user management 
 
--spec user_insert_mappings([{ID :: binary(), Pid :: pid()}])  -> ok | {error, Reason :: atom()}.
+-spec user_lookup_id(IssSub :: binary()) -> {ok, Id :: binary()} | {error, Reason :: atom()}.
+user_lookup_id(IssSub) ->
+    return_value(lookup(?TTS_USER_MAPPING,IssSub)).
+
+-spec user_insert_mappings([{IssSub :: term(), ID :: binary()}])  -> ok | {error, Reason :: atom()}.
 user_insert_mappings(Mappings) ->
-    return_ok_or_error(insert_new(?TTS_USER,Mappings)).
-
-
--spec user_get_pid(ID :: binary()) -> {ok, Pid :: pid()} | {error, Reason :: atom()}.
-user_get_pid(Id) ->
-    validate_pid_value(lookup(?TTS_USER,Id)).
+    return_ok_or_error(insert_new(?TTS_USER_MAPPING,Mappings)).
 
 -spec user_delete_mappings([ID :: binary()]) -> true.
 user_delete_mappings([]) ->
     true;
-user_delete_mappings([Id | T]) ->
-    delete(?TTS_USER,Id),
+user_delete_mappings([H | T]) ->
+    delete(?TTS_USER_MAPPING,H),
     user_delete_mappings(T).
 
+
+-spec user_get_data(ID :: binary()) -> {ok, {ID::binary(), Info::map(), TimeStamp::term()}} | {error, term()}.
+user_get_data(ID) ->
+    lookup(?TTS_USER,ID).
+
+-spec user_insert_data(ID :: binary(), Info::map(), TimeStamp::term())  -> ok | {error, Reason :: atom()}.
+user_insert_data(ID, Info, TimeStamp) ->
+    Tuple = {ID, Info, TimeStamp},
+    return_ok_or_error(insert_new(?TTS_USER,Tuple)).
+
+-spec user_delete_data(ID :: binary()) -> true.
+user_delete_data(ID) ->
+    delete(?TTS_USER,ID).
 
 -spec user_inspect() -> ok. 
 user_inspect() ->
     iterate_through_table_and_print(?TTS_USER).
 
 
+-spec user_mapping_inspect() -> ok. 
+user_mapping_inspect() ->
+    iterate_through_table_and_print(?TTS_USER_MAPPING).
 
 % functions for oidc management
 -spec oidc_add_op(Identifier::binary(), Description::binary(), ClientId ::
@@ -131,11 +152,9 @@ return_ok_or_error(true) ->
 return_ok_or_error(false) ->
     {error, already_exists}.
 
-validate_pid_value({ok,{_Id,Pid}}) when is_pid(Pid) ->
-    {ok, Pid};
-validate_pid_value({ok,{_Id,_Pid}}) ->
-    {error, not_set};
-validate_pid_value({error, _} = Error) ->
+return_value({ok,{_Key,Value}}) ->
+    {ok, Value};
+return_value({error, _} = Error) ->
     Error.
 
 
