@@ -85,9 +85,10 @@ user_delete_mappings([H | T]) ->
     delete(?TTS_USER_MAPPING,H),
     user_delete_mappings(T).
 
-
 -spec user_get_data(ID :: binary()) -> {ok, {ID::binary(), Info::map(), TimeStamp::term()}} | {error, term()}.
 user_get_data(ID) ->
+    Timestamp = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    ets:update_element(?TTS_USER,ID,{3,Timestamp}),
     lookup(?TTS_USER,ID).
 
 -spec user_insert_data(ID :: binary(), Info::map(), TimeStamp::term())  -> ok | {error, Reason :: atom()}.
