@@ -17,8 +17,8 @@
 -export([set_token/2]).
 -export([get_token/1]).
 
--export([set_user/2]).
--export([get_user/1]).
+-export([set_iss_sub/3]).
+-export([get_iss_sub/1]).
 
 -export([get_used_redirect/1]).
 -export([set_used_redirect/2]).
@@ -85,13 +85,13 @@ get_oidc_provider(Pid) ->
 set_oidc_provider(OP, Pid) ->
     gen_server:call(Pid, {set_oidc_provider, OP}).
 
--spec set_user(User ::any(), Pid :: pid()) -> ok.
-set_user(User, Pid) ->
-    gen_server:call(Pid, {set_user, User}).
+-spec set_iss_sub(Issuer :: binary(), Subject ::binary(), Pid :: pid()) -> ok.
+set_iss_sub(Issuer, Subject, Pid) ->
+    gen_server:call(Pid, {set_iss_sub, Issuer, Subject}).
 
--spec get_user(Pid :: pid()) -> {ok, User::any()}.
-get_user( Pid) ->
-    gen_server:call(Pid, get_user).
+-spec get_iss_sub(Pid :: pid()) -> {ok, Issuer :: binary(), Subject :: binary()}.
+get_iss_sub( Pid) ->
+    gen_server:call(Pid, get_iss_sub).
 
 -spec is_logged_in(Pid :: pid()) -> true | false.
 is_logged_in(Pid) ->
@@ -123,7 +123,8 @@ clear_oidc_state_nonce(Pid) ->
           id = unkonwn,
           oidc_state = none,
           oidc_nonce = none,
-          user = none,
+          iss = none,
+          sub = none,
           op = none,
           used_redirect = none,
           token = none,
@@ -152,17 +153,17 @@ handle_call(get_oidc_provider, _From, #state{op=OP,max_age=MA}=State) ->
 	{reply, {ok, OP}, State, MA};
 handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State) ->
 	{reply, ok, State#state{op=OP}, MA};
-handle_call({set_user, User}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{user=User}, MA};
-handle_call(get_user, _From, #state{max_age=MA, user=User}=State) ->
-	{reply, {ok, User}, State, MA};
+handle_call({set_iss_sub, Issuer, Subject}, _From, #state{max_age=MA}=State) ->
+	{reply, ok, State#state{iss=Issuer, sub = Subject}, MA};
+handle_call(get_iss_sub, _From, #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
+	{reply, {ok, Issuer, Subject}, State, MA};
 handle_call({set_token, Token}, _From, #state{max_age=MA}=State) ->
 	{reply, ok, State#state{token=Token}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
 	{reply, {ok, Token}, State, MA};
-handle_call(is_logged_in, _From, #state{user=none, max_age=MA}=State) ->
+handle_call(is_logged_in, _From, #state{iss=none, max_age=MA}=State) ->
 	{reply, false, State, MA};
-handle_call(is_logged_in, _From, #state{user=_, max_age=MA}=State) ->
+handle_call(is_logged_in, _From, #state{iss=_, max_age=MA}=State) ->
 	{reply, true, State, MA};
 handle_call(get_oidc_state, _From, #state{oidc_state=OidcState, max_age=MA}=State) ->
 	{reply, {ok, OidcState}, State, MA};

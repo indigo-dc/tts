@@ -12,12 +12,10 @@
         ]).
 
 -export([
-         user_lookup_id/1,
-         user_insert_mappings/1,
-         user_delete_mappings/1,
-         user_get_data/1,
-         user_insert_data/3,
-         user_delete_data/1,
+         user_lookup_info/2,
+         user_insert_info/1,
+         user_delete_entries_older_than/1,
+         user_delete_entries_not_accessed_for/1,
          user_inspect/0,
          user_mapping_inspect/0
         ]).
@@ -70,44 +68,84 @@ sessions_inspect() ->
 
 % functions for user management 
 
--spec user_lookup_id(IssSub :: binary()) -> {ok, Id :: binary()} | {error, Reason :: atom()}.
-user_lookup_id(IssSub) ->
-    return_value(lookup(?TTS_USER_MAPPING,IssSub)).
+-spec user_lookup_info(Issuer::binary(), Subject::binary()) -> {ok, Info :: map()} | {error, Reason :: atom()}.
+user_lookup_info(Issuer,Subject) ->
+    user_get_info(return_value(lookup(?TTS_USER_MAPPING,{Issuer,Subject}))).
 
--spec user_insert_mappings([{IssSub :: term(), ID :: binary()}])  -> ok | {error, Reason :: atom()}.
-user_insert_mappings(Mappings) ->
-    return_ok_or_error(insert_new(?TTS_USER_MAPPING,Mappings)).
 
--spec user_delete_mappings([ID :: binary()]) -> true.
-user_delete_mappings([]) ->
-    true;
-user_delete_mappings([H | T]) ->
-    delete(?TTS_USER_MAPPING,H),
-    user_delete_mappings(T).
+-spec user_insert_info(Info::map())  -> ok | {error, Reason :: atom()}.
+user_insert_info(Info) ->
+    IssSubList = maps:get(user_ids,Info,[]),
+    UserId = maps:get(uid, Info),
+    Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
+    CTime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    Tuple = {UserId, Info, CTime, CTime},
+    return_ok_or_error(insert_new(?TTS_USER,[Tuple | Mappings])).
 
--spec user_get_data(ID :: binary()) -> {ok, {ID::binary(), Info::map(), TimeStamp::term()}} | {error, term()}.
-user_get_data(ID) ->
-    Timestamp = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
-    ets:update_element(?TTS_USER,ID,{3,Timestamp}),
-    lookup(?TTS_USER,ID).
+-spec user_delete_entries_older_than(Duration::number()) -> 
+    {ok, NumDeleted::number()}.
+user_delete_entries_older_than(Duration) ->
+    Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    iterate_through_users_and_delete_before(ctime,Now-Duration).
 
--spec user_insert_data(ID :: binary(), Info::map(), TimeStamp::term())  -> ok | {error, Reason :: atom()}.
-user_insert_data(ID, Info, TimeStamp) ->
-    Tuple = {ID, Info, TimeStamp},
-    return_ok_or_error(insert_new(?TTS_USER,Tuple)).
-
--spec user_delete_data(ID :: binary()) -> true.
-user_delete_data(ID) ->
-    delete(?TTS_USER,ID).
+-spec user_delete_entries_not_accessed_for(Duration::number()) -> 
+    {ok, NumDeleted::number()}.
+user_delete_entries_not_accessed_for(Duration) ->
+    Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    iterate_through_users_and_delete_before(atime,Now-Duration).
 
 -spec user_inspect() -> ok. 
 user_inspect() ->
     iterate_through_table_and_print(?TTS_USER).
 
-
 -spec user_mapping_inspect() -> ok. 
 user_mapping_inspect() ->
     iterate_through_table_and_print(?TTS_USER_MAPPING).
+
+user_get_info({ok, Id}) ->
+    user_data_to_info(return_value(lookup(?TTS_USER,Id)));
+user_get_info({error,E}) ->
+    {error,E}.
+
+user_data_to_info({ok,{_Uid,UserInfo,_ATime, _CTime}}) ->
+    {ok,UserInfo};
+user_data_to_info({error,E}) ->
+    {error,E}.
+
+iterate_through_users_and_delete_before(TimeType,TimeStamp) ->
+    First = ets:first(?TTS_USER),
+    iterate_through_users_and_delete_before(TimeType,TimeStamp,First,0).
+iterate_through_users_and_delete_before(_TimeType,_TimeStamp,'$end_of_table',NumDeleted) ->
+    {ok,NumDeleted};
+iterate_through_users_and_delete_before(TimeType,TimeStamp,Key,Deleted) ->
+    {ok, User} = lookup(?TTS_USER,Key),
+    NewDeleted = case delete_user_if_before(TimeType,TimeStamp,User) of
+                     true -> Deleted + 1;
+                     false -> Deleted
+                 end,
+    Next = ets:next(?TTS_USER,Key),
+    iterate_through_users_and_delete_before(TimeType,TimeStamp,Next,NewDeleted).
+
+delete_user_if_before(ctime,Timestamp,{_UserId,UserInfo,_ATime,CTime}) ->
+    delete_user_if_true(Timestamp > CTime, UserInfo);
+delete_user_if_before(atime,Timestamp,{_UserId,UserInfo,ATime,_CTime}) ->
+    delete_user_if_true(Timestamp > ATime, UserInfo).
+
+delete_user_if_true(true,UserInfo) ->
+    #{ user_ids := UserIds,
+       uid := UserId
+     } = UserInfo,
+    user_delete_mappings(UserIds),
+    delete(?TTS_USER,UserId),
+    true;
+delete_user_if_true(_,_UserInfo) ->
+    false.
+
+user_delete_mappings([]) ->
+    true;
+user_delete_mappings([H | T]) ->
+    delete(?TTS_USER_MAPPING,H),
+    user_delete_mappings(T).
 
 % functions for oidc management
 -spec oidc_add_op(Identifier::binary(), Description::binary(), ClientId ::
@@ -190,6 +228,7 @@ iterate_through_table_and_print(Table, Key) ->
     
 delete(Table, Key) ->
     true = ets:delete(Table,Key).
+
 
 
 

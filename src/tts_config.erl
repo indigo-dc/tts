@@ -136,8 +136,9 @@ apply_main_settings() ->
     SSL = get_boolean_value(main,"","SSL", true),
     LogLevel = get_string_value(main,"","LogLevel", "Warning"),
     LogFile = get_binary_value(main,"","LogFile", "tts.log"),
-    SessionTimeout = get_integer_value(main,"","SessionTimeout", 300),
-    CacheTimeout = get_integer_value(main,"","CacheTimeout", 300),
+    SessionTimeout = get_integer_value(main,"","SessionTimeout", 600),
+    CacheTimeout = get_integer_value(main,"","CacheTimeout", 900),
+    CacheCheckInterval = get_integer_value(main,"","CacheCheckInterval", 300),
   
 
     set_config(log_level,LogLevel),
@@ -154,6 +155,7 @@ apply_main_settings() ->
     set_config(ssl,SSL),
     set_config(session_timeout,SessionTimeout * 1000),
     set_config(cache_timeout,CacheTimeout * 1000),
+    set_config(cache_check_interval,CacheCheckInterval * 1000),
     LProt = local_protocol(),
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 

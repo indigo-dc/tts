@@ -3,8 +3,7 @@
 
 %% API.
 -export([start_link/0]).
--export([get_user_id/2]).
--export([get_user_info/1]).
+-export([get_user_info/2]).
 
 %% gen_server.
 -export([init/1]).
@@ -20,13 +19,9 @@
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec get_user_id(UserSuject :: binary(), Issuer :: binary()) -> {ok, binary()} | {error, term()}.
-get_user_id(UserSubject, Issuer) ->
-    return_user_if_exists(UserSubject, Issuer).
-
--spec get_user_info(UserId :: binary() ) -> {ok, UserInfo :: map()} | {error, term()}.
-get_user_info(UserId) ->
-    retrieve_user_info(UserId).
+-spec get_user_info(UserSuject :: binary(), Issuer :: binary()) -> {ok, UserInfo :: map()} | {error, term()}.
+get_user_info(UserSubject, Issuer) ->
+    retrieve_userinfo_if_exists(UserSubject, Issuer).
 
 
 %% gen_server.
@@ -38,6 +33,8 @@ get_user_info(UserId) ->
 -include("tts.hrl").
 
 init([]) ->
+    Interval = ?CONFIG(cache_check_interval),
+    timer:send_interval(Interval,?MODULE,check_cache),
 	{ok, #state{}}.
 
 handle_call({insert,UserInfo}, _From, State) ->
@@ -49,6 +46,9 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
+handle_info(check_cache, State) ->
+    verify_cache_validity(),
+    {noreply,State};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
@@ -60,57 +60,37 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-return_user_if_exists(Subject,Issuer) ->
-    load_user_if_needed(lookup_user({Issuer, Subject}), Subject, Issuer).
+retrieve_userinfo_if_exists(Subject,Issuer) ->
+    load_user_if_needed(lookup_user(Issuer, Subject), Subject, Issuer).
    
-load_user_if_needed({ok,UserId},_, _) ->
-    {ok, UserId};
+load_user_if_needed({ok,UserInfo},_, _) ->
+    {ok,UserInfo};
 load_user_if_needed({error, not_found}, Subject, Issuer) ->
     UserMap = #{sub => Subject, iss => Issuer},
     UserInfo = tts_idh:lookup_user(UserMap),
     insert_user(UserInfo).
 
-insert_user({ok, UserInfo}) ->
-    {ok, UserId} = gen_server:call(?MODULE,{insert,UserInfo}),
-    {ok, UserId};
+insert_user({ok, NewUser}) ->
+    {ok, UserInfo} = gen_server:call(?MODULE,{insert,NewUser}),
+    {ok, UserInfo};
 insert_user({error, not_found}) ->
     {error, not_found}.
 
 
-
 sync_insert_new_user(UserInfo) ->
-    UserId = maps:get(uid, UserInfo),
-    case add_new_user_entry(UserInfo) of
-        ok -> 
-            {ok, UserId};
-        {error, already_exists} ->
-            lookup_user(UserId)
-    end.
+    ok = add_new_user_entry(UserInfo), 
+    {ok, UserInfo}.
 
 
 %% functions with data access
 
+verify_cache_validity() ->
+    tts_data:user_delete_entries_older_than(?CONFIG(cache_timeout)).
+
 add_new_user_entry(UserInfo) ->
-    IssSubList = maps:get(user_ids,UserInfo,[]),
-    UserId = maps:get(uid, UserInfo),
-    Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
-    Timestamp = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
-    ok = tts_data:user_insert_data(UserId,UserInfo,Timestamp),
-    ok = tts_data:user_insert_mappings(Mappings). 
+    ok = tts_data:user_insert_info(UserInfo). 
 
-lookup_user(IssSub) ->
-   tts_data:user_lookup_id(IssSub). 
+lookup_user(Issuer,Subject) ->
+   tts_data:user_lookup_info(Issuer, Subject). 
 
-retrieve_user_info(Id) ->
-    case tts_data:user_get_data(Id) of
-        {ok, {Id, UserInfo, _TimeStamp}} ->
-            {ok, UserInfo};
-        Other -> Other
-    end.
-
-%% delete_user(UserInfo) ->
-%%     MappingList = maps:get(user_ids,UserInfo,[]),
-%%     UserId = maps:get(uid, UserInfo),
-%%     tts_data:user_delete_mappings(MappingList),
-%%     tts_data:user_delete_data(UserId).
 
