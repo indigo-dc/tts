@@ -33,8 +33,6 @@ get_user_info(UserSubject, Issuer) ->
 -include("tts.hrl").
 
 init([]) ->
-    Interval = ?CONFIG(cache_check_interval),
-    timer:send_interval(Interval,?MODULE,check_cache),
 	{ok, #state{}}.
 
 handle_call({insert,UserInfo}, _From, State) ->
@@ -49,6 +47,15 @@ handle_cast(_Msg, State) ->
 handle_info(check_cache, State) ->
     verify_cache_validity(),
     {noreply,State};
+handle_info(timeout, State) ->
+    Interval = ?CONFIG(cache_check_interval),
+    case Interval of 
+        undefined ->
+            {noreply,State,5000};
+        _ ->
+            timer:send_interval(Interval,?MODULE,check_cache),
+            {noreply,State}
+    end;
 handle_info(_Info, State) ->
 	{noreply, State}.
 
