@@ -88,7 +88,9 @@ insert_user({ok, NewUser}) ->
 insert_user({error, Reason}) ->
     {error, Reason}.
 
-
+%TODO: add uppper limit for storing,
+% 100 000 use roughly 50MB of Ram (less)
+% and cleaning takes about 500ms (less)
 sync_insert_new_user(UserInfo) ->
     ok = add_new_user_entry(UserInfo), 
     {ok, UserInfo}.
