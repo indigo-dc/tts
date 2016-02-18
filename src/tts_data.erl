@@ -17,7 +17,9 @@
          user_delete_entries_older_than/1,
          user_delete_entries_not_accessed_for/1,
          user_inspect/0,
-         user_mapping_inspect/0
+         user_mapping_inspect/0,
+
+         insert_users/1
         ]).
 
 -export([
@@ -252,3 +254,19 @@ create_lookup_result([]) ->
     {error, not_found};
 create_lookup_result(_) ->
     {error, too_many}.
+
+insert_users(0) ->
+    ok;
+insert_users(Number) ->
+    GidUid = Number+2000,
+    BinNumber = integer_to_binary(Number),
+    User = #{ uid => Number,
+              user_ids => [{<<"https://self.here.at.tts">>,integer_to_binary(Number)}],
+              uidNumber => GidUid,
+              gidNumber => GidUid,
+              homeDirectory => << <<"/home/">>/binary, BinNumber/binary >>
+            },
+    user_insert_info(User),
+    insert_users(Number-1).
+      
+
