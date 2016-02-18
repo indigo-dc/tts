@@ -80,8 +80,8 @@ load_user_if_needed({error, not_found}, Subject, Issuer) ->
 insert_user({ok, NewUser}) ->
     {ok, UserInfo} = gen_server:call(?MODULE,{insert,NewUser}),
     {ok, UserInfo};
-insert_user({error, not_found}) ->
-    {error, not_found}.
+insert_user({error, Reason}) ->
+    {error, Reason}.
 
 
 sync_insert_new_user(UserInfo) ->
