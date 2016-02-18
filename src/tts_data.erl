@@ -118,9 +118,11 @@ user_get_info({error,E}) ->
 
 
 iterate_through_users_and_delete_before(TimeType,TimeStamp) ->
+    ets:safe_fixtable(?TTS_USER,true),
     First = ets:first(?TTS_USER),
     iterate_through_users_and_delete_before(TimeType,TimeStamp,First,0).
 iterate_through_users_and_delete_before(_TimeType,_TimeStamp,'$end_of_table',NumDeleted) ->
+    ets:safe_fixtable(?TTS_USER,false),
     {ok,NumDeleted};
 iterate_through_users_and_delete_before(TimeType,TimeStamp,Key,Deleted) ->
     {ok, User} = lookup(?TTS_USER,Key),
