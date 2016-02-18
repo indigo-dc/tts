@@ -108,6 +108,8 @@ user_mapping_inspect() ->
     iterate_through_table_and_print(?TTS_USER_MAPPING).
 
 user_get_info({ok, Id}) ->
+    ATime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    ets:update_element(?TTS_USER,Id,{3,ATime}),
     return_value(lookup(?TTS_USER,Id));
 user_get_info({error,E}) ->
     {error,E}.
