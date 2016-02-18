@@ -4,6 +4,7 @@
 %% API.
 -export([start_link/0]).
 -export([get_user_info/2]).
+-export([verify_cache/0]).
 
 %% gen_server.
 -export([init/1]).
@@ -23,6 +24,9 @@ start_link() ->
 get_user_info(Issuer, Subject) ->
     retrieve_userinfo_if_exists(Issuer, Subject).
 
+-spec verify_cache() -> ok.
+verify_cache() ->
+    gen_server:cast(?MODULE,verify_cache_validity).
 
 %% gen_server.
 %% TODO: implement a cleaning preferably in tts_data or similar
@@ -41,19 +45,21 @@ handle_call({insert,UserInfo}, _From, State) ->
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
+handle_cast(verify_cache_validity, State) ->
+    Interval = ?CONFIG(cache_check_interval),
+    timer:apply_after(Interval,?MODULE,verify_cache,[]),
+    verify_cache_validity(),
+	{noreply, State};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-handle_info(check_cache, State) ->
-    verify_cache_validity(),
-    {noreply,State};
 handle_info(timeout, State) ->
     Interval = ?CONFIG(cache_check_interval),
     case Interval of 
         undefined ->
             {noreply,State,5000};
         _ ->
-            timer:send_interval(Interval,?MODULE,check_cache),
+            timer:apply_after(Interval,?MODULE,verify_cache,[]),
             {noreply,State}
     end;
 handle_info(_Info, State) ->
