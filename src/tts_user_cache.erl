@@ -29,7 +29,6 @@ verify_cache() ->
     gen_server:cast(?MODULE,verify_cache_validity).
 
 %% gen_server.
-%% TODO: implement a cleaning preferably in tts_data or similar
 
 -record(state, {
 }).
@@ -47,7 +46,7 @@ handle_call(_Request, _From, State) ->
 
 handle_cast(verify_cache_validity, State) ->
     Interval = ?CONFIG(cache_check_interval),
-    timer:apply_after(Interval,?MODULE,verify_cache,[]),
+    {ok, _} = timer:apply_after(Interval,?MODULE,verify_cache,[]),
     verify_cache_validity(),
 	{noreply, State};
 handle_cast(_Msg, State) ->
@@ -59,7 +58,7 @@ handle_info(timeout, State) ->
         undefined ->
             {noreply,State,5000};
         _ ->
-            timer:apply_after(Interval,?MODULE,verify_cache,[]),
+            {ok, _} = timer:apply_after(Interval,?MODULE,verify_cache,[]),
             {noreply,State}
     end;
 handle_info(_Info, State) ->
