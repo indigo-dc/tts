@@ -80,7 +80,12 @@ user_insert_info(Info) ->
     Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
     CTime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
     Tuple = {UserId, Info, CTime, CTime},
-    return_ok_or_error(insert_new(?TTS_USER,[Tuple | Mappings])).
+    case  insert_new(?TTS_USER,Tuple) of 
+        true ->
+            return_ok_or_error(insert_new(?TTS_USER_MAPPING,Mappings));
+        false ->
+            {error, already_exists}
+    end.
 
 -spec user_delete_entries_older_than(Duration::number()) -> 
     {ok, NumDeleted::number()}.
