@@ -121,9 +121,8 @@ try_to_set_user(_, ReqMap) ->
     show_error_and_close_sessino(Error, ReqMap).
 
 
-set_valid_user({ok, _UserInfo},#{session := Session, token:=Token, id := #{ sub := Subject, iss := Issuer} } = ReqMap) ->
+set_valid_user({ok, _UserInfo},#{session := Session, token:=Token } = ReqMap) ->
     ok = tts_session:set_token(Token,Session),
-    ok = tts_session:set_iss_sub(Issuer,Subject, Session),
     redirect_to(user_page,ReqMap);
 set_valid_user(_,ReqMap) ->
     Error = <<"Invalid/Unknown User">>,

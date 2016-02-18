@@ -17,7 +17,6 @@
 -export([set_token/2]).
 -export([get_token/1]).
 
--export([set_iss_sub/3]).
 -export([get_iss_sub/1]).
 
 -export([get_used_redirect/1]).
@@ -85,10 +84,6 @@ get_oidc_provider(Pid) ->
 set_oidc_provider(OP, Pid) ->
     gen_server:call(Pid, {set_oidc_provider, OP}).
 
--spec set_iss_sub(Issuer :: binary(), Subject ::binary(), Pid :: pid()) -> ok.
-set_iss_sub(Issuer, Subject, Pid) ->
-    gen_server:call(Pid, {set_iss_sub, Issuer, Subject}).
-
 -spec get_iss_sub(Pid :: pid()) -> {ok, Issuer :: binary(), Subject :: binary()}.
 get_iss_sub( Pid) ->
     gen_server:call(Pid, get_iss_sub).
@@ -153,12 +148,11 @@ handle_call(get_oidc_provider, _From, #state{op=OP,max_age=MA}=State) ->
 	{reply, {ok, OP}, State, MA};
 handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State) ->
 	{reply, ok, State#state{op=OP}, MA};
-handle_call({set_iss_sub, Issuer, Subject}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{iss=Issuer, sub = Subject}, MA};
 handle_call(get_iss_sub, _From, #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
 	{reply, {ok, Issuer, Subject}, State, MA};
 handle_call({set_token, Token}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{token=Token}, MA};
+    #{ id := #{ iss := Issuer, sub := Subject }} = Token,
+	{reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
 	{reply, {ok, Token}, State, MA};
 handle_call(is_logged_in, _From, #state{iss=none, max_age=MA}=State) ->
