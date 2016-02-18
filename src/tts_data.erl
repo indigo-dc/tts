@@ -108,14 +108,10 @@ user_mapping_inspect() ->
     iterate_through_table_and_print(?TTS_USER_MAPPING).
 
 user_get_info({ok, Id}) ->
-    user_data_to_info(return_value(lookup(?TTS_USER,Id)));
+    return_value(lookup(?TTS_USER,Id));
 user_get_info({error,E}) ->
     {error,E}.
 
-user_data_to_info({ok,{_Uid,UserInfo,_ATime, _CTime}}) ->
-    {ok,UserInfo};
-user_data_to_info({error,E}) ->
-    {error,E}.
 
 iterate_through_users_and_delete_before(TimeType,TimeStamp) ->
     First = ets:first(?TTS_USER),
@@ -197,6 +193,8 @@ return_ok_or_error(false) ->
     {error, already_exists}.
 
 return_value({ok,{_Key,Value}}) ->
+    {ok, Value};
+return_value({ok,{_Key,Value,_ATime,_CTime}}) ->
     {ok, Value};
 return_value({error, _} = Error) ->
     Error.
