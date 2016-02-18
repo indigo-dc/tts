@@ -115,7 +115,7 @@ show_user_page(Session) ->
 
 
 try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}} = Token}, ReqMap) ->
-    set_valid_user(tts_user_cache:get_user_info(Subject, Issuer), maps:put(token,Token,ReqMap));
+    set_valid_user(tts_user_cache:get_user_info(Issuer, Subject), maps:put(token,Token,ReqMap));
 try_to_set_user(_, ReqMap) ->
     Error = <<"Invalid Token">>,
     show_error_and_close_sessino(Error, ReqMap).

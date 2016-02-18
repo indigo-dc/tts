@@ -19,9 +19,9 @@
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec get_user_info(UserSuject :: binary(), Issuer :: binary()) -> {ok, UserInfo :: map()} | {error, term()}.
-get_user_info(UserSubject, Issuer) ->
-    retrieve_userinfo_if_exists(UserSubject, Issuer).
+-spec get_user_info(Issuer :: binary(), Subject :: binary() ) -> {ok, UserInfo :: map()} | {error, term()}.
+get_user_info(Issuer, Subject) ->
+    retrieve_userinfo_if_exists(Issuer, Subject).
 
 
 %% gen_server.
@@ -67,12 +67,12 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-retrieve_userinfo_if_exists(Subject,Issuer) ->
-    load_user_if_needed(lookup_user(Issuer, Subject), Subject, Issuer).
+retrieve_userinfo_if_exists(Issuer,Subject) ->
+    load_user_if_needed(lookup_user(Issuer, Subject),Issuer, Subject).
    
 load_user_if_needed({ok,UserInfo},_, _) ->
     {ok,UserInfo};
-load_user_if_needed({error, not_found}, Subject, Issuer) ->
+load_user_if_needed({error, not_found}, Issuer, Subject) ->
     UserMap = #{sub => Subject, iss => Issuer},
     UserInfo = tts_idh:lookup_user(UserMap),
     insert_user(UserInfo).
