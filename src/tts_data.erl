@@ -120,7 +120,7 @@ user_get_info({error,E}) ->
 
 remove_unused_entries_if_needed(CurrentEntries, MaxEntries) 
   when is_integer(CurrentEntries), is_integer(MaxEntries), CurrentEntries >= MaxEntries ->
-    Number = CurrentEntries - (MaxEntries + 1),
+    Number = 1 + (CurrentEntries - MaxEntries),
     iterate_through_users_and_delete_least_used_ones(Number);
 remove_unused_entries_if_needed(_Current, _Max) ->
     ok.
