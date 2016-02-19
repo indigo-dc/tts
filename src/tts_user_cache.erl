@@ -102,7 +102,7 @@ verify_cache_validity() ->
     tts_data:user_delete_entries_older_than(?CONFIG(cache_timeout)).
 
 add_new_user_entry(UserInfo) ->
-    ok = tts_data:user_insert_info(UserInfo). 
+    ok = tts_data:user_insert_info(UserInfo,?CONFIG(cache_max_entries)). 
 
 lookup_user(Issuer,Subject) ->
    tts_data:user_lookup_info(Issuer, Subject). 

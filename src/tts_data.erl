@@ -13,7 +13,7 @@
 
 -export([
          user_lookup_info/2,
-         user_insert_info/1,
+         user_insert_info/2,
          user_delete_entries_older_than/1,
          user_delete_entries_not_accessed_for/1,
          user_inspect/0,
@@ -75,8 +75,10 @@ user_lookup_info(Issuer,Subject) ->
     user_get_info(return_value(lookup(?TTS_USER_MAPPING,{Issuer,Subject}))).
 
 
--spec user_insert_info(Info::map())  -> ok | {error, Reason :: atom()}.
-user_insert_info(Info) ->
+-spec user_insert_info(Info::map(), MaxEntries::integer())  -> ok | {error, Reason :: atom()}.
+user_insert_info(Info,MaxEntries) ->
+    CurrentEntries = ets:info(?TTS_USER,size), 
+    remove_unused_entries_if_needed(CurrentEntries-(MaxEntries+1)),
     IssSubList = maps:get(user_ids,Info,[]),
     UserId = maps:get(uid, Info),
     Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
@@ -115,6 +117,45 @@ user_get_info({ok, Id}) ->
     return_value(lookup(?TTS_USER,Id));
 user_get_info({error,E}) ->
     {error,E}.
+
+remove_unused_entries_if_needed(Number) when is_integer(Number), Number > 0 ->
+    iterate_through_users_and_delete_least_used_ones(Number);
+remove_unused_entries_if_needed(_Number) ->
+    ok.
+
+
+iterate_through_users_and_delete_least_used_ones(Number) ->
+    ets:safe_fixtable(?TTS_USER,true),
+    First = ets:first(?TTS_USER),
+    iterate_through_users_and_delete_least_used_ones(Number,First,[]).
+    
+iterate_through_users_and_delete_least_used_ones(_Number, '$end_of_table', List) ->
+    ets:safe_fixtable(?TTS_USER,false),
+    DeleteID = fun({ID,_},_)  ->
+                       ets:delete(?TTS_USER, ID)
+               end,
+    lists:foldl(DeleteID,[],List),
+    ok;
+iterate_through_users_and_delete_least_used_ones(0, Key, [H | T] = List) ->
+    {_,LRU_Max } = H,
+    {ok, {UserId, _Info, ATime, _CTime}} = lookup(?TTS_USER,Key),
+    NewList = case ATime < LRU_Max of
+                  true -> 
+                      % if the ATime is older than the 
+                      % newest on the list
+                      lists:reverse(lists:keysort(2,[{UserId,ATime}|T]));
+                  false -> List
+              end,
+    Next = ets:next(?TTS_USER,Key),
+    iterate_through_users_and_delete_least_used_ones(0, Next,NewList);
+iterate_through_users_and_delete_least_used_ones(Number, Key, List) ->
+    {ok, {UserId, _Info, ATime, _CTime}} = lookup(?TTS_USER,Key),
+    % the newest Item is at the head, as it has the biggest ATime value
+    NewList = lists:reverse(lists:keysort(2,[{UserId, ATime} | List])),
+    Next = ets:next(?TTS_USER,Key),
+    iterate_through_users_and_delete_least_used_ones(Number-1, Next,NewList).
+    
+    
 
 
 iterate_through_users_and_delete_before(TimeType,TimeStamp) ->
@@ -268,7 +309,7 @@ insert_users(Number) ->
               gidNumber => GidUid,
               homeDirectory => << <<"/home/">>/binary, BinNumber/binary >>
             },
-    user_insert_info(User),
+    user_insert_info(User,infinity),
     insert_users(Number-1).
       
 

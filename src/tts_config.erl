@@ -138,6 +138,7 @@ apply_main_settings() ->
     LogFile = get_binary_value(main,"","LogFile", "tts.log"),
     SessionTimeout = get_integer_value(main,"","SessionTimeout", 600),
     CacheTimeout = get_integer_value(main,"","CacheTimeout", 900),
+    CacheMaxEntries = get_integer_value(main,"","CacheMaxEntries", 50000),
     CacheCheckInterval = get_integer_value(main,"","CacheCheckInterval", 300),
   
 
@@ -156,6 +157,7 @@ apply_main_settings() ->
     set_config(session_timeout,SessionTimeout * 1000),
     set_config(cache_timeout,CacheTimeout * 1000),
     set_config(cache_check_interval,CacheCheckInterval * 1000),
+    set_config(cache_max_entries,CacheMaxEntries),
     LProt = local_protocol(),
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
