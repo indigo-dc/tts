@@ -309,7 +309,7 @@ insert_users(Number) ->
               gidNumber => GidUid,
               homeDirectory => << <<"/home/">>/binary, BinNumber/binary >>
             },
-    user_insert_info(User,infinity),
+    user_insert_info(User,50000),
     insert_users(Number-1).
       
 
