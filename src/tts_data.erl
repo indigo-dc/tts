@@ -153,27 +153,27 @@ iterate_through_users_and_delete_least_used_ones(Number) ->
     
 iterate_through_users_and_delete_least_used_ones(_Number, '$end_of_table', List) ->
     ets:safe_fixtable(?TTS_USER,false),
-    DeleteID = fun({ID,_},_)  ->
-                       ets:delete(?TTS_USER, ID)
+    DeleteID = fun({Info,_},_)  ->
+                       user_delete_info(Info)
                end,
     lists:foldl(DeleteID,[],List),
     ok;
 iterate_through_users_and_delete_least_used_ones(0, Key, [H | T] = List) ->
     {_,LRU_Max } = H,
-    {ok, {UserId, _Info, ATime, _CTime}} = lookup(?TTS_USER,Key),
+    {ok, {_UserId, _Info, ATime, _CTime} = Info} = lookup(?TTS_USER,Key),
     NewList = case ATime < LRU_Max of
                   true -> 
                       % if the ATime is older than the 
                       % newest on the list
-                      lists:reverse(lists:keysort(2,[{UserId,ATime}|T]));
+                      lists:reverse(lists:keysort(2,[{Info,ATime}|T]));
                   false -> List
               end,
     Next = ets:next(?TTS_USER,Key),
     iterate_through_users_and_delete_least_used_ones(0, Next,NewList);
 iterate_through_users_and_delete_least_used_ones(Number, Key, List) ->
-    {ok, {UserId, _Info, ATime, _CTime}} = lookup(?TTS_USER,Key),
+    {ok, {_UserId, _Info, ATime, _CTime} = Info} = lookup(?TTS_USER,Key),
     % the newest Item is at the head, as it has the biggest ATime value
-    NewList = lists:reverse(lists:keysort(2,[{UserId, ATime} | List])),
+    NewList = lists:reverse(lists:keysort(2,[{Info, ATime} | List])),
     Next = ets:next(?TTS_USER,Key),
     iterate_through_users_and_delete_least_used_ones(Number-1, Next,NewList).
     
