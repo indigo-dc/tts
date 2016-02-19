@@ -160,7 +160,7 @@ iterate_through_users_and_delete_least_used_ones(_Number, '$end_of_table', List)
     ok;
 iterate_through_users_and_delete_least_used_ones(0, Key, [H | T] = List) ->
     {_,LRU_Max } = H,
-    {ok, {_UserId, _Info, ATime, _CTime} = Info} = lookup(?TTS_USER,Key),
+    {ok, {_UserId, Info, ATime, _CTime}} = lookup(?TTS_USER,Key),
     NewList = case ATime < LRU_Max of
                   true -> 
                       % if the ATime is older than the 
@@ -171,7 +171,7 @@ iterate_through_users_and_delete_least_used_ones(0, Key, [H | T] = List) ->
     Next = ets:next(?TTS_USER,Key),
     iterate_through_users_and_delete_least_used_ones(0, Next,NewList);
 iterate_through_users_and_delete_least_used_ones(Number, Key, List) ->
-    {ok, {_UserId, _Info, ATime, _CTime} = Info} = lookup(?TTS_USER,Key),
+    {ok, {_UserId, Info, ATime, _CTime}} = lookup(?TTS_USER,Key),
     % the newest Item is at the head, as it has the biggest ATime value
     NewList = lists:reverse(lists:keysort(2,[{Info, ATime} | List])),
     Next = ets:next(?TTS_USER,Key),
