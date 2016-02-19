@@ -19,7 +19,7 @@
          user_inspect/0,
          user_mapping_inspect/0,
 
-         insert_users/1
+         insert_users/2
         ]).
 
 -export([
@@ -78,7 +78,7 @@ user_lookup_info(Issuer,Subject) ->
 -spec user_insert_info(Info::map(), MaxEntries::integer())  -> ok | {error, Reason :: atom()}.
 user_insert_info(Info,MaxEntries) ->
     CurrentEntries = ets:info(?TTS_USER,size), 
-    remove_unused_entries_if_needed(CurrentEntries-(MaxEntries+1)),
+    remove_unused_entries_if_needed(CurrentEntries,MaxEntries),
     IssSubList = maps:get(user_ids,Info,[]),
     UserId = maps:get(uid, Info),
     Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
@@ -118,9 +118,11 @@ user_get_info({ok, Id}) ->
 user_get_info({error,E}) ->
     {error,E}.
 
-remove_unused_entries_if_needed(Number) when is_integer(Number), Number > 0 ->
+remove_unused_entries_if_needed(CurrentEntries, MaxEntries) 
+  when is_integer(CurrentEntries), is_integer(MaxEntries), CurrentEntries >= MaxEntries ->
+    Number = CurrentEntries - (MaxEntries + 1),
     iterate_through_users_and_delete_least_used_ones(Number);
-remove_unused_entries_if_needed(_Number) ->
+remove_unused_entries_if_needed(_Current, _Max) ->
     ok.
 
 
@@ -298,9 +300,9 @@ create_lookup_result([]) ->
 create_lookup_result(_) ->
     {error, too_many}.
 
-insert_users(0) ->
+insert_users(0,_Max) ->
     ok;
-insert_users(Number) ->
+insert_users(Number,Max) ->
     GidUid = Number+2000,
     BinNumber = integer_to_binary(Number),
     User = #{ uid => Number,
@@ -309,7 +311,7 @@ insert_users(Number) ->
               gidNumber => GidUid,
               homeDirectory => << <<"/home/">>/binary, BinNumber/binary >>
             },
-    user_insert_info(User,50000),
-    insert_users(Number-1).
+    user_insert_info(User,Max),
+    insert_users(Number-1,Max).
       
 
