@@ -14,6 +14,8 @@
 -export([
          user_lookup_info/2,
          user_insert_info/2,
+         user_delete_info/1,
+         user_delete_info/2,
          user_delete_entries_older_than/1,
          user_delete_entries_not_accessed_for/1,
          user_inspect/0,
@@ -89,6 +91,24 @@ user_insert_info(Info,MaxEntries) ->
             return_ok_or_error(insert_new(?TTS_USER_MAPPING,Mappings));
         false ->
             {error, already_exists}
+    end.
+
+user_delete_info(Issuer, Subject) -> 
+    case lookup(?TTS_USER_MAPPING,{Issuer,Subject}) of
+        {ok, UserId} ->
+            user_delete_info(UserId);
+        {error, _} = Error -> 
+            Error
+    end.
+
+user_delete_info(#{user_ids := UserIds, uid := UserId}) ->
+    user_delete_mappings(UserIds),
+    delete(?TTS_USER,UserId),
+    ok;
+user_delete_info(UserId) ->
+    case lookup(?TTS_USER,UserId) of
+        {ok, UserInfo} -> user_delete_info(UserInfo);
+        {error, _} = Error -> Error
     end.
 
 -spec user_delete_entries_older_than(Duration::number()) -> 
@@ -182,11 +202,7 @@ delete_user_if_before(atime,Timestamp,{_UserId,UserInfo,ATime,_CTime}) ->
     delete_user_if_true(Timestamp > ATime, UserInfo).
 
 delete_user_if_true(true,UserInfo) ->
-    #{ user_ids := UserIds,
-       uid := UserId
-     } = UserInfo,
-    user_delete_mappings(UserIds),
-    delete(?TTS_USER,UserId),
+    user_delete_info(UserInfo),
     true;
 delete_user_if_true(_,_UserInfo) ->
     false.
@@ -280,8 +296,6 @@ iterate_through_table_and_print(Table, Key) ->
     
 delete(Table, Key) ->
     true = ets:delete(Table,Key).
-
-
 
 
 insert(Table, Entry) ->
