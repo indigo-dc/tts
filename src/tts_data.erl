@@ -18,10 +18,7 @@
          user_delete_info/2,
          user_delete_entries_older_than/1,
          user_delete_entries_not_accessed_for/1,
-         user_inspect/0,
-         user_mapping_inspect/0,
-
-         insert_users/2
+         user_inspect/0
         ]).
 
 -export([
@@ -93,6 +90,8 @@ user_insert_info(Info,MaxEntries) ->
             {error, already_exists}
     end.
 
+-spec user_delete_info(Issuer :: binary(), Subject :: binary()) -> 
+    ok | {error, Reason :: term() }.
 user_delete_info(Issuer, Subject) -> 
     case lookup(?TTS_USER_MAPPING,{Issuer,Subject}) of
         {ok, UserId} ->
@@ -101,6 +100,8 @@ user_delete_info(Issuer, Subject) ->
             Error
     end.
 
+-spec user_delete_info(InfoOrId :: map() | term()) -> 
+    ok | {error, Reason :: term() }.
 user_delete_info(#{user_ids := UserIds, uid := UserId}) ->
     user_delete_mappings(UserIds),
     delete(?TTS_USER,UserId),
@@ -125,11 +126,8 @@ user_delete_entries_not_accessed_for(Duration) ->
 
 -spec user_inspect() -> ok. 
 user_inspect() ->
+    iterate_through_table_and_print(?TTS_USER_MAPPING),
     iterate_through_table_and_print(?TTS_USER).
-
--spec user_mapping_inspect() -> ok. 
-user_mapping_inspect() ->
-    iterate_through_table_and_print(?TTS_USER_MAPPING).
 
 user_get_info({ok, Id}) ->
     ATime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
@@ -313,19 +311,4 @@ create_lookup_result([]) ->
     {error, not_found};
 create_lookup_result(_) ->
     {error, too_many}.
-
-insert_users(0,_Max) ->
-    ok;
-insert_users(Number,Max) ->
-    GidUid = Number+2000,
-    BinNumber = integer_to_binary(Number),
-    User = #{ uid => Number,
-              user_ids => [{<<"https://self.here.at.tts">>,integer_to_binary(Number)}],
-              uidNumber => GidUid,
-              gidNumber => GidUid,
-              homeDirectory => << <<"/home/">>/binary, BinNumber/binary >>
-            },
-    user_insert_info(User,Max),
-    insert_users(Number-1,Max).
-      
 
