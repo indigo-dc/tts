@@ -6,6 +6,7 @@
 get_list(_UserId) ->
     {ok, []}.
 
-request(_ServiceId, _UserInfo, _Token, _Params) ->
-    ok.
+request(ServiceId, UserInfo, Token, Params) ->
+    {ok, Pid} = tts_cred_sup:new_worker(),
+    tts_cred_worker:request(ServiceId,UserInfo,Token,Params,Pid).
 
