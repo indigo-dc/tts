@@ -246,21 +246,9 @@ parse_and_apply_services(ServiceConfs)  ->
 add_services([]) ->
     ok;
 add_services([{ServiceID,ServiceConfigList}|T]) ->
-    ConfigMap = service_config_list2map([{service_id,ServiceID}|ServiceConfigList]), 
+    ConfigMap = maps:from_list([{service_id,ServiceID}|ServiceConfigList]), 
     tts_services:add_service(ServiceID,ConfigMap), 
     add_services(T).
-
-service_config_list2map(List) ->
-    ToAtom = fun({InKey,Value},Map) ->
-                     Key = try binary_to_existing_atom(InKey,utf8) of
-                               AtomKey -> AtomKey 
-                           catch _:_ ->
-                                     InKey
-                           end,
-                     maps:put(Key,Value,Map)
-             end,
-    lists:foldl(ToAtom,#{},List).
-
 
 register_files(Name,Files) ->
     register_single_config(Name,only_first(Files)).  

@@ -17,5 +17,7 @@ get_service_info(ServiceId) ->
     tts_data:service_get(ServiceId).
 
 add_service(ServiceId,ServiceInfo) ->
+    %TODO:
+    %validate and change keys/values
     tts_data:service_add(ServiceId,ServiceInfo).
 
