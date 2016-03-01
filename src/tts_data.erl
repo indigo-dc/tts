@@ -265,13 +265,13 @@ service_add(Identifier, Info) ->
 service_get(Id) ->
     lookup(?TTS_SERVICE,Id). 
 
--spec service_get_list() -> [map()].
+-spec service_get_list() -> {ok, [map()]}.
 service_get_list() ->
     Entries = get_all_entries(?TTS_SERVICE),
     ExtractValue = fun({_, Val}, List) ->
                            [Val | List]
                    end,
-    lists:reverse(lists:foldl(ExtractValue,[],Entries)).
+    {ok,lists:reverse(lists:foldl(ExtractValue,[],Entries))}.
 
 -spec service_inspect() -> ok. 
 service_inspect() ->

@@ -16,7 +16,8 @@ start_debug() ->
                       "tts_session",
                       "tts_session_mgr",
                       "tts_idh",
-                      "tts_service"
+                      "tts_service",
+                      "tts_credential"
                     ],
     start_debug(ListOfModules).
 
