@@ -18,7 +18,7 @@
 -record(state, {
           action = undefined,
           client = undefined,
-          service_info = undefined,
+          service_id = undefined,
           user_info = undefined,
           token = undefined,
           params = undefined
@@ -41,19 +41,21 @@ init([]) ->
 	{ok, #state{}}.
 
 handle_call({request_credential,ServiceId,UserInfo,Token,Params}, From, #state{client = undefined} = State) ->
-    ServiceInfo = tts_service:get_info(ServiceId),
     NewState = State#state{ action = request,
                             client = From,
-                            service_info = ServiceInfo,
+                            service_id = ServiceId,
                             user_info = UserInfo,
                             token = Token,
                             params = Params
                           }, 
-    Timeout = maps:get(timeout,ServiceInfo,?TIMEOUT),
-    {noreply, NewState,Timeout};
+    gen_server:cast(self(),perform_request),
+    {noreply, NewState,200};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
+handle_cast(perform_request, State) ->
+    perform_request(State),
+    {stop, normal, State}; 
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -76,3 +78,12 @@ send_reply(_Reply,#state{client=undefined}=State) ->
 send_reply(Reply,#state{client=Client}=State) ->
     gen_server:reply(Client,Reply),
     {ok,State#state{client=undefined}}.
+
+
+perform_request(State) ->
+    #state{service_id = ServiceId
+          } = State,
+    {ok, _ServiceInfo} = tts_service:get_info(ServiceId),
+    ok. 
+
+                      
