@@ -14,8 +14,10 @@
 -export([get_oidc_nonce/1]).
 -export([is_oidc_nonce/2]).
 
--export([set_user/2]).
--export([get_user/1]).
+-export([set_token/2]).
+-export([get_token/1]).
+
+-export([get_iss_sub/1]).
 
 -export([get_used_redirect/1]).
 -export([set_used_redirect/2]).
@@ -34,19 +36,6 @@
 -export([handle_info/2]).
 -export([terminate/2]).
 -export([code_change/3]).
-
--record(state, {
-          id = unkonwn,
-          oidc_state = none,
-          oidc_nonce = none,
-          user = none,
-          op = none,
-          used_redirect = none,
-          max_age = 900
-}).
-
-% calculate the miliseconds from max_age
--define(TIMEOUT(MaxAge), MaxAge*1000).
 
 
 %% API.
@@ -71,6 +60,14 @@ get_max_age(Pid) ->
 set_max_age(MaxAge, Pid) ->
     gen_server:call(Pid, {set_max_age, MaxAge}).
 
+-spec get_token(Pid :: pid()) -> {ok, Token::map()}.
+get_token(Pid) ->
+    gen_server:call(Pid, get_token).
+
+-spec set_token(Token :: map(), Pid :: pid()) -> ok.
+set_token(Token, Pid) ->
+    gen_server:call(Pid, {set_token, Token}).
+
 -spec get_used_redirect(Pid :: pid()) -> {ok, binary()} | none.
 get_used_redirect(Pid) ->
     gen_server:call(Pid, get_used_redirect).
@@ -87,13 +84,9 @@ get_oidc_provider(Pid) ->
 set_oidc_provider(OP, Pid) ->
     gen_server:call(Pid, {set_oidc_provider, OP}).
 
--spec set_user(User ::any(), Pid :: pid()) -> ok.
-set_user(User, Pid) ->
-    gen_server:call(Pid, {set_user, User}).
-
--spec get_user(Pid :: pid()) -> {ok, User::any()}.
-get_user( Pid) ->
-    gen_server:call(Pid, get_user).
+-spec get_iss_sub(Pid :: pid()) -> {ok, Issuer :: binary(), Subject :: binary()}.
+get_iss_sub( Pid) ->
+    gen_server:call(Pid, get_iss_sub).
 
 -spec is_logged_in(Pid :: pid()) -> true | false.
 is_logged_in(Pid) ->
@@ -120,51 +113,68 @@ clear_oidc_state_nonce(Pid) ->
     gen_server:call(Pid, clear_oidc_state_nonce).
    
 %% gen_server.
+-include("tts.hrl").
+-record(state, {
+          id = unkonwn,
+          oidc_state = none,
+          oidc_nonce = none,
+          iss = none,
+          sub = none,
+          op = none,
+          used_redirect = none,
+          token = none,
+          max_age = 10
+}).
 
 
 init(ID) ->
     OidcState = create_random_state(16),
     OidcNonce = create_random_state(64),
-	{ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce}}.
+    MaxAge = ?CONFIG(session_timeout),
+	{ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
+                max_age=MaxAge}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
-	{reply, {ok, Id}, State, ?TIMEOUT(MA)};
+	{reply, {ok, Id}, State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
-	{reply, {ok, MA}, State, ?TIMEOUT(MA)};
+	{reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
-	{reply, {ok, MA}, State#state{max_age=MA}, ?TIMEOUT(MA)};
+	{reply, {ok, MA}, State#state{max_age=MA}, MA};
 handle_call(get_used_redirect, _From, #state{used_redirect=Redir,max_age=MA}=State) ->
-	{reply, {ok, Redir}, State, ?TIMEOUT(MA)};
+	{reply, {ok, Redir}, State, MA};
 handle_call({set_used_redirect, Redir}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{used_redirect=Redir}, ?TIMEOUT(MA)};
+	{reply, ok, State#state{used_redirect=Redir}, MA};
 handle_call(get_oidc_provider, _From, #state{op=OP,max_age=MA}=State) ->
-	{reply, {ok, OP}, State, ?TIMEOUT(MA)};
+	{reply, {ok, OP}, State, MA};
 handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{op=OP}, ?TIMEOUT(MA)};
-handle_call({set_user, User}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{user=User}, ?TIMEOUT(MA)};
-handle_call(get_user, _From, #state{max_age=MA, user=User}=State) ->
-	{reply, {ok, User}, State, ?TIMEOUT(MA)};
-handle_call(is_logged_in, _From, #state{user=none, max_age=MA}=State) ->
-	{reply, false, State, ?TIMEOUT(MA)};
-handle_call(is_logged_in, _From, #state{user=_, max_age=MA}=State) ->
-	{reply, true, State, ?TIMEOUT(MA)};
+	{reply, ok, State#state{op=OP}, MA};
+handle_call(get_iss_sub, _From, #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
+	{reply, {ok, Issuer, Subject}, State, MA};
+handle_call({set_token, Token}, _From, #state{max_age=MA}=State) ->
+    #{ id := #{ iss := Issuer, sub := Subject }} = Token,
+	{reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
+handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
+	{reply, {ok, Token}, State, MA};
+handle_call(is_logged_in, _From, #state{iss=none, max_age=MA}=State) ->
+	{reply, false, State, MA};
+handle_call(is_logged_in, _From, #state{iss=_, max_age=MA}=State) ->
+	{reply, true, State, MA};
 handle_call(get_oidc_state, _From, #state{oidc_state=OidcState, max_age=MA}=State) ->
-	{reply, {ok, OidcState}, State, ?TIMEOUT(MA)};
+	{reply, {ok, OidcState}, State, MA};
 handle_call({compare_oidc_state, OidcState}, _From,
             #state{oidc_state=OidcState, max_age=MA}=State) ->
-	{reply, true, State, ?TIMEOUT(MA)};
+	{reply, true, State, MA};
 handle_call({compare_oidc_state, _}, _From, #state{ max_age=MA } = State) ->
-	{reply, false, State, ?TIMEOUT(MA)};
+	{reply, false, State, MA};
 handle_call(get_oidc_nonce, _From, #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-	{reply, {ok, OidcNonce}, State, ?TIMEOUT(MA)};
+	{reply, {ok, OidcNonce}, State, MA};
 handle_call({compare_oidc_nonce, OidcNonce}, _From,
             #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-	{reply, true, State, ?TIMEOUT(MA)};
+	{reply, true, State, MA};
 handle_call({compare_oidc_nonce, _}, _From, #state{ max_age=MA } = State) ->
-	{reply, false, State, ?TIMEOUT(MA)};
+	{reply, false, State, MA};
 handle_call(clear_oidc_state_nonce, _From, #state{ max_age=MA } = State) ->
-	{reply, ok, State#state{oidc_state=cleared,oidc_nonce=cleared}, ?TIMEOUT(MA)};
+	{reply, ok, State#state{oidc_state=cleared,oidc_nonce=cleared}, MA};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 

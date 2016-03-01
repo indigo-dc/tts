@@ -7,6 +7,7 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+    tts:start_debug(),
     tts_data:init(),
    	tts_sup:start_link().
 

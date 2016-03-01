@@ -8,12 +8,16 @@ handle(#{path := ep_redirect } = ReqMap) ->
     redirect_to_auth_server(ReqMap);
 handle(#{path := ep_return} = ReqMap) ->
     login_user_with_authcode(ReqMap);
-handle(#{path := ep_main} = ReqMap) ->
-    redirect_to_user_page_or_login(ReqMap);
-handle(#{path := ep_user, method := post} = ReqMap) ->
+handle(#{path := ep_main, logged_in := true} = ReqMap) ->
+    redirect_to(user_page, ReqMap);
+handle(#{path := ep_user, method := post, logged_in := true} = ReqMap) ->
     handle_user_action(ReqMap);
-handle(#{path := ep_user, method := get} = ReqMap) ->
-    show_user_page(ReqMap).
+handle(#{path := ep_user, method := get, logged_in := true, session := Session}) ->
+    show_user_page(Session);
+handle(#{path := ep_main} = ReqMap) ->
+    show_select_page(ReqMap);
+handle( ReqMap) ->
+    redirect_to(ep_main, ReqMap).
     
 
 redirect_to_auth_server(#{body_qs:=BodyQs} = ReqMap) ->
@@ -26,7 +30,7 @@ redirect_to_auth_server(#{body_qs:=BodyQs} = ReqMap) ->
 
 
 login_user_with_authcode(#{qs := #{error := Error }} = ReqMap) ->
-    show_error_page(Error, ReqMap);
+    show_error_and_close_sessino(Error, ReqMap);
 login_user_with_authcode(#{qs := #{state:=OidcState}, session := Session} =
                          ReqMap) ->
     retreive_oidc_token_if_state_fits(tts_session:is_oidc_state(OidcState,Session),
@@ -41,7 +45,7 @@ retreive_oidc_token_if_state_fits(true, ReqMap) ->
     handle_oidc_token(oidcc:retrieve_token(AuthCode, OpenIdProviderId), ReqMap);
 retreive_oidc_token_if_state_fits(false, ReqMap) ->
     Desc = <<"the returned state did not fit this session">>,
-    show_error_page(Desc,  ReqMap).
+    show_error_and_close_sessino(Desc,  ReqMap).
 
 handle_oidc_token({ok, Token}, #{session:=Session}=ReqMap) ->
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
@@ -49,16 +53,9 @@ handle_oidc_token({ok, Token}, #{session:=Session}=ReqMap) ->
     ok = tts_session:clear_oidc_state_nonce(Session),
     VerToken = oidcc:parse_and_validate_token(Token,OpenIdProviderId ,OidcNonce),
     try_to_set_user(VerToken, ReqMap);
-    %% redirect_to(user_page, Req, State);
 handle_oidc_token({error, Error}, ReqMap) ->
-    show_error_page(Error, ReqMap).
+    show_error_and_close_sessino(Error, ReqMap).
 
-
-
-redirect_to_user_page_or_login(#{logged_in := true}=ReqMap) ->
-    redirect_to(user_page, ReqMap);
-redirect_to_user_page_or_login(ReqMap) ->
-    show_select_page(ReqMap).
 
 show_select_page(ReqMap) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
@@ -68,16 +65,19 @@ show_select_page(ReqMap) ->
                            [ [ Id, Desc ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc,[],OIDCList)),
-    case length(OpList) of 
-        1 ->
-            [[OpenIdProviderId,_]] = OpList,
-            redirect_to(auth_server, maps:put(op_id,OpenIdProviderId,ReqMap));
-        _ ->
-            {ok, Body} = tts_ui_login_dtl:render([{oidc_op_list,OpList}]),
-            #{body => Body, status => 200, cookie => update}
-    end.
+    redirect_to_op_or_show_select_page(OpList,ReqMap).
+
+redirect_to_op_or_show_select_page([[OpenIdProviderId,_]],ReqMap) ->
+    redirect_to(auth_server, maps:put(op_id,OpenIdProviderId,ReqMap));
+redirect_to_op_or_show_select_page(OpList,_) ->
+    {ok, Body} = tts_ui_login_dtl:render([{oidc_op_list,OpList}]),
+    #{body => Body, status => 200, cookie => update}.
 
 
+handle_user_action(#{body_qs:=#{action := request}} = ReqMap) ->
+   request_credential(ReqMap); 
+handle_user_action(#{body_qs:=#{action := revoke}} = ReqMap) ->
+   revoke_credential(ReqMap); 
 handle_user_action(#{body_qs:=#{action := logout}, session:=Session} = ReqMap) ->
     ok = tts_session:close(Session),
     maps:put(cookie, clear, redirect_to(ep_main,ReqMap));
@@ -85,33 +85,48 @@ handle_user_action(ReqMap) ->
     show_user_page(ReqMap).
 
 
-show_user_page(#{session := Session}) ->
-    {ok,User} = tts_session:get_user(Session),
-    {ok, UserInfo} = tts_user:get_user_info(User),
-    #{uid := UserName } = UserInfo,
-    {ok, Credentials} = tts_user:get_credential_list(User),
-    Params = [{username, UserName},
-              {credential_list, Credentials}],
+request_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) ->
+    {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
+    {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+    {ok,Token} = tts_session:get_token(Session),
+    tts_credential:request(ServiceId,UserInfo,Token,[]),
+    show_user_page(Session);
+request_credential(ReqMap) ->
+    Desc = <<"">>,
+    show_error(Desc,ReqMap,false).
+
+revoke_credential(#{session := Session}) ->
+    show_user_page(Session).
+
+show_user_page(Session) ->
+    {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
+    {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+    UserId = maps:get(uid,UserInfo),
+    {ok, Credentials} = tts_credential:get_list(UserId),
+    {ok, ServiceMapList} = tts_service:get_list(UserId),
+    ServiceList = [ [Id, Type, Host, Desc] ||
+                    #{id:=Id,type:=Type,host:=Host,description:=Desc} <- ServiceMapList],
+    Params = [{username, UserId},
+              {credential_list, Credentials},
+              {service_list, ServiceList}
+             ],
     {ok, Body} = tts_user_dtl:render(Params),
     #{body => Body, status => 200, cookie => update}.
 
 
 try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}} = Token}, ReqMap) ->
-    set_valid_user(tts_user_mgr:get_user(Subject,
-                                         Issuer),maps:put(token,Token,ReqMap));
+    set_valid_user(tts_user_cache:get_user_info(Issuer, Subject), maps:put(token,Token,ReqMap));
 try_to_set_user(_, ReqMap) ->
     Error = <<"Invalid Token">>,
-    show_error_page(Error, ReqMap).
+    show_error_and_close_sessino(Error, ReqMap).
 
 
-set_valid_user({ok, Pid},#{session := Session, token:=Token } = ReqMap) ->
-    ok = tts_user:add_token(Token,Pid),
-    ok = tts_user:connect_session(Session,Pid),
-    ok = tts_session:set_user(Pid, Session),
+set_valid_user({ok, _UserInfo},#{session := Session, token:=Token } = ReqMap) ->
+    ok = tts_session:set_token(Token,Session),
     redirect_to(user_page,ReqMap);
 set_valid_user(_,ReqMap) ->
     Error = <<"Invalid/Unknown User">>,
-    show_error_page(Error, ReqMap).
+    show_error_and_close_sessino(Error, ReqMap).
 
 redirect_to(auth_server, #{op_id := OpenIdProvider, session:=Session}) ->
     {ok, OidcState} = tts_session:get_oidc_state(Session),
@@ -125,14 +140,21 @@ redirect_to(user_page, _ReqMap) ->
 redirect_to(_, _ReqMap) ->
     create_redirection("/").
 
-show_error_page(Error,#{session := Session}) ->
-    ok = tts_session:close(Session),
-    %TODO: show some error page
-    #{error => Error, status => 400, cookie => clear}.
+show_error_and_close_sessino(Error,ReqMap) ->
+    show_error(Error, ReqMap, true).
+
+show_error(Error,#{session := Session},CloseSession) ->
+    CookieAction = case CloseSession of
+                       true ->
+                           ok = tts_session:close(Session),
+                           clear;
+                       false ->
+                           update
+                   end,
+    #{error => Error, status => 400, cookie => CookieAction}.
+
 
 create_redirection(Url) ->
     #{header => [{<<"location">>,Url}], cookie => update, status => 302}.
      
-
-
 

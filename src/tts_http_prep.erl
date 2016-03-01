@@ -74,7 +74,11 @@ terminate(_Reason, _Req, _State) ->
                     {<<"error">>, error},
                     {<<"state">>, state},
                     {<<"action">>, action, value},
+                    {<<"request">>, request},
+                    {<<"revoke">>, revoke},
                     {<<"logout">>, logout},
+                    {<<"service_id">>, service_id},
+                    {<<"credential_id">>, credential_id},
                     {<<"id">>, id}
                    ]).
 
@@ -86,8 +90,6 @@ extract_args(Req) ->
     {CookieSessionId,Req4} = cowboy_req:cookie(?COOKIE,Req3),
     {ok, Session} = tts_session_mgr:get_session(CookieSessionId),
     LoggedIn = tts_session:is_logged_in(Session),
-    {ok, SessionId} = tts_session:get_id(Session),
-    {ok, MaxAge} = tts_session:get_max_age(Session),
     {ok, BodyQsList, Req5} = cowboy_req:body_qs(Req4), 
     BodyQsMap = create_map_from_proplist(BodyQsList),
     {Method, Req6} = cowboy_req:method(Req5),
@@ -96,9 +98,7 @@ extract_args(Req) ->
               path => AtomPath,
               method => AtomMethod,
               session => Session,
-              session_id => SessionId,
               logged_in => LoggedIn,
-              session_max_age => MaxAge,
               qs => QsMap,
               body_qs => BodyQsMap
              },
@@ -108,7 +108,9 @@ perform_cookie_action(clear,Req,_ReqMap) ->
     Opts = create_cookie_opts(0),
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, <<"deleted">>, Opts, Req),
     {ok, Req2};
-perform_cookie_action(update,Req,#{session_max_age := MaxAge, session_id := ID}) ->
+perform_cookie_action(update,Req,#{session := Session}) ->
+    {ok, MaxAge} = tts_session:get_max_age(Session),
+    {ok, ID} = tts_session:get_id(Session),
     Opts = create_cookie_opts(MaxAge),
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, ID, Opts, Req),
     {ok, Req2}.  

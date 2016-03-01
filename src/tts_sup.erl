@@ -10,8 +10,8 @@ start_link() ->
 init([]) ->
 	Procs = [
              sessions_supervisor(),
-             userss_supervisor(),
              idh(),
+             user_cache(),
              config_worker()
             ],
     Flags = #{},
@@ -24,12 +24,6 @@ sessions_supervisor() ->
        type => supervisor
      }.
 
-userss_supervisor() ->
-    #{ id => userss_sup, 
-       start => {tts_users_sup, start_link, []},
-       type => supervisor
-     }.
-
 config_worker() ->
     #{ id => config,
        start => {tts_config, start_link, []},
@@ -39,4 +33,9 @@ config_worker() ->
 idh() ->
     #{ id => idh,
        start => {tts_idh, start_link, []}
+     }.
+
+user_cache() ->
+    #{ id => user_cache,
+       start => {tts_user_cache, start_link, []}
      }.

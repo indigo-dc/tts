@@ -29,6 +29,9 @@
 -record(state, {
 }).
 
+-define(OIDC_SECTION,"OIDC").
+-define(IDH_SECTION,"IDH").
+
 %% API.
 
 -spec start_link() -> {ok, pid()}.
@@ -89,28 +92,40 @@ code_change(_OldVsn, State, _Extra) ->
 %%%
 
 read_configs() -> 
-    read_main_config(),
-    read_other_configs().
+    ok = read_main_config(),
+    ok = read_service_configs(),
+    ok = start_cowboy().
 
-
-read_other_configs() ->
-    read_other_configs(get_(config_path, undefined)). 
-
-read_other_configs(undefined) ->
-    error_logger:error_msg("no configuration path found, path scanned are
-                           ~p",[generate_path_list()]),
-    erlang:halt(2);
-read_other_configs(Path) ->
-    ok = apply_main_settings(),
-    ok = read_op_config(Path),
-    ok = set_oidc_ops(),
-    ok = start_cowboy(),
-    ok.
 
 
 read_main_config() ->
     Files = generate_file_list("main.conf"),
-    register_files(main,Files).
+    ok = register_files(main,Files),
+    ok = ensure_config_found(),
+    ok = apply_main_settings().
+
+ensure_config_found() ->
+    ensure_config_found(get_(config_path, undefined)).
+
+ensure_config_found(undefined) ->
+    return_error(2,"no configuration path found, path scanned are ~p",[generate_path_list()]);
+ensure_config_found(_Defined) ->
+    ok.
+
+read_service_configs() ->
+    read_service_configs(get_(config_path, undefined)). 
+
+read_service_configs(undefined) ->
+    ok;
+read_service_configs(BasePath) ->
+    ServiceConfs = filelib:wildcard(filename:join([BasePath,"services","*.conf"])), 
+    parse_and_apply_services(ServiceConfs), 
+    ok.
+
+return_error(Number, Format, Params) ->
+    error_logger:error_msg(Format,Params),
+    erlang:halt(Number).
+
 
 apply_main_settings() ->
     HostName = get_binary_value(main,"","HostName","localhost"),
@@ -124,7 +139,10 @@ apply_main_settings() ->
     SSL = get_boolean_value(main,"","SSL", true),
     LogLevel = get_string_value(main,"","LogLevel", "Warning"),
     LogFile = get_binary_value(main,"","LogFile", "tts.log"),
-    UserTimeout = get_integer_value(main,"","UserTimeout", 300),
+    SessionTimeout = get_integer_value(main,"","SessionTimeout", 600),
+    CacheTimeout = get_integer_value(main,"","CacheTimeout", 900),
+    CacheMaxEntries = get_integer_value(main,"","CacheMaxEntries", 50000),
+    CacheCheckInterval = get_integer_value(main,"","CacheCheckInterval", 300),
   
 
     set_config(log_level,LogLevel),
@@ -139,40 +157,31 @@ apply_main_settings() ->
     set_config(ep_redirect,EpRedirect),
     set_config(ep_return,EpReturn),
     set_config(ssl,SSL),
-    set_config(user_timeout,UserTimeout * 1000),
+    set_config(session_timeout,SessionTimeout * 1000),
+    set_config(cache_timeout,CacheTimeout * 1000),
+    set_config(cache_check_interval,CacheCheckInterval * 1000),
+    set_config(cache_max_entries,CacheMaxEntries),
     LProt = local_protocol(),
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
     set_config(local_endpoint,LocalEndpoint),
+    apply_oidc_settings(),
     apply_idh_settings(),
     ok.
 
-apply_idh_settings() ->
-    Type = get_string_value(main,"IDH","Type",undefined),
-    Host = get_string_value(main,"IDH","Host",undefined),
-    Port = get_integer_value(main,"IDH","Port",389),
-    Base = get_string_value(main,"IDH","Base",undefined),
-    User = get_string_value(main,"IDH","User",undefined),
-    Pass = get_string_value(main,"IDH","Passwd",undefined),
 
-    set_config(idh_host,Host),
-    set_config(idh_port,Port),
-    set_config(idh_base,Base),
-    set_config(idh_user,User),
-    set_config(idh_passwd,Pass),
-    % set the type as the last config, tts_idh relies on that
-    AType = list_to_existing_atom(Type), 
-    set_config(idh_type,AType),
-    ok.
-    
-
-read_op_config(Path) ->
-    Files = [filename:join(Path,"oidc_provider.conf")],
-    register_files(oidc_op,Files).
-    
-
-set_oidc_ops() ->
-    OPs = econfig:sections(oidc_op),
+apply_oidc_settings() ->
+    Id = get_binary_value(main,?OIDC_SECTION,"Id",""),
+    Desc = get_binary_value(main,?OIDC_SECTION,"Description",""),
+    ClientId = get_binary_value(main,?OIDC_SECTION,"ClientId",""),
+    Secret = get_binary_value(main,?OIDC_SECTION,"Secret",""),
+    ConfigEndpoint = get_binary_value(main,?OIDC_SECTION,"ConfigEndpoint",""),
+    LocalEndpoint = ?CONFIG(local_endpoint),
+    OpEntries = [{"Description", Desc}, 
+                 {"Id" ,Id}, 
+                 {"ClientId" ,ClientId}, 
+                 {"Secret" ,Secret}, 
+                 {"ConfigEndpoint" ,ConfigEndpoint}],
     IsEmpty = fun({K, V},In) ->
                       case V of
                           <<>> -> [K | In];
@@ -180,28 +189,66 @@ set_oidc_ops() ->
                           _ -> In
                       end
               end,
-    AddValidOps = fun(OpId,_List) ->
-                          Id = binary:list_to_bin(OpId),
-                          Desc = get_binary_value(oidc_op,OpId,"Description",""),
-                          ClientId = get_binary_value(oidc_op,OpId,"ClientId",""),
-                          Secret = get_binary_value(oidc_op,OpId,"Secret",""),
-                          ConfigEndpoint = get_binary_value(oidc_op,OpId,"ConfigEndpoint",""),
-                          LocalEndpoint = ?CONFIG(local_endpoint),
-                          OpEntries = [{"Description", Desc}, 
-                                       {"ClientId" ,ClientId}, 
-                                       {"Secret" ,Secret}, 
-                                       {"ConfigEndpoint" ,ConfigEndpoint}],
-                          case lists:foldl(IsEmpty,[],OpEntries) of
-                              [] -> 
-                                  oidcc:add_openid_provider(Id, Desc, ClientId,
-                                                            Secret,
-                                                            ConfigEndpoint, 
-                                                            LocalEndpoint);
-                              _List -> noop
-                          end
-                  end,
-    lists:foldl(AddValidOps,[],OPs).
+    case lists:foldl(IsEmpty,[],OpEntries) of
+        [] -> 
+            oidcc:add_openid_provider(Id, Desc, ClientId,
+                                      Secret,
+                                      ConfigEndpoint, 
+                                      LocalEndpoint);
+        List ->
+            return_error(3,"the configuration of the OpenID Connect endpoint is
+                         missing/malformed. The following values are missing:
+                         ~p",List)
+    end.
+
+
+apply_idh_settings() ->
+    OType = get_string_value(main,?IDH_SECTION,"Type",undefined),
+    Type = try list_to_existing_atom(OType) of
+               T -> T
+           catch
+               _:_ -> OType
+           end,
+    set_idh_type_settings(Type), 
+    % set the type as the last config, tts_idh relies on that
+    set_config(idh_type,Type),
+    ok.
     
+
+
+set_idh_type_settings(ldap) ->
+    Host = get_string_value(main,?IDH_SECTION,"Host",undefined),
+    Port = get_integer_value(main,?IDH_SECTION,"Port",389),
+    Base = get_string_value(main,?IDH_SECTION,"Base",undefined),
+    User = get_string_value(main,?IDH_SECTION,"User",undefined),
+    Pass = get_string_value(main,?IDH_SECTION,"Passwd",undefined),
+    set_config(idh_host,Host),
+    set_config(idh_port,Port),
+    set_config(idh_base,Base),
+    set_config(idh_user,User),
+    set_config(idh_passwd,Pass);
+set_idh_type_settings(file) ->
+    File = get_string_value(main,?IDH_SECTION,"File","idh_mapping.conf"),
+    set_config(idh_file,get_abs_file_or(File,undefined));
+set_idh_type_settings(Type) ->
+    return_error(4,"unknown IDH type ~p",[Type]).
+
+
+parse_and_apply_services([]) ->
+    ok;
+parse_and_apply_services(ServiceConfs)  ->
+    ok = econfig:register_config(service,ServiceConfs),
+    ServiceConfigs = econfig:cfg2list(service),
+    add_services(ServiceConfigs),
+    ok = econfig:unregister_config(service), 
+    ok.
+
+add_services([]) ->
+    ok;
+add_services([{ServiceID,ServiceConfigList}|T]) ->
+    ConfigMap = maps:from_list([{service_id,ServiceID}|ServiceConfigList]), 
+    tts_service:add(ServiceID,ConfigMap), 
+    add_services(T).
 
 register_files(Name,Files) ->
     register_single_config(Name,only_first(Files)).  
@@ -297,10 +344,23 @@ start_cowboy() ->
     ok.
 
 
+set_config(config_path=Key, Path) ->
+   case application:get_env(tts,Key,undefined) of
+       undefined ->
+           application:set_env(tts,Key,Path);
+       _ -> ok
+   end;
 set_config(log_file, FileName) ->
     _AbsFileName = get_abs_file(FileName);
 set_config(Key, Value) ->
     application:set_env(tts,Key,Value).
+
+get_abs_file_or(File, Other) ->
+    AbsFile = get_abs_file(File),
+    case filelib:is_file(AbsFile) of
+        true -> AbsFile;
+        false -> Other 
+    end.
 
 get_abs_file(FileName) ->
     get_abs_file(is_absolute(FileName), FileName).
