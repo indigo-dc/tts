@@ -29,16 +29,24 @@
          oidc_op_inspect/0
         ]).
 
+-export([
+         service_add/2,
+         service_get/1,
+         service_get_list/0,
+         service_inspect/0
+        ]).
 -define(TTS_SESSIONS,tts_sessions).
 -define(TTS_OIDCP,tts_oidcp).
 -define(TTS_USER,tts_user).
 -define(TTS_USER_MAPPING,tts_user_mapping).
+-define(TTS_SERVICE,tts_service).
 
 -define(TTS_TABLES,[
                     ?TTS_SESSIONS,
                     ?TTS_OIDCP,
                     ?TTS_USER_MAPPING,
-                    ?TTS_USER
+                    ?TTS_USER,
+                    ?TTS_SERVICE
                    ]).
 
 init() ->
@@ -246,6 +254,28 @@ oidc_get_op_list() ->
 -spec oidc_op_inspect() -> ok. 
 oidc_op_inspect() ->
     iterate_through_table_and_print(?TTS_OIDCP).
+
+% functions for  management
+-spec service_add(Identifier::binary(), Info :: map()) ->ok | {error, Reason :: atom()}.
+service_add(Identifier, Info) ->
+    return_ok_or_error(insert_new(?TTS_SERVICE,{Identifier,Info})).
+
+
+-spec service_get(Identifier::binary()) ->ok.
+service_get(Id) ->
+    lookup(?TTS_SERVICE,Id). 
+
+-spec service_get_list() -> [map()].
+service_get_list() ->
+    Entries = get_all_entries(?TTS_SERVICE),
+    ExtractValue = fun({_, Val}, List) ->
+                           [Val | List]
+                   end,
+    lists:reverse(lists:foldl(ExtractValue,[],Entries)).
+
+-spec service_inspect() -> ok. 
+service_inspect() ->
+    iterate_through_table_and_print(?TTS_SERVICE).
 
 %% internal functions
 
