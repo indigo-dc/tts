@@ -93,7 +93,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 read_configs() -> 
     ok = read_main_config(),
-    ok = read_plugin_configs(),
+    ok = read_service_configs(),
     ok = start_cowboy().
 
 
@@ -112,11 +112,14 @@ ensure_config_found(undefined) ->
 ensure_config_found(_Defined) ->
     ok.
 
-read_plugin_configs() ->
-    read_plugin_configs(get_(config_path, undefined)). 
+read_service_configs() ->
+    read_service_configs(get_(config_path, undefined)). 
 
-read_plugin_configs(_Path) ->
-    % TODO: implement
+read_service_configs(undefined) ->
+    ok;
+read_service_configs(BasePath) ->
+    ServiceConfs = filelib:wildcard(filename:join([BasePath,"services","*.conf"])), 
+    parse_and_apply_services(ServiceConfs), 
     ok.
 
 return_error(Number, Format, Params) ->
@@ -231,6 +234,32 @@ set_idh_type_settings(Type) ->
     return_error(4,"unknown IDH type ~p",[Type]).
 
 
+parse_and_apply_services([]) ->
+    ok;
+parse_and_apply_services(ServiceConfs)  ->
+    ok = econfig:register_config(service,ServiceConfs),
+    ServiceConfigs = econfig:cfg2list(service),
+    add_services(ServiceConfigs),
+    ok = econfig:unregister_config(service), 
+    ok.
+
+add_services([]) ->
+    ok;
+add_services([{ServiceID,ServiceConfigList}|T]) ->
+    ConfigMap = service_config_list2map([{service_id,ServiceID}|ServiceConfigList]), 
+    tts_services:add_service(ServiceID,ConfigMap), 
+    add_services(T).
+
+service_config_list2map(List) ->
+    ToAtom = fun({InKey,Value},Map) ->
+                     Key = try binary_to_existing_atom(InKey,utf8) of
+                               AtomKey -> AtomKey 
+                           catch _:_ ->
+                                     InKey
+                           end,
+                     maps:put(Key,Value,Map)
+             end,
+    lists:foldl(ToAtom,#{},List).
 
 
 register_files(Name,Files) ->
@@ -327,6 +356,12 @@ start_cowboy() ->
     ok.
 
 
+set_config(config_path=Key, Path) ->
+   case application:get_env(tts,Key,undefined) of
+       undefined ->
+           application:set_env(tts,Key,Path);
+       _ -> ok
+   end;
 set_config(log_file, FileName) ->
     _AbsFileName = get_abs_file(FileName);
 set_config(Key, Value) ->
