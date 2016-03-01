@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 
 %% API.
--define(TIMEOUT,120000).
+-define(TIMEOUT,20000).
 
 -export([start_link/0]).
 -export([request/5]).
@@ -33,7 +33,8 @@ start_link() ->
 -spec request(ServiceId :: any(), UserInfo :: map(), Token :: map(),
               Params::any(), Pid::pid()) -> {ok, pid()}.
 request(ServiceId,UserInfo,Token,Params,Pid) ->
-	gen_server:call(Pid, {request_credential, ServiceId, UserInfo, Token, Params}).
+	gen_server:call(Pid, {request_credential, ServiceId, UserInfo, Token,
+                          Params},infinity).
 %% gen_server.
 
 init([]) ->
@@ -48,7 +49,8 @@ handle_call({request_credential,ServiceId,UserInfo,Token,Params}, From, #state{c
                             token = Token,
                             params = Params
                           }, 
-    {noreply, NewState,?TIMEOUT};
+    Timeout = maps:get(timeout,ServiceInfo,?TIMEOUT),
+    {noreply, NewState,Timeout};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
@@ -61,7 +63,8 @@ handle_info(timeout, State) ->
 handle_info(_Info, State) ->
 	{noreply, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, State) ->
+    {ok,_NewState} = send_reply({error, internal},State),
 	ok.
 
 code_change(_OldVsn, State, _Extra) ->
