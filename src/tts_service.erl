@@ -1,4 +1,4 @@
--module(tts_services).
+-module(tts_service).
 
 -export([get_service_list/0]).
 -export([get_service_list/1]).
