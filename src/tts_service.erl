@@ -16,8 +16,10 @@ get_list(_UserId) ->
 get_info(ServiceId) ->
     tts_data:service_get(ServiceId).
 
-add(ServiceId,ServiceInfo) ->
+add(ServiceId,ServiceInfo) when is_map(ServiceInfo), is_binary(ServiceId) ->
     %TODO:
     %validate and change keys/values
-    tts_data:service_add(ServiceId,maps:put(id,ServiceId,ServiceInfo)).
+    tts_data:service_add(ServiceId,maps:put(id,ServiceId,ServiceInfo));
+add(ServiceId,ServiceInfo) when is_list(ServiceId) ->
+    add(list_to_binary(ServiceId), ServiceInfo).
 
