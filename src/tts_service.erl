@@ -19,5 +19,5 @@ get_info(ServiceId) ->
 add(ServiceId,ServiceInfo) ->
     %TODO:
     %validate and change keys/values
-    tts_data:service_add(ServiceId,ServiceInfo).
+    tts_data:service_add(ServiceId,maps:put(id,ServiceId,ServiceInfo)).
 

@@ -246,7 +246,7 @@ parse_and_apply_services(ServiceConfs)  ->
 add_services([]) ->
     ok;
 add_services([{ServiceID,ServiceConfigList}|T]) ->
-    ConfigMap = maps:from_list([{service_id,ServiceID}|ServiceConfigList]), 
+    ConfigMap = maps:from_list(ServiceConfigList), 
     tts_service:add(ServiceID,ConfigMap), 
     add_services(T).
 
