@@ -8,3 +8,4 @@ get_list(_UserId) ->
 
 request(_ServiceId, _UserInfo, _Token, _Params) ->
     ok.
+
