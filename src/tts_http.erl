@@ -89,7 +89,7 @@ request_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) -
     {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok,Token} = tts_session:get_token(Session),
-    tts_service:request_credential(ServiceId,UserInfo,Token,[]),
+    tts_credential:request(ServiceId,UserInfo,Token,[]),
     show_user_page(Session);
 request_credential(ReqMap) ->
     Desc = <<"">>,
@@ -102,8 +102,8 @@ show_user_page(Session) ->
     {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid,UserInfo),
-    {ok, Credentials} = tts_service:get_credential_list(UserId),
-    {ok, ServiceMapList} = tts_service:get_service_list(UserId),
+    {ok, Credentials} = tts_credential:get_list(UserId),
+    {ok, ServiceMapList} = tts_service:get_list(UserId),
     ServiceList = [ [Id, Type, Host, Desc] ||
                     #{id:=Id,type:=Type,host:=Host,description:=Desc} <- ServiceMapList],
     Params = [{username, UserId},

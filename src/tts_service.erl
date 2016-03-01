@@ -1,22 +1,22 @@
 -module(tts_service).
 
--export([get_service_list/0]).
--export([get_service_list/1]).
--export([get_service_info/1]).
--export([add_service/2]).
+-export([get_list/0]).
+-export([get_list/1]).
+-export([get_info/1]).
+-export([add/2]).
 
 
-get_service_list() ->
+get_list() ->
     {ok,[]}.
 
-get_service_list(_UserId) ->
+get_list(_UserId) ->
     %TODO: implement a whitelist per service
     tts_data:service_get_list().
 
-get_service_info(ServiceId) ->
+get_info(ServiceId) ->
     tts_data:service_get(ServiceId).
 
-add_service(ServiceId,ServiceInfo) ->
+add(ServiceId,ServiceInfo) ->
     %TODO:
     %validate and change keys/values
     tts_data:service_add(ServiceId,ServiceInfo).

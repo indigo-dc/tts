@@ -247,7 +247,7 @@ add_services([]) ->
     ok;
 add_services([{ServiceID,ServiceConfigList}|T]) ->
     ConfigMap = maps:from_list([{service_id,ServiceID}|ServiceConfigList]), 
-    tts_service:add_service(ServiceID,ConfigMap), 
+    tts_service:add(ServiceID,ConfigMap), 
     add_services(T).
 
 register_files(Name,Files) ->
