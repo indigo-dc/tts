@@ -77,9 +77,6 @@ bin_to_atom(BinaryKey,Default) ->
             AtomKey
     end.
 
-verify_value(AKey,Value) when is_list(Value) ->
-    % default is to convert to binary
-    verify_value(AKey,list_to_binary(Value));
 verify_value(cred_cmd_req_file,InFile) ->
     %load file
     BaseDir = ?CONFIG(service_config_path),
@@ -89,6 +86,9 @@ verify_value(cred_cmd_req_file,InFile) ->
     ModuleName = binary_to_atom(<< <<"tts_service_cmd_">>/binary, RandomPart/binary >>, utf8), 
     {ok, _} = erlydtl:compile_file(FileName, ModuleName),
     {ok, InFile, #{cmd_mod_req => ModuleName}}; 
+verify_value(AKey,Value) when is_list(Value) ->
+    % default is to convert to binary
+    verify_value(AKey,list_to_binary(Value));
 verify_value(con_type,Value) ->
     {ok, bin_to_atom(Value,undefined)}; 
 verify_value(_AKey,Value) ->
