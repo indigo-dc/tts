@@ -143,7 +143,7 @@ apply_main_settings() ->
     CacheTimeout = get_integer_value(main,"","CacheTimeout", 900),
     CacheMaxEntries = get_integer_value(main,"","CacheMaxEntries", 50000),
     CacheCheckInterval = get_integer_value(main,"","CacheCheckInterval", 300),
-    ServiceConfigPath = get_binary_value(main,"","ServiceConfigPath", "./services"),
+    ServiceConfigPath = get_string_value(main,"","ServiceConfigPath", "./services"),
   
 
     set_config(log_level,LogLevel),
