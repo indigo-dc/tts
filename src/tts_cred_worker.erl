@@ -113,13 +113,13 @@ get_cmd_module(_, _) ->
 
 execute_commands(undefined,_UserInfo, _Connection) ->
     {error, no_cmd_mod};
-execute_commands(CmdMod,UserInfo, _Connection) when is_atom(CmdMod) ->
-    #{ } = UserInfo,
-    %TODO: remove hardcoding
-    User = <<"joe">>,
-    Uid = 1001,
-    Gid = 1001,
-    {ok, IoList} = CmdMod:render([{user, User },{uid, Uid},{gid, Gid},{}]), 
+execute_commands(CmdMod, UserInfo, _Connection) when is_atom(CmdMod) ->
+    #{ uid := User,
+       uidNumber := Uid, 
+       gidNumber := Gid,
+       homeDirectory := HomeDir
+     } = UserInfo,
+    {ok, IoList} = CmdMod:render([{user, User },{uid, Uid},{gid, Gid},{home_dir, HomeDir}]), 
     CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global]),
     io:format("got the rendered commands ~p~n",[CmdList]),
     {ok, IoList};
