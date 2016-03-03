@@ -14,7 +14,10 @@ get_list(_UserId) ->
     tts_data:service_get_list().
 
 get_info(ServiceId) ->
-    tts_data:service_get(ServiceId).
+    case tts_data:service_get(ServiceId) of
+        {ok, {_Id, Info}} -> {ok, Info};
+        Other -> Other
+    end.
 
 add(ServiceId,ServiceMap) when is_map(ServiceMap), is_binary(ServiceId) ->
     ServiceInfo = map_to_atom_keys(ServiceMap),
@@ -53,7 +56,7 @@ map_to_atom_keys([{Key,Value}|T],Map) when is_list(Key) ->
                     {<<"ConnectionType">>,con_type},
                     {<<"ConnectionUser">>,con_user},
                     {<<"ConnectionHost">>,con_host},
-                    {<<"ConnectionPort">>,con_host},
+                    {<<"ConnectionPort">>,con_port},
                     {<<"ConnectionKeyFile">>,con_key_file},
 
                     {<<"RequestCmdFile">>,cred_cmd_req_file},

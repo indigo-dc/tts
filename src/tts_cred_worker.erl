@@ -90,7 +90,7 @@ perform_request(State) ->
     {ok, CmdMod} = get_cmd_module(request,ServiceInfo),
     {ok, Result} = execute_commands(CmdMod,UserInfo,Connection),
     ok = close_connection(Connection),
-    send_reply(Result,State).
+    send_reply(Result ,State).
 
                       
 connect_to_service(#{con_type := ssh , con_host := _Host, con_key_file := _KeyFile} = Info ) ->
@@ -121,8 +121,7 @@ execute_commands(CmdMod, UserInfo, _Connection) when is_atom(CmdMod) ->
      } = UserInfo,
     {ok, IoList} = CmdMod:render([{user, User },{uid, Uid},{gid, Gid},{home_dir, HomeDir}]), 
     CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global]),
-    io:format("got the rendered commands ~p~n",[CmdList]),
-    {ok, IoList};
+    {ok, {ok,CmdList}};
 execute_commands(_Mod,_Info, _Connection) ->
     {error, no_cmd_mod}.
 
