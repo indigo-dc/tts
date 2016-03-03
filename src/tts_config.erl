@@ -113,12 +113,12 @@ ensure_config_found(_Defined) ->
     ok.
 
 read_service_configs() ->
-    read_service_configs(get_(config_path, undefined)). 
+    read_service_configs(get_(service_config_path, undefined)). 
 
 read_service_configs(undefined) ->
     ok;
 read_service_configs(BasePath) ->
-    ServiceConfs = filelib:wildcard(filename:join([BasePath,"services","*.conf"])), 
+    ServiceConfs = filelib:wildcard(filename:join([BasePath,"*.conf"])), 
     parse_and_apply_services(ServiceConfs), 
     ok.
 
@@ -143,6 +143,7 @@ apply_main_settings() ->
     CacheTimeout = get_integer_value(main,"","CacheTimeout", 900),
     CacheMaxEntries = get_integer_value(main,"","CacheMaxEntries", 50000),
     CacheCheckInterval = get_integer_value(main,"","CacheCheckInterval", 300),
+    ServiceConfigPath = get_integer_value(main,"","ServiceConfigPath", "./services"),
   
 
     set_config(log_level,LogLevel),
@@ -157,6 +158,7 @@ apply_main_settings() ->
     set_config(ep_redirect,EpRedirect),
     set_config(ep_return,EpReturn),
     set_config(ssl,SSL),
+    set_config(service_config_path,tts_file_util:to_abs(ServiceConfigPath)),
     set_config(session_timeout,SessionTimeout * 1000),
     set_config(cache_timeout,CacheTimeout * 1000),
     set_config(cache_check_interval,CacheCheckInterval * 1000),
@@ -351,31 +353,17 @@ set_config(config_path=Key, Path) ->
        _ -> ok
    end;
 set_config(log_file, FileName) ->
-    _AbsFileName = get_abs_file(FileName);
+    _AbsFileName = tts_file_util:to_abs(FileName);
 set_config(Key, Value) ->
     application:set_env(tts,Key,Value).
 
 get_abs_file_or(File, Other) ->
-    AbsFile = get_abs_file(File),
+    AbsFile = tts_file_util:to_abs(File),
     case filelib:is_file(AbsFile) of
         true -> AbsFile;
         false -> Other 
     end.
 
-get_abs_file(FileName) ->
-    get_abs_file(is_absolute(FileName), FileName).
-
-get_abs_file(true,FileName) ->
-    FileName;
-get_abs_file(false,FileName) ->
-    filename:join(get_(config_path),FileName).
-
-is_absolute(FileName) when is_binary(FileName) ->
-   binary:part(FileName,{0,1}) == <<"/">>;
-is_absolute(["/"| _])  ->
-    true;
-is_absolute([_|_])  ->
-    false.
 
 listen_port() ->
     listen_port(?CONFIG(listen_port), ?CONFIG(port),?CONFIG(ssl)).

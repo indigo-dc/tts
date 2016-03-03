@@ -57,7 +57,7 @@ handle_oidc_token({error, Error}, ReqMap) ->
     show_error_and_close_sessino(Error, ReqMap).
 
 
-show_select_page(ReqMap) ->
+show_select_page(_ReqMap) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     GetIdAndDesc = fun({Id, Pid}, List) ->
                            {ok,#{description := Desc}} =
@@ -65,11 +65,11 @@ show_select_page(ReqMap) ->
                            [ [ Id, Desc ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc,[],OIDCList)),
-    redirect_to_op_or_show_select_page(OpList,ReqMap).
-
-redirect_to_op_or_show_select_page([[OpenIdProviderId,_]],ReqMap) ->
-    redirect_to(auth_server, maps:put(op_id,OpenIdProviderId,ReqMap));
-redirect_to_op_or_show_select_page(OpList,_) ->
+%%     redirect_to_op_or_show_select_page(OpList,ReqMap).
+%%
+%% redirect_to_op_or_show_select_page([[OpenIdProviderId,_]],ReqMap) ->
+%%     redirect_to(auth_server, maps:put(op_id,OpenIdProviderId,ReqMap));
+%% redirect_to_op_or_show_select_page(OpList,_) ->
     {ok, Body} = tts_ui_login_dtl:render([{oidc_op_list,OpList}]),
     #{body => Body, status => 200, cookie => update}.
 
