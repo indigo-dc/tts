@@ -49,7 +49,7 @@ handle_call({request_credential,ServiceId,UserInfo,Token,Params}, From, #state{c
                             token = Token,
                             params = Params
                           }, 
-    gen_server:cast(self(),get_service_info),
+    gen_server:cast(self(),perform_request),
     {noreply, NewState,200};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
