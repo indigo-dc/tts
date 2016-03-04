@@ -93,11 +93,16 @@ perform_request(State) ->
     send_reply(Result ,State).
 
                       
-connect_to_service(#{con_type := ssh , con_host := _Host, con_key_file := _KeyFile} = Info ) ->
+connect_to_service(#{con_type := local}) ->
+    Connection = con,
+    {ok, Connection};
+connect_to_service(#{con_type := ssh , con_host := _Host, key_set := true} = Info ) ->
     _Port = maps:get(con_port,Info,22),
     _User = maps:get(con_user,Info,<<"root">>),
     Connection = con,
     {ok, Connection};
+connect_to_service(#{con_type := ssh } ) ->
+    throw(missing_ssh_config);
 connect_to_service( _ )  ->
     throw(unknown_con_type).
 
