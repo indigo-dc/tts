@@ -2,7 +2,6 @@
 -behaviour(gen_server).
 
 -include("tts.hrl").
--include_lib("public_key/include/public_key.hrl").
 
 % Path in REVERSE order
 -define(GLOBALPATH,[
