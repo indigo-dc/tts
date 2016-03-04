@@ -84,8 +84,10 @@ bin_to_atom(BinaryKey,Default) ->
 
 verify_value(con_key_file,KeyFile) ->
     AbsKeyFile = tts_file_util:to_abs(KeyFile,?CONFIG(service_config_path)),
-    Key = read_key(AbsKeyFile), 
-    {ok, KeyFile, #{con_key => Key}};  
+    case safe_read_key(AbsKeyFile) of
+        {ok, Key} -> {ok, KeyFile, #{con_key => Key}};  
+        {error, _} -> {ok, KeyFile}
+    end;
 verify_value(cred_cmd_req_file,InFile) ->
     %load file
     BaseDir = ?CONFIG(service_config_path),
@@ -113,12 +115,19 @@ ensure_module_name_unused(false,ModuleName) ->
 ensure_module_name_unused(_,_) ->
     get_unique_module_name().
 
+safe_read_key(File) ->
+    try read_key(File) of
+        {ok,Key} -> {ok, Key}
+    catch
+        _:_ ->
+            {error, bad_key }
+    end.
 
 read_key(File) ->
     {ok, Text} = file:read_file(File),
     KeyList = public_key:pem_decode(Text),
     Key = ensure_valid_key(public_key:pem_entry_decode(KeyList)),
-    {Key, Text}.
+    {ok, Key}.
 
 
 ensure_valid_key([PemKey]) ->
