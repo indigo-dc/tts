@@ -85,8 +85,8 @@ bin_to_atom(BinaryKey,Default) ->
 verify_value(con_key_file,KeyFile) ->
     AbsKeyFile = tts_file_util:to_abs(KeyFile,?CONFIG(service_config_path)),
     case safe_read_key(AbsKeyFile) of
-        {ok, Key} -> {ok, KeyFile, #{con_key => Key}};  
-        {error, _} -> {ok, KeyFile}
+        {ok, Key} -> {ok, AbsKeyFile, #{con_key => Key}};  
+        {error, _} -> {ok, AbsKeyFile}
     end;
 verify_value(cred_cmd_req_file,InFile) ->
     %load file
