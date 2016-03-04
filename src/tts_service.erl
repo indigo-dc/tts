@@ -83,7 +83,8 @@ bin_to_atom(BinaryKey,Default) ->
     end.
 
 verify_value(con_key_file,KeyFile) ->
-    Key = read_key(KeyFile), 
+    AbsKeyFile = tts_file_util:to_abs(KeyFile,?CONFIG(service_config_path)),
+    Key = read_key(AbsKeyFile), 
     {ok, KeyFile, #{con_key => Key}};  
 verify_value(cred_cmd_req_file,InFile) ->
     %load file
