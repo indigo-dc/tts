@@ -126,12 +126,12 @@ safe_read_key(File) ->
 read_key(File) ->
     {ok, Text} = file:read_file(File),
     KeyList = public_key:pem_decode(Text),
-    Key = ensure_valid_key(public_key:pem_entry_decode(KeyList)),
+    Key = ensure_valid_key(KeyList),
     {ok, Key}.
 
 
 ensure_valid_key([PemKey]) ->
-    ensure_valid_key(PemKey);
+    ensure_valid_key(public_key:pem_entry_decode(PemKey));
 ensure_valid_key(#'RSAPrivateKey'{} = Key) ->
     Key;
 ensure_valid_key(#'PrivateKeyInfo'{privateKey = Key}) ->
