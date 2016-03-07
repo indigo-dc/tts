@@ -58,7 +58,8 @@ map_to_atom_keys([{Key,Value}|T],Map) when is_list(Key) ->
                     {<<"ConnectionUser">>,con_user},
                     {<<"ConnectionHost">>,con_host},
                     {<<"ConnectionPort">>,con_port},
-                    {<<"ConnectionKeyFile">>,con_key_file},
+                    {<<"ConnectionSshDir">>,con_ssh_user_dir},
+                    {<<"Connection">>,con_ssh_user_dir},
 
                     {<<"RequestCmdFile">>,cred_cmd_req_file},
                     {<<"RevokeCmdFile">>,cred_cmd_rev_file},
@@ -82,11 +83,13 @@ bin_to_atom(BinaryKey,Default) ->
             AtomKey
     end.
 
-verify_value(con_key_file,KeyFile) ->
-    AbsKeyFile = tts_file_util:to_abs(KeyFile,?CONFIG(service_config_path)),
-    case safe_read_key(AbsKeyFile) of
-        {ok, Key} -> {ok, AbsKeyFile, #{con_key => Key}};  
-        {error, _} -> {ok, AbsKeyFile}
+verify_value(con_ssh_user_dir,SshDir) ->
+    AbsSshDir = tts_file_util:to_abs(SshDir,?CONFIG(service_config_path)),
+    case filelib:is_dir(AbsSshDir) of
+        true ->
+            {ok, AbsSshDir};
+        false ->
+            {ok, <<"~/.ssh">>}
     end;
 verify_value(cred_cmd_req_file,InFile) ->
     %load file
@@ -114,30 +117,4 @@ ensure_module_name_unused(false,ModuleName) ->
     ModuleName;
 ensure_module_name_unused(_,_) ->
     get_unique_module_name().
-
-safe_read_key(File) ->
-    try read_key(File) of
-        {ok,Key} -> {ok, Key}
-    catch
-        _:_ ->
-            {error, bad_key }
-    end.
-
-read_key(File) ->
-    {ok, Text} = file:read_file(File),
-    KeyList = public_key:pem_decode(Text),
-    Key = ensure_valid_key(KeyList),
-    {ok, Key}.
-
-
-ensure_valid_key([PemKey]) ->
-    ensure_valid_key(public_key:pem_entry_decode(PemKey));
-ensure_valid_key(#'RSAPrivateKey'{} = Key) ->
-    Key;
-ensure_valid_key(#'PrivateKeyInfo'{privateKey = Key}) ->
-    ensure_valid_key(public_key:der_decode('RSAPrivateKey',Key));
-ensure_valid_key([]) ->
-    erlang:error(no_key_in_file);
-ensure_valid_key(_) -> 
-    erlang:error(unknown_key).
 
