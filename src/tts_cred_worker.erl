@@ -102,7 +102,7 @@ connect_to_service(#{con_type := local}) ->
     {ok, local};
 connect_to_service(#{con_type := ssh , con_host := Host } = Info ) ->
     Port = maps:get(con_port,Info,22),
-    User = maps:get(con_user,Info,<<"root">>),
+    User = maps:get(con_user,Info,"root"),
     UserDir = maps:get(con_ssh_user_dir,Info),
     ssh:connect(Host,Port,[{user_dir,UserDir},{user_interaction,false},{user,User},{id_string,"TokenTranslationService"}],10000);
 connect_to_service(#{con_type := ssh } ) ->
