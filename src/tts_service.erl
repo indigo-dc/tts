@@ -59,7 +59,6 @@ map_to_atom_keys([{Key,Value}|T],Map) when is_list(Key) ->
                     {<<"ConnectionHost">>,con_host},
                     {<<"ConnectionPort">>,con_port},
                     {<<"ConnectionSshDir">>,con_ssh_user_dir},
-                    {<<"Connection">>,con_ssh_user_dir},
 
                     {<<"RequestCmdFile">>,cred_cmd_req_file},
                     {<<"RevokeCmdFile">>,cred_cmd_rev_file},
@@ -91,6 +90,12 @@ verify_value(con_ssh_user_dir,SshDir) ->
         false ->
             {ok, <<"~/.ssh">>}
     end;
+verify_value(con_ssh_user,User) ->
+    {ok, User};
+verify_value(con_host,Host) ->
+    {ok, Host};
+verify_value(con_port,Port) ->
+    {ok, list_to_integer(Port)};
 verify_value(cred_cmd_req_file,InFile) ->
     %load file
     BaseDir = ?CONFIG(service_config_path),
