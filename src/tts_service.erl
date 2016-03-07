@@ -90,7 +90,7 @@ verify_value(con_ssh_user_dir,SshDir) ->
         false ->
             {ok, <<"~/.ssh">>}
     end;
-verify_value(con_ssh_user,User) ->
+verify_value(con_user,User) ->
     {ok, User};
 verify_value(con_host,Host) ->
     {ok, Host};
