@@ -155,10 +155,12 @@ execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) 
     {noreply, State#state{cmd_state = CmdState}, cmd_list = T}.
 
 
-execute_command(Cmd, ssh, Connection) ->
+execute_command(Cmd, ssh, Connection) when is_list(Cmd) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection,infinity),
     success = ssh_connection:exec(Connection,ChannelId,Cmd,infinity),
-    {ok, #{channel_id => ChannelId, cmd => Cmd}}.
+    {ok, #{channel_id => ChannelId, cmd => Cmd}};
+execute_command(Cmd, ssh, Connection) when is_binary(Cmd) ->
+    execute_command(binary_to_list(Cmd), ssh, Connection).
 
 
 handle_ssh_result(SshCon,SshMsg, #state{connection = SshCon} = State) ->
