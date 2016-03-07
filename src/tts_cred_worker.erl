@@ -19,7 +19,6 @@
           action = undefined,
           client = undefined,
           service_id = undefined,
-          service_info = undefined,
           user_info = undefined,
           token = undefined,
           params = undefined,
@@ -92,7 +91,7 @@ prepare_request(State) ->
     {ok, ServiceInfo} = tts_service:get_info(ServiceId),
     Connection = connect_to_service(ServiceInfo),
     {ok, CmdMod} = get_cmd_module(request,ServiceInfo),
-    create_command_list(CmdMod,UserInfo,Connection,State).
+    create_command_list_and_update_state(CmdMod,UserInfo,ServiceInfo,Connection,State).
 
     %% ok = close_connection(Connection,ServiceInfo),
     %% send_reply(Result ,State).
@@ -120,9 +119,9 @@ get_cmd_module(_, _) ->
     {error, unknown_cmd_mod}.
 
 
-create_command_list(undefined,_UserInfo, _Connection, State) ->
-    {ok, State#state{error = no_cmd_mod}}; 
-create_command_list(CmdMod, UserInfo, {ok, Connection},State) when is_atom(CmdMod) ->
+create_command_list_and_update_state(undefined,_UserInfo, #{con_type := ConType}, _Connection, State) ->
+    {ok, State#state{error = no_cmd_mod, con_type = ConType}}; 
+create_command_list_and_update_state(CmdMod, UserInfo, #{con_type := ConType}, {ok, Connection},State) when is_atom(CmdMod) ->
     #{ uid := User,
        uidNumber := Uid, 
        gidNumber := Gid,
@@ -130,9 +129,9 @@ create_command_list(CmdMod, UserInfo, {ok, Connection},State) when is_atom(CmdMo
      } = UserInfo,
     {ok, IoList} = CmdMod:render([{user, User },{uid, Uid},{gid, Gid},{home_dir, HomeDir}]), 
     CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global]),
-    {ok, State#state{cmd_list=CmdList, connection = Connection}};
-create_command_list(_Mod, _Info, _Connection, State) ->
-    {ok, State#state{error = connection_or_cmd_error}}. 
+    {ok, State#state{cmd_list=CmdList, connection = Connection, con_type = ConType}};
+create_command_list_and_update_state(_Mod, _Info, #{con_type := ConType}, _Connection, State) ->
+    {ok, State#state{error = connection_or_cmd_error, con_type = ConType}}. 
 
 trigger_next_command() ->
     gen_server:cast(self(),execute_cmd).
