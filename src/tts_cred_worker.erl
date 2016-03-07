@@ -100,7 +100,7 @@ prepare_request(State) ->
                       
 connect_to_service(#{con_type := local}) ->
     {ok, local};
-connect_to_service(#{con_type := ssh , con_host := Host, key_set := true} = Info ) ->
+connect_to_service(#{con_type := ssh , con_host := Host } = Info ) ->
     Port = maps:get(con_port,Info,22),
     User = maps:get(con_user,Info,<<"root">>),
     UserDir = maps:get(con_ssh_user_dir,Info),
