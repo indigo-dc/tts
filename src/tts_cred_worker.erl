@@ -152,7 +152,7 @@ execute_command_or_send_result([],ConType,Connection,undefined,Log,State) ->
     {stop,normal,NewState};
 execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) ->
     {ok, CmdState} = execute_command(Cmd,ConType,Connection),
-    {noreply, State#state{cmd_state = CmdState}, cmd_list = T}.
+    {noreply, State#state{cmd_state = CmdState, cmd_list = T}}.
 
 
 execute_command(Cmd, ssh, Connection) when is_list(Cmd) ->
