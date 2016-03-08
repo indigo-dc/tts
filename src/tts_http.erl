@@ -89,8 +89,11 @@ request_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) -
     {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok,Token} = tts_session:get_token(Session),
-    tts_credential:request(ServiceId,UserInfo,Token,[]),
-    show_user_page(Session);
+    case tts_credential:request(ServiceId,UserInfo,Token,[]) of
+        {ok, Credential} -> 
+            show_user_page(Session,Credential);
+        _ -> show_user_page(Session)
+    end;
 request_credential(ReqMap) ->
     Desc = <<"">>,
     show_error(Desc,ReqMap,false).
