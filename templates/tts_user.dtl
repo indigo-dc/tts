@@ -2,40 +2,47 @@
     <body>
         <h1>Welcome</h1>
         this is your user page, you are logged in as {{ username }}.<br>
-        {% if credential_list %}
-        <table>
-        {% for credential in credential_list %}
-            <tr>
-            <form method="post" action="{{ ep_user }}">
-            <input type="hidden" name="credential_id" value="{{ credential.id }}" >
-            <input type="hidden" name="action" value="revoke" >
-                <td> {{ credential.description }}  </td> 
-                <td> <button type="submit">Revoke</button></td> 
-            </form> 
-            </tr>
-        {% endfor %}
-        </table>
-        {% else %}
-        You do not have any credentials
-        {% endif %}
         <br>
         {% if service_list %}
+        <h2>Services</h2>
         <table>
         {% for service in service_list %}
             <tr>
             <form method="post" action="{{ ep_user }}">
             <input type="hidden" name="service_id" value="{{ service.id }}" >
-            <input type="hidden" name="action" value="request" >
                 <td> {{ service.type }}  </td> 
                 <td> {{ service.host }}  </td> 
                 <td> {{ service.description }}  </td> 
-                <td> <button type="submit">Request</button></td> 
+                {% if service.has_credential %}
+                    <td> 
+                        <button type="submit">Revoke</button> 
+                        <input type="hidden" name="action" value="revoke" >
+                    </td>
+                {% else %}
+                    <td>
+                        <button type="submit">Request</button> 
+                        <input type="hidden" name="action" value="request" >
+                    </td>
+                {% endif %}
             </form> 
             </tr>
         {% endfor %}
         </table>
         {% else %}
-        You are not able to request any credentials 
+        You are not able to request/revoke any credentials 
+        {% endif %}
+        {% if credential %}
+        <h2>Credential</h2>
+        This information will be gone once you perform any action, the
+        credential is also not stored on the server
+        <table>
+        {% for keyvalue in credential %}
+            <tr>
+                <td> {{ keyvalue.name }}  </td> 
+                <td> {{ keyvalue.value }}  </td> 
+            </tr>
+        {% endfor %}
+        </table>
         {% endif %}
         <br>
         <form method="post" action="{{ ep_user }}">
