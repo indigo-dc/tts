@@ -5,7 +5,7 @@
 -define(TIMEOUT,20000).
 
 -export([start_link/0]).
--export([request/5]).
+-export([request/4]).
 
 %% gen_server.
 -export([init/1]).
@@ -20,7 +20,6 @@
           client = undefined,
           service_id = undefined,
           user_info = undefined,
-          token = undefined,
           params = undefined,
           connection = undefined,
           con_type = undefined,
@@ -36,22 +35,20 @@
 start_link() ->
 	gen_server:start_link(?MODULE, [], []).
 
--spec request(ServiceId :: any(), UserInfo :: map(), Token :: map(),
-              Params::any(), Pid::pid()) -> {ok, pid()}.
-request(ServiceId,UserInfo,Token,Params,Pid) ->
-	gen_server:call(Pid, {request_credential, ServiceId, UserInfo, Token,
+-spec request(ServiceId :: any(), UserInfo :: map(), Params::any(), Pid::pid()) -> {ok, pid()}.
+request(ServiceId,UserInfo,Params,Pid) ->
+	gen_server:call(Pid, {request_credential, ServiceId, UserInfo,
                           Params},infinity).
 %% gen_server.
 
 init([]) ->
 	{ok, #state{}}.
 
-handle_call({request_credential,ServiceId,UserInfo,Token,Params}, From, #state{client = undefined} = State) ->
+handle_call({request_credential,ServiceId,UserInfo,Params}, From, #state{client = undefined} = State) ->
     NewState = State#state{ action = request,
                             client = From,
                             service_id = ServiceId,
                             user_info = UserInfo,
-                            token = Token,
                             params = Params
                           }, 
     gen_server:cast(self(),perform_request),
@@ -162,9 +159,15 @@ execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) 
     {ok, CmdState} = execute_command(Cmd,ConType,Connection),
     {noreply, State#state{cmd_state = CmdState, cmd_list = T}}.
 
-create_result(#{exit_status := 0, std_out := Data}) ->
-    case jsx:is_json(Data) of
-        tru -> {ok,jsx:decode(Data,[return_maps,{labels,attempt_atom}])};
+create_result(#{exit_status := 0, std_out := []}) ->
+    {error, no_json};
+create_result(#{exit_status := 0, std_out := [H|T]}) ->
+    Append = fun(Line,Complete) ->
+                     << Complete/binary, <<"\n">>/binary, Line /binary >>
+             end,
+    Json = lists:foldl(Append,H,T),
+    case jsx:is_json(Json) of
+        tru -> {ok,jsx:decode(Json,[return_maps,{labels,attempt_atom}])};
         false -> {error, bad_json_result}
     end;
 create_result(#{exit_status := _}) ->
@@ -175,9 +178,6 @@ create_result(_) ->
     create_result(#{exit_status => -1}).
 
 
-
-
-    
 
 execute_command(Cmd, ssh, Connection) when is_list(Cmd) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection,infinity),
