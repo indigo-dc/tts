@@ -128,8 +128,15 @@ create_command_list_and_update_state(CmdMod, UserInfo, #{con_type := ConType}, {
        homeDirectory := HomeDir
      } = UserInfo,
     {ok, IoList} = CmdMod:render([{user, User },{uid, Uid},{gid, Gid},{home_dir, HomeDir}]), 
-    CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global]),
-    {ok, State#state{cmd_list=CmdList, connection = Connection, con_type = ConType}};
+    CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global, trim_all]),
+    RemoveComments = fun(Line,Cmds) ->
+                             case  binary:first(Line) of
+                                 <<"#">> -> Cmds;
+                                 _ -> [Line | Cmds]
+                             end
+                     end,
+    CleanCmdList = lists:reverse(lists:foldl(RemoveComments,[],CmdList)),
+    {ok, State#state{cmd_list=CleanCmdList, connection = Connection, con_type = ConType}};
 create_command_list_and_update_state(_Mod, _Info, #{con_type := ConType}, _Connection, State) ->
     {ok, State#state{error = connection_or_cmd_error, con_type = ConType}}. 
 
