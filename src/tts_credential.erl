@@ -12,7 +12,7 @@ request(ServiceId, UserInfo, Token, Params) ->
     handle_request_result(Result,UserInfo,Token).
 
 
-handle_request_result({ok,#{credential := Cred, state := State}},_UserInfo,_Token) ->
+handle_request_result({ok,#{credential := _Cred, state := _State}},UserInfo,_Token) ->
     %TODO: store the credential and the needed params for revoke/incident 
     ok;
 handle_request_result({error,_},_UserInfo,_Token) ->

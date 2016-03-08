@@ -167,7 +167,7 @@ create_result(#{exit_status := 0, std_out := [H|T]}) ->
              end,
     Json = lists:foldl(Append,H,T),
     case jsx:is_json(Json) of
-        tru -> {ok,jsx:decode(Json,[return_maps,{labels,attempt_atom}])};
+        true -> {ok,jsx:decode(Json,[return_maps,{labels,attempt_atom}])};
         false -> {error, bad_json_result}
     end;
 create_result(#{exit_status := _}) ->
