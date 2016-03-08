@@ -154,13 +154,30 @@ execute_single_command_or_exit(State) ->
 
 execute_command_or_send_result([],ConType,Connection,undefined,Log,State) ->
     close_connection(Connection,ConType),
-    [LastResult|_] = Log,
-    {ok,NewState} = send_reply({ok, LastResult},State),
+    [LastLog|_] = Log,
+    Result = create_result(LastLog),
+    {ok,NewState} = send_reply(Result,State),
     {stop,normal,NewState};
 execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) ->
     {ok, CmdState} = execute_command(Cmd,ConType,Connection),
     {noreply, State#state{cmd_state = CmdState, cmd_list = T}}.
 
+create_result(#{exit_status := 0, std_out := Data}) ->
+    case jsx:is_json(Data) of
+        tru -> {ok,jsx:decode(Data,[return_maps,{labels,attempt_atom}])};
+        false -> {error, bad_json_result}
+    end;
+create_result(#{exit_status := _}) ->
+    {error, script_failed};
+create_result(#{std_err := <<>>, std_out := Data}) ->
+    create_result(#{std_out=>Data,exit_status => 0});
+create_result(_) ->
+    create_result(#{exit_status => -1}).
+
+
+
+
+    
 
 execute_command(Cmd, ssh, Connection) when is_list(Cmd) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection,infinity),
