@@ -99,13 +99,15 @@ revoke_credential(#{session := Session}) ->
     show_user_page(Session).
 
 show_user_page(Session) ->
+    show_user_page(Session,false).
+
+show_user_page(Session,Credential) ->
     {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid,UserInfo),
-    {ok, Credentials} = tts_credential:get_list(UserId),
     {ok, ServiceList} = tts_service:get_list(UserId),
     Params = [{username, UserId},
-              {credential_list, Credentials},
+              {credential, Credential},
               {service_list, ServiceList}
              ],
     {ok, Body} = tts_user_dtl:render(Params),
