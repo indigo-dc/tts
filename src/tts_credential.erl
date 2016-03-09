@@ -7,7 +7,8 @@
 -export([
          get_list/1,
          request/4,
-         revoke/2
+         revoke/2,
+         security_incident/2
         ]).
 
 %% gen_server.
@@ -40,7 +41,16 @@ revoke(ServiceId, UserInfo) ->
             handle_revoke_result(Result,ServiceId,UserInfo,CredState);
         Other -> Other
     end.
-    %% handle_request_result(Result,ServiceId,UserInfo,Token).
+
+security_incident(ServiceId, UserInfo) ->
+    #{uid := UserId } = UserInfo,
+    case get_credential_state(UserId, ServiceId) of
+        {ok, CredState} -> 
+            {ok, Pid} = tts_cred_sup:new_worker(),
+            Result = tts_cred_worker:security_incident(ServiceId,UserInfo,CredState,Pid),
+            handle_revoke_result(Result,ServiceId,UserInfo,CredState);
+        Other -> Other
+    end.
 
 handle_request_result({ok,#{credential := Cred} = CredMap},ServiceId,
                       #{uid := UserId},_Token) ->

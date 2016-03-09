@@ -7,6 +7,7 @@
 -export([start_link/0]).
 -export([request/4]).
 -export([revoke/4]).
+-export([security_incident/4]).
 
 %% gen_server.
 -export([init/1]).
@@ -46,6 +47,11 @@ request(ServiceId,UserInfo,Params,Pid) ->
 revoke(ServiceId,UserInfo,CredState,Pid) ->
 	gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo,
                           CredState},infinity).
+
+-spec security_incident(ServiceId :: any(), UserInfo :: map(), CredState::any(), Pid::pid()) -> {ok, map()}.
+security_incident(ServiceId,UserInfo,CredState,Pid) ->
+	gen_server:call(Pid, {security_incident, ServiceId, UserInfo,
+                          CredState},infinity).
 %% gen_server.
 
 init([]) ->
@@ -62,6 +68,15 @@ handle_call({request_credential,ServiceId,UserInfo,Params}, From, #state{client 
     {noreply, NewState,200};
 handle_call({revoke_credential,ServiceId,UserInfo,CredState}, From, #state{client = undefined} = State) ->
     NewState = State#state{ action = revoke,
+                            client = From,
+                            service_id = ServiceId,
+                            user_info = UserInfo,
+                            cred_state = CredState 
+                          }, 
+    gen_server:cast(self(),perform_action),
+    {noreply, NewState,200};
+handle_call({security_incident,ServiceId,UserInfo,CredState}, From, #state{client = undefined} = State) ->
+    NewState = State#state{ action = incident,
                             client = From,
                             service_id = ServiceId,
                             user_info = UserInfo,
