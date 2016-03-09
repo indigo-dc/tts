@@ -33,7 +33,7 @@ request(ServiceId, UserInfo, Token, Params) ->
 
 revoke(ServiceId, UserInfo) ->
     {ok, Pid} = tts_cred_sup:new_worker(),
-    #{id := UserId } = UserInfo,
+    #{uid := UserId } = UserInfo,
     case get_credential_state(UserId, ServiceId) of
         {ok, CredState} -> 
             tts_cred_worker:revoke(ServiceId,UserInfo,CredState,Pid);
@@ -41,10 +41,10 @@ revoke(ServiceId, UserInfo) ->
     end.
     %% handle_request_result(Result,ServiceId,UserInfo,Token).
 
-handle_request_result({ok,#{credential := Cred, state := _State}},ServiceId,
-                      #{id := UserId},_Token) ->
+handle_request_result({ok,#{credential := Cred, state := CredState}},ServiceId,
+                      #{uid := UserId},_Token) ->
     %TODO: ensure the user has no credential there (what about REST?)
-    ok = store_credential_if_valid(UserId,ServiceId,Cred),     
+    ok = store_credential_if_valid(UserId,ServiceId,CredState),     
     {ok,Cred};
 handle_request_result({error,_},_ServiceId,_UserInfo,_Token) ->
     ok.
