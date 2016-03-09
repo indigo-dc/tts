@@ -9,9 +9,17 @@
 get_list() ->
     {ok,[]}.
 
-get_list(_UserId) ->
+get_list(UserId) ->
     %TODO: implement a whitelist per service
-    tts_data:service_get_list().
+    {ok, ServiceList} = tts_data:service_get_list(),
+    {ok, CredList} = tts_credential:get_list(UserId),
+    UpdateService = fun(Map, List) ->
+                            ServiceId = maps:get(id,Map,undefined),
+                            HasCred = lists:member(ServiceId,CredList),
+                            [maps:put(has_credential,HasCred,Map) | List]
+                    end,
+    Result = lists:reverse(lists:foldl(UpdateService,[],ServiceList)),
+    {ok, Result}.
 
 get_info(ServiceId) ->
     case tts_data:service_get(ServiceId) of

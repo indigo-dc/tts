@@ -6,6 +6,7 @@
 
 -export([start_link/0]).
 -export([request/4]).
+-export([revoke/4]).
 
 %% gen_server.
 -export([init/1]).
@@ -35,10 +36,15 @@
 start_link() ->
 	gen_server:start_link(?MODULE, [], []).
 
--spec request(ServiceId :: any(), UserInfo :: map(), Params::any(), Pid::pid()) -> {ok, pid()}.
+-spec request(ServiceId :: any(), UserInfo :: map(), Params::any(), Pid::pid()) -> {ok, map()}.
 request(ServiceId,UserInfo,Params,Pid) ->
 	gen_server:call(Pid, {request_credential, ServiceId, UserInfo,
                           Params},infinity).
+
+-spec revoke(ServiceId :: any(), UserInfo :: map(), CredState::any(), Pid::pid()) -> {ok, map()}.
+revoke(ServiceId,UserInfo,CredState,Pid) ->
+	gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo,
+                          CredState},infinity).
 %% gen_server.
 
 init([]) ->

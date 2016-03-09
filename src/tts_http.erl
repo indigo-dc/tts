@@ -98,7 +98,10 @@ request_credential(ReqMap) ->
     Desc = <<"">>,
     show_error(Desc,ReqMap,false).
 
-revoke_credential(#{session := Session}) ->
+revoke_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) ->
+    {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
+    {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+    tts_credential:revoke(ServiceId,UserInfo),
     show_user_page(Session).
 
 show_user_page(Session) ->

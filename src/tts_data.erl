@@ -35,18 +35,25 @@
          service_get_list/0,
          service_inspect/0
         ]).
+-export([
+         credential_add/3,
+         credential_get/1,
+         credential_inspect/0
+        ]).
 -define(TTS_SESSIONS,tts_sessions).
 -define(TTS_OIDCP,tts_oidcp).
 -define(TTS_USER,tts_user).
 -define(TTS_USER_MAPPING,tts_user_mapping).
 -define(TTS_SERVICE,tts_service).
+-define(TTS_CRED_USER,tts_cred_user).
 
 -define(TTS_TABLES,[
                     ?TTS_SESSIONS,
                     ?TTS_OIDCP,
                     ?TTS_USER_MAPPING,
                     ?TTS_USER,
-                    ?TTS_SERVICE
+                    ?TTS_SERVICE,
+                    ?TTS_CRED_USER
                    ]).
 
 init() ->
@@ -277,6 +284,28 @@ service_get_list() ->
 service_inspect() ->
     iterate_through_table_and_print(?TTS_SERVICE).
 
+% functions for  management
+-spec credential_add(UserId::binary(), ServiceId::binary(), CredState :: any()) ->ok | {error, Reason :: atom()}.
+credential_add(UserId, ServiceId, CredState) ->
+    Entry = {ServiceId, CredState},
+    case lookup(?TTS_CRED_USER, UserId) of
+        {ok, {UserId, CredList}} ->
+           insert(?TTS_CRED_USER, {UserId, [Entry | CredList]});
+        {error, not_found} ->
+            insert_new(?TTS_CRED_USER, {UserId, [Entry]})
+    end.
+
+-spec credential_get(UserId::binary()) ->ok.
+credential_get(UserId) ->
+    case lookup(?TTS_CRED_USER,UserId) of
+        {ok, {UserId, CredList}} ->
+            {ok, CredList};
+        Other -> Other
+    end. 
+
+-spec credential_inspect() -> ok. 
+credential_inspect() ->
+    iterate_through_table_and_print(?TTS_CRED_USER).
 %% internal functions
 
 
