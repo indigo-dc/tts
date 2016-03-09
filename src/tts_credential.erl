@@ -8,6 +8,7 @@
          get_list/1,
          request/4,
          revoke/2,
+         security_incident/1,
          security_incident/2
         ]).
 
@@ -42,13 +43,26 @@ revoke(ServiceId, UserInfo) ->
         Other -> Other
     end.
 
+security_incident( UserInfo) ->
+    %TODO: make this run in parallel
+    #{uid := UserId } = UserInfo,
+    {ok, List} = get_credential_states(UserId),
+    Incident = fun({ServiceId, CredState},ResultList) ->
+                       {ok, Pid} = tts_cred_sup:new_worker(),
+                       Result = tts_cred_worker:security_incident(ServiceId,UserInfo,CredState,Pid),
+                       [Result | ResultList]
+               end,
+    {ok, lists:foldl(Incident,[],List)}.
+
+
+
 security_incident(ServiceId, UserInfo) ->
     #{uid := UserId } = UserInfo,
     case get_credential_state(UserId, ServiceId) of
         {ok, CredState} -> 
             {ok, Pid} = tts_cred_sup:new_worker(),
             Result = tts_cred_worker:security_incident(ServiceId,UserInfo,CredState,Pid),
-            handle_revoke_result(Result,ServiceId,UserInfo,CredState);
+            handle_incident_result(Result,ServiceId,UserInfo,CredState);
         Other -> Other
     end.
 
@@ -65,6 +79,12 @@ handle_revoke_result({ok,#{result := Result}},ServiceId, #{uid := UserId}, CredS
     ok = remove_credential(UserId,ServiceId,CredState),     
     {ok, Result};
 handle_revoke_result({error,_},_ServiceId,_UserInfo,_CredState) ->
+    ok.
+
+handle_incident_result({ok,#{result := Result}},ServiceId, #{uid := UserId}, CredState) ->
+    ok = remove_credential(UserId,ServiceId,CredState),     
+    {ok, Result};
+handle_incident_result({error,_},_ServiceId,_UserInfo,_CredState) ->
     ok.
 
 store_credential_if_valid(_,_,#{error := _}) ->
@@ -104,13 +124,19 @@ code_change(_OldVsn, State, _Extra) ->
 
 % functions with data access
 get_credential_list(UserId) ->
+    {ok, List} = get_credential_states(UserId),
+    CredList = [ ServiceId || {ServiceId, _CredState} <- List ], 
+    {ok, CredList}.
+
+get_credential_states(UserId) ->
     case tts_data:credential_get(UserId) of
         {error, _ } -> 
             {ok, []};
         {ok, List} ->
-            CredList = [ ServiceId || {ServiceId, _CredState} <- List ], 
-            {ok, CredList}
+            {ok, List}
     end.
+
+
 
 get_credential_state(UserId,ServiceId) ->
     case tts_data:credential_get(UserId) of
