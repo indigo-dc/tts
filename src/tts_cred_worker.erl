@@ -179,8 +179,8 @@ execute_command_or_send_result([],ConType,Connection,undefined,Log,State) ->
     {ok,NewState} = send_reply(Result,State),
     {stop,normal,NewState};
 execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) ->
-    {ok, CmdState} = execute_command(Cmd,ConType,Connection),
-    {noreply, State#state{cmd_state = CmdState, cmd_list = T}}.
+    {ok, NewState} = execute_command(Cmd,ConType,Connection,State),
+    {noreply, NewState#state{ cmd_list = T}}.
 
 create_result(#{exit_status := 0, std_out := []}) ->
     {error, no_json};
@@ -202,12 +202,20 @@ create_result(_) ->
 
 
 
-execute_command(Cmd, ssh, Connection) when is_list(Cmd) ->
+execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection,infinity),
     success = ssh_connection:exec(Connection,ChannelId,Cmd,infinity),
-    {ok, #{channel_id => ChannelId, cmd => Cmd}};
-execute_command(Cmd, ssh, Connection) when is_binary(Cmd) ->
-    execute_command(binary_to_list(Cmd), ssh, Connection).
+    CmdState =  #{channel_id => ChannelId, cmd => Cmd},
+    {ok, State#state{ cmd_state = CmdState }};
+execute_command(Cmd, local, _Connection, #state{cmd_log=Log} = State) when is_list(Cmd) ->
+    StdOut = os:cmd(Cmd),
+    trigger_next_command(),
+    CmdState = #{std_out => StdOut, cmd => Cmd}, 
+    NewState = State#state{ cmd_state = #{},
+                            cmd_log = [ CmdState | Log] },
+    {ok, NewState};
+execute_command(Cmd, ConType, Connection, State) when is_binary(Cmd) ->
+    execute_command(binary_to_list(Cmd), ConType, Connection, State).
 
 
 handle_ssh_result(SshCon,SshMsg, #state{connection = SshCon} = State) ->
