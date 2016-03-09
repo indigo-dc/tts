@@ -11,6 +11,7 @@ init([]) ->
 	Procs = [
              sessions_supervisor(),
              credential_supervisor(),
+             credential_worker(),
              idh(),
              user_cache(),
              config_worker()
@@ -23,6 +24,11 @@ sessions_supervisor() ->
     #{ id => sessions_sup, 
        start => {tts_sessions_sup, start_link, []},
        type => supervisor
+     }.
+
+credential_worker() ->
+    #{ id => credential,
+       start => {tts_credential, start_link, []}
      }.
 
 credential_supervisor() ->
