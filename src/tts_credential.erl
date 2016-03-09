@@ -41,10 +41,10 @@ revoke(ServiceId, UserInfo) ->
     end.
     %% handle_request_result(Result,ServiceId,UserInfo,Token).
 
-handle_request_result({ok,#{credential := Cred, state := CredState}},ServiceId,
+handle_request_result({ok,#{credential := Cred} = CredMap},ServiceId,
                       #{uid := UserId},_Token) ->
     %TODO: ensure the user has no credential there (what about REST?)
-    ok = store_credential_if_valid(UserId,ServiceId,CredState),     
+    ok = store_credential_if_valid(UserId,ServiceId,CredMap),     
     {ok,Cred};
 handle_request_result({error,_},_ServiceId,_UserInfo,_Token) ->
     ok.
