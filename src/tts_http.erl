@@ -57,7 +57,7 @@ handle_oidc_token({error, Error}, ReqMap) ->
     show_error_and_close_sessino(Error, ReqMap).
 
 
-show_select_page(ReqMap) ->
+show_select_page(_ReqMap) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     GetIdAndDesc = fun({Id, Pid}, List) ->
                            {ok,#{description := Desc}} =
@@ -65,11 +65,11 @@ show_select_page(ReqMap) ->
                            [ [ Id, Desc ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc,[],OIDCList)),
-    redirect_to_op_or_show_select_page(OpList,ReqMap).
-
-redirect_to_op_or_show_select_page([[OpenIdProviderId,_]],ReqMap) ->
-    redirect_to(auth_server, maps:put(op_id,OpenIdProviderId,ReqMap));
-redirect_to_op_or_show_select_page(OpList,_) ->
+%%     redirect_to_op_or_show_select_page(OpList,ReqMap).
+%%
+%% redirect_to_op_or_show_select_page([[OpenIdProviderId,_]],ReqMap) ->
+%%     redirect_to(auth_server, maps:put(op_id,OpenIdProviderId,ReqMap));
+%% redirect_to_op_or_show_select_page(OpList,_) ->
     {ok, Body} = tts_ui_login_dtl:render([{oidc_op_list,OpList}]),
     #{body => Body, status => 200, cookie => update}.
 
@@ -89,25 +89,31 @@ request_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) -
     {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok,Token} = tts_session:get_token(Session),
-    tts_credential:request(ServiceId,UserInfo,Token,[]),
-    show_user_page(Session);
+    case tts_credential:request(ServiceId,UserInfo,Token,[]) of
+        {ok, Credential} -> 
+            show_user_page(Session,Credential);
+        _ -> show_user_page(Session)
+    end;
 request_credential(ReqMap) ->
     Desc = <<"">>,
     show_error(Desc,ReqMap,false).
 
-revoke_credential(#{session := Session}) ->
+revoke_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) ->
+    {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
+    {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+    tts_credential:revoke(ServiceId,UserInfo),
     show_user_page(Session).
 
 show_user_page(Session) ->
+    show_user_page(Session,false).
+
+show_user_page(Session,Credential) ->
     {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid,UserInfo),
-    {ok, Credentials} = tts_credential:get_list(UserId),
-    {ok, ServiceMapList} = tts_service:get_list(UserId),
-    ServiceList = [ [Id, Type, Host, Desc] ||
-                    #{id:=Id,type:=Type,host:=Host,description:=Desc} <- ServiceMapList],
+    {ok, ServiceList} = tts_service:get_list(UserId),
     Params = [{username, UserId},
-              {credential_list, Credentials},
+              {credential, Credential},
               {service_list, ServiceList}
              ],
     {ok, Body} = tts_user_dtl:render(Params),

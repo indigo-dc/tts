@@ -10,6 +10,7 @@
         sasl,
         cowboy,
         crypto,
+        ssh,
         econfig,
         jsx,
         ejwt,
