@@ -50,10 +50,14 @@ security_incident( UserInfo) ->
     Incident = fun({ServiceId, CredState},ResultList) ->
                        {ok, Pid} = tts_cred_sup:new_worker(),
                        Result = tts_cred_worker:security_incident(ServiceId,UserInfo,CredState,Pid),
-                       [Result | ResultList]
+                       [{Result,ServiceId,CredState} | ResultList]
                end,
-    {ok, lists:foldl(Incident,[],List)}.
-
+    ResultList = lists:foldl(Incident,[],List),
+    HandleResult = fun({Result,ServiceId,CredState},_) ->
+                           handle_incident_result(Result,ServiceId,UserInfo,CredState)
+                   end,
+    lists:foldl(HandleResult,[],ResultList),
+    ok.
 
 
 security_incident(ServiceId, UserInfo) ->
