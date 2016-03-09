@@ -104,14 +104,15 @@ verify_value(con_host,Host) ->
     {ok, Host};
 verify_value(con_port,Port) ->
     {ok, list_to_integer(Port)};
-verify_value(cred_cmd_req_file,InFile) ->
-    %load file
-    BaseDir = ?CONFIG(service_config_path),
-    % compile file to a module, store module name in config
-    FileName = tts_file_util:to_abs(InFile,BaseDir),
-    ModuleName = get_unique_module_name(),
-    {ok, _} = erlydtl:compile_file(FileName, ModuleName),
-    {ok, InFile, #{cmd_mod_req => ModuleName}}; 
+verify_value(cred_cmd_req_file,File) ->
+    {ok, ModuleName} = load_command_file(File),
+    {ok, File, #{cmd_mod_req => ModuleName}}; 
+verify_value(cred_cmd_rev_file,File) ->
+    {ok, ModuleName} = load_command_file(File),
+    {ok, File, #{cmd_mod_rev => ModuleName}}; 
+verify_value(cred_cmd_si_file,File) ->
+    {ok, ModuleName} = load_command_file(File),
+    {ok, File, #{cmd_mod_si => ModuleName}}; 
 verify_value(AKey,Value) when is_list(Value) ->
     % default is to convert to binary
     verify_value(AKey,list_to_binary(Value));
@@ -120,6 +121,14 @@ verify_value(con_type,Value) ->
 verify_value(_AKey,Value) ->
     {ok, Value}.
 
+load_command_file(InFile) ->
+    %load file
+    BaseDir = ?CONFIG(service_config_path),
+    % compile file to a module, store module name in config
+    FileName = tts_file_util:to_abs(InFile,BaseDir),
+    ModuleName = get_unique_module_name(),
+    {ok, _} = erlydtl:compile_file(FileName, ModuleName),
+    {ok, ModuleName}.
 
 get_unique_module_name() ->
     RandomPart = tts_utils:random_string(8),
