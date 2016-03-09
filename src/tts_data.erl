@@ -290,9 +290,11 @@ credential_add(UserId, ServiceId, CredState) ->
     Entry = {ServiceId, CredState},
     case lookup(?TTS_CRED_USER, UserId) of
         {ok, {UserId, CredList}} ->
-           insert(?TTS_CRED_USER, {UserId, [Entry | CredList]});
+           true = insert(?TTS_CRED_USER, {UserId, [Entry | CredList]}),
+           ok;
         {error, not_found} ->
-            insert_new(?TTS_CRED_USER, {UserId, [Entry]})
+           true = insert_new(?TTS_CRED_USER, {UserId, [Entry]}),
+           ok
     end.
 
 -spec credential_get(UserId::binary()) ->ok.
