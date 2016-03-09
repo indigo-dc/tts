@@ -37,6 +37,7 @@
         ]).
 -export([
          credential_add/3,
+         credential_remove/3,
          credential_get/1,
          credential_inspect/0
         ]).
@@ -304,6 +305,22 @@ credential_get(UserId) ->
             {ok, CredList};
         Other -> Other
     end. 
+
+-spec credential_remove(UserId::binary(), ServiceId::binary(), CredState :: any()) ->ok | {error, Reason :: atom()}.
+credential_remove(UserId, ServiceId, CredState) ->
+    Entry = {ServiceId, CredState},
+    case lookup(?TTS_CRED_USER, UserId) of
+        {ok, {UserId, CredList}} ->
+            case lists:member(Entry, CredList) of
+                true ->
+                    NewCredList = lists:delete(Entry, CredList),
+                    true = insert(?TTS_CRED_USER, {UserId, NewCredList}),
+                    ok;
+                false ->
+                    {error, credential_not_found}
+            end;
+        Other -> Other
+    end.
 
 -spec credential_inspect() -> ok. 
 credential_inspect() ->

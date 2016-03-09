@@ -32,11 +32,12 @@ request(ServiceId, UserInfo, Token, Params) ->
     handle_request_result(Result,ServiceId,UserInfo,Token).
 
 revoke(ServiceId, UserInfo) ->
-    {ok, Pid} = tts_cred_sup:new_worker(),
     #{uid := UserId } = UserInfo,
     case get_credential_state(UserId, ServiceId) of
         {ok, CredState} -> 
-            tts_cred_worker:revoke(ServiceId,UserInfo,CredState,Pid);
+            {ok, Pid} = tts_cred_sup:new_worker(),
+            Result = tts_cred_worker:revoke(ServiceId,UserInfo,CredState,Pid),
+            handle_revoke_result(Result,ServiceId,UserInfo,CredState);
         Other -> Other
     end.
     %% handle_request_result(Result,ServiceId,UserInfo,Token).
@@ -49,6 +50,12 @@ handle_request_result({ok,#{credential := Cred} = CredMap},ServiceId,
 handle_request_result({error,_},_ServiceId,_UserInfo,_Token) ->
     ok.
 
+
+handle_revoke_result({ok,#{result := Result}},ServiceId, #{uid := UserId}, CredState) ->
+    ok = remove_credential(UserId,ServiceId,CredState),     
+    {ok, Result};
+handle_revoke_result({error,_},_ServiceId,_UserInfo,_CredState) ->
+    ok.
 
 store_credential_if_valid(_,_,#{error := _}) ->
     % if the credential contains the error key, do not store it as there 
@@ -108,3 +115,6 @@ get_credential_state(UserId,ServiceId) ->
 
 store_credential(UserId,ServiceId,CredentialState) ->
      tts_data:credential_add(UserId,ServiceId,CredentialState).
+
+remove_credential(UserId,ServiceId,CredentialState) ->
+     tts_data:credential_remove(UserId,ServiceId,CredentialState).

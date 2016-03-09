@@ -22,6 +22,7 @@
           service_id = undefined,
           user_info = undefined,
           params = undefined,
+          cred_state = undefined,
           connection = undefined,
           con_type = undefined,
           cmd_list = [],
@@ -57,13 +58,22 @@ handle_call({request_credential,ServiceId,UserInfo,Params}, From, #state{client 
                             user_info = UserInfo,
                             params = Params
                           }, 
-    gen_server:cast(self(),perform_request),
+    gen_server:cast(self(),perform_action),
+    {noreply, NewState,200};
+handle_call({revoke_credential,ServiceId,UserInfo,CredState}, From, #state{client = undefined} = State) ->
+    NewState = State#state{ action = revoke,
+                            client = From,
+                            service_id = ServiceId,
+                            user_info = UserInfo,
+                            cred_state = CredState 
+                          }, 
+    gen_server:cast(self(),perform_action),
     {noreply, NewState,200};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
-handle_cast(perform_request, State) ->
-    {ok, NewState} = prepare_request(State),
+handle_cast(perform_action, State) ->
+    {ok, NewState} = prepare_action(State),
     trigger_next_command(),
     {noreply, NewState}; 
 handle_cast(execute_cmd, State) ->
@@ -87,13 +97,14 @@ code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 
-prepare_request(State) ->
+prepare_action(State) ->
     #state{service_id = ServiceId,
-           user_info = UserInfo
+           user_info = UserInfo,
+           action = Action
           } = State,
     {ok, ServiceInfo} = tts_service:get_info(ServiceId),
     Connection = connect_to_service(ServiceInfo),
-    {ok, CmdMod} = get_cmd_module(request,ServiceInfo),
+    {ok, CmdMod} = get_cmd_module(Action,ServiceInfo),
     create_command_list_and_update_state(CmdMod,UserInfo,ServiceInfo,Connection,State).
 
     %% ok = close_connection(Connection,ServiceInfo),
@@ -130,7 +141,13 @@ create_command_list_and_update_state(CmdMod, UserInfo, #{con_type := ConType}, {
        gidNumber := Gid,
        homeDirectory := HomeDir
      } = UserInfo,
-    {ok, IoList} = CmdMod:render([{user, User },{uid, Uid},{gid, Gid},{home_dir, HomeDir}]), 
+    #state{
+       params = Params,
+       cred_state = CredState
+      } = State,
+    {ok, IoList} = CmdMod:render([{user, User },{uid, Uid},{gid, Gid},
+                                  {home_dir, HomeDir},{params, Params},
+                                 {cred_state,CredState}]), 
     CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global, trim_all]),
     RemoveComments = fun(Line,Cmds) ->
                              case  binary:first(Line) of
