@@ -198,18 +198,18 @@ execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) 
     {noreply, NewState#state{ cmd_list = T}}.
 
 create_result(#{exit_status := 0, std_out := []},Log) ->
-    {error, no_json,Log};
+    {error, no_json,lists:reverse(Log)};
 create_result(#{exit_status := 0, std_out := [H|T]}, Log) ->
     Append = fun(Line,Complete) ->
                      << Complete/binary, <<"\n">>/binary, Line /binary >>
              end,
     Json = lists:foldl(Append,H,T),
     case jsx:is_json(Json) of
-        true -> {ok,jsx:decode(Json,[return_maps,{labels,attempt_atom}]), Log};
-        false -> {error, bad_json_result, Log}
+        true -> {ok,jsx:decode(Json,[return_maps,{labels,attempt_atom}]),lists:reverse(Log)};
+        false -> {error, bad_json_result,lists:reverse(Log)}
     end;
 create_result(#{exit_status := _}, Log) ->
-    {error, script_failed, Log};
+    {error, script_failed,lists:reverse(Log) };
 create_result(#{std_err := <<>>, std_out := Data},Log) ->
     create_result(#{std_out=>Data,exit_status => 0},Log);
 create_result(_,Log) ->
