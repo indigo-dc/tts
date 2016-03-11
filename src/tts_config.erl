@@ -127,7 +127,7 @@ return_error(Number, Format, Params) ->
 
 
 apply_main_settings() ->
-    DebugMode = get_boolean_value(main,"","DebugMode","false"),
+    DebugMode = get_boolean_value(main,"","DebugMode",false),
     HostName = get_binary_value(main,"","HostName","localhost"),
     Port = get_binary_value(main,"","Port","default"),
     ListenPort = get_binary_value(main,"","ListenPort","default"),

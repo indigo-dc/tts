@@ -191,7 +191,7 @@ execute_single_command_or_exit(State) ->
 execute_command_or_send_result([],ConType,Connection,undefined,Log,State) ->
     close_connection(Connection,ConType),
     [LastLog|_] = Log,
-    Result = append_log_if_debug(create_result(LastLog),?CONFIG(debug_mode,false),Log),
+    Result = append_log_if_debug(create_result(LastLog),?CONFIG(debug_mode),Log),
     {ok,NewState} = send_reply(Result,State),
     {stop,normal,NewState};
 execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) ->
