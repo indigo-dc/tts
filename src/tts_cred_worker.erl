@@ -166,7 +166,7 @@ create_command_list_and_update_state(CmdMod, UserInfo, #{con_type := ConType}, {
     CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global, trim_all]),
     RemoveComments = fun(Line,Cmds) ->
                              case  binary:first(Line) of
-                                 <<"#">> -> Cmds;
+                                 $# -> Cmds;
                                  _ -> [Line | Cmds]
                              end
                      end,
