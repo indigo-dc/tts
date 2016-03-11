@@ -3,7 +3,6 @@
 
 %% API.
 -define(TIMEOUT,20000).
--include("tts.hrl").
 
 -export([start_link/0]).
 -export([request/4]).
@@ -191,35 +190,30 @@ execute_single_command_or_exit(State) ->
 execute_command_or_send_result([],ConType,Connection,undefined,Log,State) ->
     close_connection(Connection,ConType),
     [LastLog|_] = Log,
-    Result = append_log_if_debug(create_result(LastLog),?CONFIG(debug_mode),Log),
+    Result = create_result(LastLog,Log),
     {ok,NewState} = send_reply(Result,State),
     {stop,normal,NewState};
 execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) ->
     {ok, NewState} = execute_command(Cmd,ConType,Connection,State),
     {noreply, NewState#state{ cmd_list = T}}.
 
-create_result(#{exit_status := 0, std_out := []}) ->
-    {error, no_json};
-create_result(#{exit_status := 0, std_out := [H|T]}) ->
+create_result(#{exit_status := 0, std_out := []},Log) ->
+    {error, no_json,Log};
+create_result(#{exit_status := 0, std_out := [H|T]}, Log) ->
     Append = fun(Line,Complete) ->
                      << Complete/binary, <<"\n">>/binary, Line /binary >>
              end,
     Json = lists:foldl(Append,H,T),
     case jsx:is_json(Json) of
-        true -> {ok,jsx:decode(Json,[return_maps,{labels,attempt_atom}])};
-        false -> {error, bad_json_result}
+        true -> {ok,jsx:decode(Json,[return_maps,{labels,attempt_atom}]), Log};
+        false -> {error, bad_json_result, Log}
     end;
-create_result(#{exit_status := _}) ->
-    {error, script_failed};
-create_result(#{std_err := <<>>, std_out := Data}) ->
-    create_result(#{std_out=>Data,exit_status => 0});
-create_result(_) ->
-    create_result(#{exit_status => -1}).
-
-append_log_if_debug({Type,Value},false,_Log) ->
-    {Type,Value,[]};
-append_log_if_debug({Type,Value},true,Log) ->
-    {Type,Value,Log}.
+create_result(#{exit_status := _}, Log) ->
+    {error, script_failed, Log};
+create_result(#{std_err := <<>>, std_out := Data},Log) ->
+    create_result(#{std_out=>Data,exit_status => 0},Log);
+create_result(_,Log) ->
+    create_result(#{exit_status => -1},Log).
 
 
 execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
