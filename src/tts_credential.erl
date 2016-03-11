@@ -70,13 +70,22 @@ security_incident(ServiceId, UserInfo) ->
         Other -> Other
     end.
 
-handle_request_result({ok,#{credential := Cred} = CredMap},ServiceId,
+handle_request_result({ok,#{credential := Cred} = CredMap, Log},ServiceId,
                       #{uid := UserId},_Token) ->
     %TODO: ensure the user has no credential there (what about REST?)
+    %TODO: write logs to file and pass the info to the user, so admins know
+    %about it
     ok = store_credential_if_valid(UserId,ServiceId,CredMap),     
-    {ok,Cred};
-handle_request_result({error,_},_ServiceId,_UserInfo,_Token) ->
-    ok.
+    case ?CONFIG(debug_mode) of
+        true -> {ok,Cred,Log};
+        _ -> {ok,Cred,[]}
+    end;
+handle_request_result({error,_,Log},_ServiceId,_UserInfo,_Token) ->
+    Cred = false,
+    case ?CONFIG(debug_mode) of
+        true -> {ok,Cred,Log};
+        _ -> {ok,Cred,[]}
+    end.
 
 
 handle_revoke_result({ok,#{result := Result}},ServiceId, #{uid := UserId}, CredState) ->
