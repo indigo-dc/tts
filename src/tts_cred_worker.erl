@@ -3,6 +3,7 @@
 
 %% API.
 -define(TIMEOUT,20000).
+-include("tts.hrl").
 
 -export([start_link/0]).
 -export([request/4]).
@@ -190,7 +191,7 @@ execute_single_command_or_exit(State) ->
 execute_command_or_send_result([],ConType,Connection,undefined,Log,State) ->
     close_connection(Connection,ConType),
     [LastLog|_] = Log,
-    Result = create_result(LastLog),
+    Result = append_log_if_debug(create_result(LastLog),?CONFIG(debug_mode,false),Log),
     {ok,NewState} = send_reply(Result,State),
     {stop,normal,NewState};
 execute_command_or_send_result([Cmd|T],ConType,Connection,undefined,_Log,State) ->
@@ -215,6 +216,10 @@ create_result(#{std_err := <<>>, std_out := Data}) ->
 create_result(_) ->
     create_result(#{exit_status => -1}).
 
+append_log_if_debug({Type,Value},false,_Log) ->
+    {Type,Value,[]};
+append_log_if_debug({Type,Value},true,Log) ->
+    {Type,Value,Log}.
 
 
 execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
