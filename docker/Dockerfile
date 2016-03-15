@@ -1,6 +1,7 @@
 FROM ubuntu:14.04
 
 ENV OTP_VERSION=18.2.1
+ARG config_repo
 
 RUN set -xe \
 	&& buildDeps='build-essential autoconf curl ca-certificates libncurses5-dev libssl-dev openssl git' \
@@ -33,6 +34,12 @@ RUN mkdir -p /usr/local/src/ \
     && cp -r ./_rel/tts_release/* /usr/local/tts \
     && rm -rf /usr/local/src/tts
 
+RUN set -xe \
+    && mkdir -p /usr/local/etc/ \
+    && cd /usr/local/etc \
+	&& git clone "$config_repo" "tts" \
+    && cd tts \
+    && rm -r .git 
 
 EXPOSE 80
 EXPOSE 443 
