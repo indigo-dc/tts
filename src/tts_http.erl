@@ -120,7 +120,7 @@ show_user_page(Session,Credential,Log) ->
              ],
     Params = case ?DEBUG_MODE of
                  true -> 
-                     Token = tts_session:get_token(Session),
+                     {ok, Token} = tts_session:get_token(Session),
                      [{token,Token} |BaseParams];
                  _ -> BaseParams
              end,
