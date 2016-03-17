@@ -133,8 +133,8 @@ clear_config() ->
 read_configs() -> 
     ok = read_main_config(),
     ok = read_service_configs(),
-    ok = start_cowboy(),
-    ok = update_status().
+    ok = update_status(),
+    ok = start_cowboy().
 
 
 read_main_config() ->
