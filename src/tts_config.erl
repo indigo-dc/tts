@@ -238,7 +238,7 @@ apply_oidc_settings() ->
         false -> 
             [Name, Desc, ClientId, Secret, ConfigEndpoint] = Settings,
             LocalEndpoint = ?CONFIG(local_endpoint),
-            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(Name, Name, Desc, ClientId,
+            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(Name, Desc, ClientId,
                                       Secret,
                                       ConfigEndpoint, 
                                       LocalEndpoint);
