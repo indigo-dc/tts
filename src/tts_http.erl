@@ -121,7 +121,8 @@ show_user_page(Session,Credential,Log) ->
     Params = case ?DEBUG_MODE of
                  true -> 
                      {ok, Token} = tts_session:get_token(Session),
-                     [{token,Token} |BaseParams];
+                     TokenText = io_lib:format("~p",[Token]),
+                     [{token,TokenText} |BaseParams];
                  _ -> BaseParams
              end,
     {ok, Body} = tts_user_dtl:render(Params),
