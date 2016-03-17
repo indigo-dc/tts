@@ -236,9 +236,9 @@ apply_oidc_settings() ->
               end,
     case lists:foldl(IsEmpty,false,Settings) of
         false -> 
-            [Id, Desc, ClientId, Secret, ConfigEndpoint] = Settings,
+            [Name, Desc, ClientId, Secret, ConfigEndpoint] = Settings,
             LocalEndpoint = ?CONFIG(local_endpoint),
-            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(Id, Desc, ClientId,
+            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(Name, Name, Desc, ClientId,
                                       Secret,
                                       ConfigEndpoint, 
                                       LocalEndpoint);
