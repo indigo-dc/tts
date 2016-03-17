@@ -76,13 +76,13 @@ handle_request_result({ok,#{credential := Cred} = CredMap, Log},ServiceId,
     %TODO: write logs to file and pass the info to the user, so admins know
     %about it
     ok = store_credential_if_valid(UserId,ServiceId,CredMap),     
-    case ?CONFIG(debug_mode) of
+    case ?DEBUG_MODE of
         true -> {ok,Cred,Log};
         _ -> {ok,Cred,[]}
     end;
 handle_request_result({error,_,Log},_ServiceId,_UserInfo,_Token) ->
     Cred = false,
-    case ?CONFIG(debug_mode) of
+    case ?DEBUG_MODE of
         true -> {ok,Cred,Log};
         _ -> {ok,Cred,[]}
     end.

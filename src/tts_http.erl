@@ -113,11 +113,17 @@ show_user_page(Session,Credential,Log) ->
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid,UserInfo),
     {ok, ServiceList} = tts_service:get_list(UserId),
-    Params = [{username, UserId},
+    BaseParams = [{username, UserId},
               {credential, Credential},
               {credential_log, Log},
               {service_list, ServiceList}
              ],
+    Params = case ?DEBUG_MODE of
+                 true -> 
+                     Token = tts_session:get_token(Session),
+                     maps:put(token,Token,BaseParams);
+                 _ -> BaseParams
+             end,
     {ok, Body} = tts_user_dtl:render(Params),
     #{body => Body, status => 200, cookie => update}.
 

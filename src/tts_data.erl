@@ -4,6 +4,7 @@
 -export([init/0]).
 
 -export([
+         sessions_get_list/0,
          sessions_create_new/1,
          sessions_get_pid/1,
          sessions_update_pid/2,
@@ -18,6 +19,7 @@
          user_delete_info/2,
          user_delete_entries_older_than/1,
          user_delete_entries_not_accessed_for/1,
+         user_clear_cache/0,
          user_inspect/0
         ]).
 
@@ -61,6 +63,15 @@ init() ->
     create_tables().
 
 % functions for session management
+-spec sessions_get_list() -> [map()].
+sessions_get_list() ->
+    Entries = get_all_entries(?TTS_SESSIONS),
+    ExtractValue = fun({Id, Pid}, List) ->
+                           [#{id => Id, pid => Pid} | List]
+                   end,
+    lists:reverse(lists:foldl(ExtractValue,[],Entries)).
+
+
 -spec sessions_create_new(ID :: binary()) -> ok | {error, Reason :: atom()}.
 sessions_create_new(ID) ->
     return_ok_or_error(insert_new(?TTS_SESSIONS,{ID,none_yet})).
@@ -139,6 +150,17 @@ user_delete_entries_older_than(Duration) ->
 user_delete_entries_not_accessed_for(Duration) ->
     Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
     iterate_through_users_and_delete_before(atime,Now-Duration).
+
+-spec user_clear_cache() -> ok. 
+user_clear_cache() ->
+    true = ets:delete(?TTS_USER_MAPPING),
+    true = ets:delete(?TTS_USER),
+    ?TTS_USER = create_table(?TTS_USER),
+    ?TTS_USER_MAPPING = create_table(?TTS_USER_MAPPING),
+    ok.
+
+
+    
 
 -spec user_inspect() -> ok. 
 user_inspect() ->
@@ -343,10 +365,14 @@ return_value({error, _} = Error) ->
 
 create_tables() ->
   CreateTable = fun(Table) ->
-                    ets:new(Table,[set, public, named_table, {keypos,1}])
+                    create_table(Table) 
                 end,
   lists:map(CreateTable,?TTS_TABLES),
   ok.
+
+create_table(TableName) ->
+    ets:new(TableName,[set, public, named_table, {keypos,1}]).
+
 
 
 get_all_entries(Table) -> 

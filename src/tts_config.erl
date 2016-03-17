@@ -13,10 +13,12 @@
 %% API.
 -export([start_link/0]).
 -export([is_loaded/0]).
+-export([debug_mode/0]).
 -export([get_/1]).
 -export([get_/2]).
 -export([local_port/0]).
 -export([local_protocol/0]).
+-export([reload/0]).
 
 %% gen_server.
 -export([init/1]).
@@ -29,6 +31,7 @@
 -record(state, {
 }).
 
+-define(MAIN_CONFIG_FILE,"main.conf").
 -define(OIDC_SECTION,"OIDC").
 -define(IDH_SECTION,"IDH").
 
@@ -38,6 +41,9 @@
 start_link() ->
 	gen_server:start_link(?MODULE, [], []).
 
+
+reload() ->
+    tts_sup:restart_config().
 
 get_(Key) ->
     case application:get_env(tts,Key) of 
@@ -55,6 +61,14 @@ is_loaded() ->
         true -> true;
         _ -> false 
     end.
+
+-define(CONF_DEBUG_MODE,debug_mode).
+debug_mode() ->
+    case get_(?CONF_DEBUG_MODE) of
+        true -> true;
+        _ -> false 
+    end.
+
 
 local_port() ->
     return_port(?CONFIG(port)).
@@ -90,7 +104,7 @@ handle_info(timeout, _State) ->
     clear_config(), 
     % (re)read the configuration
     read_configs(),
-    stop_when_done();
+    {stop, normal, #state{}};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
@@ -107,7 +121,8 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 stop_services() ->
-    %% TODO:implement
+    ok = tts_session_mgr:close_all_sessions(),
+    ok = tts_user_cache:clear_cache(),
     ok.
 
 clear_config() ->
@@ -123,15 +138,9 @@ read_configs() ->
 
 
 read_main_config() ->
-    Files = generate_file_list("main.conf"),
+    Files = generate_file_list(?MAIN_CONFIG_FILE),
     ok = register_files(main,Files),
     ok = apply_main_settings().
-
-stop_when_done() ->
-    case is_loaded() of
-        true ->  {stop, normal, #state{}};
-        _ ->  {noreply, #state{}, 15000}
-    end.
 
 read_service_configs() ->
     read_service_configs(get_(service_config_path, undefined)). 
@@ -153,7 +162,7 @@ update_status() ->
     ok.
 
 -define(MAIN_SETTINGS,[
-                    {"DebugMode",debug_mode,boolean,false},
+                    {"DebugMode",?CONF_DEBUG_MODE,boolean,false},
                     {"HostName",hostname,binary,"localhost"},
                     {"Port",port,binary,"default"},
                     {"ListenPort",listen_port,binary,"default"},
@@ -171,6 +180,25 @@ update_status() ->
                     {"CacheMaxEntries",cache_max_entries,integer,50000},
                     {"ServiceConfigPath",service_config_path,directory,"./services"}
                 ]).
+
+-define(IDH_SETTINGS,[
+                    {"Host",idh_host,string,"localhost"},
+                    {"Port",idh_port,integer,389},
+                    {"Base",idh_base,string,undefined},
+                    {"User",idh_user,string,undefined},
+                    {"Passwd",idh_passwd,string,undefined},
+                    {"File",idh_file,file,"idh_mapping.conf"},
+                    {"Type",idh_type,atom,undefined}
+                ]).
+
+-define(OIDC_SETTINGS,[
+                    {"Id",binary,""},
+                    {"Description",binary,""},
+                    {"ClientId",binary,""},
+                    {"Secret",binary,""},
+                    {"ConfigEndpoint",binary,""}
+                ]).
+
 
 apply_main_settings() ->
     apply_existing_main_config(?CONFIG(config_path,undefined)).
@@ -190,29 +218,11 @@ apply_existing_main_config(_) ->
     ok.
 
 
--define(IDH_SETTINGS,[
-                    {"Host",idh_host,string,"localhost"},
-                    {"Port",idh_port,integer,389},
-                    {"Base",idh_base,string,undefined},
-                    {"User",idh_user,string,undefined},
-                    {"Passwd",idh_passwd,string,undefined},
-                    {"File",idh_file,file,"idh_mapping.conf"},
-                    % must be the last
-                    {"Type",idh_type,atom,undefined}
-                ]).
 
 apply_idh_settings() ->
     apply_settings(main,?IDH_SECTION,?IDH_SETTINGS),
+    ok = tts_idh:update_config(),
     ok.
-
-
--define(OIDC_SETTINGS,[
-                    {"Id",binary,""},
-                    {"Description",binary,""},
-                    {"ClientId",binary,""},
-                    {"Secret",binary,""},
-                    {"ConfigEndpoint",binary,""}
-                ]).
 
 
 apply_oidc_settings() ->
@@ -228,12 +238,12 @@ apply_oidc_settings() ->
         false -> 
             [Id, Desc, ClientId, Secret, ConfigEndpoint] = Settings,
             LocalEndpoint = ?CONFIG(local_endpoint),
-            oidcc:add_openid_provider(Id, Desc, ClientId,
+            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(Id, Desc, ClientId,
                                       Secret,
                                       ConfigEndpoint, 
                                       LocalEndpoint);
         true ->
-            %TODO: maybe write some log or so about not adding the OIDC
+            %TODO: write some log about not adding the OIDC
             ok
     end.
 

@@ -5,7 +5,8 @@
          start_debug/0,
          start_debug/1,
          start_debug/2,
-         stop_debug/0
+         stop_debug/0,
+         set_debug_mode/1
         ]).
 
 
@@ -21,6 +22,9 @@ start_debug() ->
                       "tts_cred_worker"
                     ],
     start_debug(ListOfModules).
+
+set_debug_mode(OnOff) ->
+    application:set_env(tts,debug_mode,OnOff).
 
 start_debug(ListOfModules) ->
     %debug for an hour or 10000 messages

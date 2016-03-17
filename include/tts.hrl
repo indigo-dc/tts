@@ -1,3 +1,4 @@
 -define(CONFIG(K), tts_config:get_(K)).
 -define(CONFIG(K,D), tts_config:get_(K,D)).
-
+-define(DEBUG_MODE, tts_config:debug_mode()).
+-define(CONFIG_LOADED, tts_config:is_loaded()).

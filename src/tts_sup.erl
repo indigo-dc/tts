@@ -3,9 +3,13 @@
 
 -export([start_link/0]).
 -export([init/1]).
+-export([restart_config/0]).
 
 start_link() ->
 	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+restart_config() ->
+    supervisor:restart_child(?MODULE,config).
 
 init([]) ->
 	Procs = [
