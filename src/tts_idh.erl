@@ -138,7 +138,8 @@ update_config(State) ->
     Config = generate_config(?CONFIG(idh_type)),
     NewState = State#state{
                type = ?CONFIG(idh_type),
-               config = Config
+               config = Config,
+               configured = true
               },
     {ok,NewState}.
 
