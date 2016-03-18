@@ -33,7 +33,6 @@
 
 -define(MAIN_CONFIG_FILE,"main.conf").
 -define(OIDC_SECTION,"OIDC").
--define(IDH_SECTION,"IDH").
 
 %% API.
 
@@ -178,17 +177,9 @@ update_status() ->
                     {"CacheTimeout",cache_timeout,seconds,900},
                     {"CacheCheckInterval",cache_check_interval,seconds,300},
                     {"CacheMaxEntries",cache_max_entries,integer,50000},
-                    {"ServiceConfigPath",service_config_path,directory,"./services"}
-                ]).
-
--define(IDH_SETTINGS,[
-                    {"Host",idh_host,string,"localhost"},
-                    {"Port",idh_port,integer,389},
-                    {"Base",idh_base,string,undefined},
-                    {"User",idh_user,string,undefined},
-                    {"Passwd",idh_passwd,string,undefined},
-                    {"File",idh_file,file,"idh_mapping.conf"},
-                    {"Type",idh_type,atom,undefined}
+                    {"ServiceConfigPath",service_config_path,directory,"./services"},
+                    {"IDHScript",idh_script,file,"./idh.cmd"},
+                    {"IDHMaxWorker",idh_max_worker,integer,5}
                 ]).
 
 -define(OIDC_SETTINGS,[
@@ -214,15 +205,9 @@ apply_existing_main_config(_) ->
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
     set_config(local_endpoint,LocalEndpoint),
     apply_oidc_settings(),
-    apply_idh_settings(),
     ok.
 
 
-
-apply_idh_settings() ->
-    apply_settings(main,?IDH_SECTION,?IDH_SETTINGS),
-    ok = tts_idh:update_config(),
-    ok.
 
 
 apply_oidc_settings() ->

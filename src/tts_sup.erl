@@ -16,7 +16,7 @@ init([]) ->
              sessions_supervisor(),
              credential_supervisor(),
              credential_worker(),
-             idh(),
+             idh_supervisor(),
              user_cache(),
              config_worker()
             ],
@@ -47,9 +47,10 @@ config_worker() ->
        restart => transient
      }.
 
-idh() ->
-    #{ id => idh,
-       start => {tts_idh, start_link, []}
+idh_supervisor() ->
+    #{ id => idh_supervisor,
+       start => {tts_idh_sup, start_link, []},
+       type => supervisor
      }.
 
 user_cache() ->
