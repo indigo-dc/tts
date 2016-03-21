@@ -9,18 +9,21 @@
 -include("tts.hrl").
 -record(state, {
           bad_request = false,
+          config_loaded = undefined,
           req_map = #{}
 }).
 
 -define(COOKIE,<<"tts_session">>).
 
 init(_, Req, _Opts) ->
-    try extract_args(Req) of
+    try extract_args(Req,tts_config:is_loaded()) of
         {ok, Req2, State} -> {ok, Req2, State}
     catch 
         _:_ -> {ok, Req, #state{bad_request=true}}
     end.   
 
+handle(Req,#state{config_loaded=false} = State) ->
+    show_result(#{error => no_config}, Req, State);
 handle(Req,#state{bad_request=true} = State) ->
     show_result(#{error => bad_request}, Req, State);
 handle(Req,#state{req_map=ReqMap} = State) ->
@@ -28,6 +31,9 @@ handle(Req,#state{req_map=ReqMap} = State) ->
     show_result(Result,Req,State).
 
 
+show_result(#{error := no_config},Req,State) ->
+    {ok,Body} = tts_out_of_service_dtl:render(), 
+    show_html(Body, 200, Req, State);
 show_result(#{error := _Error} = Result,Req,#state{req_map=ReqMap} = State) ->
     Status = maps:get(status,Result, 400),
     Cookie = maps:get(cookie,Result,clear),
@@ -82,7 +88,9 @@ terminate(_Reason, _Req, _State) ->
                     {<<"id">>, id}
                    ]).
 
-extract_args(Req) ->
+extract_args(Req,false) ->
+    {ok, Req, #state{ config_loaded = false }};
+extract_args(Req,true) ->
     {Path,Req2} = cowboy_req:path(Req), 
     AtomPath = map_to_atom(Path,?PATHMAPPING,ep_main),
     {QsList, Req3} = cowboy_req:qs_vals(Req2),
@@ -102,7 +110,7 @@ extract_args(Req) ->
               qs => QsMap,
               body_qs => BodyQsMap
              },
-    {ok, Req6, #state{req_map = ReqMap}}.
+    {ok, Req6, #state{req_map = ReqMap, config_loaded = true }}.
 
 perform_cookie_action(clear,Req,_ReqMap) ->
     Opts = create_cookie_opts(0),

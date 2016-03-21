@@ -3,6 +3,11 @@
         <h1>Welcome</h1>
         this is your user page, you are logged in as {{ username }}.<br>
         <br>
+        {% if token %}
+        The token used to log into this session is:
+        <br>
+        <pre> {{ token }}</pre> 
+        {% endif %}
         {% if service_list %}
         <h2>Services</h2>
         <table>
@@ -43,6 +48,27 @@
             </tr>
         {% endfor %}
         </table>
+        {% endif %}
+        {% if credential_log %}
+        <h3>Log</h3>
+        The log of executing the ssh-commands
+        <table>
+            <tr>
+                <th> Command  </th> 
+                <th> Exit Status  </th> 
+                <th> Std Out  </th> 
+                <th> Std Err  </th> 
+            </tr>
+        {% for log in credential_log %}
+            <tr>
+                <td> {{ log.cmd }}  </td> 
+                <td> {{ log.exit_status }}  </td> 
+                <td> {{ log.std_out }}  </td> 
+                <td> {{ log.std_err }}  </td> 
+            </tr>
+        {% endfor %}
+        </table>
+
         {% endif %}
         <br>
         <form method="post" action="{{ ep_user }}">

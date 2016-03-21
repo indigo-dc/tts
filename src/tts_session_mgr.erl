@@ -6,6 +6,7 @@
 
 -export([new_session/0]).
 -export([get_session/1]).
+-export([close_all_sessions/0]).
 -export([session_wants_to_close/1]).
 %% gen_server.
 -export([init/1]).
@@ -16,7 +17,6 @@
 -export([code_change/3]).
 
 -record(state, {
-          ets = none
 }).
 
 %% API.
@@ -40,13 +40,18 @@ get_session(ID) ->
 session_wants_to_close(ID) ->
     gen_server:call(?MODULE,{delete_session,ID}).
 
+-spec close_all_sessions() -> ok.
+close_all_sessions() ->
+    gen_server:call(?MODULE, close_all_sessions).
+
+
 %% gen_server.
 
 init([]) ->
 	{ok, #state{}}.
 
 handle_call(new_session, _From, State) ->
-    ID = get_unique_id(State),
+    ID = get_unique_id(),
     Pid = start_session(ID),
     ok = set_session_for_id(ID,Pid),
     {reply, {ok, Pid}, State};
@@ -54,6 +59,10 @@ handle_call({delete_session,ID}, _From, State) ->
     {ok, Pid} = lookup_session_pid(ID),
     delete_session(ID),
     tts_session:close(Pid),
+    {reply, ok, State};
+handle_call(close_all_sessions, _From, State) ->
+    SessionList = get_all_sessions(),
+    delete_sessions(SessionList),
     {reply, ok, State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
@@ -71,20 +80,26 @@ code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
 
+delete_sessions([]) ->
+    ok;
+delete_sessions([#{id:= Id, pid:= Pid}|T]) ->
+    delete_session(Id),
+    tts_session:close(Pid),
+    delete_sessions(T).
 
 
-get_unique_id(State) ->
+get_unique_id() ->
     ID = tts_utils:random_string(64), 
-    repeat_id_gen_if_needed(add_new_session_entry(ID, State), ID, State).
+    repeat_id_gen_if_needed(add_new_session_entry(ID)).
 
 start_session(ID) ->
     {ok, Pid} = tts_session_sup:new_session(ID),
     Pid.
 
-repeat_id_gen_if_needed(ok,ID,_State) ->
+repeat_id_gen_if_needed({ok,ID}) ->
     ID;
-repeat_id_gen_if_needed(_,_ID,State) ->
-    get_unique_id(State).
+repeat_id_gen_if_needed(_) ->
+    get_unique_id().
 
 lookup_or_create_session_pid({ok, Pid}) ->
     {ok, Pid};
@@ -96,9 +111,14 @@ lookup_or_create_session_pid(ID) ->
 %% 
 %% functions with data access
 %%
+get_all_sessions() ->
+    tts_data:sessions_get_list().
 
-add_new_session_entry(ID,_State) ->
-   tts_data:sessions_create_new(ID). 
+add_new_session_entry(ID) ->
+   case tts_data:sessions_create_new(ID) of
+       ok -> {ok, ID};
+       _ -> {error, used}
+   end. 
 
 lookup_session_pid(ID) ->
    tts_data:sessions_get_pid(ID). 

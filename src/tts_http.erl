@@ -90,9 +90,10 @@ request_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) -
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok,Token} = tts_session:get_token(Session),
     case tts_credential:request(ServiceId,UserInfo,Token,[]) of
-        {ok, Credential} -> 
-            show_user_page(Session,Credential);
-        _ -> show_user_page(Session)
+        {ok, Credential, Log} -> 
+            show_user_page(Session,Credential,Log);
+        {_,_,Log} -> 
+            show_user_page(Session,false,Log)
     end;
 request_credential(ReqMap) ->
     Desc = <<"">>,
@@ -105,17 +106,25 @@ revoke_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) ->
     show_user_page(Session).
 
 show_user_page(Session) ->
-    show_user_page(Session,false).
+    show_user_page(Session,false,[]).
 
-show_user_page(Session,Credential) ->
+show_user_page(Session,Credential,Log) ->
     {ok,Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok,UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid,UserInfo),
     {ok, ServiceList} = tts_service:get_list(UserId),
-    Params = [{username, UserId},
+    BaseParams = [{username, UserId},
               {credential, Credential},
+              {credential_log, Log},
               {service_list, ServiceList}
              ],
+    Params = case ?DEBUG_MODE of
+                 true -> 
+                     {ok, Token} = tts_session:get_token(Session),
+                     TokenText = io_lib:format("~p",[Token]),
+                     [{token,TokenText} |BaseParams];
+                 _ -> BaseParams
+             end,
     {ok, Body} = tts_user_dtl:render(Params),
     #{body => Body, status => 200, cookie => update}.
 

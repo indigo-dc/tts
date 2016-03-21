@@ -5,6 +5,7 @@
 -export([start_link/0]).
 -export([get_user_info/2]).
 -export([verify_cache/0]).
+-export([clear_cache/0]).
 
 %% gen_server.
 -export([init/1]).
@@ -28,6 +29,9 @@ get_user_info(Issuer, Subject) ->
 verify_cache() ->
     gen_server:cast(?MODULE,verify_cache_validity).
 
+-spec clear_cache() -> ok.
+clear_cache() ->
+    gen_server:call(?MODULE,clear_cache).
 %% gen_server.
 
 -record(state, {
@@ -38,6 +42,9 @@ verify_cache() ->
 init([]) ->
 	{ok, #state{}}.
 
+handle_call(clear_cache, _From, State) ->
+    ok = clear_user_cache(),
+    {reply, ok, State};
 handle_call({insert,UserInfo}, _From, State) ->
     Result = sync_insert_new_user(UserInfo),
     {reply, Result, State};
@@ -88,15 +95,15 @@ insert_user({ok, NewUser}) ->
 insert_user({error, Reason}) ->
     {error, Reason}.
 
-%TODO: add uppper limit for storing,
-% 100 000 use roughly 50MB of Ram (less)
-% and cleaning takes about 500ms (less)
 sync_insert_new_user(UserInfo) ->
     ok = add_new_user_entry(UserInfo), 
     {ok, UserInfo}.
 
 
 %% functions with data access
+
+clear_user_cache() ->
+    tts_data:user_clear_cache().
 
 verify_cache_validity() ->
     tts_data:user_delete_entries_older_than(?CONFIG(cache_timeout)).

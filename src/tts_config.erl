@@ -12,10 +12,13 @@
 
 %% API.
 -export([start_link/0]).
+-export([is_loaded/0]).
+-export([debug_mode/0]).
 -export([get_/1]).
 -export([get_/2]).
 -export([local_port/0]).
 -export([local_protocol/0]).
+-export([reload/0]).
 
 %% gen_server.
 -export([init/1]).
@@ -28,6 +31,7 @@
 -record(state, {
 }).
 
+-define(MAIN_CONFIG_FILE,"main.conf").
 -define(OIDC_SECTION,"OIDC").
 -define(IDH_SECTION,"IDH").
 
@@ -38,12 +42,33 @@ start_link() ->
 	gen_server:start_link(?MODULE, [], []).
 
 
+reload() ->
+    tts_sup:restart_config().
+
 get_(Key) ->
-    {ok, Val} = application:get_env(tts,Key),
-    Val.
+    case application:get_env(tts,Key) of 
+        {ok, Val} -> Val;
+        _ -> undefined
+    end.
           
 get_(Key, Default) ->
     application:get_env(tts,Key,Default).
+
+
+-define(CONF_LOADED,conf_loaded).
+is_loaded() ->
+    case get_(?CONF_LOADED) of
+        true -> true;
+        _ -> false 
+    end.
+
+-define(CONF_DEBUG_MODE,debug_mode).
+debug_mode() ->
+    case get_(?CONF_DEBUG_MODE) of
+        true -> true;
+        _ -> false 
+    end.
+
 
 local_port() ->
     return_port(?CONFIG(port)).
@@ -72,10 +97,14 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
-handle_info(timeout, State) ->
-    % read the configuration
+handle_info(timeout, _State) ->
+    % stop depending services
+    stop_services(), 
+    % clear config path 
+    clear_config(), 
+    % (re)read the configuration
     read_configs(),
-	{stop, normal, State};
+    {stop, normal, #state{}};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
@@ -90,26 +119,28 @@ code_change(_OldVsn, State, _Extra) ->
 %%% config functionality
 %%%
 
+
+stop_services() ->
+    ok = tts_session_mgr:close_all_sessions(),
+    ok = tts_user_cache:clear_cache(),
+    ok.
+
+clear_config() ->
+    application:unset_env(tts,?CONF_LOADED),
+    application:unset_env(tts,config_path),
+    ok.
+
 read_configs() -> 
     ok = read_main_config(),
     ok = read_service_configs(),
+    ok = update_status(),
     ok = start_cowboy().
 
 
-
 read_main_config() ->
-    Files = generate_file_list("main.conf"),
+    Files = generate_file_list(?MAIN_CONFIG_FILE),
     ok = register_files(main,Files),
-    ok = ensure_config_found(),
     ok = apply_main_settings().
-
-ensure_config_found() ->
-    ensure_config_found(get_(config_path, undefined)).
-
-ensure_config_found(undefined) ->
-    return_error(2,"no configuration path found, path scanned are ~p",[generate_path_list()]);
-ensure_config_found(_Defined) ->
-    ok.
 
 read_service_configs() ->
     read_service_configs(get_(service_config_path, undefined)). 
@@ -121,47 +152,63 @@ read_service_configs(BasePath) ->
     parse_and_apply_services(ServiceConfs), 
     ok.
 
-return_error(Number, Format, Params) ->
-    error_logger:error_msg(Format,Params),
-    erlang:halt(Number).
+
+update_status() ->
+    Value = case get_(config_path, undefined) of
+        undefined -> false;
+        _ -> true
+            end, 
+    set_config(?CONF_LOADED,Value),
+    ok.
+
+-define(MAIN_SETTINGS,[
+                    {"DebugMode",?CONF_DEBUG_MODE,boolean,false},
+                    {"HostName",hostname,binary,"localhost"},
+                    {"Port",port,binary,"default"},
+                    {"ListenPort",listen_port,binary,"default"},
+                    {"EpRedirect",ep_redirect,binary,"/oidc/redirect"},
+                    {"EpReturn",ep_return,binary,"/oidc/return"},
+                    {"EpMain",ep_main,binary,"/"},
+                    {"EpUser",ep_user,binary,"/user"},
+                    {"EpApi",ep_api,binary,"/api"},
+                    {"SSL",ssl,boolean,true},
+                    {"LogLevel",log_level,string,"Warning"},
+                    {"LogFile",log_file,binary,"tts.log"},
+                    {"SessionTimeout",session_timeout,seconds,600},
+                    {"CacheTimeout",cache_timeout,seconds,900},
+                    {"CacheCheckInterval",cache_check_interval,seconds,300},
+                    {"CacheMaxEntries",cache_max_entries,integer,50000},
+                    {"ServiceConfigPath",service_config_path,directory,"./services"}
+                ]).
+
+-define(IDH_SETTINGS,[
+                    {"Host",idh_host,string,"localhost"},
+                    {"Port",idh_port,integer,389},
+                    {"Base",idh_base,string,undefined},
+                    {"User",idh_user,string,undefined},
+                    {"Passwd",idh_passwd,string,undefined},
+                    {"File",idh_file,file,"idh_mapping.conf"},
+                    {"Type",idh_type,atom,undefined}
+                ]).
+
+-define(OIDC_SETTINGS,[
+                    {"Id",binary,""},
+                    {"Description",binary,""},
+                    {"ClientId",binary,""},
+                    {"Secret",binary,""},
+                    {"ConfigEndpoint",binary,""}
+                ]).
 
 
 apply_main_settings() ->
-    HostName = get_binary_value(main,"","HostName","localhost"),
-    Port = get_binary_value(main,"","Port","default"),
-    ListenPort = get_binary_value(main,"","ListenPort","default"),
-    EpRedirect = get_binary_value(main,"","EpRedirect", "/oidc/redirect"),
-    EpReturn = get_binary_value(main,"","EpReturn", "/oidc/return"),
-    EpMain = get_binary_value(main,"","EpMain", "/"),
-    EpUser = get_binary_value(main,"","EpUser", "/user"),
-    EpApi = get_binary_value(main,"","EpApi", "/api"),
-    SSL = get_boolean_value(main,"","SSL", true),
-    LogLevel = get_string_value(main,"","LogLevel", "Warning"),
-    LogFile = get_binary_value(main,"","LogFile", "tts.log"),
-    SessionTimeout = get_integer_value(main,"","SessionTimeout", 600),
-    CacheTimeout = get_integer_value(main,"","CacheTimeout", 900),
-    CacheMaxEntries = get_integer_value(main,"","CacheMaxEntries", 50000),
-    CacheCheckInterval = get_integer_value(main,"","CacheCheckInterval", 300),
-    ServiceConfigPath = get_string_value(main,"","ServiceConfigPath", "./services"),
-  
+    apply_existing_main_config(?CONFIG(config_path,undefined)).
 
-    set_config(log_level,LogLevel),
-    set_config(log_file,LogFile),
-
-    set_config(hostname,HostName),
-    set_config(port,Port),
-    set_config(listen_port,ListenPort),
-    set_config(ep_main,EpMain),
-    set_config(ep_user,EpUser),
-    set_config(ep_api,EpApi),
-    set_config(ep_redirect,EpRedirect),
-    set_config(ep_return,EpReturn),
-    set_config(ssl,SSL),
-    set_config(service_config_path,tts_file_util:to_abs(ServiceConfigPath)),
-    set_config(session_timeout,SessionTimeout * 1000),
-    set_config(cache_timeout,CacheTimeout * 1000),
-    set_config(cache_check_interval,CacheCheckInterval * 1000),
-    set_config(cache_max_entries,CacheMaxEntries),
+apply_existing_main_config(undefined) ->
+    ok;
+apply_existing_main_config(_) ->
+    apply_settings(main,"",?MAIN_SETTINGS),
+    EpReturn = ?CONFIG(ep_return),
+    HostName = ?CONFIG(hostname),
     LProt = local_protocol(),
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
@@ -171,68 +218,80 @@ apply_main_settings() ->
     ok.
 
 
+
+apply_idh_settings() ->
+    apply_settings(main,?IDH_SECTION,?IDH_SETTINGS),
+    ok = tts_idh:update_config(),
+    ok.
+
+
 apply_oidc_settings() ->
-    Id = get_binary_value(main,?OIDC_SECTION,"Id",""),
-    Desc = get_binary_value(main,?OIDC_SECTION,"Description",""),
-    ClientId = get_binary_value(main,?OIDC_SECTION,"ClientId",""),
-    Secret = get_binary_value(main,?OIDC_SECTION,"Secret",""),
-    ConfigEndpoint = get_binary_value(main,?OIDC_SECTION,"ConfigEndpoint",""),
-    LocalEndpoint = ?CONFIG(local_endpoint),
-    OpEntries = [{"Description", Desc}, 
-                 {"Id" ,Id}, 
-                 {"ClientId" ,ClientId}, 
-                 {"Secret" ,Secret}, 
-                 {"ConfigEndpoint" ,ConfigEndpoint}],
-    IsEmpty = fun({K, V},In) ->
+    Settings = get_values(main,?OIDC_SECTION,?OIDC_SETTINGS),
+    IsEmpty = fun(V,In) ->
                       case V of
-                          <<>> -> [K | In];
-                          "" -> [K | In];
+                          <<>> -> true;
+                          "" -> true;
                           _ -> In
                       end
               end,
-    case lists:foldl(IsEmpty,[],OpEntries) of
-        [] -> 
-            oidcc:add_openid_provider(Id, Desc, ClientId,
+    case lists:foldl(IsEmpty,false,Settings) of
+        false -> 
+            [Name, Desc, ClientId, Secret, ConfigEndpoint] = Settings,
+            LocalEndpoint = ?CONFIG(local_endpoint),
+            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(Name, Desc, ClientId,
                                       Secret,
                                       ConfigEndpoint, 
                                       LocalEndpoint);
-        List ->
-            return_error(3,"the configuration of the OpenID Connect endpoint is
-                         missing/malformed. The following values are missing:
-                         ~p",List)
+        true ->
+            %TODO: write some log about not adding the OIDC
+            ok
     end.
 
 
-apply_idh_settings() ->
-    OType = get_string_value(main,?IDH_SECTION,"Type",undefined),
-    Type = try list_to_existing_atom(OType) of
-               T -> T
-           catch
-               _:_ -> OType
-           end,
-    set_idh_type_settings(Type), 
-    % set the type as the last config, tts_idh relies on that
-    set_config(idh_type,Type),
-    ok.
     
+apply_settings(_Name,_Section,[]) ->
+    ok;
+apply_settings(Name,Section,[{Key, AtomKey, Type, Default} | T]) ->
+    apply_setting(Name, Section, Key, AtomKey, Type, Default),
+    apply_settings(Name, Section, T).
+
+apply_setting(Name,Section,Key,AtomKey,Type,Default) -> 
+    Value = get_value(Name, Section, Key,Type, Default),
+    set_config(AtomKey,Value).
+
+get_values(Name,Section,List) ->
+    get_values(Name,Section,List,[]).
+get_values(_Name,_Section,[],List) ->
+    lists:reverse(List);
+get_values(Name,Section,[{Key,Type,Default}|T],List) ->
+    Value = get_value(Name,Section,Key,Type,Default),
+    get_values(Name, Section, T, [Value | List]).
 
 
-set_idh_type_settings(ldap) ->
-    Host = get_string_value(main,?IDH_SECTION,"Host",undefined),
-    Port = get_integer_value(main,?IDH_SECTION,"Port",389),
-    Base = get_string_value(main,?IDH_SECTION,"Base",undefined),
-    User = get_string_value(main,?IDH_SECTION,"User",undefined),
-    Pass = get_string_value(main,?IDH_SECTION,"Passwd",undefined),
-    set_config(idh_host,Host),
-    set_config(idh_port,Port),
-    set_config(idh_base,Base),
-    set_config(idh_user,User),
-    set_config(idh_passwd,Pass);
-set_idh_type_settings(file) ->
-    File = get_string_value(main,?IDH_SECTION,"File","idh_mapping.conf"),
-    set_config(idh_file,get_abs_file_or(File,undefined));
-set_idh_type_settings(Type) ->
-    return_error(4,"unknown IDH type ~p",[Type]).
+get_value(Name,Section,Key,boolean,Default) -> 
+    econfig:get_boolean(Name, Section, Key, Default);
+get_value(Name,Section,Key,binary,Default) ->
+    binary:list_to_bin(econfig:get_value(Name,Section,Key,Default));
+get_value(Name,Section,Key,string,Default) ->
+    econfig:get_value(Name,Section,Key,Default);
+get_value(Name,Section,Key,directory,Default) ->
+    Value = econfig:get_value(Name,Section,Key,Default),
+    tts_file_util:to_abs(Value);
+get_value(Name,Section,Key,file,Default) ->
+    Value = econfig:get_value(Name,Section,Key,Default),
+    tts_file_util:to_abs(Value);
+get_value(Name,Section,Key,seconds,Default) ->
+    Value = econfig:get_integer(Name,Section,Key,Default),
+    Value*1000;
+get_value(Name,Section,Key,integer,Default) ->
+    econfig:get_integer(Name,Section,Key,Default);
+get_value(Name,Section,Key,atom,Default) ->
+    StringValue = econfig:get_value(Name,Section,Key),
+    try list_to_existing_atom(StringValue) of
+        V -> V
+    catch
+        _:_ -> Default 
+    end.
 
 
 parse_and_apply_services([]) ->
@@ -299,19 +358,23 @@ only_first(Files) ->
                end,
     lists:foldl(GetFirst,"",Files).
 
-get_string_value(Name,Section,Key,Default) ->
-    econfig:get_value(Name,Section,Key,Default).
-
-get_binary_value(Name,Section,Key,Default) ->
-    binary:list_to_bin(get_string_value(Name,Section,Key,Default)).
-
-get_integer_value(Name,Section,Key,Default) ->
-    econfig:get_integer(Name,Section,Key,Default).
-
-get_boolean_value(Name, Section, Key, Default) ->
-    econfig:get_boolean(Name, Section, Key, Default).
 
 start_cowboy() ->
+    ok = start_cowboy(is_loaded()),
+    ok.
+
+start_cowboy(false) ->
+    Dispatch = [{'_', [
+                       {"/",tts_http_prep, []}
+                      ]}],
+    _ = cowboy:start_http( http_handler 
+                                 , 100
+                                 , [ {port, 8080} ]
+                                 , [{env, [{dispatch, cowboy_router:compile(Dispatch)}]}]
+                               ),
+    ok;
+start_cowboy(_) ->
+    cowboy:stop_listener(http_handler),
     EpMain = ?CONFIG(ep_main),
     EpRedirect = ?CONFIG(ep_redirect),
     EpReturn = ?CONFIG(ep_return),
@@ -351,17 +414,9 @@ set_config(config_path=Key, Path) ->
            application:set_env(tts,Key,Path);
        _ -> ok
    end;
-set_config(log_file, FileName) ->
-    _AbsFileName = tts_file_util:to_abs(FileName);
 set_config(Key, Value) ->
     application:set_env(tts,Key,Value).
 
-get_abs_file_or(File, Other) ->
-    AbsFile = tts_file_util:to_abs(File),
-    case filelib:is_file(AbsFile) of
-        true -> AbsFile;
-        false -> Other 
-    end.
 
 
 listen_port() ->
