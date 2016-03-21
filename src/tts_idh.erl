@@ -60,7 +60,7 @@ handle_call({user_result, Map}, {Pid, _Tag}, State) ->
     {reply,ok,NewState};
 handle_call({lookup_user, Map}, From, State) ->
     State2 = enqueue_lookup(Map, From, State),
-    State3 = add_new_worker(State2),
+    State3 = add_new_worker_if_needed(State2),
     State4 = try_next_lookup(State3),
     {noreply,State4};
 handle_call(update_config, _From, State) ->
@@ -87,7 +87,7 @@ enqueue_lookup(Map,From,#state{queue = Queue} = State) ->
     NewQueue = queue:in({Map, From},Queue),
     State#state{queue = NewQueue}.
 
-add_new_worker(#state{ready=Ready, active_count=ActiveCount} = State) ->
+add_new_worker_if_needed(#state{ready=Ready, active_count=ActiveCount} = State) ->
     PossibleAndNeeded = ( (Ready == []) and 
                           (ActiveCount < ?CONFIG(idh_max_worker) ) ),
     add_new_worker(PossibleAndNeeded,State).
