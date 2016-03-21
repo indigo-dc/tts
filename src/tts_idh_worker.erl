@@ -15,8 +15,8 @@
 -export([code_change/3]).
 
 -record(state, {
-          map = undefined,
-          module = undefined
+          params = undefined,
+          script = undefined
 }).
 
 %% API.
@@ -25,9 +25,9 @@
 start_link() ->
 	gen_server:start_link(?MODULE, [], []).
 
--spec lookup(map(),atom(),pid()) -> ok.
-lookup(Map, Module, Pid) ->
-	gen_server:call({lookup,Map,Module},Pid).
+-spec lookup(list(), list(),pid()) -> ok.
+lookup(Script, Params, Pid) ->
+	gen_server:call({lookup,Script,Params},Pid).
 
 -spec stop(pid()) -> ok.
 stop(Pid) ->
@@ -37,23 +37,22 @@ stop(Pid) ->
 init([]) ->
 	{ok, #state{}}.
 
-handle_call({lookup,Map,Module}, _From, State) ->
+handle_call({lookup,Script,Params}, _From, State) ->
     gen_server:cast(perform_lookup,self()),
-    {reply,ok,State#state{map=Map,module=Module}};
+    {reply,ok,State#state{script=Script,params=Params}};
 handle_call(stop, _From, State) ->
     {stop,normal,ok,State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
-handle_cast(perform_lookup,#state{map=undefined}=State) ->
+handle_cast(perform_lookup,#state{params=undefined}=State) ->
     {noreply, State};
-handle_cast(perform_lookup,#state{module=undefined}=State) ->
+handle_cast(perform_lookup,#state{script=undefined}=State) ->
     {noreply, State};
-handle_cast(perform_lookup,#state{map=Map,module=Module}=State) ->
-    CmdList = create_cmd_list(Module,Map), 
-    Result = execute_commands(CmdList),
+handle_cast(perform_lookup,#state{params=Params,script=Script}=State) ->
+    Result = execute_script(Script,Params),
     tts_idh:user_result(Result),
-    {noreply, State#state{map=undefined,module=undefined}};
+    {noreply, State#state{script=undefined,params=undefined}};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -66,17 +65,17 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
 	{ok, State}.
 
-execute_commands(_CmdList) ->
-    %TODO:implement
-    ok.
 
-create_cmd_list(CmdMod,Map) ->
-    {ok, IoList} = CmdMod:render([{info, Map}]),
-    CmdList = binary:split(list_to_binary(IoList),[<<"\n">>],[global, trim_all]),
-    RemoveComments = fun(Line,Cmds) ->
-                             case  binary:first(Line) of
-                                 $# -> Cmds;
-                                 _ -> [Line | Cmds]
-                             end
-                     end,
-    lists:reverse(lists:foldl(RemoveComments,[],CmdList)).
+execute_script(Script,Params) ->
+    Cmd = create_command_line(Script,Params),
+    StdOut = os:cmd(Cmd),
+    case jsx:is_json(StdOut) of
+        true -> jsx:decode(StdOut,[return_maps,{labels,attempt_atom}]);
+        false -> #{error => bad_json_result}
+    end.
+
+create_command_line(Script, []) ->
+    Script;
+create_command_line(Script, [Param|T]) ->
+    CL = io_lib:format("~s ~s",[Script,Param]),
+    create_command_line(CL,T).
