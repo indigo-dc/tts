@@ -15,7 +15,7 @@
 -export([code_change/3]).
 
 -record(state, {
-          params = undefined,
+          param_map = undefined,
           script = undefined
 }).
 
@@ -27,35 +27,31 @@ start_link() ->
 
 -spec lookup(list(), list(),pid()) -> ok.
 lookup(Script, Params, Pid) ->
-	gen_server:call({lookup,Script,Params},Pid).
+	gen_server:call(Pid, {lookup,Script,Params}).
 
 -spec stop(pid()) -> ok.
 stop(Pid) ->
-	gen_server:call(stop,Pid).
+	gen_server:call(Pid, stop).
 %% gen_server.
 
 init([]) ->
 	{ok, #state{}}.
 
-handle_call({lookup,Script,Params}, _From, State) ->
-    gen_server:cast(perform_lookup,self()),
-    {reply,ok,State#state{script=Script,params=Params}};
+handle_call({lookup,Script,ParamMap}, _From, State) ->
+    {reply,ok,State#state{script=Script,param_map=ParamMap},1};
 handle_call(stop, _From, State) ->
     {stop,normal,ok,State};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
-handle_cast(perform_lookup,#state{params=undefined}=State) ->
-    {noreply, State};
-handle_cast(perform_lookup,#state{script=undefined}=State) ->
-    {noreply, State};
-handle_cast(perform_lookup,#state{params=Params,script=Script}=State) ->
-    Result = execute_script(Script,Params),
-    tts_idh:user_result(Result),
-    {noreply, State#state{script=undefined,params=undefined}};
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
+handle_info(timeout,#state{param_map=Map,script=Script}=State) ->
+    Params = map_to_params(Map),
+    Result = execute_script(Script,Params),
+    tts_idh:user_result(Result),
+    {noreply, State#state{script=undefined,param_map=undefined}};
 handle_info(_Info, State) ->
 	{noreply, State}.
 
@@ -68,10 +64,10 @@ code_change(_OldVsn, State, _Extra) ->
 
 execute_script(Script,Params) ->
     Cmd = create_command_line(Script,Params),
-    StdOut = os:cmd(Cmd),
+    StdOut = list_to_binary(os:cmd(Cmd)),
     case jsx:is_json(StdOut) of
         true -> jsx:decode(StdOut,[return_maps,{labels,attempt_atom}]);
-        false -> #{error => bad_json_result}
+        false -> #{error => bad_json_result, details => StdOut}
     end.
 
 create_command_line(Script, []) ->
@@ -79,3 +75,7 @@ create_command_line(Script, []) ->
 create_command_line(Script, [Param|T]) ->
     CL = io_lib:format("~s ~s",[Script,Param]),
     create_command_line(CL,T).
+
+map_to_params(#{type := openidconnect, subject := Subject, issuer := Issuer}) ->
+    ["OpenIdConnect",Issuer,Subject].
+    

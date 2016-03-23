@@ -103,6 +103,7 @@ handle_info(timeout, _State) ->
     clear_config(), 
     % (re)read the configuration
     read_configs(),
+    trigger_services(),
     {stop, normal, #state{}};
 handle_info(_Info, State) ->
 	{noreply, State}.
@@ -132,9 +133,11 @@ clear_config() ->
 read_configs() -> 
     ok = read_main_config(),
     ok = read_service_configs(),
-    ok = update_status(),
-    ok = start_cowboy().
+    ok = update_status().
 
+trigger_services() ->
+    ok = tts_idh:update_config(),
+    ok = start_cowboy().
 
 read_main_config() ->
     Files = generate_file_list(?MAIN_CONFIG_FILE),
@@ -178,7 +181,7 @@ update_status() ->
                     {"CacheCheckInterval",cache_check_interval,seconds,300},
                     {"CacheMaxEntries",cache_max_entries,integer,50000},
                     {"ServiceConfigPath",service_config_path,directory,"./services"},
-                    {"IDHScript",idh_script,file,"./idh.cmd"},
+                    {"IDHScript",idh_script,file,"./idh.py"},
                     {"IDHMaxWorker",idh_max_worker,integer,5}
                 ]).
 
@@ -206,8 +209,6 @@ apply_existing_main_config(_) ->
     set_config(local_endpoint,LocalEndpoint),
     apply_oidc_settings(),
     ok.
-
-
 
 
 apply_oidc_settings() ->

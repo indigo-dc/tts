@@ -105,9 +105,9 @@ user_lookup_info(Issuer,Subject) ->
 user_insert_info(Info,MaxEntries) ->
     CurrentEntries = ets:info(?TTS_USER,size), 
     remove_unused_entries_if_needed(CurrentEntries,MaxEntries),
-    IssSubList = maps:get(user_ids,Info,[]),
+    IssSubList = maps:get(userIds,Info,[]),
     UserId = maps:get(uid, Info),
-    Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
+    Mappings = [ {{Issuer, Subject}, UserId} || [Issuer, Subject] <- IssSubList ],
     CTime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
     Tuple = {UserId, Info, CTime, CTime},
     case  insert_new(?TTS_USER,Tuple) of 
@@ -129,7 +129,7 @@ user_delete_info(Issuer, Subject) ->
 
 -spec user_delete_info(InfoOrId :: map() | term()) -> 
     ok | {error, Reason :: term() }.
-user_delete_info(#{user_ids := UserIds, uid := UserId}) ->
+user_delete_info(#{userIds := UserIds, uid := UserId}) ->
     user_delete_mappings(UserIds),
     delete(?TTS_USER,UserId),
     ok;

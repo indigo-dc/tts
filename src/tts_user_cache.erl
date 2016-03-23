@@ -85,7 +85,7 @@ retrieve_userinfo_if_exists(Issuer,Subject) ->
 load_user_if_needed({ok,UserInfo},_, _) ->
     {ok,UserInfo};
 load_user_if_needed({error, not_found}, Issuer, Subject) ->
-    UserMap = #{type => openidconnect, sub => Subject, iss => Issuer},
+    UserMap = #{type => openidconnect, subject => Subject, issuer => Issuer},
     UserInfo = tts_idh:lookup_user(UserMap),
     insert_user(UserInfo).
 

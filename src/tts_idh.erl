@@ -16,7 +16,7 @@
 -export([code_change/3]).
 
 -include("tts.hrl").
--define(IDH_CMD_MOD,"tts_idh_cmd").
+-define(IDH_CMD_FILE,"idh_cmd_file").
 
 -record(state, {
           configured = false,
@@ -63,8 +63,8 @@ handle_call({lookup_user, Map}, From, State) ->
     trigger_next(),
     {noreply,State3};
 handle_call(update_config, _From, State) ->
-    {Result, NewState} = update_config(State),
-    {reply, Result, NewState};
+    NewState = update_config(State),
+    {reply, ok, NewState};
 handle_call(_Request, _From, State) ->
 	{reply, ignored, State}.
 
@@ -104,42 +104,40 @@ add_new_worker(true, #state{ready=Ready} = State) ->
 
 try_next_lookup(#state{queue=Queue, ready=Ready, active_count=ActiveCount} = State) ->
     Possible = ( ( not queue:is_empty(Queue) ) and 
-                 ( not Ready == [] ) and
+                 ( not (Ready == [] ) ) and
                  ( ActiveCount < ?CONFIG(idh_max_worker))
                ),
-    try_next_lookup(Possible,State). 
+    process_next_lookup(Possible,State). 
 
-try_next_lookup(false,State) ->
-    State;
-try_next_lookup(true,State) ->
-    process_next_lookup(State).
 
-process_next_lookup(#state{queue=Queue, ready=Ready,
+process_next_lookup(true, #state{queue=Queue, ready=Ready,
                            active=Active,active_count=ActiveCount, script=Script} = State) ->
     {{value,{Map, From}},NewQueue} = queue:out(Queue),
-    case map_to_params(Map) of
-        {ok, Params} ->
-            [{Pid,MonRef} | NewReady] = Ready,
-            ok = tts_idh_worker:lookup(Script, Params, Pid),
-            NewActive = [{Pid,From,MonRef}|Active],
-            State#state{queue=NewQueue,ready=NewReady,active=NewActive,active_count=ActiveCount+1};
-        {error, _} ->
-            gen_server:reply(From,{error, bad_request}),
-            trigger_next(),
-            State#state{queue=NewQueue}
-    end.
+    [{Pid,MonRef} | NewReady] = Ready,
+    ok = tts_idh_worker:lookup(Script, Map, Pid),
+    NewActive = [{Pid,From,MonRef}|Active],
+    State#state{queue=NewQueue,ready=NewReady,active=NewActive,active_count=ActiveCount+1};
+process_next_lookup(false, State) ->
+    State.
+
 
 
 
 handle_lookup_result(Map,Pid,#state{active=Active, ready=Ready, active_count=ActiveCount} =State) ->
     {Pid,From,MonRef} = lists:keyfind(Pid,1,Active),
     NewActive = lists:keydelete(Pid,1,Active),
-    gen_server:reply(From,{ok,Map}),
+    send_reply(From,Map),
     NewActiveCount = ActiveCount -1,
     Reuse = NewActiveCount < ?CONFIG(idh_max_worker),
     NewReady = reuse_worker(Reuse,Pid,MonRef,Ready),
     trigger_next(),
     State#state{active=NewActive, ready=NewReady, active_count=NewActiveCount}.
+
+send_reply(From, #{uid := _, uidNumber := _, gidNumber:=_, homeDirectory:=_, userIds:=_}=Map) ->
+    gen_server:reply(From,{ok,Map});
+send_reply(From, Map) ->
+    gen_server:reply(From,{error, Map}).
+
 
 reuse_worker(true,Pid,MonRef,Ready) ->
     [{Pid, MonRef} | Ready];
@@ -148,15 +146,10 @@ reuse_worker(false,Pid,MonRef,Ready) ->
     tts_idh_worker:stop(Pid),
     Ready.
 
-map_to_params(#{type := openidconnect, sub := Subject, iss := Issuer}) ->
-    {ok, ["OpenIdConnect",Subject,Issuer]};
-map_to_params(_) ->
-    {error, unknown_type}.
-    
 trigger_next() ->
     gen_server:cast(?MODULE,perform_next). 
 
 update_config(State) ->
-    ScriptName = ?CONFIG(idh_cmd_file), 
-    {ok, State#state{configured=true, script=ScriptName}}.
+    ScriptName = ?CONFIG(idh_script), 
+    State#state{configured=true, script=ScriptName}.
 

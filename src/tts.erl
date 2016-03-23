@@ -17,6 +17,7 @@ start_debug() ->
                       "tts_session",
                       "tts_session_mgr",
                       "tts_idh",
+                      "tts_idh_worker",
                       "tts_service",
                       "tts_credential",
                       "tts_cred_worker"
