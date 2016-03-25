@@ -88,11 +88,18 @@ handle_request_result({error,_,Log},_ServiceId,_UserInfo,_Token) ->
     end.
 
 
-handle_revoke_result({ok,#{result := Result}},ServiceId, #{uid := UserId}, CredState) ->
+handle_revoke_result({ok,#{result := Result}, Log},ServiceId, #{uid := UserId}, CredState) ->
     ok = remove_credential(UserId,ServiceId,CredState),     
-    {ok, Result};
+    case ?DEBUG_MODE of
+        true -> {ok,Result,Log};
+        _ -> {ok,Result,[]}
+    end;
 handle_revoke_result({error,_},_ServiceId,_UserInfo,_CredState) ->
-    ok.
+    Result = {error, revoke_failed},
+    case ?DEBUG_MODE of
+        true -> {ok,Result,[]};
+        _ -> {ok,Result,[]}
+    end.
 
 handle_incident_result({ok,#{result := Result}},ServiceId, #{uid := UserId}, CredState) ->
     ok = remove_credential(UserId,ServiceId,CredState),     
