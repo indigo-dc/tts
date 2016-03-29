@@ -46,8 +46,8 @@
                 <td> {{ keyvalue.name }}  </td> 
                 {% if keyvalue.type == "text" %}
                     <td> <input type="text" value="{{ keyvalue.value }}" readonly></input> </td> 
-                {% elif keyvalue.type == "file" %}
-                    <td> <textarea  readonly> {{ keyvalue.value }}</textarea> </td> 
+                {% elif keyvalue.type == "textfile" %}
+                    <td> <textarea rows="{{ keyvalue.rows }}" cols="{{ keyvalue.cols }}" readonly>{{ keyvalue.value }}</textarea> </td> 
                 {% else %}
                     <td> <input type="text" value="{{ keyvalue.value }}" readonly></input> </td> 
                 {% endif %}
