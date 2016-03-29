@@ -44,7 +44,13 @@
         {% for keyvalue in credential %}
             <tr>
                 <td> {{ keyvalue.name }}  </td> 
-                <td> {{ keyvalue.value }}  </td> 
+                {% if keyvalue.type == "text" %}
+                    <td> <input type="text" value="{{ keyvalue.value }}" readonly></input> </td> 
+                {% elif keyvalue.type == "file" %}
+                    <td> <textarea  readonly> {{ keyvalue.value }}</textarea> </td> 
+                {% else %}
+                    <td> <input type="text" value="{{ keyvalue.value }}" readonly></input> </td> 
+                {% endif %}
             </tr>
         {% endfor %}
         </table>
