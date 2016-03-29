@@ -176,7 +176,7 @@ update_status() ->
                     {"SSL",ssl,boolean,true},
                     {"CaCertFile",ca_cert_file,file,"cert/ca.cert"},
                     {"CertFile",cert_file,file,"cert/tts.cert"},
-                    {"KeyFile",key_File,file,"cert/tts.key"},
+                    {"KeyFile",key_file,file,"cert/tts.key"},
                     {"LogLevel",log_level,string,"Warning"},
                     {"LogFile",log_file,binary,"tts.log"},
                     {"SessionTimeout",session_timeout,seconds,600},
