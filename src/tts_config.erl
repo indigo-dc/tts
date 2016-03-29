@@ -174,6 +174,9 @@ update_status() ->
                     {"EpUser",ep_user,binary,"/user"},
                     {"EpApi",ep_api,binary,"/api"},
                     {"SSL",ssl,boolean,true},
+                    {"CaCertFile",ca_cert_file,file,"cert/ca.cert"},
+                    {"CertFile",cert_file,file,"cert/tts.cert"},
+                    {"KeyFile",key_File,file,"cert/tts.key"},
                     {"LogLevel",log_level,string,"Warning"},
                     {"LogFile",log_file,binary,"tts.log"},
                     {"SessionTimeout",session_timeout,seconds,600},
@@ -385,9 +388,16 @@ start_cowboy(_) ->
                                          , [{env, [{dispatch, cowboy_router:compile(Dispatch)}]}]
                                        );
         _ ->
+            %% CaCertFile = ?CONFIG(ca_cert_file),
+            CertFile = ?CONFIG(cert_file),
+            KeyFile = ?CONFIG(key_file),
             {ok, _} = cowboy:start_https( http_handler 
                                           , 100
-                                          , [ {port, ListenPort} ]
+                                          , [ {port, ListenPort},
+                                              %% {cacertfile, CaCertFile},
+                                              {certfile, CertFile},
+                                              {keyfile, KeyFile}
+                                            ]
                                           , [{env, [{dispatch, cowboy_router:compile(Dispatch)}]}]
                                         )
     end,
