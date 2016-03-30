@@ -354,6 +354,7 @@ start_cowboy() ->
 
 start_cowboy(false) ->
     Dispatch = [{'_', [
+                       {"/static/[...]", cowboy_static, {priv_dir, tts, "http_static"} },
                        {"/",tts_http_prep, []}
                       ]}],
     _ = cowboy:start_http( http_handler 
@@ -370,6 +371,7 @@ start_cowboy(_) ->
     EpApi = ?CONFIG(ep_api),
     EpUser = ?CONFIG(ep_user),
     Dispatch = [{'_', [
+                       {"/static/[...]", cowboy_static, {priv_dir, tts, "http_static"} },
                        {EpApi,tts_rest, []},
                        {EpMain, tts_http_prep, []},
                        {EpUser, tts_http_prep, []},

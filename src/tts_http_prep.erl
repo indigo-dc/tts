@@ -32,7 +32,7 @@ handle(Req,#state{req_map=ReqMap} = State) ->
 
 
 show_result(#{error := no_config},Req,State) ->
-    {ok,Body} = tts_out_of_service_dtl:render(), 
+    {ok,Body} = tts_main_dtl:render(), 
     show_html(Body, 200, Req, State);
 show_result(#{error := _Error} = Result,Req,#state{req_map=ReqMap} = State) ->
     Status = maps:get(status,Result, 400),
