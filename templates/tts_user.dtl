@@ -1,7 +1,7 @@
 <html>
     <body>
-        <h1>Welcome</h1>
-        this is your user page, you are logged in as {{ username }}.<br>
+        <h1>Token Translation Service</h1>
+        you are logged in as {{ username }}.<br>
         <br>
         {% if token %}
         The token used to log into this session is:
