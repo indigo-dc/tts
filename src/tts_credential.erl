@@ -148,29 +148,40 @@ get_credential_list(UserId) ->
     CredList = [ ServiceId || {ServiceId, _CredState} <- List ], 
     {ok, CredList}.
 
-get_credential_states(UserId) ->
-    case tts_data:credential_get(UserId) of
-        {error, _ } -> 
-            {ok, []};
-        {ok, List} ->
-            {ok, List}
-    end.
-
-
-
 get_credential_state(UserId,ServiceId) ->
-    case tts_data:credential_get(UserId) of
-        {error, _ } = Error ->  Error;
-        {ok, List} ->
-            case lists:keyfind(ServiceId,1,List) of
-                false -> {error, not_found};
-                {ServiceId, CredState} -> {ok, CredState}
-            end
+    {ok, List} = get_credential_states(UserId),
+    case lists:keyfind(ServiceId,1,List) of
+        false -> {error, not_found};
+        {ServiceId, CredState} -> {ok, CredState}
     end.
 
+%% % functions using ets
+%%
+%% get_credential_states(UserId) ->
+%%     case tts_data:credential_get(UserId) of
+%%         {error, _ } -> 
+%%             {ok, []};
+%%         {ok, List} ->
+%%             {ok, List}
+%%     end.
+%%
+%%
+%% store_credential(UserId,ServiceId,CredentialState) ->
+%%      tts_data:credential_add(UserId,ServiceId,CredentialState).
+%%
+%% remove_credential(UserId,ServiceId,CredentialState) ->
+%%      tts_data:credential_remove(UserId,ServiceId,CredentialState).
+%%
+
+% functions using sqlite
+
+get_credential_states(UserId) ->
+    tts_data_sqlite:credential_get(UserId).
 
 store_credential(UserId,ServiceId,CredentialState) ->
-     tts_data:credential_add(UserId,ServiceId,CredentialState).
+     tts_data_sqlite:credential_add(UserId,ServiceId,CredentialState).
 
 remove_credential(UserId,ServiceId,CredentialState) ->
-     tts_data:credential_remove(UserId,ServiceId,CredentialState).
+     tts_data_sqlite:credential_remove(UserId,ServiceId,CredentialState).
+
+

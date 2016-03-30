@@ -3,7 +3,7 @@
 -export([get_list/0]).
 -export([get_list/1]).
 -export([get_info/1]).
--export([add/2]).
+-export([add/1]).
 
 
 get_list() ->
@@ -27,11 +27,15 @@ get_info(ServiceId) ->
         Other -> Other
     end.
 
-add(ServiceId,ServiceMap) when is_map(ServiceMap), is_binary(ServiceId) ->
+add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
+    tts_data:service_add(ServiceId,ServiceInfo);
+add(#{ id := ServiceId } = ServiceMap) when is_list(ServiceId) ->
+    add(maps:put(id,list_to_binary(ServiceId),ServiceMap));
+add(ServiceMap) when is_map(ServiceMap) ->
     ServiceInfo = map_to_atom_keys(ServiceMap),
-    tts_data:service_add(ServiceId,maps:put(id,ServiceId,ServiceInfo));
-add(ServiceId,ServiceInfo) when is_list(ServiceId) ->
-    add(list_to_binary(ServiceId), ServiceInfo).
+    add(ServiceInfo);
+add(_ServiceMap)  ->
+    {error, invalid_config}.
 
 
 -include("tts.hrl").
@@ -57,6 +61,7 @@ map_to_atom_keys([{Key,Value}|T],Map) when is_list(Key) ->
     map_to_atom_keys([{list_to_binary(Key),Value} | T],Map).
 
 -define(KEYMAPPING,[
+                    {<<"Id">>,id},
                     {<<"Type">>,type},
                     {<<"Host">>,host},
                     {<<"Port">>,port},

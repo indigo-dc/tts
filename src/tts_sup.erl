@@ -18,6 +18,7 @@ init([]) ->
              credential_worker(),
              idh_supervisor(),
              user_cache(),
+             sqlite_worker(),
              config_worker()
             ],
     Flags = #{},
@@ -47,6 +48,10 @@ config_worker() ->
        restart => transient
      }.
 
+sqlite_worker() ->
+    #{ id => sqlite,
+       start => {tts_data_sqlite, start_link, []}
+     }.
 idh_supervisor() ->
     #{ id => idh_supervisor,
        start => {tts_idh_sup, start_link, []},

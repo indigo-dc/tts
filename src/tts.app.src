@@ -14,6 +14,7 @@
         econfig,
         jsx,
         ejwt,
+        esqlite,
         erlydtl,
         uri,
         base64url,

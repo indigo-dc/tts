@@ -5,7 +5,7 @@
 -export([start_link/0]).
 -export([lookup_user/1]).
 -export([user_result/1]).
--export([update_config/0]).
+-export([reconfigure/0]).
 
 %% gen_server.
 -export([init/1]).
@@ -41,8 +41,8 @@ lookup_user(Map) ->
 user_result(Map) ->
     gen_server:call(?MODULE, {user_result, Map}).
 
--spec update_config() -> ok.
-update_config() ->
+-spec reconfigure() -> ok.
+reconfigure() ->
 	gen_server:call(?MODULE, update_config).
 %% gen_server.
 

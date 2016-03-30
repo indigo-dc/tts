@@ -140,7 +140,8 @@ read_configs() ->
     ok = update_status().
 
 trigger_services() ->
-    ok = tts_idh:update_config(),
+    ok = tts_idh:reconfigure(),
+    ok = tts_data_sqlite:reconfigure(),
     ok = start_cowboy().
 
 read_main_config() ->
@@ -182,6 +183,7 @@ update_status() ->
                     {"CertFile",cert_file,file,"cert/tts.cert"},
                     {"KeyFile",key_file,file,"cert/tts.key"},
                     {"LogLevel",log_level,string,"Warning"},
+                    {"SqliteFile",sqlite_db,file,"./tts.db"},
                     {"LogFile",log_file,binary,"tts.log"},
                     {"SessionTimeout",session_timeout,seconds,600},
                     {"CacheTimeout",cache_timeout,seconds,900},
@@ -289,19 +291,13 @@ get_value(Name,Section,Key,atom,Default) ->
 
 parse_and_apply_services([]) ->
     ok;
-parse_and_apply_services(ServiceConfs)  ->
-    ok = econfig:register_config(service,ServiceConfs),
-    ServiceConfigs = econfig:cfg2list(service),
-    add_services(ServiceConfigs),
+parse_and_apply_services([ConfigFile|Tail])  ->
+    ok = econfig:register_config(service,[ConfigFile]),
+    ServiceConfig = econfig:get_value(service,""),
+    ConfigMap = maps:from_list(ServiceConfig), 
+    tts_service:add(ConfigMap), 
     ok = econfig:unregister_config(service), 
-    ok.
-
-add_services([]) ->
-    ok;
-add_services([{ServiceID,ServiceConfigList}|T]) ->
-    ConfigMap = maps:from_list(ServiceConfigList), 
-    tts_service:add(ServiceID,ConfigMap), 
-    add_services(T).
+    parse_and_apply_services(Tail).
 
 register_files(Name,Files) ->
     register_single_config(Name,only_first(Files)).  

@@ -51,12 +51,12 @@
 -define(TTS_CRED_USER,tts_cred_user).
 
 -define(TTS_TABLES,[
-                    ?TTS_SESSIONS,
-                    ?TTS_OIDCP,
-                    ?TTS_USER_MAPPING,
-                    ?TTS_USER,
-                    ?TTS_SERVICE,
-                    ?TTS_CRED_USER
+                    ?TTS_SESSIONS
+                    , ?TTS_OIDCP
+                    , ?TTS_USER_MAPPING
+                    , ?TTS_USER
+                    , ?TTS_SERVICE
+                    %% , ?TTS_CRED_USER
                    ]).
 
 init() ->
@@ -285,7 +285,7 @@ oidc_get_op_list() ->
 oidc_op_inspect() ->
     iterate_through_table_and_print(?TTS_OIDCP).
 
-% functions for  management
+% functions for service  management
 -spec service_add(Identifier::binary(), Info :: map()) ->ok | {error, Reason :: atom()}.
 service_add(Identifier, Info) ->
     return_ok_or_error(insert_new(?TTS_SERVICE,{Identifier,Info})).
