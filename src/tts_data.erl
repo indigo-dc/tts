@@ -307,7 +307,7 @@ service_get_list() ->
 service_inspect() ->
     iterate_through_table_and_print(?TTS_SERVICE).
 
-% functions for  management
+% functions for credential  management
 -spec credential_add(UserId::binary(), ServiceId::binary(), CredState :: any()) ->ok | {error, Reason :: atom()}.
 credential_add(UserId, ServiceId, CredState) ->
     Entry = {ServiceId, CredState},
