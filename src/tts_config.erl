@@ -70,10 +70,14 @@ debug_mode() ->
 
 
 local_port() ->
-    return_port(?CONFIG(port)).
-return_port(<<"default">>) ->
+    return_port(?CONFIG(port),?CONFIG(ssl)).
+return_port(<<"default">>,_) ->
     <<"">>;
-return_port(Port) ->
+return_port(<<"443">>, true) ->
+    <<"">>;
+return_port(<<"80">>, false) ->
+    <<"">>;
+return_port(Port,_) ->
     << <<":">>/binary, Port/binary>>.
 
 local_protocol() ->
