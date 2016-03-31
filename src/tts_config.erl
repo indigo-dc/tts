@@ -33,7 +33,6 @@
 
 -define(MAIN_CONFIG_FILE,"main.conf").
 -define(OIDC_SECTION,"OIDC").
--define(IDH_SECTION,"IDH").
 
 %% API.
 
@@ -71,10 +70,14 @@ debug_mode() ->
 
 
 local_port() ->
-    return_port(?CONFIG(port)).
-return_port(<<"default">>) ->
+    return_port(?CONFIG(port),?CONFIG(ssl)).
+return_port(<<"default">>,_) ->
     <<"">>;
-return_port(Port) ->
+return_port(<<"443">>, true) ->
+    <<"">>;
+return_port(<<"80">>, false) ->
+    <<"">>;
+return_port(Port,_) ->
     << <<":">>/binary, Port/binary>>.
 
 local_protocol() ->
@@ -104,6 +107,7 @@ handle_info(timeout, _State) ->
     clear_config(), 
     % (re)read the configuration
     read_configs(),
+    trigger_services(),
     {stop, normal, #state{}};
 handle_info(_Info, State) ->
 	{noreply, State}.
@@ -132,15 +136,29 @@ clear_config() ->
 
 read_configs() -> 
     ok = read_main_config(),
+    ok = read_oidc_configs(),
     ok = read_service_configs(),
-    ok = update_status(),
-    ok = start_cowboy().
+    ok = update_status().
 
+trigger_services() ->
+    ok = tts_idh:reconfigure(),
+    ok = tts_data_sqlite:reconfigure(),
+    ok = start_cowboy().
 
 read_main_config() ->
     Files = generate_file_list(?MAIN_CONFIG_FILE),
     ok = register_files(main,Files),
     ok = apply_main_settings().
+
+read_oidc_configs() ->
+    read_oidc_configs(get_(oidc_config_path, undefined)). 
+
+read_oidc_configs(undefined) ->
+    ok;
+read_oidc_configs(BasePath) ->
+    OidcConfs = filelib:wildcard(filename:join([BasePath,"*.conf"])), 
+    parse_and_apply_oidc(OidcConfs), 
+    ok.
 
 read_service_configs() ->
     read_service_configs(get_(service_config_path, undefined)). 
@@ -172,32 +190,22 @@ update_status() ->
                     {"EpUser",ep_user,binary,"/user"},
                     {"EpApi",ep_api,binary,"/api"},
                     {"SSL",ssl,boolean,true},
+                    {"CaCertFile",ca_cert_file,file,"cert/ca.cert"},
+                    {"CertFile",cert_file,file,"cert/tts.cert"},
+                    {"KeyFile",key_file,file,"cert/tts.key"},
                     {"LogLevel",log_level,string,"Warning"},
+                    {"SqliteFile",sqlite_db,file,"./tts.db"},
                     {"LogFile",log_file,binary,"tts.log"},
                     {"SessionTimeout",session_timeout,seconds,600},
                     {"CacheTimeout",cache_timeout,seconds,900},
                     {"CacheCheckInterval",cache_check_interval,seconds,300},
                     {"CacheMaxEntries",cache_max_entries,integer,50000},
-                    {"ServiceConfigPath",service_config_path,directory,"./services"}
+                    {"ServiceConfigPath",service_config_path,directory,"./services"},
+                    {"OidcConfigPath",oidc_config_path,directory,"./oidc"},
+                    {"IDHScript",idh_script,file,"./idh.py"},
+                    {"IDHMaxWorker",idh_max_worker,integer,5}
                 ]).
 
--define(IDH_SETTINGS,[
-                    {"Host",idh_host,string,"localhost"},
-                    {"Port",idh_port,integer,389},
-                    {"Base",idh_base,string,undefined},
-                    {"User",idh_user,string,undefined},
-                    {"Passwd",idh_passwd,string,undefined},
-                    {"File",idh_file,file,"idh_mapping.conf"},
-                    {"Type",idh_type,atom,undefined}
-                ]).
-
--define(OIDC_SETTINGS,[
-                    {"Id",binary,""},
-                    {"Description",binary,""},
-                    {"ClientId",binary,""},
-                    {"Secret",binary,""},
-                    {"ConfigEndpoint",binary,""}
-                ]).
 
 
 apply_main_settings() ->
@@ -213,20 +221,21 @@ apply_existing_main_config(_) ->
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
     set_config(local_endpoint,LocalEndpoint),
-    apply_oidc_settings(),
-    apply_idh_settings(),
     ok.
 
+-define(OIDC_SETTINGS,[
+                    {"Id",binary,""},
+                    {"Description",binary,""},
+                    {"ClientId",binary,""},
+                    {"Secret",binary,""},
+                    {"ConfigEndpoint",binary,""}
+                ]).
 
-
-apply_idh_settings() ->
-    apply_settings(main,?IDH_SECTION,?IDH_SETTINGS),
-    ok = tts_idh:update_config(),
-    ok.
-
-
-apply_oidc_settings() ->
-    Settings = get_values(main,?OIDC_SECTION,?OIDC_SETTINGS),
+parse_and_apply_oidc([]) ->
+    ok;
+parse_and_apply_oidc([ConfigFile|Tail])  ->
+    ok = econfig:register_config(oidc,[ConfigFile]),
+    Settings = get_values(oidc,"",?OIDC_SETTINGS),
     IsEmpty = fun(V,In) ->
                       case V of
                           <<>> -> true;
@@ -245,8 +254,20 @@ apply_oidc_settings() ->
         true ->
             %TODO: write some log about not adding the OIDC
             ok
-    end.
+    end,
+    ok = econfig:unregister_config(oidc), 
+    parse_and_apply_oidc(Tail).
 
+
+parse_and_apply_services([]) ->
+    ok;
+parse_and_apply_services([ConfigFile|Tail])  ->
+    ok = econfig:register_config(service,[ConfigFile]),
+    ServiceConfig = econfig:get_value(service,""),
+    ConfigMap = maps:from_list(ServiceConfig), 
+    tts_service:add(ConfigMap), 
+    ok = econfig:unregister_config(service), 
+    parse_and_apply_services(Tail).
 
     
 apply_settings(_Name,_Section,[]) ->
@@ -293,22 +314,6 @@ get_value(Name,Section,Key,atom,Default) ->
         _:_ -> Default 
     end.
 
-
-parse_and_apply_services([]) ->
-    ok;
-parse_and_apply_services(ServiceConfs)  ->
-    ok = econfig:register_config(service,ServiceConfs),
-    ServiceConfigs = econfig:cfg2list(service),
-    add_services(ServiceConfigs),
-    ok = econfig:unregister_config(service), 
-    ok.
-
-add_services([]) ->
-    ok;
-add_services([{ServiceID,ServiceConfigList}|T]) ->
-    ConfigMap = maps:from_list(ServiceConfigList), 
-    tts_service:add(ServiceID,ConfigMap), 
-    add_services(T).
 
 register_files(Name,Files) ->
     register_single_config(Name,only_first(Files)).  
@@ -365,6 +370,7 @@ start_cowboy() ->
 
 start_cowboy(false) ->
     Dispatch = [{'_', [
+                       {"/static/[...]", cowboy_static, {priv_dir, tts, "http_static"} },
                        {"/",tts_http_prep, []}
                       ]}],
     _ = cowboy:start_http( http_handler 
@@ -381,6 +387,7 @@ start_cowboy(_) ->
     EpApi = ?CONFIG(ep_api),
     EpUser = ?CONFIG(ep_user),
     Dispatch = [{'_', [
+                       {"/static/[...]", cowboy_static, {priv_dir, tts, "http_static"} },
                        {EpApi,tts_rest, []},
                        {EpMain, tts_http_prep, []},
                        {EpUser, tts_http_prep, []},
@@ -399,9 +406,16 @@ start_cowboy(_) ->
                                          , [{env, [{dispatch, cowboy_router:compile(Dispatch)}]}]
                                        );
         _ ->
+            %% CaCertFile = ?CONFIG(ca_cert_file),
+            CertFile = ?CONFIG(cert_file),
+            KeyFile = ?CONFIG(key_file),
             {ok, _} = cowboy:start_https( http_handler 
                                           , 100
-                                          , [ {port, ListenPort} ]
+                                          , [ {port, ListenPort},
+                                              %% {cacertfile, CaCertFile},
+                                              {certfile, CertFile},
+                                              {keyfile, KeyFile}
+                                            ]
                                           , [{env, [{dispatch, cowboy_router:compile(Dispatch)}]}]
                                         )
     end,

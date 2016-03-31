@@ -210,7 +210,7 @@ create_result(#{exit_status := 0, std_out := [H|T]}, Log) ->
     end;
 create_result(#{exit_status := _}, Log) ->
     {error, script_failed,lists:reverse(Log) };
-create_result(#{std_err := <<>>, std_out := Data},Log) ->
+create_result(#{std_err := [], std_out := Data},Log) ->
     create_result(#{std_out=>Data,exit_status => 0},Log);
 create_result(_,Log) ->
     create_result(#{exit_status => -1},Log).
@@ -222,9 +222,9 @@ execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
     CmdState =  #{channel_id => ChannelId, cmd => Cmd},
     {ok, State#state{ cmd_state = CmdState }};
 execute_command(Cmd, local, _Connection, #state{cmd_log=Log} = State) when is_list(Cmd) ->
-    StdOut = os:cmd(Cmd),
+    StdOut = list_to_binary(os:cmd(Cmd)),
     trigger_next_command(),
-    CmdState = #{std_out => StdOut, cmd => Cmd}, 
+    CmdState = #{std_out => [StdOut], cmd => Cmd, std_err => []}, 
     NewState = State#state{ cmd_state = #{},
                             cmd_log = [ CmdState | Log] },
     {ok, NewState};

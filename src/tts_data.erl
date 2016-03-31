@@ -51,12 +51,12 @@
 -define(TTS_CRED_USER,tts_cred_user).
 
 -define(TTS_TABLES,[
-                    ?TTS_SESSIONS,
-                    ?TTS_OIDCP,
-                    ?TTS_USER_MAPPING,
-                    ?TTS_USER,
-                    ?TTS_SERVICE,
-                    ?TTS_CRED_USER
+                    ?TTS_SESSIONS
+                    , ?TTS_OIDCP
+                    , ?TTS_USER_MAPPING
+                    , ?TTS_USER
+                    , ?TTS_SERVICE
+                    %% , ?TTS_CRED_USER
                    ]).
 
 init() ->
@@ -105,9 +105,9 @@ user_lookup_info(Issuer,Subject) ->
 user_insert_info(Info,MaxEntries) ->
     CurrentEntries = ets:info(?TTS_USER,size), 
     remove_unused_entries_if_needed(CurrentEntries,MaxEntries),
-    IssSubList = maps:get(user_ids,Info,[]),
+    IssSubList = maps:get(userIds,Info,[]),
     UserId = maps:get(uid, Info),
-    Mappings = [ {IssSub, UserId} || IssSub <- IssSubList ],
+    Mappings = [ {{Issuer, Subject}, UserId} || [Issuer, Subject] <- IssSubList ],
     CTime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
     Tuple = {UserId, Info, CTime, CTime},
     case  insert_new(?TTS_USER,Tuple) of 
@@ -129,7 +129,7 @@ user_delete_info(Issuer, Subject) ->
 
 -spec user_delete_info(InfoOrId :: map() | term()) -> 
     ok | {error, Reason :: term() }.
-user_delete_info(#{user_ids := UserIds, uid := UserId}) ->
+user_delete_info(#{userIds := UserIds, uid := UserId}) ->
     user_delete_mappings(UserIds),
     delete(?TTS_USER,UserId),
     ok;
@@ -285,7 +285,7 @@ oidc_get_op_list() ->
 oidc_op_inspect() ->
     iterate_through_table_and_print(?TTS_OIDCP).
 
-% functions for  management
+% functions for service  management
 -spec service_add(Identifier::binary(), Info :: map()) ->ok | {error, Reason :: atom()}.
 service_add(Identifier, Info) ->
     return_ok_or_error(insert_new(?TTS_SERVICE,{Identifier,Info})).
@@ -307,7 +307,7 @@ service_get_list() ->
 service_inspect() ->
     iterate_through_table_and_print(?TTS_SERVICE).
 
-% functions for  management
+% functions for credential  management
 -spec credential_add(UserId::binary(), ServiceId::binary(), CredState :: any()) ->ok | {error, Reason :: atom()}.
 credential_add(UserId, ServiceId, CredState) ->
     Entry = {ServiceId, CredState},

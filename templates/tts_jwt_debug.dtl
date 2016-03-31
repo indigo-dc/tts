@@ -1,9 +1,0 @@
-<html>
-    <body>
-        Response: {{ response }} </br>
-        Access Token: {{ access_token }} </br>
-        Refresh Token: {{ refresh_token }} </br>
-        JWT: {{ jwt }} </br>
-        verified JWT: {{ jwt_data }} </br>
-    </body>
-</html>
