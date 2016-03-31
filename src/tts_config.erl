@@ -136,6 +136,7 @@ clear_config() ->
 
 read_configs() -> 
     ok = read_main_config(),
+    ok = read_oidc_configs(),
     ok = read_service_configs(),
     ok = update_status().
 
@@ -148,6 +149,16 @@ read_main_config() ->
     Files = generate_file_list(?MAIN_CONFIG_FILE),
     ok = register_files(main,Files),
     ok = apply_main_settings().
+
+read_oidc_configs() ->
+    read_oidc_configs(get_(oidc_config_path, undefined)). 
+
+read_oidc_configs(undefined) ->
+    ok;
+read_oidc_configs(BasePath) ->
+    OidcConfs = filelib:wildcard(filename:join([BasePath,"*.conf"])), 
+    parse_and_apply_oidc(OidcConfs), 
+    ok.
 
 read_service_configs() ->
     read_service_configs(get_(service_config_path, undefined)). 
@@ -190,17 +201,11 @@ update_status() ->
                     {"CacheCheckInterval",cache_check_interval,seconds,300},
                     {"CacheMaxEntries",cache_max_entries,integer,50000},
                     {"ServiceConfigPath",service_config_path,directory,"./services"},
+                    {"OidcConfigPath",oidc_config_path,directory,"./oidc"},
                     {"IDHScript",idh_script,file,"./idh.py"},
                     {"IDHMaxWorker",idh_max_worker,integer,5}
                 ]).
 
--define(OIDC_SETTINGS,[
-                    {"Id",binary,""},
-                    {"Description",binary,""},
-                    {"ClientId",binary,""},
-                    {"Secret",binary,""},
-                    {"ConfigEndpoint",binary,""}
-                ]).
 
 
 apply_main_settings() ->
@@ -216,12 +221,21 @@ apply_existing_main_config(_) ->
     LPort = local_port(),
     LocalEndpoint = << LProt/binary, HostName/binary, LPort/binary, EpReturn/binary >>, 
     set_config(local_endpoint,LocalEndpoint),
-    apply_oidc_settings(),
     ok.
 
+-define(OIDC_SETTINGS,[
+                    {"Id",binary,""},
+                    {"Description",binary,""},
+                    {"ClientId",binary,""},
+                    {"Secret",binary,""},
+                    {"ConfigEndpoint",binary,""}
+                ]).
 
-apply_oidc_settings() ->
-    Settings = get_values(main,?OIDC_SECTION,?OIDC_SETTINGS),
+parse_and_apply_oidc([]) ->
+    ok;
+parse_and_apply_oidc([ConfigFile|Tail])  ->
+    ok = econfig:register_config(oidc,[ConfigFile]),
+    Settings = get_values(oidc,"",?OIDC_SETTINGS),
     IsEmpty = fun(V,In) ->
                       case V of
                           <<>> -> true;
@@ -240,8 +254,20 @@ apply_oidc_settings() ->
         true ->
             %TODO: write some log about not adding the OIDC
             ok
-    end.
+    end,
+    ok = econfig:unregister_config(oidc), 
+    parse_and_apply_oidc(Tail).
 
+
+parse_and_apply_services([]) ->
+    ok;
+parse_and_apply_services([ConfigFile|Tail])  ->
+    ok = econfig:register_config(service,[ConfigFile]),
+    ServiceConfig = econfig:get_value(service,""),
+    ConfigMap = maps:from_list(ServiceConfig), 
+    tts_service:add(ConfigMap), 
+    ok = econfig:unregister_config(service), 
+    parse_and_apply_services(Tail).
 
     
 apply_settings(_Name,_Section,[]) ->
@@ -288,16 +314,6 @@ get_value(Name,Section,Key,atom,Default) ->
         _:_ -> Default 
     end.
 
-
-parse_and_apply_services([]) ->
-    ok;
-parse_and_apply_services([ConfigFile|Tail])  ->
-    ok = econfig:register_config(service,[ConfigFile]),
-    ServiceConfig = econfig:get_value(service,""),
-    ConfigMap = maps:from_list(ServiceConfig), 
-    tts_service:add(ConfigMap), 
-    ok = econfig:unregister_config(service), 
-    parse_and_apply_services(Tail).
 
 register_files(Name,Files) ->
     register_single_config(Name,only_first(Files)).  
