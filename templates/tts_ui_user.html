@@ -23,16 +23,31 @@ The token used to log into this session is:
             <td> {{ service.host }}  </td> 
             <td> {{ service.description }}  </td> 
             {% if service.has_credential %}
-            <td> 
-                <button class="btn btn-default" type="submit">Revoke</button> 
-                <input type="hidden" name="action" value="revoke" >
-            </td>
-                {% else %}
+                    {% if service.is_suspended %}
+                    <td> 
+                        <button class="btn btn-default" type="submit" disabled>Revoke</button> 
+                        <input type="hidden" name="action" value="revoke" >
+                    </td>
+                    {% else %}
+                    <td> 
+                        <button class="btn btn-default" type="submit">Revoke</button> 
+                        <input type="hidden" name="action" value="revoke" >
+                    </td>
+                    {% endif %}
+            {% else %}
+                    {% if service.is_suspended %}
+                <td>
+                    <button type="submit" class="btn btn-default" disabled>Request</button> 
+                    <input type="hidden" name="action" value="request" >
+                </td>
+
+                    {% else %}
                 <td>
                     <button type="submit" class="btn btn-default">Request</button> 
                     <input type="hidden" name="action" value="request" >
                 </td>
                     {% endif %}
+            {% endif %}
         </form> 
     </tr>
     {% endfor %}
