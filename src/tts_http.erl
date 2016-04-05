@@ -30,7 +30,7 @@ redirect_to_auth_server(#{body_qs:=BodyQs} = ReqMap) ->
 
 
 login_user_with_authcode(#{qs := #{error := Error }} = ReqMap) ->
-    show_error_and_close_sessino(Error, ReqMap);
+    show_error_and_close_session(Error, ReqMap);
 login_user_with_authcode(#{qs := #{state:=OidcState}, session := Session} =
                          ReqMap) ->
     retreive_oidc_token_if_state_fits(tts_session:is_oidc_state(OidcState,Session),
@@ -45,7 +45,7 @@ retreive_oidc_token_if_state_fits(true, ReqMap) ->
     handle_oidc_token(oidcc:retrieve_token(AuthCode, OpenIdProviderId), ReqMap);
 retreive_oidc_token_if_state_fits(false, ReqMap) ->
     Desc = <<"the returned state did not fit this session">>,
-    show_error_and_close_sessino(Desc,  ReqMap).
+    show_error_and_close_session(Desc,  ReqMap).
 
 handle_oidc_token({ok, Token}, #{session:=Session}=ReqMap) ->
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
@@ -53,8 +53,10 @@ handle_oidc_token({ok, Token}, #{session:=Session}=ReqMap) ->
     ok = tts_session:clear_oidc_state_nonce(Session),
     VerToken = oidcc:parse_and_validate_token(Token,OpenIdProviderId ,OidcNonce),
     try_to_set_user(VerToken, ReqMap);
-handle_oidc_token({error, Error}, ReqMap) ->
-    show_error_and_close_sessino(Error, ReqMap).
+handle_oidc_token({error, _Error}, ReqMap) ->
+    Desc = <<"An error occured on verifying your identity, please try to log in
+             again">>,
+    show_error_and_close_session(Desc, ReqMap).
 
 
 show_select_page(_ReqMap) ->
@@ -130,7 +132,7 @@ try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}} = Token}, ReqMap
     set_valid_user(tts_user_cache:get_user_info(Issuer, Subject), maps:put(token,Token,ReqMap));
 try_to_set_user(_, ReqMap) ->
     Error = <<"Invalid Token">>,
-    show_error_and_close_sessino(Error, ReqMap).
+    show_error_and_close_session(Error, ReqMap).
 
 
 set_valid_user({ok, _UserInfo},#{session := Session, token:=Token } = ReqMap) ->
@@ -138,7 +140,7 @@ set_valid_user({ok, _UserInfo},#{session := Session, token:=Token } = ReqMap) ->
     redirect_to(user_page,ReqMap);
 set_valid_user(_,ReqMap) ->
     Error = <<"Invalid/Unknown User">>,
-    show_error_and_close_sessino(Error, ReqMap).
+    show_error_and_close_session(Error, ReqMap).
 
 redirect_to(auth_server, #{op_id := OpenIdProvider, session:=Session}) ->
     {ok, OidcState} = tts_session:get_oidc_state(Session),
@@ -152,7 +154,7 @@ redirect_to(user_page, _ReqMap) ->
 redirect_to(_, _ReqMap) ->
     create_redirection("/").
 
-show_error_and_close_sessino(Error,ReqMap) ->
+show_error_and_close_session(Error,ReqMap) ->
     show_error(Error, ReqMap, true).
 
 show_error(Error,#{session := Session},CloseSession) ->
