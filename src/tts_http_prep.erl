@@ -92,25 +92,33 @@ extract_args(Req,false) ->
     {ok, Req, #state{ config_loaded = false }};
 extract_args(Req,true) ->
     {Path,Req2} = cowboy_req:path(Req), 
-    AtomPath = map_to_atom(Path,?PATHMAPPING,ep_main),
     {QsList, Req3} = cowboy_req:qs_vals(Req2),
-    QsMap = create_map_from_proplist(QsList),
     {CookieSessionId,Req4} = cowboy_req:cookie(?COOKIE,Req3),
-    {ok, Session} = tts_session_mgr:get_session(CookieSessionId),
-    LoggedIn = tts_session:is_logged_in(Session),
     {ok, BodyQsList, Req5} = cowboy_req:body_qs(Req4), 
-    BodyQsMap = create_map_from_proplist(BodyQsList),
-    {Method, Req6} = cowboy_req:method(Req5),
+    {Headers, Req6} = cowboy_req:headers(Req5),
+    {Method, Req7} = cowboy_req:method(Req6),
+    {{PeerIP,_Port}, Req99} = cowboy_req:peer(Req7),
+    
+
+    {ok, Session} = tts_session_mgr:get_session(CookieSessionId),
+    AtomPath = map_to_atom(Path,?PATHMAPPING,ep_main),
     AtomMethod = map_to_atom(Method, ?HTTPMETHODMAPPING), 
+    QsMap = create_map_from_proplist(QsList),
+    BodyQsMap = create_map_from_proplist(BodyQsList),
+    UserAgent = get_header(<<"user-agent">>,Headers), 
+    Referer = get_header(<<"referer">>,Headers), 
+    LoggedIn = is_logged_in(UserAgent, PeerIP, Session),
     ReqMap = #{
               path => AtomPath,
               method => AtomMethod,
               session => Session,
               logged_in => LoggedIn,
+              referer => Referer,
+              user_agent => UserAgent,
               qs => QsMap,
               body_qs => BodyQsMap
              },
-    {ok, Req6, #state{req_map = ReqMap, config_loaded = true }}.
+    {ok, Req99, #state{req_map = ReqMap, config_loaded = true }}.
 
 perform_cookie_action(clear,Req,_ReqMap) ->
     Opts = create_cookie_opts(0),
@@ -158,4 +166,19 @@ map_to_atom(Item, Mapping, Default) ->
         {Item, AItem, value} -> {val_too,AItem};
         {Item, AItem, _} -> AItem;
         false -> Default 
+    end.
+
+is_logged_in(UserAgent,IP,Session) ->
+    LoggedIn = tts_session:is_logged_in(Session),
+    SameUA = tts_session:is_user_agent(UserAgent,Session),
+    SameIP = tts_session:is_same_ip(IP,Session),
+    SameIP and SameUA and LoggedIn.
+
+
+
+
+get_header(Key,Headers) ->
+    case lists:keyfind(Key,1,Headers) of
+        {Key, Value} -> Value;
+        false -> undefined
     end.
