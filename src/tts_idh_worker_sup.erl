@@ -6,17 +6,17 @@
 -export([init/1]).
 
 start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 start_worker() ->
     supervisor:start_child(?MODULE, []).
 
 init([]) ->
-    IDHWorker = #{ 
-      id => idh_worker, 
-      start => {tts_idh_worker,start_link,[]}, 
+    IDHWorker = #{
+      id => idh_worker,
+      start => {tts_idh_worker, start_link, []},
       restart => transient
      },
-	Procs = [IDHWorker],
+    Procs = [IDHWorker],
     Flags = #{ strategy => simple_one_for_one  },
-	{ok, {Flags, Procs}}.
+    {ok, {Flags, Procs}}.

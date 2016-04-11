@@ -9,7 +9,7 @@
 start(_Type, _Args) ->
     tts:start_debug(),
     tts_data:init(),
-   	tts_sup:start_link().
+    tts_sup:start_link().
 
 stop(_State) ->
-	ok.
+    ok.

@@ -5,14 +5,14 @@
 -export([init/1]).
 
 start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-	Procs = [
+    Procs = [
              idh(),
              worker_supervisor()
             ],
-	{ok, {{rest_for_one, 1, 5}, Procs}}.
+    {ok, {{rest_for_one, 1, 5}, Procs}}.
 
 worker_supervisor() ->
     #{ id => worker_supervisor,

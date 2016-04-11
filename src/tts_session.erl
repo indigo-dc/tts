@@ -27,9 +27,6 @@
 -export([clear_oidc_state_nonce/1]).
 
 -export([is_user_agent/2]).
--export([is_same_ip/2]).
-
-
 -export([is_logged_in/1]).
 
 %% gen_server.
@@ -45,11 +42,11 @@
 
 -spec start_link(ID :: binary()) -> {ok, pid()}.
 start_link(ID) ->
-	gen_server:start_link(?MODULE, ID, []).
+    gen_server:start_link(?MODULE, ID, []).
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
-	gen_server:cast(Pid, close).
+    gen_server:cast(Pid, close).
 
 -spec get_id(Pid :: pid()) -> {ok, ID::binary()}.
 get_id(Pid) ->
@@ -87,7 +84,8 @@ get_oidc_provider(Pid) ->
 set_oidc_provider(OP, Pid) ->
     gen_server:call(Pid, {set_oidc_provider, OP}).
 
--spec get_iss_sub(Pid :: pid()) -> {ok, Issuer :: binary(), Subject :: binary()}.
+-spec get_iss_sub(Pid :: pid()) ->
+    {ok, Issuer :: binary(), Subject :: binary()}.
 get_iss_sub( Pid) ->
     gen_server:call(Pid, get_iss_sub).
 
@@ -95,11 +93,8 @@ get_iss_sub( Pid) ->
 is_logged_in(Pid) ->
     gen_server:call(Pid, is_logged_in).
 
-is_user_agent(UserAgent,Pid) ->
-    gen_server:call(Pid, {is_user_agent,UserAgent}).
-
-is_same_ip(IP,Pid) ->
-    gen_server:call(Pid, {is_same_ip,IP}).
+is_user_agent(UserAgent, Pid) ->
+    gen_server:call(Pid, {is_user_agent, UserAgent}).
 
 -spec get_oidc_state(Pid :: pid()) -> {ok, OidcState::binary()}.
 get_oidc_state(Pid) ->
@@ -118,9 +113,9 @@ is_oidc_nonce(Nonce, Pid) ->
     gen_server:call(Pid, {compare_oidc_nonce, Nonce}).
 
 -spec clear_oidc_state_nonce(Pid :: pid()) -> ok.
-clear_oidc_state_nonce(Pid) -> 
+clear_oidc_state_nonce(Pid) ->
     gen_server:call(Pid, clear_oidc_state_nonce).
-   
+
 %% gen_server.
 -include("tts.hrl").
 -record(state, {
@@ -131,92 +126,96 @@ clear_oidc_state_nonce(Pid) ->
           sub = none,
           op = none,
           user_agent = undefined,
-          ip = undefined,
           used_redirect = none,
           token = none,
           max_age = 10
-}).
+         }).
 
 
 init(ID) ->
     OidcState = create_random_state(16),
     OidcNonce = create_random_state(64),
     MaxAge = ?CONFIG(session_timeout),
-	{ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
+    {ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
                 max_age=MaxAge}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
-	{reply, {ok, Id}, State, MA};
+    {reply, {ok, Id}, State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
-	{reply, {ok, MA}, State, MA};
+    {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
-	{reply, {ok, MA}, State#state{max_age=MA}, MA};
-handle_call(get_used_redirect, _From, #state{used_redirect=Redir,max_age=MA}=State) ->
-	{reply, {ok, Redir}, State, MA};
+    {reply, {ok, MA}, State#state{max_age=MA}, MA};
+handle_call(get_used_redirect, _From,
+            #state{used_redirect=Redir, max_age=MA}=State) ->
+    {reply, {ok, Redir}, State, MA};
 handle_call({set_used_redirect, Redir}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{used_redirect=Redir}, MA};
-handle_call(get_oidc_provider, _From, #state{op=OP,max_age=MA}=State) ->
-	{reply, {ok, OP}, State, MA};
+    {reply, ok, State#state{used_redirect=Redir}, MA};
+handle_call(get_oidc_provider, _From, #state{op=OP, max_age=MA}=State) ->
+    {reply, {ok, OP}, State, MA};
 handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State) ->
-	{reply, ok, State#state{op=OP}, MA};
-handle_call(get_iss_sub, _From, #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
-	{reply, {ok, Issuer, Subject}, State, MA};
+    {reply, ok, State#state{op=OP}, MA};
+handle_call(get_iss_sub, _From,
+            #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
+    {reply, {ok, Issuer, Subject}, State, MA};
 handle_call({set_token, Token}, _From, #state{max_age=MA}=State) ->
     #{ id := #{ iss := Issuer, sub := Subject }} = Token,
-	{reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
+    {reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
-	{reply, {ok, Token}, State, MA};
+    {reply, {ok, Token}, State, MA};
 handle_call(is_logged_in, _From, #state{iss=none, max_age=MA}=State) ->
-	{reply, false, State, MA};
+    {reply, false, State, MA};
 handle_call(is_logged_in, _From, #state{iss=_, max_age=MA}=State) ->
-	{reply, true, State, MA};
-handle_call(get_oidc_state, _From, #state{oidc_state=OidcState, max_age=MA}=State) ->
-	{reply, {ok, OidcState}, State, MA};
+    {reply, true, State, MA};
+handle_call(get_oidc_state, _From,
+            #state{oidc_state=OidcState, max_age=MA}=State) ->
+    {reply, {ok, OidcState}, State, MA};
 handle_call({compare_oidc_state, OidcState}, _From,
             #state{oidc_state=OidcState, max_age=MA}=State) ->
-	{reply, true, State, MA};
+    {reply, true, State, MA};
 handle_call({compare_oidc_state, _}, _From, #state{ max_age=MA } = State) ->
-	{reply, false, State, MA};
-handle_call(get_oidc_nonce, _From, #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-	{reply, {ok, OidcNonce}, State, MA};
+    {reply, false, State, MA};
+handle_call(get_oidc_nonce, _From,
+            #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
+    {reply, {ok, OidcNonce}, State, MA};
 handle_call({compare_oidc_nonce, OidcNonce}, _From,
             #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-	{reply, true, State, MA};
+    {reply, true, State, MA};
 handle_call({compare_oidc_nonce, _}, _From, #state{ max_age=MA } = State) ->
-	{reply, false, State, MA};
+    {reply, false, State, MA};
 handle_call(clear_oidc_state_nonce, _From, #state{ max_age=MA } = State) ->
-	{reply, ok, State#state{oidc_state=cleared,oidc_nonce=cleared}, MA};
-handle_call({is_user_agent, UserAgent}, _From, #state{user_agent=undefined, max_age=MA}=State) ->
-	{reply, true, State#state{user_agent=UserAgent}, MA};
-handle_call({is_user_agent, UserAgent}, _From, #state{user_agent=UserAgent, max_age=MA}=State) ->
-	{reply, true, State, MA};
+    {reply, ok, State#state{oidc_state=cleared, oidc_nonce=cleared}, MA};
+handle_call({set_user_agent, UserAgent}, _From, #state{max_age=MA}=State) ->
+    {reply, ok, State#state{user_agent=UserAgent}, MA};
+handle_call({is_user_agent, UserAgent}, _From,
+            #state{user_agent=undefined, max_age=MA}=State) ->
+    {reply, true, State#state{user_agent=UserAgent}, MA};
+handle_call({is_user_agent, UserAgent}, _From,
+            #state{user_agent=UserAgent, max_age=MA}=State) ->
+    {reply, true, State, MA};
 handle_call({is_user_agent, _UserAgent}, _From, #state{max_age=MA}=State) ->
-	{reply, false, State, MA};
-handle_call({is_same_ip, IP}, _From, #state{ip=undefined, max_age=MA}=State) ->
-	{reply, true, State#state{ip=IP}, MA};
-handle_call({is_same_ip, IP}, _From, #state{ip=IP, max_age=MA}=State) ->
-	{reply, true, State, MA};
-handle_call({is_same_ip, _IP}, _From, #state{max_age=MA}=State) ->
-	{reply, false, State, MA};
+    {reply, false, State, MA};
+handle_call(get_user_agent, _From,
+            #state{user_agent=UserAgent, max_age=MA}=State) ->
+    {reply, {ok, UserAgent}, State, MA};
 handle_call(_Request, _From, State) ->
-	{reply, ignored, State}.
+    {reply, ignored, State}.
 
 handle_cast(close, State) ->
-    {stop,normal,State};
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
-	{noreply, State}.
+    {noreply, State}.
 
 handle_info(timeout, #state{id=ID} = State) ->
-    tts_session_mgr:session_wants_to_close(ID), 
-    {noreply,State,5000};
+    tts_session_mgr:session_wants_to_close(ID),
+    {noreply, State, 5000};
 handle_info(_Info, State) ->
-	{noreply, State}.
+    {noreply, State}.
 
 terminate(_Reason, _State) ->
-	ok.
+    ok.
 
 code_change(_OldVsn, State, _Extra) ->
-	{ok, State}.
+    {ok, State}.
 
 
 create_random_state(Length) ->
