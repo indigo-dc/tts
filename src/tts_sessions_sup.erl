@@ -5,18 +5,18 @@
 -export([init/1]).
 
 start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-    SessionSup = #{ 
+    SessionSup = #{
       id => session_sup,
       start => {tts_session_sup, start_link, []},
       type => supervisor
      },
-    SessionMgr = #{ 
+    SessionMgr = #{
       id => session_mgr,
       start => {tts_session_mgr, start_link, []}
      },
-	Procs = [SessionSup, SessionMgr],
+    Procs = [SessionSup, SessionMgr],
     Flags = #{ strategy => one_for_all },
-	{ok, {Flags, Procs}}.
+    {ok, {Flags, Procs}}.

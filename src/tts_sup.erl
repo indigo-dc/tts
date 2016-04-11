@@ -6,13 +6,13 @@
 -export([restart_config/0]).
 
 start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 restart_config() ->
-    supervisor:restart_child(?MODULE,config).
+    supervisor:restart_child(?MODULE, config).
 
 init([]) ->
-	Procs = [
+    Procs = [
              sessions_supervisor(),
              credential_supervisor(),
              credential_worker(),
@@ -22,11 +22,11 @@ init([]) ->
              config_worker()
             ],
     Flags = #{},
-	{ok, {Flags,  Procs}}.
+    {ok, {Flags, Procs}}.
 
 
 sessions_supervisor() ->
-    #{ id => sessions_sup, 
+    #{ id => sessions_sup,
        start => {tts_sessions_sup, start_link, []},
        type => supervisor
      }.
@@ -37,7 +37,7 @@ credential_worker() ->
      }.
 
 credential_supervisor() ->
-    #{ id => credential_sup, 
+    #{ id => credential_sup,
        start => {tts_cred_sup, start_link, []},
        type => supervisor
      }.

@@ -5,10 +5,10 @@
 -export([get_html/2]).
 
 init(_, _Req, _Opts) ->
-	{upgrade, protocol, cowboy_rest}.
+    {upgrade, protocol, cowboy_rest}.
 
 content_types_provided(Req, State) ->
-	{[{{<<"text">>, <<"html">>, '*'}, get_html}], Req, State}.
+    {[{{<<"text">>, <<"html">>, '*'}, get_html}], Req, State}.
 
 get_html(Req, State) ->
-	{<<"<html><body>This is REST!</body></html>">>, Req, State}.
+    {<<"<html><body>This is REST!</body></html>">>, Req, State}.

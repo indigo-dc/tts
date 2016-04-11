@@ -6,17 +6,17 @@
 -export([new_session/1]).
 
 start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 new_session(ID) ->
-    supervisor:start_child(?MODULE,[ID]).
+    supervisor:start_child(?MODULE, [ID]).
 
 init([]) ->
-    Session = #{ 
-      id => session, 
-      start => {tts_session,start_link,[]}, 
+    Session = #{
+      id => session,
+      start => {tts_session, start_link, []},
       restart => transient
      },
-	Procs = [Session],
+    Procs = [Session],
     Flags = #{ strategy => simple_one_for_one  },
-	{ok, {Flags, Procs}}.
+    {ok, {Flags, Procs}}.
