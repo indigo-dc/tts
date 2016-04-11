@@ -27,6 +27,7 @@
 -export([clear_oidc_state_nonce/1]).
 
 -export([is_user_agent/2]).
+-export([is_same_ip/2]).
 -export([is_logged_in/1]).
 
 %% gen_server.
@@ -96,6 +97,9 @@ is_logged_in(Pid) ->
 is_user_agent(UserAgent, Pid) ->
     gen_server:call(Pid, {is_user_agent, UserAgent}).
 
+is_same_ip(IP, Pid) ->
+    gen_server:call(Pid, {is_same_ip, IP}).
+
 -spec get_oidc_state(Pid :: pid()) -> {ok, OidcState::binary()}.
 get_oidc_state(Pid) ->
     gen_server:call(Pid, get_oidc_state).
@@ -126,6 +130,7 @@ clear_oidc_state_nonce(Pid) ->
           sub = none,
           op = none,
           user_agent = undefined,
+          ip = undefine,
           used_redirect = none,
           token = none,
           max_age = 10
@@ -184,8 +189,6 @@ handle_call({compare_oidc_nonce, _}, _From, #state{ max_age=MA } = State) ->
     {reply, false, State, MA};
 handle_call(clear_oidc_state_nonce, _From, #state{ max_age=MA } = State) ->
     {reply, ok, State#state{oidc_state=cleared, oidc_nonce=cleared}, MA};
-handle_call({set_user_agent, UserAgent}, _From, #state{max_age=MA}=State) ->
-    {reply, ok, State#state{user_agent=UserAgent}, MA};
 handle_call({is_user_agent, UserAgent}, _From,
             #state{user_agent=undefined, max_age=MA}=State) ->
     {reply, true, State#state{user_agent=UserAgent}, MA};
@@ -194,9 +197,14 @@ handle_call({is_user_agent, UserAgent}, _From,
     {reply, true, State, MA};
 handle_call({is_user_agent, _UserAgent}, _From, #state{max_age=MA}=State) ->
     {reply, false, State, MA};
-handle_call(get_user_agent, _From,
-            #state{user_agent=UserAgent, max_age=MA}=State) ->
-    {reply, {ok, UserAgent}, State, MA};
+handle_call({is_same_ip, IP}, _From,
+            #state{ip=undefined, max_age=MA}=State) ->
+    {reply, true, State#state{ip=IP}, MA};
+handle_call({is_same_ip, IP}, _From,
+            #state{ip=IP, max_age=MA}=State) ->
+    {reply, true, State, MA};
+handle_call({is_same_ip, _IP}, _From, #state{max_age=MA}=State) ->
+    {reply, false, State, MA};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
