@@ -130,7 +130,7 @@ clear_oidc_state_nonce(Pid) ->
           sub = none,
           op = none,
           user_agent = undefined,
-          ip = undefine,
+          ip = undefined,
           used_redirect = none,
           token = none,
           max_age = 10
