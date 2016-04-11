@@ -390,7 +390,7 @@ start_cowboy(_) ->
     EpReturn = ?CONFIG(ep_return),
     EpApi = ?CONFIG(ep_api),
     EpUser = ?CONFIG(ep_user),
-    Dispatch = cowboy_router:dispatch( [{'_',
+    Dispatch = cowboy_router:compile( [{'_',
                                          [
                                           {"/static/[...]", cowboy_static,
                                            {priv_dir, tts, "http_static"}},
