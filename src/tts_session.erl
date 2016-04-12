@@ -4,7 +4,6 @@
 
 %% API.
 -export([start_link/1]).
--export([start/1]).
 -export([close/1]).
 
 -export([get_id/1]).
@@ -47,10 +46,6 @@
 -spec start_link(ID :: binary()) -> {ok, pid()}.
 start_link(ID) ->
     gen_server:start_link(?MODULE, ID, []).
-
--spec start(ID :: binary()) -> {ok, pid()}.
-start(ID) ->
-    gen_server:start(?MODULE, ID, []).
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
