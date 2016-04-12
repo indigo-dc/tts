@@ -10,6 +10,6 @@ doc/
 elvis
 xrefr
 cover/
-eunit.coverdata
+*.coverdata
 test/ct.cover.spec
 *.beam
