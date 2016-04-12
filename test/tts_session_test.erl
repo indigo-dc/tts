@@ -7,11 +7,7 @@ start_stop_id_test() ->
     {ok, Pid} = tts_session:start_link(?ID),
     {ok, ?ID} = tts_session:get_id(Pid),
     ok = tts_session:close(Pid),
-    try tts_session:get_id(Pid) of
-        _ -> erlang:error(not_stopped)
-    catch exit:_ ->
-              ok
-    end.
+    ok = wait_for_process_to_die(Pid,100).
 
 get_set_max_age_test() ->
     {ok, Pid} = tts_session:start_link(?ID),
@@ -26,13 +22,8 @@ get_set_max_age_test() ->
     ok = tts_session:set_max_age(1000,Pid),
     {ok, 1000} = tts_session:get_max_age(Pid),
     ok = tts_session:set_max_age(1,Pid),
-    timer:sleep(5),
-    try tts_session:get_id(Pid) of
-        _ -> erlang:error(not_stopped)
-    catch exit:_ ->
-              ok
-    end,
-    ok.
+    ok = wait_for_process_to_die(Pid,100),
+    ok = meck:unload(tts_session_mgr).
 
 oidc_test() ->
     {ok, Pid} = tts_session:start_link(?ID),
@@ -97,4 +88,16 @@ same_ua_ip_test() ->
     false = tts_session:is_same_ip(UA,Pid),
     true = tts_session:is_same_ip(IP,Pid),
     ok = tts_session:close(Pid).
+
+wait_for_process_to_die(_Pid,0) ->
+    still_alive;
+wait_for_process_to_die(Pid,Iterations) ->
+    case process_info(Pid) of
+        undefined ->
+            ok;
+        _ ->
+            timer:sleep(10),
+            wait_for_process_to_die(Pid,Iterations-1)
+    end.
+
 
