@@ -142,7 +142,7 @@ clear_oidc_state_nonce(Pid) ->
 init(ID) ->
     OidcState = create_random_state(16),
     OidcNonce = create_random_state(64),
-    MaxAge = ?CONFIG(session_timeout,10000),
+    MaxAge = ?CONFIG(session_timeout, 10000),
     {ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
                 max_age=MaxAge}}.
 
