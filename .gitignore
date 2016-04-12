@@ -11,4 +11,5 @@ elvis
 xrefr
 cover/
 eunit.coverdata
+test/ct.cover.spec
 
