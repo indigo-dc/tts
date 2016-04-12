@@ -9,3 +9,6 @@ doc/
 .tts.plt
 elvis
 xrefr
+cover/
+eunit.coverdata
+
