@@ -3,12 +3,8 @@
 
 -define(ID,<<"JustSomeID">>).
 
-start_stop_linked_test() ->
-    {ok, Pid} = tts_session:start_link(?ID),
-    ok = tts_session:close(Pid).
-
 start_stop_id_test() ->
-    {ok, Pid} = tts_session:start(?ID),
+    {ok, Pid} = tts_session:start_link(?ID),
     {ok, ?ID} = tts_session:get_id(Pid),
     ok = tts_session:close(Pid),
     try tts_session:get_id(Pid) of
@@ -18,14 +14,18 @@ start_stop_id_test() ->
     end.
 
 get_set_max_age_test() ->
-    {ok, Pid} = tts_session:start(?ID),
+    {ok, Pid} = tts_session:start_link(?ID),
+    %set up the mocking of tts_session_mgr
+    CloseFun = fun(ID) ->
+                       ID = ?ID,
+                       tts_session:close(Pid)
+               end,
+    ok = meck:new(tts_session_mgr),
+    ok = meck:expect(tts_session_mgr,session_wants_to_close, CloseFun),
     {ok, _} = tts_session:get_max_age(Pid),
     ok = tts_session:set_max_age(1000,Pid),
     {ok, 1000} = tts_session:get_max_age(Pid),
     ok = tts_session:set_max_age(1,Pid),
-    % This will raise an error as tts_session_mgr does not exist
-    % the cooperation between session and session_mgr
-    % is part of common tests, not unit testing
     timer:sleep(5),
     try tts_session:get_id(Pid) of
         _ -> erlang:error(not_stopped)
@@ -35,7 +35,7 @@ get_set_max_age_test() ->
     ok.
 
 oidc_test() ->
-    {ok, Pid} = tts_session:start(?ID),
+    {ok, Pid} = tts_session:start_link(?ID),
     {ok, OidcState} = tts_session:get_oidc_state(Pid),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Pid),
     true = is_binary(OidcState),
@@ -50,7 +50,7 @@ oidc_test() ->
     ok = tts_session:close(Pid).
 
 token_login_test() ->
-    {ok, Pid} = tts_session:start(?ID),
+    {ok, Pid} = tts_session:start_link(?ID),
     Subject = "foo",
     Issuer = "https://bar.com",
     Token = #{id => #{sub => Subject, iss=>Issuer}},
@@ -69,7 +69,7 @@ token_login_test() ->
 redirect_test() ->
     Redirect = <<"https://localhost/back">>,
     BadRedirect = "https://localhost/back",
-    {ok, Pid} = tts_session:start(?ID),
+    {ok, Pid} = tts_session:start_link(?ID),
     ok = tts_session:set_used_redirect(Redirect, Pid),
     {ok,Redirect} = tts_session:get_used_redirect(Pid),
     ignored = tts_session:set_used_redirect(BadRedirect, Pid),
@@ -77,7 +77,7 @@ redirect_test() ->
 
 
 oidc_provider_test() ->
-    {ok, Pid} = tts_session:start(?ID),
+    {ok, Pid} = tts_session:start_link(?ID),
     Issuer = "https://bar.com",
     OidcMap = #{some_info=>Issuer},
     ok = tts_session:set_oidc_provider(OidcMap, Pid),
@@ -89,7 +89,7 @@ oidc_provider_test() ->
 same_ua_ip_test() ->
     IP = {123,123,123,123},
     UA = <<"some browser">>,
-    {ok, Pid} = tts_session:start(?ID),
+    {ok, Pid} = tts_session:start_link(?ID),
     true = tts_session:is_user_agent(UA,Pid),
     false = tts_session:is_user_agent(IP,Pid),
     true = tts_session:is_user_agent(UA,Pid),
