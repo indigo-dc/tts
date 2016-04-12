@@ -7,3 +7,5 @@ _rel/
 doc/
 .erlang.mk/
 .tts.plt
+elvis
+xrefr
