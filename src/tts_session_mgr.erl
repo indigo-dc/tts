@@ -3,6 +3,7 @@
 
 %% API.
 -export([start_link/0]).
+-export([stop/0]).
 
 -export([new_session/0]).
 -export([get_session/1]).
@@ -25,6 +26,9 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+-spec stop() -> ok.
+stop() ->
+    gen_server:cast(?MODULE, stop).
 
 -spec new_session() -> {ok, pid()}.
 new_session() ->
@@ -67,6 +71,10 @@ handle_call(close_all_sessions, _From, State) ->
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast(stop, State) ->
+    SessionList = get_all_sessions(),
+    delete_sessions(SessionList),
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
