@@ -4,11 +4,14 @@
 
 %% API.
 -export([start_link/1]).
+-export([start/1]).
 -export([close/1]).
 
 -export([get_id/1]).
+
 -export([get_max_age/1]).
 -export([set_max_age/2]).
+
 -export([get_oidc_state/1]).
 -export([is_oidc_state/2]).
 -export([get_oidc_nonce/1]).
@@ -44,6 +47,10 @@
 -spec start_link(ID :: binary()) -> {ok, pid()}.
 start_link(ID) ->
     gen_server:start_link(?MODULE, ID, []).
+
+-spec start(ID :: binary()) -> {ok, pid()}.
+start(ID) ->
+    gen_server:start(?MODULE, ID, []).
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
@@ -140,7 +147,7 @@ clear_oidc_state_nonce(Pid) ->
 init(ID) ->
     OidcState = create_random_state(16),
     OidcNonce = create_random_state(64),
-    MaxAge = ?CONFIG(session_timeout),
+    MaxAge = ?CONFIG(session_timeout,10000),
     {ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
                 max_age=MaxAge}}.
 
