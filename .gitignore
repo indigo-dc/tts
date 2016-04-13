@@ -9,3 +9,7 @@ doc/
 .tts.plt
 elvis
 xrefr
+cover/
+*.coverdata
+test/ct.cover.spec
+*.beam

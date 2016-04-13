@@ -7,12 +7,15 @@
 -export([close/1]).
 
 -export([get_id/1]).
+
 -export([get_max_age/1]).
 -export([set_max_age/2]).
+
 -export([get_oidc_state/1]).
 -export([is_oidc_state/2]).
 -export([get_oidc_nonce/1]).
 -export([is_oidc_nonce/2]).
+-export([clear_oidc_state_nonce/1]).
 
 -export([set_token/2]).
 -export([get_token/1]).
@@ -24,7 +27,6 @@
 
 -export([get_oidc_provider/1]).
 -export([set_oidc_provider/2]).
--export([clear_oidc_state_nonce/1]).
 
 -export([is_user_agent/2]).
 -export([is_same_ip/2]).
@@ -140,7 +142,7 @@ clear_oidc_state_nonce(Pid) ->
 init(ID) ->
     OidcState = create_random_state(16),
     OidcNonce = create_random_state(64),
-    MaxAge = ?CONFIG(session_timeout),
+    MaxAge = ?CONFIG(session_timeout, 10000),
     {ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
                 max_age=MaxAge}}.
 
@@ -149,21 +151,23 @@ handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
-    {reply, {ok, MA}, State#state{max_age=MA}, MA};
+    {reply, ok, State#state{max_age=MA}, MA};
 handle_call(get_used_redirect, _From,
             #state{used_redirect=Redir, max_age=MA}=State) ->
     {reply, {ok, Redir}, State, MA};
-handle_call({set_used_redirect, Redir}, _From, #state{max_age=MA}=State) ->
+handle_call({set_used_redirect, Redir}, _From, #state{max_age=MA}=State)
+  when is_binary(Redir) ->
     {reply, ok, State#state{used_redirect=Redir}, MA};
 handle_call(get_oidc_provider, _From, #state{op=OP, max_age=MA}=State) ->
     {reply, {ok, OP}, State, MA};
-handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State) ->
+handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State)
+      when is_map(OP) ->
     {reply, ok, State#state{op=OP}, MA};
 handle_call(get_iss_sub, _From,
             #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
     {reply, {ok, Issuer, Subject}, State, MA};
-handle_call({set_token, Token}, _From, #state{max_age=MA}=State) ->
-    #{ id := #{ iss := Issuer, sub := Subject }} = Token,
+handle_call({set_token, #{ id := #{ iss := Issuer, sub := Subject }} = Token}
+            , _From, #state{max_age=MA}=State) ->
     {reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
