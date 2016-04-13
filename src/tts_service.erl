@@ -7,8 +7,10 @@
 
 
 get_list() ->
-    {ok, []}.
+     tts_data:service_get_list().
 
+get_list(#{uid := UserId})  ->
+    get_list(UserId);
 get_list(UserId) ->
     %TODO: implement a whitelist per service
     {ok, ServiceList} = tts_data:service_get_list(),
