@@ -151,11 +151,11 @@ set_valid_user(_, ReqMap) ->
     Error = <<"Invalid/Unknown User">>,
     show_error_and_close_session(Error, ReqMap).
 
-redirect_to(auth_server, #{op_id := OpenIdProvider, session:=Session}) ->
+redirect_to(auth_server, #{op_id := OpenIdProviderId, session:=Session}) ->
     {ok, OidcState} = tts_session:get_oidc_state(Session),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
-    ok = tts_session:set_oidc_provider(OpenIdProvider, Session),
-    {ok, Redirection} = oidcc:create_redirect_url(OpenIdProvider,
+    ok = tts_session:set_oidc_provider(OpenIdProviderId, Session),
+    {ok, Redirection} = oidcc:create_redirect_url(OpenIdProviderId,
                                                   OidcState, OidcNonce),
     create_redirection(Redirection);
 redirect_to(user_page, _ReqMap) ->

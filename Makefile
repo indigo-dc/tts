@@ -1,12 +1,11 @@
 PROJECT = tts
 
-DEPS = cowboy uuid econfig erlydtl jsx ejwt base64url uri oidcc eper esqlite
+DEPS = cowboy uuid econfig erlydtl jsx base64url uri oidcc eper esqlite
 BUILD_DEPS = elvis_mk
 DEP_PLUGINS = elvis_mk
 TEST_DEPS = meck
 
-dep_ejwt = git https://github.com/indigo-dc-tokentranslation/ejwt cc9f769 
-dep_oidcc = git https://github.com/indigo-dc-tokentranslation/oidcc.git 9cbba42 
+dep_oidcc = git https://github.com/indigo-dc/oidcc.git 91dd62d
 
 dep_esqlite = git https://github.com/mmzeeman/esqlite.git a0c5b39
 dep_base64url = git https://github.com/dvv/base64url.git f2c64ed 
