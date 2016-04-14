@@ -83,8 +83,8 @@ set_used_redirect(Redirect, Pid) ->
 get_oidc_provider(Pid) ->
     gen_server:call(Pid, get_oidc_provider_id).
 
--spec set_oidc_provider(OidcProvider :: map(), Pid :: pid()) -> ok.
-set_oidc_provider(OpId, Pid) ->
+-spec set_oidc_provider(OidcProviderId :: binary(), Pid :: pid()) -> ok.
+set_oidc_provider(OpId, Pid) when is_binary(OpId) ->
     gen_server:call(Pid, {set_oidc_provider_id, OpId}).
 
 -spec get_iss_sub(Pid :: pid()) ->

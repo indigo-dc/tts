@@ -69,11 +69,9 @@ redirect_test() ->
 
 oidc_provider_test() ->
     {ok, Pid} = tts_session:start_link(?ID),
-    Issuer = "https://bar.com",
-    OidcMap = #{some_info=>Issuer},
-    ok = tts_session:set_oidc_provider(OidcMap, Pid),
-    {ok, OidcMap} = tts_session:get_oidc_provider(Pid),
-    ignored = tts_session:set_oidc_provider(<<>>, Pid),
+    OidcId = <<"SomeOpenIdProviderId">>,
+    ok = tts_session:set_oidc_provider(OidcId, Pid),
+    {ok, OidcId} = tts_session:get_oidc_provider(Pid),
     ok = tts_session:close(Pid).
 
 
