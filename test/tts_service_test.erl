@@ -20,7 +20,7 @@ get_list_for_user_test() ->
     ExpectUserId = fun(Uid) ->
                            case Uid of
                                UserId ->
-                                   {ok,[]};
+                                   {ok, []};
                                _ ->
                                    {error, wrong_user}
                            end
@@ -40,7 +40,7 @@ get_service_info_test() ->
     ExpectServiceId = fun(Id) ->
                            case Id of
                                ServiceId ->
-                                   {ok,{ServiceId,great_news}};
+                                   {ok, {ServiceId, great_news}};
                                _ ->
                                    {error, not_found}
                            end
@@ -68,12 +68,13 @@ ssh_service_add_test() ->
       "ConnectionSshDir" => "./.ssh/"},
     ok = meck:new(tts_data),
     ok = meck:new(erlydtl),
-    ok = meck:expect(tts_data, service_add, fun(_,_) -> ok end),
-    ok = meck:expect(erlydtl, compile_file, fun(_,_) -> {ok,some_data} end),
+    ok = meck:expect(tts_data, service_add, fun(_, _) -> ok end),
+    ok = meck:expect(erlydtl, compile_file, fun(_, _) -> {ok, some_data} end),
     ok = tts_service:add(ServiceInfo),
     true = meck:validate(tts_data),
     true = meck:validate(erlydtl),
     ok = meck:unload(tts_data),
+    ok = meck:unload(erlydtl),
     ok.
 
 
