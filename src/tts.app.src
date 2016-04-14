@@ -13,13 +13,11 @@
         ssh,
         econfig,
         jsx,
-        ejwt,
         esqlite,
         erlydtl,
         uri,
         base64url,
         oidcc,
-        eldap,
         eper
                    ]},
 	{mod, {tts_app, []}}
