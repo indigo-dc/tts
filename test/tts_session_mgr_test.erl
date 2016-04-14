@@ -8,7 +8,7 @@ start_stop_test() ->
     ok = meck:expect(tts_data, sessions_delete, fun(_ID) -> true end),
     {ok, Pid} = tts_session_mgr:start_link(),
     ok = tts_session_mgr:stop(),
-    ok = wait_for_process_to_die(Pid, 100),
+    ok = test_util:wait_for_process_to_die(Pid, 100),
     ok = meck:unload(tts_data).
 
 
@@ -27,7 +27,7 @@ session_start_test() ->
     {ok, Session} = tts_session_mgr:new_session(),
 
     ok = tts_session_mgr:stop(),
-    ok = wait_for_process_to_die(Pid, 100),
+    ok = test_util:wait_for_process_to_die(Pid, 100),
     true = meck:validate(tts_data),
     ok = meck:unload(tts_data),
     true = meck:validate(tts_session_sup),
@@ -56,10 +56,10 @@ session_timeout_test() ->
     ok = meck:expect(tts_data, sessions_get_list, fun() -> SessionList end),
 
     tts_session:set_max_age(1,Session),
-    ok = wait_for_process_to_die(Session, 100),
+    ok = test_util:wait_for_process_to_die(Session, 100),
     ok = meck:expect(tts_data, sessions_get_list, fun() -> [] end),
     ok = tts_session_mgr:stop(),
-    ok = wait_for_process_to_die(Pid, 100),
+    ok = test_util:wait_for_process_to_die(Pid, 100),
     true = meck:validate(tts_data),
     ok = meck:unload(tts_data).
 
@@ -105,7 +105,7 @@ session_lookup_create_test() ->
 
     ok = meck:expect(tts_data, sessions_get_list, fun() -> [] end),
     ok = tts_session_mgr:stop(),
-    ok = wait_for_process_to_die(Pid, 100),
+    ok = test_util:wait_for_process_to_die(Pid, 100),
 
     true = meck:validate(tts_session_sup),
     ok = meck:unload(tts_session_sup),
@@ -123,23 +123,25 @@ session_deletion_test() ->
 
     {ok, Pid} = tts_session_mgr:start_link(),
     ok = tts_session_mgr:close_all_sessions(),
-    ok = wait_for_process_to_die(Session, 100),
+    ok = test_util:wait_for_process_to_die(Session, 100),
 
     ok = tts_session_mgr:stop(),
-    ok = wait_for_process_to_die(Pid, 100),
+    ok = test_util:wait_for_process_to_die(Pid, 100),
 
     true = meck:validate(tts_data),
     ok = meck:unload(tts_data).
 
 
+garbage_test() ->
+    ok = meck:new(tts_data),
+    ok = meck:expect(tts_data, sessions_get_list, fun() -> [] end),
+    ok = meck:expect(tts_data, sessions_delete, fun(_ID) -> true end),
+    {ok, Pid} = tts_session_mgr:start_link(),
+    Pid ! <<"some data">>,
+    ok = gen_server:cast(Pid,some_cast),
+    ignored = gen_server:call(Pid,some_unsupported_call),
+    still_alive = test_util:wait_for_process_to_die(Pid,5),
+    ok = tts_session_mgr:stop(),
+    ok = test_util:wait_for_process_to_die(Pid,100),
+    ok = meck:unload(tts_data).
 
-wait_for_process_to_die(_Pid,0) ->
-    still_alive;
-wait_for_process_to_die(Pid,Iterations) ->
-    case process_info(Pid) of
-        undefined ->
-            ok;
-        _ ->
-            timer:sleep(10),
-            wait_for_process_to_die(Pid,Iterations-1)
-    end.
