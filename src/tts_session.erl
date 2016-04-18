@@ -81,11 +81,11 @@ set_used_redirect(Redirect, Pid) ->
 
 -spec get_oidc_provider(Pid :: pid()) -> {ok, map()} | none.
 get_oidc_provider(Pid) ->
-    gen_server:call(Pid, get_oidc_provider).
+    gen_server:call(Pid, get_oidc_provider_id).
 
--spec set_oidc_provider(OidcProvider :: map(), Pid :: pid()) -> ok.
-set_oidc_provider(OP, Pid) ->
-    gen_server:call(Pid, {set_oidc_provider, OP}).
+-spec set_oidc_provider(OidcProviderId :: binary(), Pid :: pid()) -> ok.
+set_oidc_provider(OpId, Pid) when is_binary(OpId) ->
+    gen_server:call(Pid, {set_oidc_provider_id, OpId}).
 
 -spec get_iss_sub(Pid :: pid()) ->
     {ok, Issuer :: binary(), Subject :: binary()}.
@@ -130,7 +130,7 @@ clear_oidc_state_nonce(Pid) ->
           oidc_nonce = none,
           iss = none,
           sub = none,
-          op = none,
+          op_id = none,
           user_agent = undefined,
           ip = undefined,
           used_redirect = none,
@@ -158,11 +158,10 @@ handle_call(get_used_redirect, _From,
 handle_call({set_used_redirect, Redir}, _From, #state{max_age=MA}=State)
   when is_binary(Redir) ->
     {reply, ok, State#state{used_redirect=Redir}, MA};
-handle_call(get_oidc_provider, _From, #state{op=OP, max_age=MA}=State) ->
+handle_call(get_oidc_provider_id, _From, #state{op_id=OP, max_age=MA}=State) ->
     {reply, {ok, OP}, State, MA};
-handle_call({set_oidc_provider, OP}, _From, #state{max_age=MA}=State)
-      when is_map(OP) ->
-    {reply, ok, State#state{op=OP}, MA};
+handle_call({set_oidc_provider_id, OP}, _From, #state{max_age=MA}=State) ->
+    {reply, ok, State#state{op_id=OP}, MA};
 handle_call(get_iss_sub, _From,
             #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
     {reply, {ok, Issuer, Subject}, State, MA};
