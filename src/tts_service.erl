@@ -110,9 +110,6 @@ verify_value(con_host, Host) ->
     {ok, Host};
 verify_value(con_port, Port) ->
     {ok, list_to_integer(Port)};
-verify_value(script, File) ->
-    BaseDir = ?CONFIG(service_config_path),
-    tts_file_util:to_abs(File, BaseDir);
 verify_value(AKey, Value) when is_list(Value) ->
     % default is to convert to binary
     verify_value(AKey, list_to_binary(Value));
