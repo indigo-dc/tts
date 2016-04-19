@@ -75,7 +75,7 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"ConnectionPort">>, con_port},
                     {<<"ConnectionSshDir">>, con_ssh_user_dir},
 
-                    {<<"Script">>, script},
+                    {<<"Cmd">>, cmd},
 
 
                     {<<"ssh">>, ssh},
