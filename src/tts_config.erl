@@ -320,7 +320,7 @@ get_value(Name, Section, Key, atom, Default) ->
 register_files(Name, Files) ->
     register_single_config(Name, only_first(Files)).
 
-register_single_config(_Name, "") ->
+register_single_config(_Name, undefined) ->
     ok;
 register_single_config(Name, File) ->
     ok = econfig:register_config(Name, [File]),
