@@ -120,17 +120,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 prepare_action(State) ->
     #state{service_id = ServiceId,
-           user_info = UserInfo,
-           action = Action
+           user_info = UserInfo
           } = State,
     {ok, ServiceInfo} = tts_service:get_info(ServiceId),
     Connection = connect_to_service(ServiceInfo),
-    {ok, CmdMod} = get_cmd_module(Action, ServiceInfo),
-    create_command_list_and_update_state(CmdMod, UserInfo, ServiceInfo,
+    {ok, Cmd} = get_cmd(ServiceInfo),
+    create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
                                          Connection, State).
 
-%% ok = close_connection(Connection, ServiceInfo),
-%% send_reply(Result , State).
 
 
 connect_to_service(#{con_type := local}) ->
@@ -148,13 +145,9 @@ connect_to_service(#{con_type := ssh } ) ->
 connect_to_service( _ )  ->
     throw(unknown_con_type).
 
-get_cmd_module(request, #{cmd_mod_req := CmdMod}) ->
-    {ok, CmdMod};
-get_cmd_module(revoke, #{cmd_mod_rev := CmdMod}) ->
-    {ok, CmdMod};
-get_cmd_module(incident, #{cmd_mod_si := CmdMod}) ->
-    {ok, CmdMod};
-get_cmd_module(_, _) ->
+get_cmd(#{cmd := Cmd}) ->
+    {ok, Cmd};
+get_cmd(_) ->
     {error, unknown_cmd_mod}.
 
 
@@ -162,31 +155,31 @@ create_command_list_and_update_state(undefined, _UserInfo,
                                      #{con_type := ConType}, _Connection
                                      , State) ->
     {ok, State#state{error = no_cmd_mod, con_type = ConType}};
-create_command_list_and_update_state(CmdMod, UserInfo, #{con_type := ConType},
+create_command_list_and_update_state(Cmd, UserInfo, #{con_type := ConType},
                                      {ok, Connection}, State)
-  when is_atom(CmdMod) ->
+  when is_binary(Cmd) ->
     #{ uid := User,
        uidNumber := Uid,
        gidNumber := Gid,
        homeDirectory := HomeDir
      } = UserInfo,
     #state{
+       action = Action,
        params = Params,
        cred_state = CredState
       } = State,
-    {ok, IoList} = CmdMod:render([{user, User }, {uid, Uid}, {gid, Gid},
-                                  {home_dir, HomeDir}, {params, Params},
-                                  {cred_state, CredState}]),
-    Binary = list_to_binary(IoList),
-    CmdList = binary:split(Binary, [<<"\n">>], [global, trim_all]),
-    RemoveComments = fun(Line, Cmds) ->
-                             case  binary:first(Line) of
-                                 $# -> Cmds;
-                                 _ -> [Line | Cmds]
-                             end
-                     end,
-    CleanCmdList = lists:reverse(lists:foldl(RemoveComments, [], CmdList)),
-    {ok, State#state{cmd_list=CleanCmdList,
+    EncodedJson = base64url:encode(jsx:encode(#{
+                                     action => Action,
+                                     user => User,
+                                     uid => Uid,
+                                     gid => Gid,
+                                     home_dir => HomeDir,
+                                     params => Params,
+                                     cred_state => CredState
+                                    })),
+    CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
+    CmdList = [CmdLine],
+    {ok, State#state{cmd_list=CmdList,
                      connection = Connection, con_type = ConType}};
 create_command_list_and_update_state(_Mod, _Info, #{con_type := ConType},
                                      _Connection, State) ->

@@ -75,9 +75,8 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"ConnectionPort">>, con_port},
                     {<<"ConnectionSshDir">>, con_ssh_user_dir},
 
-                    {<<"RequestCmdFile">>, cred_cmd_req_file},
-                    {<<"RevokeCmdFile">>, cred_cmd_rev_file},
-                    {<<"IncidentCmdFile">>, cred_cmd_si_file},
+                    {<<"Cmd">>, cmd},
+
 
                     {<<"ssh">>, ssh},
                     {<<"local">>, local},
@@ -111,15 +110,6 @@ verify_value(con_host, Host) ->
     {ok, Host};
 verify_value(con_port, Port) ->
     {ok, list_to_integer(Port)};
-verify_value(cred_cmd_req_file, File) ->
-    {ok, ModuleName} = load_command_file(File),
-    {ok, File, #{cmd_mod_req => ModuleName}};
-verify_value(cred_cmd_rev_file, File) ->
-    {ok, ModuleName} = load_command_file(File),
-    {ok, File, #{cmd_mod_rev => ModuleName}};
-verify_value(cred_cmd_si_file, File) ->
-    {ok, ModuleName} = load_command_file(File),
-    {ok, File, #{cmd_mod_si => ModuleName}};
 verify_value(AKey, Value) when is_list(Value) ->
     % default is to convert to binary
     verify_value(AKey, list_to_binary(Value));
@@ -127,24 +117,4 @@ verify_value(con_type, Value) ->
     {ok, bin_to_atom(Value, undefined)};
 verify_value(_AKey, Value) ->
     {ok, Value}.
-
-load_command_file(InFile) ->
-    %load file
-    BaseDir = ?CONFIG(service_config_path),
-    % compile file to a module, store module name in config
-    FileName = tts_file_util:to_abs(InFile, BaseDir),
-    ModuleName = get_unique_module_name(),
-    {ok, _} = erlydtl:compile_file(FileName, ModuleName),
-    {ok, ModuleName}.
-
-get_unique_module_name() ->
-    Random = tts_utils:random_string(8),
-    Prefix = <<"tts_service_cmd_">>,
-    ModuleName = binary_to_atom(<< Prefix/binary, Random/binary >>, utf8),
-    ensure_module_name_unused(code:is_loaded(ModuleName), ModuleName).
-
-ensure_module_name_unused(false, ModuleName) ->
-    ModuleName;
-ensure_module_name_unused(_, _) ->
-    get_unique_module_name().
 
