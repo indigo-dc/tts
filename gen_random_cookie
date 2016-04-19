@@ -1,0 +1,6 @@
+#!/bin/bash
+VMARGS='rel/vm.args'
+sed -n -i '/^-setcookie/!p' $VMARGS 
+COOKIE=`pwgen 24 1`
+echo "-setcookie $COOKIE" >> $VMARGS 
+echo "cookie set to '$COOKIE'"
