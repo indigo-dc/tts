@@ -177,7 +177,7 @@ create_command_list_and_update_state(Cmd, UserInfo, #{con_type := ConType},
                                      params => Params,
                                      cred_state => CredState
                                     })),
-    CmdLine = << Cmd/binary, EncodedJson/binary >>,
+    CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,
                      connection = Connection, con_type = ConType}};
