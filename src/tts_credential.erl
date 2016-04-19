@@ -82,6 +82,9 @@ handle_request_result({ok, #{credential := Cred} = CredMap, Log}, ServiceId,
     %about it
     ok = store_credential_if_valid(UserId, ServiceId, CredMap),
     return_result_with_debug(Cred, Log);
+handle_request_result({ok, #{error := _Err}, Log}, _ServiceId, _Uid, _Token) ->
+    Cred = false,
+    return_result_with_debug(Cred, Log);
 handle_request_result({error, _, Log}, _ServiceId, _UserInfo, _Token) ->
     Cred = false,
     return_result_with_debug(Cred, Log).
@@ -90,6 +93,10 @@ handle_request_result({error, _, Log}, _ServiceId, _UserInfo, _Token) ->
 handle_revoke_result({ok, #{result := Result}, Log}, ServiceId,
                      #{uid := UserId}, CredState) ->
     ok = remove_credential(UserId, ServiceId, CredState),
+    return_result_with_debug(Result, Log);
+handle_revoke_result({ok, #{error := Error}, Log}, _ServiceId,
+                     _UserInfo, _CredState) ->
+    Result = {error, Error},
     return_result_with_debug(Result, Log);
 handle_revoke_result({error, _}, _ServiceId, _UserInfo, _CredState) ->
     Result = {error, revoke_failed},
