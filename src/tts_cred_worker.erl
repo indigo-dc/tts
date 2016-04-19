@@ -129,8 +129,6 @@ prepare_action(State) ->
     create_command_list_and_update_state(CmdMod, UserInfo, ServiceInfo,
                                          Connection, State).
 
-%% ok = close_connection(Connection, ServiceInfo),
-%% send_reply(Result , State).
 
 
 connect_to_service(#{con_type := local}) ->
@@ -162,31 +160,31 @@ create_command_list_and_update_state(undefined, _UserInfo,
                                      #{con_type := ConType}, _Connection
                                      , State) ->
     {ok, State#state{error = no_cmd_mod, con_type = ConType}};
-create_command_list_and_update_state(CmdMod, UserInfo, #{con_type := ConType},
+create_command_list_and_update_state(Script, UserInfo, #{con_type := ConType},
                                      {ok, Connection}, State)
-  when is_atom(CmdMod) ->
+  when is_binary(Script) ->
     #{ uid := User,
        uidNumber := Uid,
        gidNumber := Gid,
        homeDirectory := HomeDir
      } = UserInfo,
     #state{
+       action = Action,
        params = Params,
        cred_state = CredState
       } = State,
-    {ok, IoList} = CmdMod:render([{user, User }, {uid, Uid}, {gid, Gid},
-                                  {home_dir, HomeDir}, {params, Params},
-                                  {cred_state, CredState}]),
-    Binary = list_to_binary(IoList),
-    CmdList = binary:split(Binary, [<<"\n">>], [global, trim_all]),
-    RemoveComments = fun(Line, Cmds) ->
-                             case  binary:first(Line) of
-                                 $# -> Cmds;
-                                 _ -> [Line | Cmds]
-                             end
-                     end,
-    CleanCmdList = lists:reverse(lists:foldl(RemoveComments, [], CmdList)),
-    {ok, State#state{cmd_list=CleanCmdList,
+    EncodedJson = base64url:encode(jsx:encode(#{
+                                     action => Action,
+                                     user => User,
+                                     uid => Uid,
+                                     gid => Gid,
+                                     home_dir => HomeDir,
+                                     params => Params,
+                                     cred_state => CredState
+                                    })),
+    Cmd = << Script/binary, EncodedJson/binary >>,
+    CmdList = [Cmd],
+    {ok, State#state{cmd_list=CmdList,
                      connection = Connection, con_type = ConType}};
 create_command_list_and_update_state(_Mod, _Info, #{con_type := ConType},
                                      _Connection, State) ->
