@@ -74,7 +74,9 @@ show_select_page(_ReqMap) ->
     %% redirect_to_op_or_show_select_page([[OpenIdProviderId, _]], ReqMap) ->
     %%     redirect_to(auth_server, maps:put(op_id, OpenIdProviderId, ReqMap));
     %% redirect_to_op_or_show_select_page(OpList, _) ->
+    {ok, Version} = application:get_key(tts, id),
     {ok, Body} = tts_main_dtl:render([{oidc_op_list, OpList},
+                                      {version, Version},
                                       {configured, true}]),
     #{body => Body, status => 200, cookie => update}.
 
@@ -117,11 +119,13 @@ show_user_page(Session, Credential, Log) ->
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid, UserInfo),
     {ok, ServiceList} = tts_service:get_list(UserId),
+    {ok, Version} = application:get_key(tts, id),
     BaseParams = [{username, UserId},
                   {credential, Credential},
                   {credential_log, Log},
                   {service_list, ServiceList},
-                  {logged_in, true}
+                  {logged_in, true},
+                  {version, Version}
                  ],
     Params = case ?DEBUG_MODE of
                  true ->
