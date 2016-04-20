@@ -1,6 +1,7 @@
 #!/bin/bash
 VMARGS='rel/vm.args'
 sed -n -i '/^-setcookie/!p' $VMARGS 
-COOKIE=`pwgen 24 1`
+# COOKIE=`pwgen 24 1`
+COOKIE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
 echo "-setcookie $COOKIE" >> $VMARGS 
 echo "cookie set to '$COOKIE'"
