@@ -5,7 +5,7 @@ BUILD_DEPS = elvis_mk
 DEP_PLUGINS = elvis_mk
 TEST_DEPS = meck
 
-dep_oidcc = git https://github.com/indigo-dc/oidcc.git ff4621a 
+dep_oidcc = git https://github.com/indigo-dc/oidcc.git 4fe5542 
 
 dep_esqlite = git https://github.com/mmzeeman/esqlite.git a0c5b39
 dep_base64url = git https://github.com/dvv/base64url.git f2c64ed 
