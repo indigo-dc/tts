@@ -98,18 +98,22 @@ request_credential(#{session := Session,
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok, Token} = tts_session:get_token(Session),
-    {ok, Credential, Log} = tts_credential:request(ServiceId,
-                                                   UserInfo, Token, []),
-    show_user_page(Session, Credential, Log);
+    case  tts_credential:request(ServiceId, UserInfo, Token, []) of
+        {ok, Credential, Log} ->  show_user_page(Session, Credential, Log);
+        {error, Reason, _Log} -> show_error(Reason, Session, false)
+    end;
 request_credential(ReqMap) ->
     Desc = <<"">>,
     show_error(Desc, ReqMap, false).
 
+
 revoke_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) ->
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
-    {ok, _Result, _Log} = tts_credential:revoke(ServiceId, UserInfo),
-    show_user_page(Session).
+    case tts_credential:revoke(ServiceId, UserInfo) of
+        {ok, _Result, _Log} -> show_user_page(Session);
+        {error, Error, _Log} -> show_error(Error, Session, false)
+    end.
 
 show_user_page(Session) ->
     show_user_page(Session, false, []).
