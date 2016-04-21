@@ -3,6 +3,7 @@
 
 %% API.
 -export([start_link/0]).
+-export([stop/0]).
 -export([get_user_info/2]).
 -export([verify_cache/0]).
 -export([clear_cache/0]).
@@ -20,6 +21,10 @@
 -spec start_link() -> {ok, pid()}.
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+-spec stop() -> ok.
+stop() ->
+    gen_server:cast(?MODULE, stop).
 
 -spec get_user_info(Issuer :: binary(), Subject :: binary() ) ->
     {ok, UserInfo :: map()} | {error, term()}.
@@ -41,7 +46,7 @@ clear_cache() ->
 -include("tts.hrl").
 
 init([]) ->
-    {ok, #state{}}.
+    {ok, #state{}, 1}.
 
 handle_call(clear_cache, _From, State) ->
     ok = clear_user_cache(),
@@ -57,6 +62,8 @@ handle_cast(verify_cache_validity, State) ->
     {ok, _} = timer:apply_after(Interval, ?MODULE, verify_cache, []),
     verify_cache_validity(),
     {noreply, State};
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -104,10 +111,11 @@ sync_insert_new_user(UserInfo) ->
 %% functions with data access
 
 clear_user_cache() ->
-    tts_data:user_clear_cache().
+    ok = tts_data:user_clear_cache().
 
 verify_cache_validity() ->
-    tts_data:user_delete_entries_older_than(?CONFIG(cache_timeout)).
+    Timeout = ?CONFIG(cache_timeout),
+    {ok, _NumDel} = tts_data:user_delete_entries_older_than(Timeout).
 
 add_new_user_entry(UserInfo) ->
     ok = tts_data:user_insert_info(UserInfo, ?CONFIG(cache_max_entries)).
