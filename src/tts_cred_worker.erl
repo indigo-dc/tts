@@ -5,9 +5,10 @@
 -define(TIMEOUT, 20000).
 
 -export([start_link/0]).
+-export([start/0]).
+-export([stop/1]).
 -export([request/4]).
 -export([revoke/4]).
--export([security_incident/4]).
 
 %% gen_server.
 -export([init/1]).
@@ -38,23 +39,26 @@
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
+-spec start() -> {ok, pid()}.
+start() ->
+    gen_server:start(?MODULE, [], []).
+
+-spec stop(Pid::pid()) -> ok.
+stop(Pid) ->
+    gen_server:cast(Pid, stop).
+
 -spec request(ServiceId :: any(), UserInfo :: map(), Params::any(), pid()) ->
-    {ok, map()}.
+    {ok, map(), list()} | {error, any(), list()} | {error, atom()}.
 request(ServiceId, UserInfo, Params, Pid) ->
     gen_server:call(Pid, {request_credential, ServiceId, UserInfo,
                           Params}, infinity).
 
 -spec revoke(ServiceId :: any(), UserInfo :: map(), CredState::any(), pid()) ->
-    {ok, map()}.
+    {ok, map(), list()} | {error, any(), list()} | {error, atom()}.
 revoke(ServiceId, UserInfo, CredState, Pid) ->
     gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo,
                           CredState}, infinity).
 
--spec security_incident(ServiceId :: any(), UserInfo :: map(), CredState::any()
-                        , pid()) -> {ok, map()}.
-security_incident(ServiceId, UserInfo, CredState, Pid) ->
-    gen_server:call(Pid, {security_incident, ServiceId, UserInfo,
-                          CredState}, infinity).
 %% gen_server.
 
 init([]) ->
@@ -80,16 +84,6 @@ handle_call({revoke_credential, ServiceId, UserInfo, CredState}, From,
                           },
     gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
-handle_call({security_incident, ServiceId, UserInfo, CredState}, From,
-            #state{client = undefined} = State) ->
-    NewState = State#state{ action = incident,
-                            client = From,
-                            service_id = ServiceId,
-                            user_info = UserInfo,
-                            cred_state = CredState
-                          },
-    gen_server:cast(self(), perform_action),
-    {noreply, NewState, 200};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
@@ -99,11 +93,16 @@ handle_cast(perform_action, State) ->
     {noreply, NewState};
 handle_cast(execute_cmd, State) ->
     execute_single_command_or_exit(State);
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({ssh_cm, SshConRef, SshMsg}, State) ->
-    handle_ssh_result(SshConRef, SshMsg, State);
+handle_info({ssh_cm, SshCon, SshMsg}
+            , #state{connection=SshCon,
+                     cmd_state = #{ channel_id := ChannelId}}=State) ->
+    {ok, NewState} = handle_ssh_message(SshMsg, ChannelId, State),
+    {noreply, NewState};
 handle_info(timeout, State) ->
     {ok, NewState} = send_reply({error, timeout}, State),
     {stop, normal, NewState};
@@ -139,22 +138,14 @@ connect_to_service(#{con_type := ssh , con_host := Host } = Info ) ->
     ssh:connect(Host, Port,
                 [{user_dir, UserDir}, {user_interaction, false},
                  {user, User}, {id_string, "TokenTranslationService"}]
-                , 10000);
-connect_to_service(#{con_type := ssh } ) ->
-    throw(missing_ssh_config);
-connect_to_service( _ )  ->
-    throw(unknown_con_type).
+                , 10000).
 
 get_cmd(#{cmd := Cmd}) ->
     {ok, Cmd};
 get_cmd(_) ->
-    {error, unknown_cmd_mod}.
+    {error, no_cmd}.
 
 
-create_command_list_and_update_state(undefined, _UserInfo,
-                                     #{con_type := ConType}, _Connection
-                                     , State) ->
-    {ok, State#state{error = no_cmd_mod, con_type = ConType}};
 create_command_list_and_update_state(Cmd, UserInfo, #{con_type := ConType},
                                      {ok, Connection}, State)
   when is_binary(Cmd) ->
@@ -180,10 +171,7 @@ create_command_list_and_update_state(Cmd, UserInfo, #{con_type := ConType},
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,
-                     connection = Connection, con_type = ConType}};
-create_command_list_and_update_state(_Mod, _Info, #{con_type := ConType},
-                                     _Connection, State) ->
-    {ok, State#state{error = connection_or_cmd_error, con_type = ConType}}.
+                     connection = Connection, con_type = ConType}}.
 
 trigger_next_command() ->
     gen_server:cast(self(), execute_cmd).
@@ -212,11 +200,7 @@ execute_command_or_send_result([Cmd|T], ConType, Connection, undefined, _Log
 
 create_result(#{exit_status := 0, std_out := []}, Log) ->
     {error, no_json, lists:reverse(Log)};
-create_result(#{exit_status := 0, std_out := [H|T]}, Log) ->
-    Append = fun(Line, Complete) ->
-                     << Complete/binary, <<"\n">>/binary, Line /binary >>
-             end,
-    Json = lists:foldl(Append, H, T),
+create_result(#{exit_status := 0, std_out := [Json|_]}, Log) ->
     case jsx:is_json(Json) of
         true -> {ok, jsx:decode(Json, [return_maps, {labels, attempt_atom}])
                  , lists:reverse(Log)};
@@ -248,33 +232,12 @@ execute_command(Cmd, ConType, Connection, State)
     execute_command(binary_to_list(Cmd), ConType, Connection, State).
 
 
-handle_ssh_result(SshCon, SshMsg, #state{connection = SshCon} = State) ->
-    #state{
-       cmd_state = #{ channel_id := ChannelId}
-      } = State,
-    {ok, NewState} = handle_ssh_message(SshMsg, ChannelId, State),
-    {noreply, NewState};
-handle_ssh_result(_SshCon, _SshMsg, State) ->
-    {noreply, State}.
-
 handle_ssh_message({data, ChannelId, 0, Data}, ChannelId, State) ->
     % data on std out
-    #state{ cmd_state = CmdState
-          } = State,
-    StdOut = [Data | maps:get(std_out, CmdState, [])],
-    StdErr = [<<>> | maps:get(std_err, CmdState, [])],
-    Update = #{std_out => StdOut, std_err => StdErr},
-    NewState = State#state{ cmd_state = maps:merge(CmdState, Update) },
-    {ok, NewState};
+    update_std_out_err(Data, <<>>, State);
 handle_ssh_message({data, ChannelId, 1, Data}, ChannelId, State) ->
     % data on std err
-    #state{ cmd_state = CmdState
-          } = State,
-    StdOut = [<<>> | maps:get(std_out, CmdState, [])],
-    StdErr = [Data | maps:get(std_err, CmdState, [])],
-    Update = #{std_out => StdOut, std_err => StdErr},
-    NewState = State#state{ cmd_state = maps:merge(CmdState, Update) },
-    {ok, NewState};
+    update_std_out_err(<<>>, Data, State);
 handle_ssh_message({eof, ChannelId}, ChannelId, State) ->
     {ok, State};
 handle_ssh_message({exit_signal, ChannelId, ExitSignal, ErrorMsg, Lang},
@@ -297,17 +260,19 @@ handle_ssh_message({closed, ChannelId}, ChannelId, State) ->
     trigger_next_command(),
     NewState = State#state{ cmd_state = #{},
                             cmd_log = [ CmdState | Log] },
-    {ok, NewState};
-handle_ssh_message(_Msg, _ChannelId, State) ->
-    {ok, State}.
+    {ok, NewState}.
 
+update_std_out_err(Out, Err, #state{ cmd_state = CmdState } = State) ->
+    StdOut = [Out | maps:get(std_out, CmdState, [])],
+    StdErr = [Err | maps:get(std_err, CmdState, [])],
+    Update = #{std_out => StdOut, std_err => StdErr},
+    NewState = State#state{ cmd_state = maps:merge(CmdState, Update) },
+    {ok, NewState}.
 
 
 close_connection(Connection, ssh) ->
     ok = ssh:close(Connection);
 close_connection(_, local ) ->
-    ok;
-close_connection(_Con, _Info) ->
     ok.
 
 send_reply(_Reply, #state{client=undefined}=State) ->
