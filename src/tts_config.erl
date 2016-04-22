@@ -12,6 +12,7 @@
 
 %% API.
 -export([start_link/0]).
+-export([stop/1]).
 -export([is_loaded/0]).
 -export([debug_mode/0]).
 -export([get_/1]).
@@ -40,6 +41,9 @@
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
+-spec stop(pid()) -> ok.
+stop(Pid) ->
+    gen_server:cast(Pid, stop).
 
 reload() ->
     tts_sup:restart_config().
@@ -97,6 +101,8 @@ init([]) ->
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -131,7 +137,8 @@ stop_services() ->
 
 clear_config() ->
     application:unset_env(tts, ?CONF_LOADED),
-    application:unset_env(tts, config_path),
+    % do not reset the config_path
+    % as on a reload the same path should be used
     ok.
 
 read_configs() ->
