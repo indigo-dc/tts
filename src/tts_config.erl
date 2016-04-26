@@ -395,8 +395,9 @@ start_cowboy(_) ->
     EpMain = ?CONFIG(ep_main),
     EpRedirect = ?CONFIG(ep_redirect),
     EpReturn = ?CONFIG(ep_return),
-    EpApi = ?CONFIG(ep_api),
     EpUser = ?CONFIG(ep_user),
+    EpApiBase = ?CONFIG(ep_api),
+    EpApi = tts_rest:dispatch_mapping(EpApiBase),
     Dispatch = cowboy_router:compile( [{'_',
                                          [
                                           {"/static/[...]", cowboy_static,

@@ -3,22 +3,48 @@
 
 [[ -x $(which jq) ]] || (echo 'Please install "jq"' && exit 2)
 
-URI_SCHEME='http'
+URI_SCHEME='https'
 # let curl be 
 # silent (-s)
 # write the http_code (-w)
-CURL_OPTS='-s -w %{http_code}'
+CURL_OPTS='-s -w %{http_code} --insecure '
 
 function perform-request {
-    method=$1
-    host=$2
-    url_path=$3
-    params=$4
+    if [[ $method = POST ]]; then
+        method=$1
+        host=$2
+        url_path=$3
+        ac_token=$4
+        body=$5
+        iss=$6
+        url=$URI_SCHEME://$host/$url_path
+        if [[ $iss = '' ]]; then
+            resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
+                --data-raw "$body" -H "Authorization: Bearer $ac_token" \
+                -X $method $url)
+        else
+            resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
+                --data-raw "$body" -H "Authorization: Bearer $ac_token" \
+                -H "X-OpenId-Connect-Issuer: $iss" \
+                -X $method $url)
+        fi
+    else 
+        method=$1
+        host=$2
+        url_path=$3
+        ac_token=$4
+        iss=$5
+        url=$URI_SCHEME://$host/$url_path
+        if [[ $iss = '' ]]; then
+            resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
+                -X $method $url)
+        else 
+            resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
+                -H "X-OpenId-Connect-Issuer: $iss" \
+                -X $method $url)
+        fi
+    fi 
 
-    url=$URI_SCHEME://$host/$url_path?$params
-    
-    resp=$(curl $CURL_OPTS -X $method $url)
-    
     length=${#resp}
     http_status=${resp:$length-3:3} 
     http_status_first=${resp:$length-3:1} 
@@ -35,23 +61,14 @@ function perform-request {
 
 function list-endservices {
     host=$1
-    at=$2
-    op=$3
-    mode=$4
+    ac_token=$2
+    iss=$3
 
-    if [[ -n $at ]]
-    then
-       [[ -z $op ]] && echo 'Missing OP' && exit 1
-       [[ $mode = 'active' || $mode = 'inactive' ]] || (echo 'Invalid mode: ' $mode && exit 1)
-
-	args="access_token=$at&provider_id=$op&list_mode=$mode"
-    fi
-
-    resp=$(perform-request GET $host api/endservice/list $args)
+    resp=$(perform-request GET $host api/service $ac_token $iss)
 
     [[ $? -ne 0 ]] && exit $?
 
-    services=$(echo $resp | jq '.endservices')
+    services=$(echo $resp | jq '.service_list')
 
     if [[ $? -ne 0 ]]
     then
@@ -59,8 +76,9 @@ function list-endservices {
     fi
 
     ids=($(echo $services | jq -c '.[].id'))
-    names=($(echo $services | jq -c '.[] .name'))
-    hosts=($(echo $services | jq -c '.[] .host'))
+    types=($(echo $services | jq -c '.[].type'))
+    ports=($(echo $services | jq -c '.[].port'))
+    hosts=($(echo $services | jq -c '.[].host'))
 
     if [[ $? -ne 0 ]]
     then
@@ -69,57 +87,86 @@ function list-endservices {
     fi
 
 
-    # echo "id  name   host"
+    #echo "id  type   host  port"
     for ((i=0; i<${#ids[@]}; i++))
     do
-	echo ${ids[$i]} ${names[$i]} ${hosts[$i]}
+	echo ${ids[$i]} ${types[$i]} ${hosts[$i]} ${ports[$i]}
     done
 }
 
-function list-providers {
+function list-credentials {
     host=$1
+    ac_token=$2
+    iss=$3
 
-    json=$(perform-request GET $host api/oidc/provider/list)
+    resp=$(perform-request GET $host api/credential $ac_token $iss)
 
     [[ $? -ne 0 ]] && exit $?
 
-    provider=$(echo $json | jq '.oidc_provider') 2>/dev/null
+    credentials=$(echo $resp | jq -c '.credential_list')
 
     if [[ $? -ne 0 ]]
     then
 	>&2 echo Something other than JSON returned from server
     fi
 
+    ids=($(echo $credentials | jq -c '.[].id'))
 
-    ids=($(echo $provider | jq '.[] .id'))
-    issuer=($(echo $provider | jq '.[] .iss'))
+    if [[ $? -ne 0 ]]
+    then
+       echo $resp
+       exit 3
+    fi
 
-    # echo "id  issuer"
+    #echo "id  type   host  port"
     for ((i=0; i<${#ids[@]}; i++))
     do
-	echo ${ids[$i]} ${issuer[$i]}
+	echo ${ids[$i]}
+    done
+}
+function list-providers {
+    host=$1
+
+    resp=$(perform-request GET $host api/oidcp)
+
+    [[ $? -ne 0 ]] && exit $?
+
+    provider=$(echo $resp | jq .openid_provider_list) 2>/dev/null
+
+    if [[ $? -ne 0 ]]
+    then
+	>&2 echo Something other than JSON returned from server
+    fi
+    
+
+    ids=($(echo $provider | jq -c '.[].id'))
+    issuer=($(echo $provider | jq -c '.[].issuer'))
+
+    #echo "id  issuer"
+    for ((i=0; i<${#ids[@]}; i++))
+    do
+	echo ${ids[$i]} ${issuer[$i]} 
     done
 }
 
 function request-endservice-access {
     host=$1
-    at=$2
-    pid=$3
-    sid=$4
+    sid=$2
+    at=$3
+    iss=$4
 
-    perform-request POST $host api/endservice/access \
-	       "access_token=$at&provider_id=$pid&service_id=$sid"
+    body="{\"service_id\":\"$sid\"}"
+    perform-request POST $host api/credential $at $body $iss
 }
 
 function revoke-endservice-access {
     host=$1
-    at=$2
-    pid=$3
-    sid=$4
+    cstate=$2
+    at=$3
+    iss=$4
 
-    perform-request DELETE $host api/endservice/access \
-	       "access_token=$at&provider_id=$pid&service_id=$sid"
-}
+    perform-request DELETE $host api/credential/$cstate $at $iss
+ }
 
 name=$0
 cmd=$1
@@ -132,6 +179,9 @@ case $cmd in
     lsserv)
 	list-endservices $@
 	;;
+    lscred)
+	list-credentials $@
+	;;
     request)
 	request-endservice-access $@
 	;;
@@ -143,10 +193,16 @@ case $cmd in
     ;;
     --help|-h|help)
 	echo 'Usage:'
-	# echo '    lsprov <host> [<ac_token> <provider_id> <mode>]     # List all providers'
-	echo '    lsserv <host>                                       # List all end-services'
-	echo '    request <host> <ac_token> <provider_id> <service_id> # Request access'
-	echo '    revoke <host> <ac_token> <provider_id> <service_id> # Revoke access'
+	echo '  # List all OpenId Connect providers'
+	echo '    lsprov  <host>'
+	echo '  # List all end-services provided to the user'
+	echo '    lsserv  <host> <ac_token> [<issuer>]'
+	echo '  # List all credential references of the user'
+	echo '    lscred  <host> <ac_token> [<issuer>]'
+	echo '  # Request credentials for a service'
+	echo '    request <host> <service_id> <ac_token> [<issuer>]'
+    echo '  # Revoke the credentials, given by the credential state (c_state)'
+	echo '    revoke  <host> <c_state> <ac_token> [<issuer>]'
 	;;
     *)
 	echo 'Unknown command'
