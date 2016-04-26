@@ -61,7 +61,9 @@ handle_request_result({ok, #{credential := Cred, state := CredState} , Log}
     ok = sync_store_credential(UserId, ServiceId, CredState),
     return_result_with_debug(Cred, Log);
 handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Token) ->
-    return_error_with_debug({internal, Error}, Log).
+    return_error_with_debug({internal, Error}, Log);
+handle_request_result({error, Error}, _ServiceId, _UserInfo, _Token) ->
+    return_error_with_debug(Error, []).
 
 handle_revoke_result({ok, #{error := Error}, Log}, _ServiceId,
                      _UserInfo, _CredState) ->
