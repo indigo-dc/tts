@@ -7,7 +7,7 @@ URI_SCHEME='https'
 # let curl be 
 # silent (-s)
 # write the http_code (-w)
-CURL_OPTS='-s -w %{http_code} --insecure '
+CURL_OPTS='-s -L -w %{http_code} --insecure '
 
 function perform-request {
     method=$1
