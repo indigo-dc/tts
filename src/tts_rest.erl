@@ -1,5 +1,5 @@
 -module(tts_rest).
-
+-include("tts.hrl").
 
 
 -export([dispatch_mapping/1]).
@@ -129,6 +129,8 @@ resource_exists(Req, #state{type=credential, id=Id,
                             user_info=#{uid :=UserId}}=State) ->
     Result = tts_credential:exists(UserId, Id),
     {Result, Req, State};
+resource_exists(Req, #state{type=cred_data}=State) ->
+    {true, Req, State};
 resource_exists(Req, State) ->
     {false, Req, State}.
 
@@ -159,13 +161,20 @@ perform_get(oidcp, undefined, _, _, _Version) ->
     return_oidc_list(OIDCList);
 perform_get(credential, undefined, _, #{uid := UserId}, _Version) ->
     {ok, CredList} = tts_credential:get_list(UserId),
-    return_credential_list(CredList).
+    return_credential_list(CredList);
+perform_get(cred_data, Id, _, #{uid := UserId}, _Version) ->
+    case tts_rest_cred:get(Id, UserId) of
+        {ok, Cred} -> Cred;
+        _ -> jsx:encode(#{})
+    end.
 
 perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, _Ver) ->
     IFace = <<"REST interface">>,
     case  tts_credential:request(ServiceId, UserInfo, IFace, rest, []) of
-        {ok, _Credential, _Log} ->
-            Url= <<"/user">>,
+        {ok, Credential, _Log} ->
+            #{ uid := UserId } = UserInfo,
+            {ok, Id} = tts_rest_cred:add_cred(Credential, UserId),
+            Url = id_to_url(Id),
             {true, Url};
         _ ->
             false
@@ -273,8 +282,15 @@ safe_binary_to_integer(Version) ->
 -define(TYPE_MAPPING, [
                        {<<"service">>, service},
                        {<<"oidcp">>, oidcp},
-                       {<<"credential">>, credential}
+                       {<<"credential">>, credential},
+                       {<<"credential_data">>, cred_data }
                       ]).
+
+id_to_url(Id) ->
+    Base = ?CONFIG(ep_api),
+    ListPath = io_lib:format("/~p/credential_data/~p", [?LATEST_VERSION, Id]),
+    Path = list_to_binary(ListPath),
+    << Base/binary, Path/binary >>.
 
 verify_type(Type) ->
     case lists:keyfind(Type, 1, ?TYPE_MAPPING) of
@@ -291,6 +307,8 @@ is_malformed(get, service, undefined, undefined) ->
     false;
 is_malformed(get, credential, undefined, undefined) ->
     false;
+is_malformed(get, cred_data, Id, undefined) ->
+    not is_binary(Id);
 is_malformed(post,  credential, undefined, #{service_id:=_Id}) ->
     false;
 is_malformed(delete, credential, Id, undefined) ->
