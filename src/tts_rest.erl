@@ -127,17 +127,14 @@ resource_exists(Req, #state{type=service, id=Id} = State) ->
     end;
 resource_exists(Req, #state{type=credential, id=Id,
                             user_info=#{uid :=UserId}}=State) ->
-    case tts_credential:get_list(UserId) of
-        {ok, List} ->
-            {lists:member(Id, List), Req, State};
-        _ -> {false, Req, State}
-    end;
+    Result = tts_credential:exists(UserId, Id),
+    {Result, Req, State};
 resource_exists(Req, State) ->
     {false, Req, State}.
 
 delete_resource(Req, #state{type=credential,
-                            id=Id, user_info=UserInfo}=State) ->
-     case tts_credential:revoke(Id, UserInfo) of
+                            id=CredentialId, user_info=UserInfo}=State) ->
+     case tts_credential:revoke(CredentialId, UserInfo) of
          {ok, _, _} -> {true, Req, State};
          _ -> {false, Req, State}
      end.
@@ -154,8 +151,8 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
     Result = perform_post(Type, Id, Json, UserInfo, Version),
     {Result, Req, State}.
 
-perform_get(service, undefined, _, _, _Version) ->
-    {ok, ServiceList} = tts_service:get_list(),
+perform_get(service, undefined, _, #{uid:=UserId}, _Version) ->
+    {ok, ServiceList} = tts_service:get_list(UserId),
     return_service_list(ServiceList);
 perform_get(oidcp, undefined, _, _, _Version) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
@@ -165,9 +162,13 @@ perform_get(credential, undefined, _, #{uid := UserId}, _Version) ->
     return_credential_list(CredList).
 
 perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, _Ver) ->
-    case  tts_credential:request(ServiceId, UserInfo, rest, []) of
-        {ok, _Credential, _Log} -> true;
-        _ -> false
+    IFace = <<"REST interface">>,
+    case  tts_credential:request(ServiceId, UserInfo, IFace, rest, []) of
+        {ok, _Credential, _Log} ->
+            Url= <<"/user">>,
+            {true, Url};
+        _ ->
+            false
     end.
 
 return_service_list(Services) ->

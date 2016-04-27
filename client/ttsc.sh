@@ -10,8 +10,8 @@ URI_SCHEME='https'
 CURL_OPTS='-s -w %{http_code} --insecure '
 
 function perform-request {
+    method=$1
     if [[ $method = POST ]]; then
-        method=$1
         host=$2
         url_path=$3
         ac_token=$4
@@ -29,7 +29,6 @@ function perform-request {
                 -X $method $url)
         fi
     else 
-        method=$1
         host=$2
         url_path=$3
         ac_token=$4

@@ -1,5 +1,5 @@
 -module(tts_data).
-
+-include("tts.hrl").
 
 -export([init/0]).
 
@@ -30,6 +30,7 @@
 
 -export([
          service_add/2,
+         service_update/2,
          service_get/1,
          service_get_list/0
         ]).
@@ -94,7 +95,8 @@ user_lookup_info(Issuer, Subject) ->
     user_get_info(return_value(lookup(?TTS_USER_MAPPING, {Issuer, Subject}))).
 
 
--spec user_insert_info(Info::map(), MaxEntries::integer())  ->
+-spec user_insert_info(Info::tts_user_cache:user_info(),
+                       MaxEntries::integer())->
     ok | {error, Reason :: atom()}.
 user_insert_info(Info, MaxEntries) ->
     CurrentEntries = ets:info(?TTS_USER, size),
@@ -121,7 +123,7 @@ user_delete_info(Issuer, Subject) ->
             Error
     end.
 
--spec user_delete_info(InfoOrId :: map() | term()) ->
+-spec user_delete_info(InfoOrId :: tts_user_cache:user_info() | binary()) ->
     ok | {error, Reason :: term() }.
 user_delete_info(#{userIds := UserIds, uid := UserId}) ->
     user_delete_mappings(UserIds),
@@ -279,6 +281,10 @@ oidc_get_op_list() ->
 service_add(Identifier, Info) ->
     return_ok_or_error(insert_new(?TTS_SERVICE, {Identifier, Info})).
 
+-spec service_update(Identifier::binary(), Info :: map()) ->
+    ok | {error, Reason :: atom()}.
+service_update(Identifier, Info) ->
+    return_ok_or_error(insert(?TTS_SERVICE, {Identifier, Info})).
 
 -spec service_get(Identifier::binary()) ->ok.
 service_get(Id) ->

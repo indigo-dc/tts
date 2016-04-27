@@ -1,12 +1,15 @@
 -module(tts_data_sqlite).
 -behaviour(gen_server).
+-include("tts.hrl").
 
 %% API.
 -export([start_link/0]).
 -export([reconfigure/0]).
--export([credential_add/3]).
+-export([credential_add/4]).
 -export([credential_get/1]).
--export([credential_remove/3]).
+-export([credential_get_list/1]).
+-export([credential_get_count/2]).
+-export([credential_remove/2]).
 
 
 %% gen_server.
@@ -32,37 +35,53 @@ reconfigure() ->
     gen_server:cast(?MODULE, reconfigure).
 
 -spec credential_add(UserId::binary(), ServiceId::binary(),
-                     CredState :: any()) -> ok | {error, Reason :: atom()}.
-credential_add(UserId, ServiceId, CredState) ->
-    gen_server:call(?MODULE, {credential_add, UserId, ServiceId, CredState}).
+                     Interface ::binary(), CredState :: any())
+-> ok | {error, Reason :: atom()}.
+credential_add(UserId, ServiceId, Interface, CredState) ->
+    gen_server:call(?MODULE, {credential_add, UserId, ServiceId, Interface,
+                              CredState}).
 
--spec credential_get(UserId::binary()) ->ok.
-credential_get(UserId) ->
-    gen_server:call(?MODULE, {credential_get, UserId}).
+-spec credential_get_list(UserId::binary()) -> [tts:cred()].
+credential_get_list(UserId) ->
+    gen_server:call(?MODULE, {credential_get_list, UserId}).
 
--spec credential_remove(UserId::binary(), ServiceId::binary(),
-                       CredState :: any()) ->ok | {error, Reason :: atom()}.
-credential_remove(UserId, ServiceId, CredState) ->
-    gen_server:call(?MODULE, {credential_remove, UserId, ServiceId, CredState}).
+-spec credential_get_count(UserId::binary(), ServiceId::binary()) -> integer().
+credential_get_count(UserId, ServiceId) ->
+    gen_server:call(?MODULE, {credential_get_count, UserId, ServiceId}).
+
+-spec credential_get(CredId::binary()) -> {ok, tts:cred()}.
+credential_get(CredId) ->
+    gen_server:call(?MODULE, {credential_get, CredId}).
+
+-spec credential_remove(UserId::binary(), CredentialId::binary()) ->
+    ok | {error, Reason :: atom()}.
+credential_remove(UserId, CredId) ->
+    gen_server:call(?MODULE, {credential_remove, UserId, CredId}).
 
 %% gen_server.
--include("tts.hrl").
 
 init([]) ->
     {ok, #state{}}.
 
 handle_call(_, _From, #state{con=undefined}=State) ->
     {reply, {error, not_configured}, State};
-handle_call({credential_add, UserId, ServiceId, CredState}, _From
+handle_call({credential_add, UserId, ServiceId, Interface, CredState}, _From
             , #state{con=Con}=State) ->
-    ok = credential_add(UserId, ServiceId, CredState, Con),
+    ok = credential_add(UserId, ServiceId, Interface, CredState, Con),
     {reply, ok, State};
-handle_call({credential_get, UserId}, _From, #state{con=Con}=State) ->
-    CredList = credential_get(UserId, Con),
+handle_call({credential_get_list, UserId}, _From, #state{con=Con}=State) ->
+    CredList = credential_get_list(UserId, Con),
     {reply, {ok, CredList}, State};
-handle_call({credential_remove, UserId, ServiceId, CredState}, _From
+handle_call({credential_get_count, UserId, ServiceId}, _From,
+            #state{con=Con}=State) ->
+    Count = credential_get_count(UserId, ServiceId, Con),
+    {reply, {ok, Count}, State};
+handle_call({credential_get, CredId}, _From, #state{con=Con}=State) ->
+    Cred = credential_get(CredId, Con),
+    {reply, {ok, Cred}, State};
+handle_call({credential_remove, UserId, CredentialId}, _From
             , #state{con=Con}=State) ->
-    ok = credential_remove(UserId, ServiceId, CredState, Con),
+    ok = credential_remove(UserId, CredentialId, Con),
     {reply, ok, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -86,26 +105,66 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
-credential_add(UserId, ServiceId, CredState, Con) ->
+credential_add(UserId, ServiceId, Interface, CredState, Con) ->
     ok = esqlite3:exec("begin;", Con),
-    esqlite3:q("INSERT INTO tts_cred VALUES( ?1, ?2, ?3);"
-               , [UserId, ServiceId, CredState], Con),
+    CredentialId = create_random_credential_id(Con),
+    CreationTime = erlang:system_time(seconds),
+    esqlite3:q("INSERT INTO tts_cred VALUES( ?1, ?2, ?3, ?4, ?5, ?6);"
+               , [CredentialId, CreationTime, Interface, UserId, ServiceId,
+                  CredState] , Con),
     ok = esqlite3:exec("commit;", Con),
     ok.
 
 
-credential_get(UserId, Con) ->
-    esqlite3:q("SELECT serviceid, credstate FROM tts_cred WHERE  userid IS ?"
-               , [UserId], Con).
+credential_get_list(UserId, Con) ->
+    CredList = esqlite3:q("SELECT credential_id, ctime, interface, service_id,
+                           credstate FROM tts_cred WHERE  user_id IS ?"
+                          , [UserId], Con),
+    ToCred = fun({CredId, CTime, Interface, ServiceId, CredState}, List) ->
+                     Cred = #{cred_id => CredId, ctime => CTime,
+                       interface => Interface, service_id => ServiceId,
+                       cred_state => CredState},
+                     [Cred | List]
+             end,
+    lists:reverse(lists:foldl(ToCred, [], CredList)).
 
-credential_remove(UserId, ServiceId, CredState, Con) ->
+credential_get_count(UserId, ServiceId, Con) ->
+    [Count] = esqlite3:q("SELECT COUNT(user_id) FROM tts_cred WHERE
+                          user_id IS ?1 AND service_id IS ?2"
+                          , [UserId, ServiceId], Con),
+    Count.
+
+credential_get(CredId, Con) ->
+    Result = esqlite3:q("SELECT credential_id, ctime, interface, service_id,
+                         credstate, user_id FROM tts_cred
+                         WHERE  credential_id IS ?"
+                          , [CredId], Con),
+    ToCred = fun({Id, CTime, Interface, ServiceId, CredState, UserId}) ->
+                     #{cred_id => Id, ctime => CTime,
+                       interface => Interface, service_id => ServiceId,
+                       cred_state => CredState, user_id => UserId}
+             end,
+    case Result of
+        [] -> {error, not_found};
+        [Cred] -> ToCred(Cred)
+    end.
+
+credential_remove(UserId, CredentialId, Con) ->
     ok = esqlite3:exec("begin;", Con),
-    esqlite3:q("DELETE FROM tts_cred WHERE userid = ?1 AND serviceid = ?2 AND
-               credstate = ?3;", [UserId,
-                                 ServiceId,
-                                 CredState], Con),
+    esqlite3:q("DELETE FROM tts_cred WHERE user_id=?1 AND credential_id=?2;",
+                [UserId, CredentialId], Con),
     ok = esqlite3:exec("commit;", Con),
     ok.
+
+create_random_credential_id(Con) ->
+    CredId = tts_utils:random_string(24),
+    Result = esqlite3:q("SELECT credential_id FROM tts_cred WHERE
+                        credential_id = ?1", [CredId], Con),
+    case Result of
+        [] -> CredId;
+        _ -> create_random_credential_id(Con)
+    end.
+
 
 reconfigure(#state{con=undefined}) ->
     {ok, Con} = esqlite3:open(?CONFIG(sqlite_db)),
@@ -118,8 +177,9 @@ reconfigure(#state{con=Con} = State) ->
 -define(TABLES, [
                  {cred,
                   <<"tts_cred">>,
-                  <<"CREATE TABLE tts_cred(userid TEXT,
-                    serviceid TEXT, credstate TEXT)">>}
+                  <<"CREATE TABLE tts_cred(credential_id Text, ctime INTEGER,
+                  interface TEXT, user_id TEXT, service_id TEXT,
+                    credstate TEXT)">>}
                 ]).
 
 create_tables_if_needed(Con) ->

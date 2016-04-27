@@ -5,23 +5,18 @@
 -export([get_info/1]).
 -export([add/1]).
 
+-export([disable/1]).
+-export([enable/1]).
+-export([is_enabled/1]).
 
 get_list() ->
      tts_data:service_get_list().
 
 get_list(#{uid := UserId})  ->
     get_list(UserId);
-get_list(UserId) ->
+get_list(_UserId) ->
     %TODO: implement a whitelist per service
-    {ok, ServiceList} = tts_data:service_get_list(),
-    {ok, CredList} = tts_credential:get_list(UserId),
-    UpdateService = fun(Map, List) ->
-                            ServiceId = maps:get(id, Map, undefined),
-                            HasCred = lists:member(ServiceId, CredList),
-                            [maps:put(has_credential, HasCred, Map) | List]
-                    end,
-    Result = lists:reverse(lists:foldl(UpdateService, [], ServiceList)),
-    {ok, Result}.
+    tts_data:service_get_list().
 
 get_info(ServiceId) ->
     case tts_data:service_get(ServiceId) of
@@ -29,8 +24,28 @@ get_info(ServiceId) ->
         Other -> Other
     end.
 
+is_enabled(ServiceId) ->
+    case tts_data:service_get(ServiceId) of
+        {ok, {_Id, Info}} -> maps:get(enabled, Info, true);
+        _ -> false
+    end.
+
+enable(Id) ->
+    set_enabled_to(true, Id).
+
+disable(Id) ->
+    set_enabled_to(false, Id).
+
+set_enabled_to(Value, Id) ->
+    case tts_data:service_get(Id) of
+        {ok, {_Id, Info}} ->
+            tts_data:service_update(Id, maps:put(enabled, Value, Info));
+        Other -> Other
+    end.
+
+
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
-    tts_data:service_add(ServiceId, ServiceInfo);
+    tts_data:service_add(ServiceId, maps:put(enabled, true, ServiceInfo));
 add(#{ id := ServiceId } = ServiceMap) when is_list(ServiceId) ->
     add(maps:put(id, list_to_binary(ServiceId), ServiceMap));
 add(ServiceMap) when is_map(ServiceMap) ->

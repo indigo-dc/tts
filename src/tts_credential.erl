@@ -7,7 +7,8 @@
 -export([stop/0]).
 -export([
          get_list/1,
-         request/4,
+         exists/2,
+         request/5,
          revoke/2
         ]).
 
@@ -19,7 +20,6 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
-
 -spec start_link() -> {ok, pid()}.
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -28,51 +28,69 @@ start_link() ->
 stop() ->
     gen_server:cast(?MODULE, stop).
 
--spec get_list(binary()) -> {ok, [{ServiceId::binary(), CredState::binary()}]}.
+-spec get_list(binary()) -> {ok, [tts:cred()]}.
 get_list(UserId) ->
     get_credential_list(UserId).
 
--spec request(binary(), map(), map(), list()) ->
-    {ok, map(), list()} | {error, any(), list()}.
-request(ServiceId, UserInfo, Token, Params) ->
-    {ok, Pid} = tts_cred_sup:new_worker(),
-    Result = tts_cred_worker:request(ServiceId, UserInfo, Params, Pid),
-    handle_request_result(Result, ServiceId, UserInfo, Token).
+-spec exists(binary(), binary()) -> true | false.
+exists(UserId, CredId) ->
+    case get_credential(UserId, CredId) of
+        {ok, _} -> true;
+        _ -> false
+    end.
 
--spec revoke(binary(), map()) ->
+-spec request(binary(), tts:user_info(), binary(), map()|atom(), list()) ->
     {ok, map(), list()} | {error, any(), list()}.
-revoke(ServiceId, UserInfo) ->
+request(ServiceId, UserInfo, Interface, Token, Params) ->
+    case tts_service:is_enabled(ServiceId) of
+        true ->
+            {ok, Pid} = tts_cred_sup:new_worker(),
+            Result = tts_cred_worker:request(ServiceId, UserInfo, Params, Pid),
+            handle_request_result(Result, ServiceId, UserInfo, Interface,
+                                  Token);
+        false ->
+            {error, service_disabled, []}
+    end.
+
+-spec revoke(binary(), tts:user_info ()) ->
+    {ok, tts:cred(), list()} | {error, any(), list()}.
+revoke(CredentialId, UserInfo) ->
     #{uid := UserId } = UserInfo,
-    case get_credential_state(UserId, ServiceId) of
-        {ok, CredState} ->
+    case get_credential(UserId, CredentialId) of
+        {ok, Cred} ->
+            #{ service_id := ServiceId,
+               cred_state := CredState,
+               cred_id := CredId
+             } = Cred,
             {ok, Pid} = tts_cred_sup:new_worker(),
             Result=tts_cred_worker:revoke(ServiceId, UserInfo, CredState, Pid),
-            handle_revoke_result(Result, ServiceId, UserInfo, CredState);
-        Other -> Other
+            handle_revoke_result(Result, UserInfo, CredId);
+        {error, Reason} -> {error, Reason, []}
     end.
 
 
-handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _Uid, _Token) ->
+handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
+                      _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
 handle_request_result({ok, #{credential := Cred, state := CredState} , Log}
-                      , ServiceId, #{uid := UserId}, _Token) ->
+                      , ServiceId, #{uid := UserId}, Interface, _Token) ->
     %TODO: write logs to file and pass the info to the user, so admins know
     %about it
-    ok = sync_store_credential(UserId, ServiceId, CredState),
+    ok = sync_store_credential(UserId, ServiceId, Interface, CredState),
     return_result_with_debug(Cred, Log);
-handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Token) ->
+handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Interface,
+                      _Token) ->
     return_error_with_debug({internal, Error}, Log);
-handle_request_result({error, Error}, _ServiceId, _UserInfo, _Token) ->
+handle_request_result({error, Error}, _ServiceId, _UserInfo, _Interface,
+                      _Token) ->
     return_error_with_debug(Error, []).
 
-handle_revoke_result({ok, #{error := Error}, Log}, _ServiceId,
-                     _UserInfo, _CredState) ->
+handle_revoke_result({ok, #{error := Error}, Log}, _UserInfo, _CredId) ->
     return_error_with_debug({script, Error}, Log);
-handle_revoke_result({ok, #{result := Result}, Log}, ServiceId,
-                     #{uid := UserId}, CredState) ->
-    ok = remove_credential(UserId, ServiceId, CredState),
+handle_revoke_result({ok, #{result := Result}, Log}, #{uid:=UserId}, CredId) ->
+    ok = remove_credential(UserId, CredId),
     return_result_with_debug(Result, Log);
-handle_revoke_result({error, Error, Log}, _ServiceId, _UserInfo, _CredState) ->
+handle_revoke_result({error, Error, Log}, _UserInfo, _CredId) ->
     return_error_with_debug({internal, Error}, Log).
 
 return_result_with_debug(Result, Log) ->
@@ -93,8 +111,9 @@ return_error_with_debug(Error, _Log, false) ->
 
 
 
-sync_store_credential(UserId, ServiceId, CredState) ->
-    gen_server:call(?MODULE, {store_credential, UserId, ServiceId, CredState}).
+sync_store_credential(UserId, ServiceId, Interface, CredState) ->
+    gen_server:call(?MODULE, {store_credential, UserId, ServiceId, Interface,
+                              CredState}).
 
 -record(state, {
          }).
@@ -103,8 +122,9 @@ sync_store_credential(UserId, ServiceId, CredState) ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({store_credential, UserId, ServiceId, CredState}, _From, State) ->
-    ok = store_credential(UserId, ServiceId, CredState),
+handle_call({store_credential, UserId, ServiceId, Interface, CredState}, _From,
+            State) ->
+    ok = store_credential(UserId, ServiceId, Interface, CredState),
     {reply, ok, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -123,28 +143,29 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-get_credential_list(UserId) ->
-    {ok, List} = get_credential_states(UserId),
-    CredList = [ ServiceId || {ServiceId, _CredState} <- List ],
-    {ok, CredList}.
-
-get_credential_state(UserId, ServiceId) ->
-    {ok, List} = get_credential_states(UserId),
-    case lists:keyfind(ServiceId, 1, List) of
-        false -> {error, not_found};
-        {ServiceId, CredState} -> {ok, CredState}
+get_credential(UserId, CredentialId) ->
+    case get_credential(CredentialId) of
+        {ok, Cred} ->
+            case maps:get(user_id, Cred, undefined) of
+                UserId -> {ok, Cred};
+                _ -> {error, bad_user}
+            end;
+        Other -> Other
     end.
 
 
 % functions with data access
+get_credential(CredId) ->
+    tts_data_sqlite:credential_get(CredId).
 
-get_credential_states(UserId) ->
-    tts_data_sqlite:credential_get(UserId).
+get_credential_list(UserId) ->
+    tts_data_sqlite:credential_get_list(UserId).
 
-store_credential(UserId, ServiceId, CredentialState) ->
-    tts_data_sqlite:credential_add(UserId, ServiceId, CredentialState).
+store_credential(UserId, ServiceId, Interface, CredentialState) ->
+    tts_data_sqlite:credential_add(UserId, ServiceId, Interface,
+                                   CredentialState).
 
-remove_credential(UserId, ServiceId, CredentialState) ->
-    tts_data_sqlite:credential_remove(UserId, ServiceId, CredentialState).
+remove_credential(UserId, CredentialId) ->
+    tts_data_sqlite:credential_remove(UserId, CredentialId).
 
 

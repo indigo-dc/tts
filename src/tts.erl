@@ -9,6 +9,26 @@
          set_debug_mode/1
         ]).
 
+-export_type([
+              oidc_id/0,
+              user_info/0,
+              cred/0
+             ]).
+
+-type oidc_id() :: { Issuer:: binary(), Subject::binary() }.
+
+-type user_info() :: #{ uid => binary(),
+                        uidNumber => integer(),
+                        gidNumber => integer(),
+                        homeDirectory => binary(),
+                        userIds => [oidc_id()]
+                      }.
+
+-type cred() :: #{ cred_id => binary(), ctime => integer(),
+                   cred_state => binary(), service_id => binary(),
+                   interface => binary(), user_id => binary()
+                 }.
+
 
 start_debug() ->
     %debug these modules

@@ -98,7 +98,9 @@ request_credential(#{session := Session,
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok, Token} = tts_session:get_token(Session),
-    case  tts_credential:request(ServiceId, UserInfo, Token, []) of
+    true = tts_service:is_enabled(ServiceId),
+    Iface = <<"web interface">>,
+    case  tts_credential:request(ServiceId, UserInfo, Iface, Token, []) of
         {ok, Credential, Log} ->  show_user_page(Session, Credential, Log);
         {error, Reason, _Log} -> show_error(Reason, Session, false)
     end;
@@ -107,10 +109,10 @@ request_credential(ReqMap) ->
     show_error(Desc, ReqMap, false).
 
 
-revoke_credential(#{session := Session, body_qs:= #{ service_id:=ServiceId}}) ->
+revoke_credential(#{session := Session, body_qs:= #{ credential_id:=CredId}}) ->
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
-    case tts_credential:revoke(ServiceId, UserInfo) of
+    case tts_credential:revoke(CredId, UserInfo) of
         {ok, _Result, _Log} -> show_user_page(Session);
         {error, Error, _Log} -> show_error(Error, Session, false)
     end.
@@ -123,11 +125,13 @@ show_user_page(Session, Credential, Log) ->
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid, UserInfo),
     {ok, ServiceList} = tts_service:get_list(UserId),
+    {ok, CredentialList} = tts_credential:get_list(UserId),
     {ok, Version} = application:get_key(tts, id),
     BaseParams = [{username, UserId},
                   {credential, Credential},
                   {credential_log, Log},
                   {service_list, ServiceList},
+                  {credential_list, CredentialList},
                   {logged_in, true},
                   {version, Version}
                  ],
