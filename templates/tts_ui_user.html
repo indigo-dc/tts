@@ -13,6 +13,7 @@ The token used to log into this session is:
         <th> Type  </th> 
         <th> Host  </th> 
         <th> Description </th> 
+        <th> #Credentials </th> 
         <th> Action </th> 
 
     </tr>
@@ -24,18 +25,15 @@ The token used to log into this session is:
             <td> {{ service.type }}  </td> 
             <td> {{ service.host }}  </td> 
             <td> {{ service.description }}  </td> 
-            {% if service.enabled %}
+            <td> {{ service.cred_count }} / {{ service.cred_limit }}</td> 
             <td>
-                <button type="submit" class="btn btn-default">Request</button> 
-                <input type="hidden" name="action" value="request" >
-            </td>
-
-            {% else %}
-            <td>
-                <button type="submit" class="btn btn-default" disabled>Request</button> 
-                <input type="hidden" name="action" value="request" >
-            </td>
+                <button type="submit" class="btn btn-default"
+            {% if not service.enabled or service.limit_reached %}
+                disabled
             {% endif %}
+                    >Request</button> 
+                <input type="hidden" name="action" value="request" >
+            </td>
         </form> 
     </tr>
     {% endfor %}
