@@ -2,7 +2,7 @@
 
 
 -export([
-         start_debug/0,
+         start_full_debug/0,
          start_debug/1,
          start_debug/2,
          stop_debug/0,
@@ -30,9 +30,11 @@
                  }.
 
 
-start_debug() ->
+start_full_debug() ->
     %debug these modules
     ListOfModules = [ "tts_http",
+                      "tts_rest",
+                      "tts_rest_cred",
                       "tts_user_cache",
                       "tts_session",
                       "tts_session_mgr",
