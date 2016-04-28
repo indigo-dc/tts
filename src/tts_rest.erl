@@ -85,7 +85,7 @@ is_authorized(Req, #state{type=oidcp} = State) ->
 is_authorized(Req, #state{token=undefined} = State) ->
     {{false, <<"Authorization">>}, Req, State};
 is_authorized(Req, #state{type=Type, token=Token} = State)
-  when Type==service; Type==credential ->
+  when Type==service; Type==credential; Type==cred_data ->
     {ok, [{ProviderId, _}| _]} = oidcc:get_openid_provider_list(),
     {ok, Info} = oidcc:get_openid_provider_info(ProviderId),
     #{issuer := Issuer} = Info,
@@ -163,18 +163,18 @@ perform_get(credential, undefined, _, #{uid := UserId}, _Version) ->
     {ok, CredList} = tts_credential:get_list(UserId),
     return_credential_list(CredList);
 perform_get(cred_data, Id, _, #{uid := UserId}, _Version) ->
-    case tts_rest_cred:get(Id, UserId) of
-        {ok, Cred} -> Cred;
+    case tts_rest_cred:get_cred(Id, UserId) of
+        {ok, Cred} -> jsx:encode(Cred);
         _ -> jsx:encode(#{})
     end.
 
-perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, _Ver) ->
+perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, Ver) ->
     IFace = <<"REST interface">>,
     case  tts_credential:request(ServiceId, UserInfo, IFace, rest, []) of
         {ok, Credential, _Log} ->
             #{ uid := UserId } = UserInfo,
             {ok, Id} = tts_rest_cred:add_cred(Credential, UserId),
-            Url = id_to_url(Id),
+            Url = id_to_url(Id, Ver),
             {true, Url};
         _ ->
             false
@@ -286,11 +286,17 @@ safe_binary_to_integer(Version) ->
                        {<<"credential_data">>, cred_data }
                       ]).
 
-id_to_url(Id) ->
+id_to_url(Id, CurrentVersion) ->
     Base = ?CONFIG(ep_api),
-    ListPath = io_lib:format("/~p/credential_data/~p", [?LATEST_VERSION, Id]),
-    Path = list_to_binary(ListPath),
-    << Base/binary, Path/binary >>.
+    Version = list_to_binary(io_lib:format("v~p", [CurrentVersion])),
+    PathElements =[Version, <<"credential_data">>, Id],
+    Concat = fun(Element, Path) ->
+                     Sep = <<"/">>,
+                     << Path/binary, Sep/binary, Element/binary >>
+             end,
+    Path = lists:foldl(Concat, <<>>, PathElements),
+    << Base/binary, Path/binary>>.
+
 
 verify_type(Type) ->
     case lists:keyfind(Type, 1, ?TYPE_MAPPING) of
