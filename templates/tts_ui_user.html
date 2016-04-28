@@ -1,4 +1,8 @@
-you are logged in as <strong>{{ username }}</strong>.<br>
+Hello, you are logged in as <strong>{{ username }}</strong>.
+<br>
+<button id="ac_token" type="button" class="btn btn-default" data-container="body"
+    data-toggle="popover" data-placement="right" data-content="Your Access-Token: {{ access_token }}">
+ show access token </button> <br>
 <br>
 {% if token %}
 The token used to log into this session is:
