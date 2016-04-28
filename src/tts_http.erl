@@ -127,11 +127,13 @@ show_user_page(Session, Credential, Log) ->
     {ok, ServiceList} = tts_service:get_list(UserId),
     {ok, CredentialList} = tts_credential:get_list(UserId),
     {ok, Version} = application:get_key(tts, id),
+    {ok, #{access := #{token := AccessToken}}} = tts_session:get_token(Session),
     BaseParams = [{username, UserId},
                   {credential, Credential},
                   {credential_log, Log},
                   {service_list, ServiceList},
                   {credential_list, CredentialList},
+                  {access_token, AccessToken},
                   {logged_in, true},
                   {version, Version}
                  ],
