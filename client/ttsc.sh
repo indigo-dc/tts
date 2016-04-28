@@ -7,64 +7,100 @@ URI_SCHEME='https'
 # let curl be 
 # silent (-s)
 # write the http_code (-w)
-CURL_OPTS='-s -w %{http_code} --insecure '
+CURL_OPTS='-s -w %{http_code}%{redirect_url} --insecure '
 
-function perform-request {
-    if [[ $method = POST ]]; then
-        method=$1
-        host=$2
-        url_path=$3
-        ac_token=$4
-        body=$5
-        iss=$6
-        url=$URI_SCHEME://$host/$url_path
-        if [[ $iss = '' ]]; then
-            resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
-                --data-raw "$body" -H "Authorization: Bearer $ac_token" \
-                -X $method $url)
-        else
-            resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
-                --data-raw "$body" -H "Authorization: Bearer $ac_token" \
-                -H "X-OpenId-Connect-Issuer: $iss" \
-                -X $method $url)
-        fi
-    else 
-        method=$1
-        host=$2
-        url_path=$3
-        ac_token=$4
-        iss=$5
-        url=$URI_SCHEME://$host/$url_path
-        if [[ $iss = '' ]]; then
-            resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
-                -X $method $url)
-        else 
-            resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
-                -H "X-OpenId-Connect-Issuer: $iss" \
-                -X $method $url)
-        fi
-    fi 
-
+function perform-post {
+    url=$1
+    ac_token=$2
+    body=$3
+    iss=$4
+    if [[ $iss = '' ]]; then
+        resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
+            --data-raw "$body" -H "Authorization: Bearer $ac_token" \
+            -X POST $url)
+    else
+        resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
+            --data-raw "$body" -H "Authorization: Bearer $ac_token" \
+            -H "X-OpenId-Connect-Issuer: $iss" \
+            -X POST $url)
+    fi
     length=${#resp}
-    http_status=${resp:$length-3:3} 
-    http_status_first=${resp:$length-3:1} 
-    body=${resp:0:$length-3}
-    echo $body
+    http_status=${resp:0:3} 
+    redirect=${resp:3:$length-3} 
 
-    if [[ ! $http_status_first = "2" ]]
+    if [[ $http_status = "303" ]]
     then
-	>&2 echo ERROR RESPONSE $http_status
-	exit 5
+        perform-get $redirect $ac_token $iss
+    elif [[ ! $http_status_first = "2" ]]
+    then
+        >&2 echo ERROR RESPONSE $http_status
+        exit 5
+    else
+        echo $body
     fi
 
 }
 
+function perform-get {
+    url=$1
+    ac_token=$2
+    iss=$3
+    if [[ $iss = '' ]]; then
+        resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
+            -X GET $url)
+    else 
+        resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
+            -H "X-OpenId-Connect-Issuer: $iss" \
+            -X GET $url)
+    fi
+    length=${#resp}
+    http_status=${resp:$length-3:3} 
+    body=${resp:0:$length-3}
+
+    http_status_first=${resp:$length-3:1} 
+
+    echo $body
+
+    if [[ ! $http_status_first = "2" ]]
+    then
+        >&2 echo ERROR RESPONSE $http_status
+        exit 5
+    fi
+}
+
+function perform-delete {
+    url=$1
+    ac_token=$2
+    iss=$3
+    if [[ $iss = '' ]]; then
+        resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
+            -X DELETE $url)
+    else 
+        resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
+            -H "X-OpenId-Connect-Issuer: $iss" \
+            -X DELETE $url)
+    fi
+    length=${#resp}
+    http_status=${resp:$length-3:3} 
+    body=${resp:0:$length-3}
+
+    http_status_first=${resp:$length-3:1} 
+
+    echo $body
+
+    if [[ ! $http_status_first = "2" ]]
+    then
+        >&2 echo ERROR RESPONSE $http_status
+        exit 5
+    fi
+}
 function list-endservices {
     host=$1
     ac_token=$2
     iss=$3
-
-    resp=$(perform-request GET $host api/service $ac_token $iss)
+    url_path=api/service
+    url=$URI_SCHEME://$host/$url_path
+    resp=$(perform-get $url $ac_token $iss)
 
     [[ $? -ne 0 ]] && exit $?
 
@@ -98,8 +134,9 @@ function list-credentials {
     host=$1
     ac_token=$2
     iss=$3
-
-    resp=$(perform-request GET $host api/credential $ac_token $iss)
+    url_path=api/credential
+    url=$URI_SCHEME://$host/$url_path
+    resp=$(perform-get $url $ac_token $iss)
 
     [[ $? -ne 0 ]] && exit $?
 
@@ -126,8 +163,9 @@ function list-credentials {
 }
 function list-providers {
     host=$1
-
-    resp=$(perform-request GET $host api/oidcp)
+    url_path=api/oidcp
+    url=$URI_SCHEME://$host/$url_path
+    resp=$(perform-get $url)
 
     [[ $? -ne 0 ]] && exit $?
 
@@ -154,9 +192,11 @@ function request-endservice-access {
     sid=$2
     at=$3
     iss=$4
+    url_path=api/credential
+    url=$URI_SCHEME://$host/$url_path
 
     body="{\"service_id\":\"$sid\"}"
-    perform-request POST $host api/credential $at $body $iss
+    perform-post $url $at $body $iss
 }
 
 function revoke-endservice-access {
@@ -165,7 +205,9 @@ function revoke-endservice-access {
     at=$3
     iss=$4
 
-    perform-request DELETE $host api/credential/$cstate $at $iss
+    url_path=api/credential/$cstate
+    url=$URI_SCHEME://$host/$url_path
+    perform-delete $url $at $iss
  }
 
 name=$0

@@ -2,17 +2,39 @@
 
 
 -export([
-         start_debug/0,
+         start_full_debug/0,
          start_debug/1,
          start_debug/2,
          stop_debug/0,
          set_debug_mode/1
         ]).
 
+-export_type([
+              oidc_id/0,
+              user_info/0,
+              cred/0
+             ]).
 
-start_debug() ->
+-type oidc_id() :: { Issuer:: binary(), Subject::binary() }.
+
+-type user_info() :: #{ uid => binary(),
+                        uidNumber => integer(),
+                        gidNumber => integer(),
+                        homeDirectory => binary(),
+                        userIds => [oidc_id()]
+                      }.
+
+-type cred() :: #{ cred_id => binary(), ctime => integer(),
+                   cred_state => binary(), service_id => binary(),
+                   interface => binary(), user_id => binary()
+                 }.
+
+
+start_full_debug() ->
     %debug these modules
     ListOfModules = [ "tts_http",
+                      "tts_rest",
+                      "tts_rest_cred",
                       "tts_user_cache",
                       "tts_session",
                       "tts_session_mgr",

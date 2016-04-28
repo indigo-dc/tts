@@ -19,6 +19,7 @@ init([]) ->
              idh_supervisor(),
              user_cache(),
              sqlite_worker(),
+             rest_cred(),
              config_worker()
             ],
     Flags = #{},
@@ -61,4 +62,9 @@ idh_supervisor() ->
 user_cache() ->
     #{ id => user_cache,
        start => {tts_user_cache, start_link, []}
+     }.
+
+rest_cred() ->
+    #{ id => rest_cred,
+       start => {tts_rest_cred, start_link, []}
      }.

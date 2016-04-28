@@ -8,45 +8,33 @@ The token used to log into this session is:
 {% if service_list %}
 <h2>Services</h2>
 <table class="table table-striped">
-    {% for service in service_list %}
     <tr>
+        <th> Id  </th> 
         <th> Type  </th> 
         <th> Host  </th> 
         <th> Description </th> 
         <th> Action </th> 
 
     </tr>
+    {% for service in service_list %}
     <tr>
         <form method="post" action="{{ ep_user }}">
             <input type="hidden" name="service_id" value="{{ service.id }}" >
+            <td> {{ service.id }}  </td> 
             <td> {{ service.type }}  </td> 
             <td> {{ service.host }}  </td> 
             <td> {{ service.description }}  </td> 
-            {% if service.has_credential %}
-                    {% if service.is_suspended %}
-                    <td> 
-                        <button class="btn btn-default" type="submit" disabled>Revoke</button> 
-                        <input type="hidden" name="action" value="revoke" >
-                    </td>
-                    {% else %}
-                    <td> 
-                        <button class="btn btn-default" type="submit">Revoke</button> 
-                        <input type="hidden" name="action" value="revoke" >
-                    </td>
-                    {% endif %}
-            {% else %}
-                    {% if service.is_suspended %}
-                <td>
-                    <button type="submit" class="btn btn-default" disabled>Request</button> 
-                    <input type="hidden" name="action" value="request" >
-                </td>
+            {% if service.enabled %}
+            <td>
+                <button type="submit" class="btn btn-default">Request</button> 
+                <input type="hidden" name="action" value="request" >
+            </td>
 
-                    {% else %}
-                <td>
-                    <button type="submit" class="btn btn-default">Request</button> 
-                    <input type="hidden" name="action" value="request" >
-                </td>
-                    {% endif %}
+            {% else %}
+            <td>
+                <button type="submit" class="btn btn-default" disabled>Request</button> 
+                <input type="hidden" name="action" value="request" >
+            </td>
             {% endif %}
         </form> 
     </tr>
@@ -94,6 +82,33 @@ The log of executing the ssh-commands
     {% endfor %}
 </table>
 
+{% endif %}
+
+{% if credential_list %}
+<h2>Credentials</h2>
+<table class="table table-striped">
+    <tr>
+        <th> Interface  </th> 
+        <th> Creation Time  </th> 
+        <th> Service Id  </th> 
+        <th> Action  </th> 
+    </tr>
+    {% for credential in credential_list %}
+    <tr>
+        <form method="post" action="{{ ep_user }}">
+            <input type="hidden" name="credential_id" value="{{credential.cred_id }}" >
+            <td> {{ credential.interface }}  </td> 
+            <td> {{ credential.ctime }}  </td> 
+            <td> {{ credential.service_id }}  </td> 
+            <td>
+                <button type="submit" class="btn btn-default">Revoke</button> 
+                <input type="hidden" name="action" value="revoke" >
+            </td>
+        </form> 
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
 {% endif %}
 <br>
 <form method="post" action="{{ ep_user }}">

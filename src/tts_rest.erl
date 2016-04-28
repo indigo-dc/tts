@@ -1,5 +1,5 @@
 -module(tts_rest).
-
+-include("tts.hrl").
 
 
 -export([dispatch_mapping/1]).
@@ -85,7 +85,7 @@ is_authorized(Req, #state{type=oidcp} = State) ->
 is_authorized(Req, #state{token=undefined} = State) ->
     {{false, <<"Authorization">>}, Req, State};
 is_authorized(Req, #state{type=Type, token=Token} = State)
-  when Type==service; Type==credential ->
+  when Type==service; Type==credential; Type==cred_data ->
     {ok, [{ProviderId, _}| _]} = oidcc:get_openid_provider_list(),
     {ok, Info} = oidcc:get_openid_provider_info(ProviderId),
     #{issuer := Issuer} = Info,
@@ -127,17 +127,16 @@ resource_exists(Req, #state{type=service, id=Id} = State) ->
     end;
 resource_exists(Req, #state{type=credential, id=Id,
                             user_info=#{uid :=UserId}}=State) ->
-    case tts_credential:get_list(UserId) of
-        {ok, List} ->
-            {lists:member(Id, List), Req, State};
-        _ -> {false, Req, State}
-    end;
+    Result = tts_credential:exists(UserId, Id),
+    {Result, Req, State};
+resource_exists(Req, #state{type=cred_data}=State) ->
+    {true, Req, State};
 resource_exists(Req, State) ->
     {false, Req, State}.
 
 delete_resource(Req, #state{type=credential,
-                            id=Id, user_info=UserInfo}=State) ->
-     case tts_credential:revoke(Id, UserInfo) of
+                            id=CredentialId, user_info=UserInfo}=State) ->
+     case tts_credential:revoke(CredentialId, UserInfo) of
          {ok, _, _} -> {true, Req, State};
          _ -> {false, Req, State}
      end.
@@ -154,20 +153,31 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
     Result = perform_post(Type, Id, Json, UserInfo, Version),
     {Result, Req, State}.
 
-perform_get(service, undefined, _, _, _Version) ->
-    {ok, ServiceList} = tts_service:get_list(),
+perform_get(service, undefined, _, #{uid:=UserId}, _Version) ->
+    {ok, ServiceList} = tts_service:get_list(UserId),
     return_service_list(ServiceList);
 perform_get(oidcp, undefined, _, _, _Version) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     return_oidc_list(OIDCList);
 perform_get(credential, undefined, _, #{uid := UserId}, _Version) ->
     {ok, CredList} = tts_credential:get_list(UserId),
-    return_credential_list(CredList).
+    return_credential_list(CredList);
+perform_get(cred_data, Id, _, #{uid := UserId}, _Version) ->
+    case tts_rest_cred:get_cred(Id, UserId) of
+        {ok, Cred} -> jsx:encode(Cred);
+        _ -> jsx:encode(#{})
+    end.
 
-perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, _Ver) ->
-    case  tts_credential:request(ServiceId, UserInfo, rest, []) of
-        {ok, _Credential, _Log} -> true;
-        _ -> false
+perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, Ver) ->
+    IFace = <<"REST interface">>,
+    case  tts_credential:request(ServiceId, UserInfo, IFace, rest, []) of
+        {ok, Credential, _Log} ->
+            #{ uid := UserId } = UserInfo,
+            {ok, Id} = tts_rest_cred:add_cred(Credential, UserId),
+            Url = id_to_url(Id, Ver),
+            {true, Url};
+        _ ->
+            false
     end.
 
 return_service_list(Services) ->
@@ -272,8 +282,21 @@ safe_binary_to_integer(Version) ->
 -define(TYPE_MAPPING, [
                        {<<"service">>, service},
                        {<<"oidcp">>, oidcp},
-                       {<<"credential">>, credential}
+                       {<<"credential">>, credential},
+                       {<<"credential_data">>, cred_data }
                       ]).
+
+id_to_url(Id, CurrentVersion) ->
+    Base = ?CONFIG(ep_api),
+    Version = list_to_binary(io_lib:format("v~p", [CurrentVersion])),
+    PathElements =[Version, <<"credential_data">>, Id],
+    Concat = fun(Element, Path) ->
+                     Sep = <<"/">>,
+                     << Path/binary, Sep/binary, Element/binary >>
+             end,
+    Path = lists:foldl(Concat, <<>>, PathElements),
+    << Base/binary, Path/binary>>.
+
 
 verify_type(Type) ->
     case lists:keyfind(Type, 1, ?TYPE_MAPPING) of
@@ -290,6 +313,8 @@ is_malformed(get, service, undefined, undefined) ->
     false;
 is_malformed(get, credential, undefined, undefined) ->
     false;
+is_malformed(get, cred_data, Id, undefined) ->
+    not is_binary(Id);
 is_malformed(post,  credential, undefined, #{service_id:=_Id}) ->
     false;
 is_malformed(delete, credential, Id, undefined) ->

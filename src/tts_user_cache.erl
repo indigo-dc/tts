@@ -1,5 +1,6 @@
 -module(tts_user_cache).
 -behaviour(gen_server).
+-include("tts.hrl").
 
 %% API.
 -export([start_link/0]).
@@ -18,6 +19,7 @@
 
 %% API.
 
+
 -spec start_link() -> {ok, pid()}.
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -27,7 +29,7 @@ stop() ->
     gen_server:cast(?MODULE, stop).
 
 -spec get_user_info(Issuer :: binary(), Subject :: binary() ) ->
-    {ok, UserInfo :: map()} | {error, term()}.
+    {ok, UserInfo::tts:user_info()} | {error, term()}.
 get_user_info(Issuer, Subject) ->
     retrieve_userinfo_if_exists(Issuer, Subject).
 
@@ -43,7 +45,6 @@ clear_cache() ->
 -record(state, {
          }).
 
--include("tts.hrl").
 
 init([]) ->
     {ok, #state{}, 1}.

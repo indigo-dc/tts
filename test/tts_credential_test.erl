@@ -22,14 +22,14 @@ get_list_test() ->
     MeckModules = [tts_data_sqlite],
     GetFun = fun(User) ->
                      User = UserId,
-                     {ok, [{ServiceId, #{}}]}
+                     {ok, [#{service_id => ServiceId}]}
              end,
     ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts_data_sqlite, credential_get, GetFun),
+    ok = meck:expect(tts_data_sqlite, credential_get_list, GetFun),
 
 
     {ok, Pid} = tts_credential:start_link(),
-    {ok, [ServiceId]} = tts_credential:get_list(UserId),
+    {ok, [#{service_id := ServiceId}]} = tts_credential:get_list(UserId),
     ok = tts_credential:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = test_util:meck_done(MeckModules),
@@ -45,11 +45,13 @@ request_test() ->
     UserInfo3 = #{uid => UserId3},
     CredState = <<"some_cred">>,
     Cred = <<"secret">>,
-    MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker],
+    MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker, tts_service],
     Token = #{},
     Params = [],
     MyPid = self(),
-    AddFun = fun(User, Service, State) ->
+    Interface = <<"test interface">>,
+    AddFun = fun(User, Service, IFace, State) ->
+                     IFace = Interface,
                      User = UserId1,
                      Service = ServiceId,
                      State = CredState,
@@ -72,19 +74,30 @@ request_test() ->
     ok = meck:expect(tts_data_sqlite, credential_add, AddFun),
     ok = meck:expect(tts_cred_sup, new_worker, fun() -> {ok, MyPid} end),
     ok = meck:expect(tts_cred_worker, request, RequestFun),
+    ok = meck:expect(tts_service, is_enabled, fun(_) -> true end),
 
 
     {ok, Pid} = tts_credential:start_link(),
-    {ok, Cred, []} = tts_credential:request(ServiceId, UserInfo1, Token, Params),
-    {error, {script, <<>>}, []} = tts_credential:request(ServiceId, UserInfo2, Token, Params),
-    {error, {internal, just_because}, []} = tts_credential:request(ServiceId, UserInfo3, Token, Params),
+    {ok, Cred, []} = tts_credential:request(ServiceId, UserInfo1, Interface,
+                                            Token, Params),
+    {error, {script, <<>>}, []} = tts_credential:request(ServiceId, UserInfo2,
+                                                         Interface, Token, Params),
+    {error, {internal, just_because}, []} = tts_credential:request(ServiceId,
+                                                                   UserInfo3,
+                                                                   Interface,
+                                                                   Token, Params),
     ok = tts_credential:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = test_util:meck_done(MeckModules),
     ok.
 
 revoke_test() ->
-    ServiceId = <<"ssh1">>,
+    CredId1 = <<"some credential id1">>,
+    CredId2 = <<"some credential id2">>,
+    CredId3 = <<"some credential id3">>,
+    CredId4 = <<"some credential id4">>,
+    CredId5 = <<"some credential id5">>,
+    ServiceId = <<"ssh">>,
     UserId1 = <<"foo">>,
     UserId2 = <<"bar">>,
     UserId3 = <<"joe">>,
@@ -94,20 +107,21 @@ revoke_test() ->
     UserInfo3 = #{uid => UserId3},
     UserInfo4 = #{uid => UserId4},
     CredState = <<"some_cred">>,
-    Cred = <<"secret">>,
+    RevokeResult = <<"some info">>,
     MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker],
     MyPid = self(),
-    GetFun = fun(UserId) ->
-                     case UserId of
-                         UserId1 -> {ok, [{ServiceId, CredState}]};
-                         UserId2 -> {ok, [{ServiceId, CredState}]};
-                         UserId3 -> {ok, [{ServiceId, CredState}]};
-                         _ -> {ok, []}
+    Cred = #{ service_id => ServiceId, cred_state => CredState},
+    GetFun = fun(CredentialId) ->
+                     NewCred = maps:put(cred_id, CredentialId, Cred),
+                     case CredentialId of
+                         CredId1 -> {ok, maps:put(user_id, UserId1, NewCred)};
+                         CredId2 -> {ok, maps:put(user_id, UserId2, NewCred)};
+                         CredId3 -> {ok, maps:put(user_id, UserId3, NewCred)};
+                         CredId4 -> {error, not_found};
+                         _ -> {ok, maps:put(userid, UserId1, NewCred)}
                      end
              end,
-    DelFun = fun(UserId, Service, State) ->
-                     Service = ServiceId,
-                     State = CredState,
+    DelFun = fun(UserId, _CredentialId) ->
                      case UserId of
                          UserId1 -> ok;
                          UserId2 -> ok;
@@ -120,10 +134,10 @@ revoke_test() ->
                          #{uid := User} = UserInfo,
                          Pid = MyPid,
                          case User of
-                             UserId1 -> {ok, #{result => Cred,
+                             UserId1 -> {ok, #{result => RevokeResult,
                                               state => CredState}, []};
                              UserId2 -> {ok, #{
-                                           result => Cred,
+                                           result => RevokeResult,
                                            error => <<>>}, []};
                              _ -> {error, just_because, []}
                          end
@@ -135,12 +149,11 @@ revoke_test() ->
     ok = meck:expect(tts_cred_worker, revoke, RevokeFun),
 
     {ok, Pid} = tts_credential:start_link(),
-    {ok, Cred, []} = tts_credential:revoke(ServiceId, UserInfo1),
-    {error, {script, <<>>}, []} = tts_credential:revoke(ServiceId, UserInfo2),
-    {error, {internal, just_because}, []} = tts_credential:revoke(ServiceId, UserInfo3),
-    Result =  tts_credential:revoke(ServiceId, UserInfo4),
-    io:format("Result: ~p~n",[Result]),
-    Result = {error, not_found},
+    {ok, RevokeResult, []} = tts_credential:revoke(CredId1, UserInfo1),
+    {error, {script, <<>>}, []} = tts_credential:revoke(CredId2, UserInfo2),
+    {error, {internal, just_because}, []} = tts_credential:revoke(CredId3, UserInfo3),
+    {error, not_found, []} =  tts_credential:revoke(CredId4, UserInfo4),
+    {error, bad_user, []} = tts_credential:revoke(CredId5, UserInfo4),
     ok = tts_credential:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = test_util:meck_done(MeckModules),
