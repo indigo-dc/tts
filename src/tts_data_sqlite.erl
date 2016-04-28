@@ -77,8 +77,8 @@ handle_call({credential_get_count, UserId, ServiceId}, _From,
     Count = credential_get_count(UserId, ServiceId, Con),
     {reply, {ok, Count}, State};
 handle_call({credential_get, CredId}, _From, #state{con=Con}=State) ->
-    Cred = credential_get(CredId, Con),
-    {reply, {ok, Cred}, State};
+    CredOrError = credential_get(CredId, Con),
+    {reply, CredOrError, State};
 handle_call({credential_remove, UserId, CredentialId}, _From
             , #state{con=Con}=State) ->
     ok = credential_remove(UserId, CredentialId, Con),
@@ -146,7 +146,7 @@ credential_get(CredId, Con) ->
              end,
     case Result of
         [] -> {error, not_found};
-        [Cred] -> ToCred(Cred)
+        [Cred] -> {ok, ToCred(Cred)}
     end.
 
 credential_remove(UserId, CredentialId, Con) ->
