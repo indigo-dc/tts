@@ -7,6 +7,7 @@
 -export([stop/0]).
 -export([
          get_list/1,
+         get_count/2,
          exists/2,
          request/5,
          revoke/2
@@ -32,6 +33,10 @@ stop() ->
 get_list(UserId) ->
     get_credential_list(UserId).
 
+-spec get_count(binary(), binary()) -> {ok, non_neg_integer()}.
+get_count(UserId, ServiceId) ->
+    get_credential_count(UserId, ServiceId).
+
 -spec exists(binary(), binary()) -> true | false.
 exists(UserId, CredId) ->
     case get_credential(UserId, CredId) of
@@ -42,14 +47,19 @@ exists(UserId, CredId) ->
 -spec request(binary(), tts:user_info(), binary(), map()|atom(), list()) ->
     {ok, map(), list()} | {error, any(), list()}.
 request(ServiceId, UserInfo, Interface, Token, Params) ->
-    case tts_service:is_enabled(ServiceId) of
-        true ->
+    {ok, Limit} = tts_service:get_credential_limit(ServiceId),
+    {ok, Count} = get_credential_count(UserInfo, ServiceId),
+    Enabled = tts_service:is_enabled(ServiceId),
+    case {Enabled, Count < Limit } of
+        {true, true} ->
             {ok, Pid} = tts_cred_sup:new_worker(),
             Result = tts_cred_worker:request(ServiceId, UserInfo, Params, Pid),
             handle_request_result(Result, ServiceId, UserInfo, Interface,
                                   Token);
-        false ->
-            {error, service_disabled, []}
+        {false, _} ->
+            {error, service_disabled, []};
+        {true, false} ->
+            {error, limit_reached, []}
     end.
 
 -spec revoke(binary(), tts:user_info ()) ->
@@ -153,8 +163,12 @@ get_credential(UserId, CredentialId) ->
         Other -> Other
     end.
 
-
 % functions with data access
+get_credential_count(#{uid := UserId}, ServiceId) ->
+    get_credential_count(UserId, ServiceId);
+get_credential_count(UserId, ServiceId) when is_binary(UserId) ->
+    tts_data_sqlite:credential_get_count(UserId, ServiceId).
+
 get_credential(CredId) ->
     tts_data_sqlite:credential_get(CredId).
 
