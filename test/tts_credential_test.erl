@@ -72,9 +72,11 @@ request_test() ->
                  end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(tts_data_sqlite, credential_add, AddFun),
+    ok = meck:expect(tts_data_sqlite, credential_get_count, fun(_, _) -> {ok, 0} end),
     ok = meck:expect(tts_cred_sup, new_worker, fun() -> {ok, MyPid} end),
     ok = meck:expect(tts_cred_worker, request, RequestFun),
     ok = meck:expect(tts_service, is_enabled, fun(_) -> true end),
+    ok = meck:expect(tts_service, get_credential_limit, fun(_) -> {ok, 100} end),
 
 
     {ok, Pid} = tts_credential:start_link(),

@@ -8,21 +8,43 @@
 -export([disable/1]).
 -export([enable/1]).
 -export([is_enabled/1]).
+-export([get_credential_limit/1]).
 
 get_list() ->
      tts_data:service_get_list().
 
 get_list(#{uid := UserId})  ->
     get_list(UserId);
-get_list(_UserId) ->
+get_list(UserId) ->
     %TODO: implement a whitelist per service
-    tts_data:service_get_list().
+    {ok, ServiceList} = tts_data:service_get_list(),
+    UpdateLimit = fun(Service, List) ->
+                      #{ id := ServiceId
+                       } = Service,
+                      Limit = maps:get(cred_limit, Service, 0),
+                      {ok, Count} = tts_credential:get_count(UserId, ServiceId),
+                      LimitReached = (Count >= Limit),
+                      Update = #{ limit_reached => LimitReached,
+                                  cred_count => Count
+                                },
+                      [ maps:merge(Service, Update) | List]
+                  end,
+    {ok, lists:reverse(lists:foldl(UpdateLimit, [], ServiceList))}.
+
 
 get_info(ServiceId) ->
     case tts_data:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, Info};
         Other -> Other
     end.
+
+get_credential_limit(ServiceId) ->
+    case tts_data:service_get(ServiceId) of
+        {ok, {_Id, Info}} -> {ok, maps:get(cred_limit, Info, 0)};
+        _ -> {ok, 0}
+    end.
+
+
 
 is_enabled(ServiceId) ->
     case tts_data:service_get(ServiceId) of
@@ -83,6 +105,7 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"Host">>, host},
                     {<<"Port">>, port},
                     {<<"Description">>, description},
+                    {<<"CredentialLimit">>, cred_limit},
 
                     {<<"ConnectionType">>, con_type},
                     {<<"ConnectionUser">>, con_user},
@@ -125,6 +148,8 @@ verify_value(con_host, Host) ->
     {ok, Host};
 verify_value(con_port, Port) ->
     {ok, list_to_integer(Port)};
+verify_value(cred_limit, Limit) ->
+    {ok, list_to_integer(Limit)};
 verify_value(AKey, Value) when is_list(Value) ->
     % default is to convert to binary
     verify_value(AKey, list_to_binary(Value));

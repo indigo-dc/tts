@@ -129,7 +129,7 @@ credential_get_list(UserId, Con) ->
     lists:reverse(lists:foldl(ToCred, [], CredList)).
 
 credential_get_count(UserId, ServiceId, Con) ->
-    [Count] = esqlite3:q("SELECT COUNT(user_id) FROM tts_cred WHERE
+    [{Count}] = esqlite3:q("SELECT COUNT(user_id) FROM tts_cred WHERE
                           user_id IS ?1 AND service_id IS ?2"
                           , [UserId, ServiceId], Con),
     Count.
