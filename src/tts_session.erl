@@ -20,6 +20,10 @@
 -export([set_token/2]).
 -export([get_token/1]).
 
+-export([set_user_info/2]).
+-export([get_user_info/1]).
+-export([get_display_name/1]).
+
 -export([get_iss_sub/1]).
 
 -export([get_used_redirect/1]).
@@ -70,6 +74,18 @@ get_token(Pid) ->
 -spec set_token(Token :: map(), Pid :: pid()) -> ok.
 set_token(Token, Pid) ->
     gen_server:call(Pid, {set_token, Token}).
+
+-spec get_user_info(Pid :: pid()) -> {ok, UserInfo::map()}.
+get_user_info(Pid) ->
+    gen_server:call(Pid, get_user_info).
+
+-spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
+set_user_info(UserInfo, Pid) ->
+    gen_server:call(Pid, {set_user_info, UserInfo}).
+
+-spec get_display_name(Pid :: pid()) -> {ok, Name::binary()}.
+get_display_name(Pid) ->
+    gen_server:call(Pid, get_display_name).
 
 -spec get_used_redirect(Pid :: pid()) -> {ok, binary()} | none.
 get_used_redirect(Pid) ->
@@ -135,6 +151,7 @@ clear_oidc_state_nonce(Pid) ->
           ip = undefined,
           used_redirect = none,
           token = none,
+          user_info = #{},
           max_age = 10
          }).
 
@@ -170,6 +187,19 @@ handle_call({set_token, #{ id := #{ iss := Issuer, sub := Subject }} = Token}
     {reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
+handle_call({set_user_info, #{ sub := Subject } = UserInfo}
+            , _From, #state{max_age=MA, sub=Subject}=State) ->
+    {reply, ok, State#state{user_info=UserInfo}, MA};
+handle_call(get_user_info, _From, #state{max_age=MA, user_info=UserInfo}
+            =State) ->
+    {reply, {ok, UserInfo}, State, MA};
+handle_call(get_display_name, _From, #state{max_age=MA, sub=Subject, iss=Issuer,
+                                            user_info=UserInfo}=State) ->
+    Name = case maps:get(name, UserInfo, undefined) of
+               undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
+               Other -> Other
+           end,
+    {reply, {ok, Name}, State, MA};
 handle_call(is_logged_in, _From, #state{iss=none, max_age=MA}=State) ->
     {reply, false, State, MA};
 handle_call(is_logged_in, _From, #state{iss=_, max_age=MA}=State) ->

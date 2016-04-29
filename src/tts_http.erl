@@ -69,11 +69,6 @@ show_select_page(_ReqMap) ->
                            [ [ Id, Desc ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc, [], OIDCList)),
-    %%     redirect_to_op_or_show_select_page(OpList, ReqMap).
-    %%
-    %% redirect_to_op_or_show_select_page([[OpenIdProviderId, _]], ReqMap) ->
-    %%     redirect_to(auth_server, maps:put(op_id, OpenIdProviderId, ReqMap));
-    %% redirect_to_op_or_show_select_page(OpList, _) ->
     {ok, Version} = application:get_key(tts, id),
     {ok, Body} = tts_main_dtl:render([{oidc_op_list, OpList},
                                       {version, Version},
@@ -128,7 +123,9 @@ show_user_page(Session, Credential, Log) ->
     {ok, CredentialList} = tts_credential:get_list(UserId),
     {ok, Version} = application:get_key(tts, id),
     {ok, #{access := #{token := AccessToken}}} = tts_session:get_token(Session),
-    BaseParams = [{username, UserId},
+    {ok, Name} = tts_session:get_display_name(Session),
+    BaseParams = [
+                  {name, Name},
                   {credential, Credential},
                   {credential_log, Log},
                   {service_list, ServiceList},
@@ -159,7 +156,10 @@ try_to_set_user(_, ReqMap) ->
 
 set_valid_user({ok, _UserInfo},
                #{session := Session, token:=Token } = ReqMap) ->
+    {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
+    {ok, UserInfo} = oidcc:retrieve_user_info(Token, OpenIdProviderId),
     ok = tts_session:set_token(Token, Session),
+    ok = tts_session:set_user_info(UserInfo, Session),
     redirect_to(user_page, ReqMap);
 set_valid_user(_, ReqMap) ->
     Error = <<"Invalid/Unknown User">>,
