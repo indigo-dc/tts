@@ -1,8 +1,25 @@
-Hello, you are logged in as <strong>{{ username }}</strong>.
+Hello, {{ name }}, welcome!
 <br>
-<button id="ac_token" type="button" class="btn btn-default" data-container="body"
-    data-toggle="popover" data-placement="right" data-content="Your Access-Token: {{ access_token }}">
- show access token </button> <br>
+<button id="ac_token" type="button" class="btn btn-default" data-toggle="modal"
+    data-target="#AcTokenModal"> show access token </button> <br>
+
+<div id="AcTokenModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="AcTokenModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+         <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Your Access Token</h4>
+      </div>
+      <div class="modal-body">
+           <textarea class="form-control" readonly>{{ access_token }}</textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <br>
 {% if token %}
 The token used to log into this session is:
