@@ -61,7 +61,7 @@ handle_oidc_token({error, _Error}, ReqMap) ->
     show_error_and_close_session(Desc, ReqMap).
 
 
-show_select_page(_ReqMap) ->
+show_select_page(ReqMap) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     GetIdAndDesc = fun({Id, Pid}, List) ->
                            {ok, #{description := Desc}} =
@@ -73,7 +73,8 @@ show_select_page(_ReqMap) ->
     {ok, Body} = tts_main_dtl:render([{oidc_op_list, OpList},
                                       {version, Version},
                                       {configured, true}]),
-    #{body => Body, status => 200, cookie => update}.
+    Cookie = maps:get(cookie, ReqMap, update),
+    #{body => Body, status => 200, cookie => Cookie}.
 
 
 handle_user_action(#{body_qs:=#{action := request}} = ReqMap) ->
@@ -97,11 +98,12 @@ request_credential(#{session := Session,
     Iface = <<"web interface">>,
     case  tts_credential:request(ServiceId, UserInfo, Iface, Token, []) of
         {ok, Credential, Log} ->  show_user_page(Session, Credential, Log);
-        {error, Reason, _Log} -> show_error(Reason, Session, false)
+        {error, _Reason, _Log} -> show_user_page(Session, <<"failed to request
+                                                           credential">>)
     end;
-request_credential(ReqMap) ->
-    Desc = <<"">>,
-    show_error(Desc, ReqMap, false).
+request_credential(#{session := Session}) ->
+    Desc = <<"Credential Request failed">>,
+    show_user_page(Session, Desc).
 
 
 revoke_credential(#{session := Session, body_qs:= #{ credential_id:=CredId}}) ->
@@ -109,13 +111,19 @@ revoke_credential(#{session := Session, body_qs:= #{ credential_id:=CredId}}) ->
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     case tts_credential:revoke(CredId, UserInfo) of
         {ok, _Result, _Log} -> show_user_page(Session);
-        {error, Error, _Log} -> show_error(Error, Session, false)
+        {error, Error, _Log} -> show_user_page(Session, Error)
     end.
 
 show_user_page(Session) ->
-    show_user_page(Session, false, []).
+    show_user_page(Session, false, [], false).
+
+show_user_page(Session, Error) ->
+    show_user_page(Session, false, [], Error).
 
 show_user_page(Session, Credential, Log) ->
+    show_user_page(Session, Credential, Log, false).
+
+show_user_page(Session, Credential, Log, Error) ->
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     UserId = maps:get(uid, UserInfo),
@@ -125,6 +133,7 @@ show_user_page(Session, Credential, Log) ->
     {ok, #{access := #{token := AccessToken}}} = tts_session:get_token(Session),
     {ok, Name} = tts_session:get_display_name(Session),
     BaseParams = [
+                  {error, Error},
                   {name, Name},
                   {credential, Credential},
                   {credential_log, Log},
@@ -179,17 +188,12 @@ redirect_to(_, _ReqMap) ->
     create_redirection("/").
 
 show_error_and_close_session(Error, ReqMap) ->
-    show_error(Error, ReqMap, true).
+    #{ session := Session } = ReqMap,
+    ok = tts_session:close(Session),
+    Update = #{error => Error, status => 200, cookie => clear},
+    NewReqMap = maps:merge(ReqMap, Update),
+    show_select_page(NewReqMap).
 
-show_error(Error, #{session := Session}, CloseSession) ->
-    CookieAction = case CloseSession of
-                       true ->
-                           ok = tts_session:close(Session),
-                           clear;
-                       false ->
-                           update
-                   end,
-    #{error => Error, status => 400, cookie => CookieAction}.
 
 
 create_redirection(Url) ->
