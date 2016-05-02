@@ -28,7 +28,8 @@ Hello, {{ name }}, welcome!
         </div>
         {% endif %}
 {% if service_list %}
-<h2>Services</h2>
+<div class="panel panel-default">
+    <div class="panel-heading"><h2>Services</h2></div>
 <table class="table table-striped">
     <tr>
         <th> Id  </th> 
@@ -60,31 +61,16 @@ Hello, {{ name }}, welcome!
     </tr>
     {% endfor %}
 </table>
+</div>
 {% else %}
 You are not able to request/revoke any credentials 
 {% endif %}
-{% if credential %}
-<h2>Credential</h2>
-This information will be gone once you perform any action, the
-credential is also not stored on the server
-<table class="table table-striped">
-    {% for keyvalue in credential %}
-    <tr>
-        <td> {{ keyvalue.name }}  </td> 
-        {% if keyvalue.type == "text" %}
-        <td> <input type="text" value="{{ keyvalue.value }}" class="form-control" readonly></input> </td> 
-        {% elif keyvalue.type == "textfile" %}
-        <td> <textarea rows="{{ keyvalue.rows }}" class="form-control" cols="{{ keyvalue.cols }}" readonly>{{ keyvalue.value }}</textarea> </td> 
-        {% else %}
-        <td> <input type="text" value="{{ keyvalue.value }}" class="form-control" readonly></input> </td> 
-        {% endif %}
-    </tr>
-    {% endfor %}
-</table>
-{% endif %}
 {% if credential_log %}
-<h3>Log</h3>
-The log of executing the ssh-commands
+<div class="panel panel-default">
+    <div class="panel-heading"><h2>Log</h2></div>
+<div class="panel-body">
+    <p>The output of the script execution</p>
+</div>
 <table class="table table-striped">
     <tr>
         <th> Command  </th> 
@@ -101,11 +87,16 @@ The log of executing the ssh-commands
     </tr>
     {% endfor %}
 </table>
+</div>
 
 {% endif %}
 
 {% if credential_list %}
-<h2>Credentials</h2>
+<div class="panel panel-default">
+    <div class="panel-heading"><h2>Credentials</h2></div>
+<div class="panel-body">
+    <p>The credentials that have been created for you or on your behalf</p>
+</div>
 <table class="table table-striped">
     <tr>
         <th> Interface  </th> 
@@ -128,10 +119,47 @@ The log of executing the ssh-commands
     </tr>
     {% endfor %}
 </table>
+</div>
 {% else %}
 {% endif %}
-<br>
+
 <form method="post" action="{{ ep_user }}">
     <input type="hidden" name="action" value="logout" >
     <button type="submit" class="btn btn-primary">Logout</button> 
 </form> 
+
+{% if credential %}
+<div id="CredentialModal" class="modal fade" tabindex="-1" role="dialog"
+    aria-labelledby="CredModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+         <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="CredLabel">Your Credential</h4>
+      </div>
+      <div class="modal-body">
+    <p>This information will be gone once you perform any action, the
+    credential is also not stored on the server</p>
+
+<table class="table table-striped">
+    {% for keyvalue in credential %}
+    <tr>
+        <td> {{ keyvalue.name }}  </td> 
+        {% if keyvalue.type == "text" %}
+        <td> <input type="text" value="{{ keyvalue.value }}" class="form-control" readonly></input> </td> 
+        {% elif keyvalue.type == "textfile" %}
+        <td> <textarea rows="{{ keyvalue.rows }}" class="form-control" cols="{{ keyvalue.cols }}" readonly>{{ keyvalue.value }}</textarea> </td> 
+        {% else %}
+        <td> <input type="text" value="{{ keyvalue.value }}" class="form-control" readonly></input> </td> 
+        {% endif %}
+    </tr>
+    {% endfor %}
+</table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
