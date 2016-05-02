@@ -21,11 +21,12 @@ Hello, {{ name }}, welcome!
 </div>
 
 <br>
-{% if token %}
-The token used to log into this session is:
-<br>
-<pre> {{ token }}</pre> 
-{% endif %}
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible" role="alert">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <strong>Error!</strong> {{ error }} 
+        </div>
+        {% endif %}
 {% if service_list %}
 <h2>Services</h2>
 <table class="table table-striped">
