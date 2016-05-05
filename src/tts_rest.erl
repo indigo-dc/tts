@@ -52,6 +52,7 @@ init(_, _Req, _Opts) ->
           token = undefined,
           issuer = undefined,
           object = undefined,
+          provider = undefined,
           json = undefined,
           user_info = undefined
          }).
@@ -244,9 +245,15 @@ verify_token(Token) when is_atom(Token) ->
 verify_issuer(undefined) ->
     undefined;
 verify_issuer(Issuer) when is_binary(Issuer) ->
-    case binary_part(Issuer, {0, 8}) == <<"https://">> of
-        true -> Issuer;
-        false -> bad_issuer
+    case oidcc:get_openid_provider_info(Issuer) of
+        {ok, #{issuer := IssuerUrl}} ->
+            IssuerUrl;
+        _ ->
+            case (byte_size(Issuer) > 8) andalso
+                 (binary_part(Issuer, {0, 8}) == <<"https://">>) of
+                true -> Issuer;
+                false -> bad_issuer
+            end
     end;
 verify_issuer(_Issuer)  ->
     bad_issuer.
