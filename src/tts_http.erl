@@ -179,6 +179,7 @@ redirect_to(auth_server, #{op_id := OpenIdProviderId, session:=Session}) ->
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
     ok = tts_session:set_oidc_provider(OpenIdProviderId, Session),
     {ok, Redirection} = oidcc:create_redirect_url(OpenIdProviderId,
+                                                  [openid, email, profile],
                                                   OidcState, OidcNonce),
     create_redirection(Redirection);
 redirect_to(user_page, _ReqMap) ->
