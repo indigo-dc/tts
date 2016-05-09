@@ -41,7 +41,13 @@ login_user_with_authcode(#{qs := #{error := Error }
 login_user_with_authcode(#{qs := #{state:=OidcState}, session := Session} =
                          ReqMap) ->
     IsOidc = tts_session:is_oidc_state(OidcState, Session),
-    retreive_oidc_token_if_state_fits(IsOidc, ReqMap).
+    retreive_oidc_token_if_state_fits(IsOidc, ReqMap);
+login_user_with_authcode(#{session_id := SessionId } = ReqMap) ->
+    lager:error("~p: bad auth code response ~p~n", [SessionId, ReqMap]),
+    Desc = <<"the data provided by the openid provider was invalide, please try
+             again">>,
+    show_error_and_close_session(Desc, ReqMap).
+
 
 retreive_oidc_token_if_state_fits(true, ReqMap) ->
     #{
@@ -187,17 +193,23 @@ try_to_set_user(_, ReqMap) ->
 set_valid_user({ok, _UserInfo},
                #{session := Session, session_id:=SessionId, token:=Token }
                = ReqMap) ->
-    {ok, _Issuer, Subject } = tts_session:get_iss_sub(Session),
+    #{ id := #{ sub := Subject, iss := Issuer}} = Token,
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
-    {ok, UserInfo} = oidcc:retrieve_user_info(Token, OpenIdProviderId, Subject),
-    #{ name := Name } = UserInfo,
-    ok = tts_session:set_token(Token, Session),
-    ok = tts_session:set_user_info(UserInfo, Session),
-    {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
-    lager:info("~p: user logged in ~p: ~p ~p",
-               [SessionId, Name, Issuer, Subject]),
+    case oidcc:retrieve_user_info(Token, OpenIdProviderId, Subject) of
+        {ok, UserInfo} ->
+            #{ name := Name } = UserInfo,
+            ok = tts_session:set_token(Token, Session),
+            ok = tts_session:set_user_info(UserInfo, Session),
+            lager:info("~p: user logged in ~p: ~p ~p",
+                       [SessionId, Name, Issuer, Subject]),
 
-    redirect_to(user_page, ReqMap);
+            redirect_to(user_page, ReqMap);
+        {error, Reason} ->
+            lager:info("~p: login failed due to ~p: ~p ~p",
+                       [SessionId, Reason, Issuer, Subject]),
+            Desc = <<"the subject in the userinfo is different than at login">>,
+            show_error_and_close_session(Desc, ReqMap)
+    end;
 set_valid_user(_, #{session_id := SessionId } = ReqMap) ->
     lager:info("~p: user login failed ~p", [SessionId, ReqMap]),
     Error = <<"Invalid/Unknown User">>,
