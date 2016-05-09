@@ -187,8 +187,9 @@ try_to_set_user(_, ReqMap) ->
 set_valid_user({ok, _UserInfo},
                #{session := Session, session_id:=SessionId, token:=Token }
                = ReqMap) ->
+    {ok, _Issuer, Subject } = tts_session:get_iss_sub(Session),
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
-    {ok, UserInfo} = oidcc:retrieve_user_info(Token, OpenIdProviderId),
+    {ok, UserInfo} = oidcc:retrieve_user_info(Token, OpenIdProviderId, Subject),
     #{ name := Name } = UserInfo,
     ok = tts_session:set_token(Token, Session),
     ok = tts_session:set_user_info(UserInfo, Session),
