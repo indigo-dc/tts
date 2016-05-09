@@ -1,5 +1,6 @@
 -module(tts_credential).
 -behaviour(gen_server).
+-compile([{parse_transform, lager_transform}]).
 -include("tts.hrl").
 
 %% API.
@@ -83,11 +84,14 @@ handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
 handle_request_result({ok, #{credential := Cred, state := CredState} , Log}
-                      , ServiceId, #{uid := UserId}, Interface, _Token) ->
-    %TODO: write logs to file and pass the info to the user, so admins know
-    %about it
-    ok = sync_store_credential(UserId, ServiceId, Interface, CredState),
-    return_result_with_debug(Cred, Log);
+                      , ServiceId, #{uid := UserId} = UserInfo,
+                      Interface, _Token) ->
+    {ok, CredId} = sync_store_credential(UserId, ServiceId, Interface,
+                                         CredState),
+    lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",
+               [CredId, CredState, ServiceId, UserInfo, Interface]),
+    Id = #{name => id, type => text, value => CredId},
+    return_result_with_debug([ Id | Cred], Log);
 handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Interface,
                       _Token) ->
     return_error_with_debug({internal, Error}, Log);
@@ -134,8 +138,9 @@ init([]) ->
 
 handle_call({store_credential, UserId, ServiceId, Interface, CredState}, _From,
             State) ->
-    ok = store_credential(UserId, ServiceId, Interface, CredState),
-    {reply, ok, State};
+    {ok, CredentialId} = store_credential(UserId, ServiceId, Interface,
+                                          CredState),
+    {reply, {ok, CredentialId}, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 

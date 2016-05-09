@@ -18,6 +18,7 @@
         uri,
         base64url,
         oidcc,
+        lager,
         eper
                    ]},
 	{mod, {tts_app, []}}

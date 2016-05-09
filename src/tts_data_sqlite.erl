@@ -67,8 +67,8 @@ handle_call(_, _From, #state{con=undefined}=State) ->
     {reply, {error, not_configured}, State};
 handle_call({credential_add, UserId, ServiceId, Interface, CredState}, _From
             , #state{con=Con}=State) ->
-    ok = credential_add(UserId, ServiceId, Interface, CredState, Con),
-    {reply, ok, State};
+    Result = credential_add(UserId, ServiceId, Interface, CredState, Con),
+    {reply, Result, State};
 handle_call({credential_get_list, UserId}, _From, #state{con=Con}=State) ->
     CredList = credential_get_list(UserId, Con),
     {reply, {ok, CredList}, State};
@@ -113,7 +113,7 @@ credential_add(UserId, ServiceId, Interface, CredState, Con) ->
                , [CredentialId, CreationTime, Interface, UserId, ServiceId,
                   CredState] , Con),
     ok = esqlite3:exec("commit;", Con),
-    ok.
+    {ok, CredentialId}.
 
 
 credential_get_list(UserId, Con) ->

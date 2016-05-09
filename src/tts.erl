@@ -21,6 +21,9 @@
                         uidNumber => integer(),
                         gidNumber => integer(),
                         homeDirectory => binary(),
+                        issuer => binary(),
+                        subject => binary(),
+                        groups => [binary()],
                         userIds => [oidc_id()]
                       }.
 

@@ -55,17 +55,18 @@ request_test() ->
                      User = UserId1,
                      Service = ServiceId,
                      State = CredState,
-                     ok
+                     CredId = <<"123">>,
+                     {ok, CredId}
              end,
     RequestFun = fun(Service, UserInfo, _Par, Pid) ->
                          Service = ServiceId,
                          #{uid := User} = UserInfo,
                          Pid = MyPid,
                          case User of
-                             UserId1 -> {ok, #{credential => Cred,
+                             UserId1 -> {ok, #{credential => [Cred],
                                               state => CredState}, []};
                              UserId2 -> {ok, #{
-                                           credential => Cred,
+                                           credential => [Cred],
                                            error => <<>>}, []};
                              _ -> {error, just_because, []}
                          end
@@ -80,7 +81,7 @@ request_test() ->
 
 
     {ok, Pid} = tts_credential:start_link(),
-    {ok, Cred, []} = tts_credential:request(ServiceId, UserInfo1, Interface,
+    {ok, [_, Cred], []} = tts_credential:request(ServiceId, UserInfo1, Interface,
                                             Token, Params),
     {error, {script, <<>>}, []} = tts_credential:request(ServiceId, UserInfo2,
                                                          Interface, Token, Params),
