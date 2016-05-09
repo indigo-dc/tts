@@ -1,5 +1,6 @@
 % @doc the user webinterface
 -module(tts_http).
+-compile([{parse_transform, lager_transform}]).
 
 -export([handle/1]).
 -include("tts.hrl").
@@ -21,16 +22,21 @@ handle( ReqMap) ->
     redirect_to(ep_main, ReqMap).
 
 
-redirect_to_auth_server(#{body_qs:=BodyQs} = ReqMap) ->
+redirect_to_auth_server(#{body_qs:=BodyQs, session_id:=SessionId} = ReqMap) ->
     case maps:get(id, BodyQs, undefined) of
         undefined ->
+            lager:info("~p: trying to redirect without provider", [SessionId]),
             redirect_to(main, ReqMap);
         OpenIdProvider ->
+            lager:debug("~p: redirecting to provider ~p", [SessionId,
+                                                         OpenIdProvider]),
             redirect_to(auth_server, maps:put(op_id , OpenIdProvider, ReqMap))
     end.
 
 
-login_user_with_authcode(#{qs := #{error := Error }} = ReqMap) ->
+login_user_with_authcode(#{qs := #{error := Error }
+                           , session_id:=SessionId} = ReqMap) ->
+    lager:warning("~p: error with auth code ~p~n", [SessionId, Error]),
     show_error_and_close_session(Error, ReqMap);
 login_user_with_authcode(#{qs := #{state:=OidcState}, session := Session} =
                          ReqMap) ->
@@ -44,7 +50,8 @@ retreive_oidc_token_if_state_fits(true, ReqMap) ->
                                          } = ReqMap,
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
     handle_oidc_token(oidcc:retrieve_token(AuthCode, OpenIdProviderId), ReqMap);
-retreive_oidc_token_if_state_fits(false, ReqMap) ->
+retreive_oidc_token_if_state_fits(false, #{session_id := SessionId} = ReqMap) ->
+    lager:info("~p: wrong state in jwt ~n", [SessionId]),
     Desc = <<"the returned state did not fit this session">>,
     show_error_and_close_session(Desc, ReqMap).
 
@@ -55,7 +62,8 @@ handle_oidc_token({ok, Token}, #{session:=Session}=ReqMap) ->
     VerToken = oidcc:parse_and_validate_token(Token, OpenIdProviderId,
                                               OidcNonce),
     try_to_set_user(VerToken, ReqMap);
-handle_oidc_token({error, _Error}, ReqMap) ->
+handle_oidc_token({error, Error}, #{session_id := SessionId} = ReqMap) ->
+    lager:warning("~p: bad token ~p", [SessionId, Error]),
     Desc = <<"An error occured on verifying your identity, please try to log in
              again">>,
     show_error_and_close_session(Desc, ReqMap).
@@ -89,7 +97,7 @@ handle_user_action(ReqMap) ->
     show_user_page(ReqMap).
 
 
-request_credential(#{session := Session,
+request_credential(#{session := Session, session_id := SessionId,
                      body_qs:= #{ service_id:=ServiceId}}) ->
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
@@ -97,21 +105,34 @@ request_credential(#{session := Session,
     true = tts_service:is_enabled(ServiceId),
     Iface = <<"web interface">>,
     case  tts_credential:request(ServiceId, UserInfo, Iface, Token, []) of
-        {ok, Credential, Log} ->  show_user_page(Session, Credential, Log);
-        {error, _Reason, _Log} -> show_user_page(Session, <<"failed to request
-                                                           credential">>)
+        {ok, Credential, Log} ->
+            [#{name := id, value:=CredId}|_] = Credential,
+            lager:info("~p: requested credential ~p",
+                       [SessionId, CredId]),
+            show_user_page(Session, Credential, Log);
+        {error, Reason, _Log} ->
+            lager:warning("~p: credential request for ~p failed with ~p",
+                       [SessionId, ServiceId, Reason]),
+            show_user_page(Session, <<"failed to request credential">>)
     end;
 request_credential(#{session := Session}) ->
     Desc = <<"Credential Request failed">>,
     show_user_page(Session, Desc).
 
 
-revoke_credential(#{session := Session, body_qs:= #{ credential_id:=CredId}}) ->
+revoke_credential(#{session := Session, session_id:=SessionId,
+                    body_qs:= #{ credential_id:=CredId}}) ->
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     case tts_credential:revoke(CredId, UserInfo) of
-        {ok, _Result, _Log} -> show_user_page(Session);
-        {error, Error, _Log} -> show_user_page(Session, Error)
+        {ok, _Result, _Log} ->
+            lager:info("~p: revoked credential ~p as ~p ~p",
+                       [SessionId, CredId, Issuer, Subject]),
+            show_user_page(Session);
+        {error, Error, _Log} ->
+            lager:warning("~p: revocation of credential ~p  as ~p ~p
+            failed with ~p", [SessionId, CredId, Issuer, Subject, Error]),
+            show_user_page(Session, Error)
     end.
 
 show_user_page(Session) ->
@@ -164,23 +185,33 @@ try_to_set_user(_, ReqMap) ->
 
 
 set_valid_user({ok, _UserInfo},
-               #{session := Session, token:=Token } = ReqMap) ->
+               #{session := Session, session_id:=SessionId, token:=Token }
+               = ReqMap) ->
     {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
     {ok, UserInfo} = oidcc:retrieve_user_info(Token, OpenIdProviderId),
+    #{ name := Name } = UserInfo,
     ok = tts_session:set_token(Token, Session),
     ok = tts_session:set_user_info(UserInfo, Session),
+    {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
+    lager:info("~p: user logged in ~p: ~p ~p",
+               [SessionId, Name, Issuer, Subject]),
+
     redirect_to(user_page, ReqMap);
-set_valid_user(_, ReqMap) ->
+set_valid_user(_, #{session_id := SessionId } = ReqMap) ->
+    lager:info("~p: user login failed ~p", [SessionId, ReqMap]),
     Error = <<"Invalid/Unknown User">>,
     show_error_and_close_session(Error, ReqMap).
 
-redirect_to(auth_server, #{op_id := OpenIdProviderId, session:=Session}) ->
+redirect_to(auth_server, #{op_id := OpenIdProviderId, session:=Session,
+                           session_id:=SessionId}) ->
     {ok, OidcState} = tts_session:get_oidc_state(Session),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
     ok = tts_session:set_oidc_provider(OpenIdProviderId, Session),
     {ok, Redirection} = oidcc:create_redirect_url(OpenIdProviderId,
                                                   [openid, email, profile],
                                                   OidcState, OidcNonce),
+    lager:info("~p: redirecting to openid provider: ~p", [SessionId,
+                                                          Redirection]),
     create_redirection(Redirection);
 redirect_to(user_page, _ReqMap) ->
     UserPath = ?CONFIG(ep_user),
@@ -189,7 +220,8 @@ redirect_to(_, _ReqMap) ->
     create_redirection("/").
 
 show_error_and_close_session(Error, ReqMap) ->
-    #{ session := Session } = ReqMap,
+    #{ session := Session, session_id := SessionId } = ReqMap,
+    lager:info("~p: closing session due to ~p", [SessionId, Error]),
     ok = tts_session:close(Session),
     Update = #{error => Error, status => 200, cookie => clear},
     NewReqMap = maps:merge(ReqMap, Update),

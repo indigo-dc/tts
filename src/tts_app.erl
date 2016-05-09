@@ -1,5 +1,6 @@
 -module(tts_app).
 -behaviour(application).
+-compile([{parse_transform, lager_transform}]).
 
 -include("tts.hrl").
 
@@ -7,6 +8,7 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
+    lager:info("Token Translation Service starting"),
     tts_data:init(),
     tts_sup:start_link().
 

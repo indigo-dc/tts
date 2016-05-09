@@ -1,5 +1,6 @@
 -module(tts_session).
 -behaviour(gen_server).
+-compile([{parse_transform, lager_transform}]).
 
 
 %% API.
@@ -157,6 +158,7 @@ clear_oidc_state_nonce(Pid) ->
 
 
 init(ID) ->
+    lager:info("~p: session starting", [ID]),
     OidcState = create_random_state(16),
     OidcNonce = create_random_state(64),
     MaxAge = ?CONFIG(session_timeout, 10000),
@@ -241,18 +243,22 @@ handle_call({is_same_ip, _IP}, _From, #state{max_age=MA}=State) ->
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
-handle_cast(close, State) ->
+handle_cast(close, #state{id=ID} = State) ->
+    lager:info("~p: session stopping", [ID]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_info(timeout, #state{id=ID} = State) ->
+    lager:info("~p: timeout, asking for termination", [ID]),
     tts_session_mgr:session_wants_to_close(ID),
     {noreply, State, 5000};
 handle_info(_Info, State) ->
     {noreply, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{id=ID}) ->
+    lager:info("~p: session terminating", [ID]),
+    tts_session_mgr:session_terminating(ID),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->

@@ -9,6 +9,8 @@
 -export([get_session/1]).
 -export([close_all_sessions/0]).
 -export([session_wants_to_close/1]).
+-export([session_terminating/1]).
+
 %% gen_server.
 -export([init/1]).
 -export([handle_call/3]).
@@ -44,6 +46,10 @@ get_session(ID) ->
 session_wants_to_close(ID) ->
     gen_server:call(?MODULE, {delete_session, ID}).
 
+-spec session_terminating(ID :: binary()) -> ok.
+session_terminating(ID) ->
+    gen_server:call(?MODULE, {purge_session, ID}).
+
 -spec close_all_sessions() -> ok.
 close_all_sessions() ->
     gen_server:call(?MODULE, close_all_sessions).
@@ -63,6 +69,9 @@ handle_call({delete_session, ID}, _From, State) ->
     {ok, Pid} = lookup_session_pid(ID),
     delete_session(ID),
     tts_session:close(Pid),
+    {reply, ok, State};
+handle_call({purge_session, ID}, _From, State) ->
+    delete_session(ID),
     {reply, ok, State};
 handle_call(close_all_sessions, _From, State) ->
     SessionList = get_all_sessions(),

@@ -1,6 +1,7 @@
 % @doc the user webinterface
 -module(tts_http_prep).
 -behaviour(cowboy_http_handler).
+-compile([{parse_transform, lager_transform}]).
 
 -export([init/3]).
 -export([handle/2]).
@@ -103,6 +104,7 @@ extract_args(Req, true) ->
 
 
     {ok, Session} = tts_session_mgr:get_session(CookieSessionId),
+    {ok, SessionId} = tts_session:get_id(Session),
     AtomPath = map_to_atom(Path, ?PATHMAPPING, ep_main),
     AtomMethod = map_to_atom(Method, ?HTTPMETHODMAPPING),
     QsMap = create_map_from_proplist(QsList),
@@ -114,6 +116,7 @@ extract_args(Req, true) ->
       path => AtomPath,
       method => AtomMethod,
       session => Session,
+      session_id => SessionId,
       logged_in => LoggedIn,
       referer => Referer,
       user_agent => UserAgent,
