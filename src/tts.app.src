@@ -1,6 +1,6 @@
 {application, tts, [
 	{description, ""},
-	{vsn, "rolling"},
+	{vsn, "git"},
     {id, "git"},
 	{modules, []},
 	{registered, [tts_sup]},
