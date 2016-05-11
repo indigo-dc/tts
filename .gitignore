@@ -14,5 +14,5 @@ cover/
 *.coverdata
 test/ct.cover.spec
 *.beam
-/rel/vm.args
+/config/vm.args
 rebar.lock

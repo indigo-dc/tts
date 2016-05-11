@@ -193,8 +193,8 @@ iterate_through_users_and_delete_least_used_ones(Number, Key, List) ->
     iterate_through_users_and_delete_least_used_ones(NewNumber, Next, NewList).
 
 update_lru_list(0, Info, ATime, [H | T] = List) ->
-    {_, LRU_Max } = H,
-    case ATime < LRU_Max of
+    {_, LruMax } = H,
+    case ATime < LruMax of
         true ->
             % if the ATime is older than the
             % newest on the list
