@@ -33,7 +33,7 @@ handle(Req, #state{req_map=ReqMap} = State) ->
 
 
 show_result(#{error := no_config}, Req, State) ->
-    {ok, Version} = application:get_key(tts, id),
+    {ok, Version} = application:get_key(tts, vsn),
     {ok, Body} = tts_main_dtl:render([{version, Version}]),
     show_html(Body, 200, Req, State);
 show_result(#{error := _Error} = Result, Req, #state{req_map=ReqMap} = State) ->

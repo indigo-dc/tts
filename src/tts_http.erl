@@ -83,7 +83,7 @@ show_select_page(ReqMap) ->
                            [ [ Id, Desc ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc, [], OIDCList)),
-    {ok, Version} = application:get_key(tts, id),
+    {ok, Version} = application:get_key(tts, vsn),
     {ok, Body} = tts_main_dtl:render([{oidc_op_list, OpList},
                                       {version, Version},
                                       {configured, true}]),
@@ -156,7 +156,7 @@ show_user_page(Session, Credential, Log, Error) ->
     UserId = maps:get(uid, UserInfo),
     {ok, ServiceList} = tts_service:get_list(UserId),
     {ok, CredentialList} = tts_credential:get_list(UserId),
-    {ok, Version} = application:get_key(tts, id),
+    {ok, Version} = application:get_key(tts, vsn),
     {ok, #{access := #{token := AccessToken}}} = tts_session:get_token(Session),
     {ok, Name} = tts_session:get_display_name(Session),
     BaseParams = [
