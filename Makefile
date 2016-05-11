@@ -1,20 +1,26 @@
-PROJECT = tts
+REBAR = $(shell pwd)/rebar3
+APP=oidcc
 
-DEPS = cowboy uuid econfig erlydtl oidcc eper esqlite lager
-BUILD_DEPS = elvis_mk
-DEP_PLUGINS = elvis_mk
-TEST_DEPS = meck
+.PHONY: all ct test clean elvis compile rel
 
-dep_oidcc = git https://github.com/indigo-dc/oidcc.git 826b3a2
+all: compile
 
-dep_esqlite = git https://github.com/mmzeeman/esqlite.git a0c5b39
-dep_base64url = git https://github.com/dvv/base64url.git f2c64ed 
-dep_uri = git https://github.com/erlware/uri.git 91f6b71
-dep_lager = git https://github.com/basho/lager.git 2.2.2
-# dep_elvis_mk = git https://github.com/inaka/elvis.mk.git 1.0.0
-dep_elvis_mk = git https://github.com/inaka/elvis.mk.git 215616a
+clean:
+	$(REBAR) clean
 
+eunit:
+	$(REBAR) eunit
 
+ct:
+	$(REBAR) ct
 
-COVER = 1
-include erlang.mk
+elvis:
+	$(REBAR) lint
+
+compile:
+	$(REBAR) compile
+
+rel:
+	./gen_random_cookie
+	$(REBAR) release 
+
