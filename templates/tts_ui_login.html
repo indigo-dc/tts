@@ -1,6 +1,6 @@
 Please select your OpenId Connect Provider
 <div class="form-group">
-    <form method="post" action="/oauth/redirect">
+    <form method="post" action="{{ ep_redirect }}" >
         <div class="input-group">
             <select id="id"  name="id" class="form-control">
                 {% for id, description in oidc_op_list %}
