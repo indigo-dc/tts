@@ -1,7 +1,6 @@
 {application, tts, [
 	{description, ""},
-	{vsn, "git"},
-    {id, "git"},
+	{vsn, "semver"},
 	{modules, []},
 	{registered, [tts_sup]},
 	{applications, [
