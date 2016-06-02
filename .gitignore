@@ -15,4 +15,3 @@ cover/
 test/ct.cover.spec
 *.beam
 /config/vm.args
-rebar.lock

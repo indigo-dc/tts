@@ -1,0 +1,11 @@
+#!/bin/bash
+DIRECTORY=~/.config/tts
+BACKUPDIR=~/.config/tts_`date +%Y%m%d_%H%M%S`
+
+if [ -d "$DIRECTORY" ]; then
+    echo "storing backup of current config in $BACKUPDIR"
+    mv "$DIRECTORY" "$BACKUPDIR"
+fi
+
+echo "copy configuration"
+cp -vr ./tts_config/sample/tts ~/.config/tts
