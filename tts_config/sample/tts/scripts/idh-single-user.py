@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
 # Dummy idenitity harmonization that always returns the current user.
