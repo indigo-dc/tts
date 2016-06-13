@@ -22,23 +22,12 @@
         ]).
 
 -export([
-         oidc_add_op/5,
-         oidc_op_set/3,
-         oidc_get_op/1,
-         oidc_get_op_list/0
-        ]).
-
--export([
          service_add/2,
          service_update/2,
          service_get/1,
          service_get_list/0
         ]).
--export([
-         credential_add/3,
-         credential_remove/3,
-         credential_get/1
-        ]).
+
 -define(TTS_SESSIONS, tts_sessions).
 -define(TTS_OIDCP, tts_oidcp).
 -define(TTS_USER, tts_user).
@@ -76,7 +65,10 @@ sessions_create_new(ID) ->
 -spec sessions_get_pid(ID :: binary()) -> {ok, Pid :: pid()} |
                                           {error, Reason :: atom()}.
 sessions_get_pid(ID) ->
-    return_value(lookup(?TTS_SESSIONS, ID)).
+    case return_value(lookup(?TTS_SESSIONS, ID)) of
+        {ok, none_yet} -> {error, none_yet};
+        Other -> Other
+    end.
 
 -spec sessions_update_pid(ID :: binary(), Pid :: pid()) -> ok.
 sessions_update_pid(ID, Pid) ->
@@ -103,8 +95,8 @@ user_insert_info(Info, MaxEntries) ->
     remove_unused_entries_if_needed(CurrentEntries, MaxEntries),
     IssSubList = maps:get(userIds, Info, []),
     UserId = maps:get(uid, Info),
-    Mappings = [{{Issuer, Subject}, UserId}||[Issuer, Subject] <- IssSubList ],
-    CTime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    Mappings = [{{Issuer, Subject} , UserId}||{Issuer, Subject} <- IssSubList ],
+    CTime = epoch(),
     Tuple = {UserId, Info, CTime, CTime},
     case  insert_new(?TTS_USER, Tuple) of
         true ->
@@ -117,7 +109,7 @@ user_insert_info(Info, MaxEntries) ->
     ok | {error, Reason :: term() }.
 user_delete_info(Issuer, Subject) ->
     case lookup(?TTS_USER_MAPPING, {Issuer, Subject}) of
-        {ok, UserId} ->
+        {ok, {_IssSub, UserId}} ->
             user_delete_info(UserId);
         {error, _} = Error ->
             Error
@@ -125,26 +117,26 @@ user_delete_info(Issuer, Subject) ->
 
 -spec user_delete_info(InfoOrId :: tts_user_cache:user_info() | binary()) ->
     ok | {error, Reason :: term() }.
-user_delete_info(#{userIds := UserIds, uid := UserId}) ->
-    user_delete_mappings(UserIds),
-    delete(?TTS_USER, UserId),
-    ok;
+user_delete_info(#{uid := UserId}) ->
+    user_delete_info(UserId);
 user_delete_info(UserId) ->
     case lookup(?TTS_USER, UserId) of
-        {ok, UserInfo} -> user_delete_info(UserInfo);
+        {ok, {UserId, #{uid := UserId, userIds := Mappings}, _, _}} ->
+            user_delete_mappings(Mappings),
+            delete(?TTS_USER, UserId);
         {error, _} = Error -> Error
     end.
 
 -spec user_delete_entries_older_than(Duration::number()) ->
     {ok, NumDeleted::number()}.
 user_delete_entries_older_than(Duration) ->
-    Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    Now = epoch(),
     iterate_through_users_and_delete_before(ctime, Now-Duration).
 
 -spec user_delete_entries_not_accessed_for(Duration::number()) ->
     {ok, NumDeleted::number()}.
 user_delete_entries_not_accessed_for(Duration) ->
-    Now = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    Now = epoch(),
     iterate_through_users_and_delete_before(atime, Now-Duration).
 
 -spec user_clear_cache() -> ok.
@@ -158,7 +150,7 @@ user_clear_cache() ->
 
 
 user_get_info({ok, Id}) ->
-    ATime = calendar:datetime_to_gregorian_seconds(calendar:local_time()),
+    ATime = epoch(),
     ets:update_element(?TTS_USER, Id, {3, ATime}),
     return_value(lookup(?TTS_USER, Id));
 user_get_info({error, E}) ->
@@ -241,40 +233,6 @@ user_delete_mappings([H | T]) ->
     delete(?TTS_USER_MAPPING, H),
     user_delete_mappings(T).
 
-% functions for oidc management
--spec oidc_add_op(Identifier::binary(), Description::binary(),
-                  ClientId :: binary(), ClientSecret:: binary(),
-                  ConfigEndpoint:: binary()) ->ok | {error, Reason :: atom()}.
-oidc_add_op(Identifier, Description, ClientId, ClientSecret, ConfigEndpoint) ->
-    Map = #{
-      id => Identifier,
-      desc => Description,
-      client_id => ClientId,
-      client_secret => ClientSecret,
-      config_endpoint => ConfigEndpoint
-     },
-    return_ok_or_error(insert_new(?TTS_OIDCP, {Identifier, Map})).
-
-
--spec oidc_op_set(Key::atom(), Value::any(), Identifier::binary()) ->ok.
-oidc_op_set(Key, Value, Id) ->
-    {ok, {Id, Map0}} = oidc_get_op(Id),
-    Map = maps:put(Key, Value, Map0),
-    return_ok_or_error(insert(?TTS_OIDCP, {Id, Map})).
-
--spec oidc_get_op(RemoteEndpoint :: binary()) ->
-    {ok, Info :: map()} | {error, Reason :: atom()}.
-oidc_get_op(RemoteEndpoint) ->
-    lookup(?TTS_OIDCP, RemoteEndpoint).
-
--spec oidc_get_op_list() -> [map()].
-oidc_get_op_list() ->
-    Entries = get_all_entries(?TTS_OIDCP),
-    ExtractValue = fun({_, Val}, List) ->
-                           [Val | List]
-                   end,
-    lists:reverse(lists:foldl(ExtractValue, [], Entries)).
-
 % functions for service  management
 -spec service_add(Identifier::binary(), Info :: map()) ->
     ok | {error, Reason :: atom()}.
@@ -297,45 +255,6 @@ service_get_list() ->
                            [Val | List]
                    end,
     {ok, lists:reverse(lists:foldl(ExtractValue, [], Entries))}.
-
-% functions for credential  management
--spec credential_add(UserId::binary(), ServiceId::binary()
-                     , CredState :: any()) -> ok | {error, Reason :: atom()}.
-credential_add(UserId, ServiceId, CredState) ->
-    Entry = {ServiceId, CredState},
-    case lookup(?TTS_CRED_USER, UserId) of
-        {ok, {UserId, CredList}} ->
-            true = insert(?TTS_CRED_USER, {UserId, [Entry | CredList]}),
-            ok;
-        {error, not_found} ->
-            true = insert_new(?TTS_CRED_USER, {UserId, [Entry]}),
-            ok
-    end.
-
--spec credential_get(UserId::binary()) ->ok.
-credential_get(UserId) ->
-    case lookup(?TTS_CRED_USER, UserId) of
-        {ok, {UserId, CredList}} ->
-            {ok, CredList};
-        Other -> Other
-    end.
-
--spec credential_remove(UserId::binary(), ServiceId::binary(),
-                        CredState :: any()) ->ok | {error, Reason :: atom()}.
-credential_remove(UserId, ServiceId, CredState) ->
-    Entry = {ServiceId, CredState},
-    case lookup(?TTS_CRED_USER, UserId) of
-        {ok, {UserId, CredList}} ->
-            case lists:member(Entry, CredList) of
-                true ->
-                    NewCredList = lists:delete(Entry, CredList),
-                    true = insert(?TTS_CRED_USER, {UserId, NewCredList}),
-                    ok;
-                false ->
-                    {error, credential_not_found}
-            end;
-        Other -> Other
-    end.
 
 %% internal functions
 
@@ -373,7 +292,8 @@ get_all_entries(Table) ->
     lists:reverse(Entries).
 
 delete(Table, Key) ->
-    true = ets:delete(Table, Key).
+    true = ets:delete(Table, Key),
+    ok.
 
 
 insert(Table, Entry) ->
@@ -391,4 +311,8 @@ create_lookup_result([]) ->
     {error, not_found};
 create_lookup_result(_) ->
     {error, too_many}.
+
+
+epoch() ->
+    os:system_time().
 
