@@ -12,8 +12,7 @@ clean_all:
 	$(REBAR) clean -a
 
 eunit:
-	$(REBAR) eunit
-	cp _build/test/cover/eunit.coverdata .
+	$(REBAR) do eunit,cover -v
 
 ct:
 	$(REBAR) ct

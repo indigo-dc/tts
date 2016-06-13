@@ -146,11 +146,18 @@ send_reply(From, #{uid := _,
                    uidNumber := _,
                    gidNumber:=_,
                    homeDirectory:=_,
-                   userIds:=_}=Map) ->
-    gen_server:reply(From, {ok, Map});
+                   userIds:=Mapping0}=Map) ->
+    Mapping = convert_mapping(Mapping0, []),
+    gen_server:reply(From, {ok, maps:put(userIds, Mapping, Map)});
 send_reply(From, Map) ->
     gen_server:reply(From, {error, Map}).
 
+convert_mapping([], Mapping) ->
+    lists:reverse(Mapping);
+convert_mapping([ {Issuer, Subject} | T ], Mapping) ->
+    convert_mapping(T, [{Issuer, Subject} | Mapping]);
+convert_mapping([ [Issuer, Subject] | T ], Mapping) ->
+    convert_mapping(T, [{Issuer, Subject} | Mapping]).
 
 reuse_worker(true, Pid, MonRef, Ready) ->
     [{Pid, MonRef} | Ready];

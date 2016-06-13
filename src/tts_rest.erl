@@ -21,7 +21,7 @@
 dispatch_mapping(InBasePath) ->
     BasePath = case binary:last(InBasePath) of
                    $/ ->
-                       Len = binary:byte_size(InBasePath),
+                       Len = byte_size(InBasePath),
                        binary:part(InBasePath, 0, Len-1);
                    _ ->
                        InBasePath
