@@ -147,7 +147,7 @@ send_reply(From, #{uid := _,
                    gidNumber:=_,
                    homeDirectory:=_,
                    userIds:=Mapping0}=Map) ->
-    Mapping = convert_mapping(Mapping0,[]),
+    Mapping = convert_mapping(Mapping0, []),
     gen_server:reply(From, {ok, maps:put(userIds, Mapping, Map)});
 send_reply(From, Map) ->
     gen_server:reply(From, {error, Map}).

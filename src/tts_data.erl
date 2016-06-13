@@ -95,7 +95,7 @@ user_insert_info(Info, MaxEntries) ->
     remove_unused_entries_if_needed(CurrentEntries, MaxEntries),
     IssSubList = maps:get(userIds, Info, []),
     UserId = maps:get(uid, Info),
-    Mappings = [{{Issuer, Subject} , UserId} || {Issuer, Subject} <- IssSubList ],
+    Mappings = [{{Issuer, Subject} , UserId}||{Issuer, Subject} <- IssSubList ],
     CTime = epoch(),
     Tuple = {UserId, Info, CTime, CTime},
     case  insert_new(?TTS_USER, Tuple) of
