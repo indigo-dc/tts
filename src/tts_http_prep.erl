@@ -1,7 +1,6 @@
 % @doc the user webinterface
 -module(tts_http_prep).
 -behaviour(cowboy_http_handler).
--compile([{parse_transform, lager_transform}]).
 
 -export([init/3]).
 -export([handle/2]).

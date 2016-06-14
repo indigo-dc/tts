@@ -1,6 +1,5 @@
 -module(tts_rest).
 -include("tts.hrl").
--compile([{parse_transform, lager_transform}]).
 
 
 -export([dispatch_mapping/1]).

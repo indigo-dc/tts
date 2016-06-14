@@ -1,6 +1,5 @@
 % @doc the user webinterface
 -module(tts_http).
--compile([{parse_transform, lager_transform}]).
 
 -export([handle/1]).
 -include("tts.hrl").

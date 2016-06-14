@@ -1,6 +1,5 @@
 -module(tts_credential).
 -behaviour(gen_server).
--compile([{parse_transform, lager_transform}]).
 -include("tts.hrl").
 
 %% API.
