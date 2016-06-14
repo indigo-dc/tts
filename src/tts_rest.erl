@@ -84,21 +84,19 @@ malformed_request(Req, State) ->
 
 is_authorized(Req, #state{type=oidcp} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{token=undefined} = State) ->
+is_authorized(Req, #state{issuer=Issuer} = State) when not is_binary(Issuer) ->
     {{false, <<"Authorization">>}, Req, State};
-is_authorized(Req, #state{type=Type, token=Token} = State)
+is_authorized(Req, #state{token=Token} = State) when not is_binary(Token) ->
+    {{false, <<"Authorization">>}, Req, State};
+is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer} = State)
   when Type==service; Type==credential; Type==cred_data ->
-    {ok, [{ProviderId, _}| _]} = oidcc:get_openid_provider_list(),
-    {ok, Info} = oidcc:get_openid_provider_info(ProviderId),
-    #{issuer := Issuer} = Info,
-    case oidcc:retrieve_user_info(Token, ProviderId) of
-        {ok, #{sub := Subject}} ->
-            case tts_user_cache:get_user_info(Issuer, Subject) of
-                {ok, UserInfo} ->
-                    {true, Req, State#state{user_info=UserInfo}};
-                _ -> {{false, <<"Authorization">>}, Req, State}
-            end;
-        _ -> {{false, <<"Authorization">>}, Req, State}
+    try
+        {ok, ProviderId} = oidcc:find_openid_provider(Issuer),
+        {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderId),
+        {ok, #{sub := Subject}} = oidcc:retrieve_user_info(Token, ProviderId),
+        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+        {true, Req, State#state{user_info=UserInfo}}
+    catch _:_ -> {{false, <<"Authorization">>}, Req, State}
     end;
 is_authorized(Req, State) ->
     {{false, <<"Authorization">>}, Req, State}.
