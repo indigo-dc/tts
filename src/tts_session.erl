@@ -188,7 +188,7 @@ handle_call({set_token, #{ id := #{ iss := Issuer, sub := Subject }} = Token}
     {reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
-handle_call({set_user_info, #{ sub := Subject } = UserInfo}
+handle_call({set_user_info, #{ oidc := #{ sub := Subject }} = UserInfo}
             , _From, #state{max_age=MA, sub=Subject}=State) ->
     {reply, ok, State#state{user_info=UserInfo}, MA};
 handle_call(get_user_info, _From, #state{max_age=MA, user_info=UserInfo}
@@ -196,7 +196,8 @@ handle_call(get_user_info, _From, #state{max_age=MA, user_info=UserInfo}
     {reply, {ok, UserInfo}, State, MA};
 handle_call(get_display_name, _From, #state{max_age=MA, sub=Subject, iss=Issuer,
                                             user_info=UserInfo}=State) ->
-    Name = case maps:get(name, UserInfo, undefined) of
+    Oidc = maps:get(oidc, UserInfo, #{}),
+    Name = case maps:get(name, Oidc, undefined) of
                undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
                Other -> Other
            end,
