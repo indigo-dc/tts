@@ -173,7 +173,7 @@ create_command_list_and_update_state(Cmd, UserInfo, #{con_type := ConType},
       gid => Gid,
       home_dir => HomeDir
      },
-    lager:debug("script params are: ~p",[ScriptParam]),
+    lager:debug("script params are: ~p", [ScriptParam]),
     EncodedJson = base64url:encode(jsx:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
