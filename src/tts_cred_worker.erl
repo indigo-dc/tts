@@ -149,25 +149,32 @@ get_cmd(_) ->
 create_command_list_and_update_state(Cmd, UserInfo, #{con_type := ConType},
                                      {ok, Connection}, State)
   when is_binary(Cmd) ->
+    #{ site := Site } = UserInfo,
     #{ uid := User,
        uidNumber := Uid,
        gidNumber := Gid,
        homeDirectory := HomeDir
-     } = UserInfo,
+     } = Site,
     #state{
        action = Action,
        params = Params,
        cred_state = CredState
       } = State,
-    EncodedJson = base64url:encode(jsx:encode(#{
-                                     action => Action,
-                                     user => User,
-                                     uid => Uid,
-                                     gid => Gid,
-                                     home_dir => HomeDir,
-                                     params => Params,
-                                     cred_state => CredState
-                                    })),
+    ScriptParam = #{
+      action => Action,
+      params => Params,
+      cred_state => CredState,
+      user_info => UserInfo
+
+      %% deprecated!
+      ,
+      user => User,
+      uid => Uid,
+      gid => Gid,
+      home_dir => HomeDir
+     },
+    lager:debug("script params are: ~p", [ScriptParam]),
+    EncodedJson = base64url:encode(jsx:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,

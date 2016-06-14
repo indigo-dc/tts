@@ -153,7 +153,7 @@ show_user_page(Session, Credential, Log) ->
 show_user_page(Session, Credential, Log, Error) ->
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
-    UserId = maps:get(uid, UserInfo),
+    #{ site := #{uid := UserId}} = UserInfo,
     {ok, ServiceList} = tts_service:get_list(UserId),
     {ok, CredentialList} = tts_credential:get_list(UserId),
     {ok, Version} = application:get_key(tts, vsn),
@@ -181,35 +181,31 @@ show_user_page(Session, Credential, Log, Error) ->
     #{body => Body, status => 200, cookie => update}.
 
 
-try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer}} = Token},
+try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer},
+                      access := #{token := AccessToken}} = Token},
                 ReqMap) ->
-    set_valid_user(tts_user_cache:get_user_info(Issuer, Subject),
+    set_valid_user(tts_user_cache:get_user_info(Issuer, Subject, AccessToken),
                    maps:put(token, Token, ReqMap));
 try_to_set_user(_, ReqMap) ->
     Error = <<"Invalid Token">>,
     show_error_and_close_session(Error, ReqMap).
 
 
-set_valid_user({ok, _UserInfo},
-               #{session := Session, session_id:=SessionId, token:=Token }
-               = ReqMap) ->
-    #{ id := #{ sub := Subject, iss := Issuer}} = Token,
-    {ok, OpenIdProviderId} = tts_session:get_oidc_provider(Session),
-    case oidcc:retrieve_user_info(Token, OpenIdProviderId, Subject) of
-        {ok, UserInfo} ->
-            #{ name := Name } = UserInfo,
-            ok = tts_session:set_token(Token, Session),
-            ok = tts_session:set_user_info(UserInfo, Session),
-            lager:info("~p: user logged in ~p: ~p ~p",
-                       [SessionId, Name, Issuer, Subject]),
-
-            redirect_to(user_page, ReqMap);
-        {error, Reason} ->
-            lager:info("~p: login failed due to ~p: ~p ~p",
-                       [SessionId, Reason, Issuer, Subject]),
-            Desc = <<"the subject in the userinfo is different than at login">>,
-            show_error_and_close_session(Desc, ReqMap)
-    end;
+set_valid_user({ok, UserInfo}, ReqMap) ->
+    #{session := Session, session_id:=SessionId, token:=Token } = ReqMap,
+    #{ oidc := #{ name := Name,
+                  sub := Subject,
+                  iss := Issuer }} = UserInfo,
+    ok = tts_session:set_token(Token, Session),
+    ok = tts_session:set_user_info(UserInfo, Session),
+    lager:info("~p: user logged in ~p: ~p ~p",
+               [SessionId, Name, Issuer, Subject]),
+    redirect_to(user_page, ReqMap);
+set_valid_user({error, Reason}, ReqMap) ->
+    #{session_id := SessionId} = ReqMap,
+    lager:info("~p: login failed due to ~p", [SessionId, Reason]),
+    Desc = <<"an error occured during login">>,
+    show_error_and_close_session(Desc, ReqMap);
 set_valid_user(_, #{session_id := SessionId } = ReqMap) ->
     lager:info("~p: user login failed ~p", [SessionId, ReqMap]),
     Error = <<"Invalid/Unknown User">>,

@@ -96,7 +96,6 @@ is_authorized_test() ->
                {#state{type=service, issuer= <<"known">>, token= <<"token">>}, {false, <<"Authorization">>}},
                {#state{type=service, issuer= <<"known">>, token= <<"good1">>}, {false, <<"Authorization">>}},
                {#state{type=service, issuer= <<"known">>, token= <<"good2">>}, true}
-
               ],
     Req = req,
     MeckModules = [oidcc, tts_user_cache],
@@ -126,7 +125,7 @@ is_authorized_test() ->
                                    {error, bad_token}
                            end
                    end,
-    GetInfo = fun(_Issuer, Subject) ->
+    GetInfo = fun(_Issuer, Subject, _Token) ->
                       case Subject of
                           <<"joe">> ->
                               {error, not_found};

@@ -65,7 +65,7 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
 -spec revoke(binary(), tts:user_info ()) ->
     {ok, tts:cred(), list()} | {error, any(), list()}.
 revoke(CredentialId, UserInfo) ->
-    #{uid := UserId } = UserInfo,
+    #{site := #{uid := UserId }} = UserInfo,
     case get_credential(UserId, CredentialId) of
         {ok, Cred} ->
             #{ service_id := ServiceId,
@@ -83,7 +83,7 @@ handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
 handle_request_result({ok, #{credential := Cred, state := CredState} , Log}
-                      , ServiceId, #{uid := UserId} = UserInfo,
+                      , ServiceId, #{site := #{uid := UserId}} = UserInfo,
                       Interface, _Token) ->
     {ok, CredId} = sync_store_credential(UserId, ServiceId, Interface,
                                          CredState),
@@ -100,7 +100,8 @@ handle_request_result({error, Error}, _ServiceId, _UserInfo, _Interface,
 
 handle_revoke_result({ok, #{error := Error}, Log}, _UserInfo, _CredId) ->
     return_error_with_debug({script, Error}, Log);
-handle_revoke_result({ok, #{result := Result}, Log}, #{uid:=UserId}, CredId) ->
+handle_revoke_result({ok, #{result := Result}, Log}, #{ site := #{uid:=UserId}},
+                     CredId) ->
     ok = remove_credential(UserId, CredId),
     return_result_with_debug(Result, Log);
 handle_revoke_result({error, Error, Log}, _UserInfo, _CredId) ->
@@ -168,7 +169,7 @@ get_credential(UserId, CredentialId) ->
     end.
 
 % functions with data access
-get_credential_count(#{uid := UserId}, ServiceId) ->
+get_credential_count(#{site := #{uid := UserId}}, ServiceId) ->
     get_credential_count(UserId, ServiceId);
 get_credential_count(UserId, ServiceId) when is_binary(UserId) ->
     tts_data_sqlite:credential_get_count(UserId, ServiceId).

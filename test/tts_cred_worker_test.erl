@@ -27,11 +27,17 @@ request_ssh_test() ->
                     con_ssh_user_dir => <<"~/.ssh">>,
                    cmd => Cmd
                    },
-    UserInfo = #{uid => <<"joe">>,
-                 uidNumber => 1001,
-                 gidNumber => 1001,
-                 homeDirectory => <<"/home/joe">>
-                },
+    UserInfo = #{ site => #{uid => <<"joe">>,
+                            uidNumber => 1001,
+                            gidNumber => 1001,
+                            homeDirectory => <<"/home/joe">>
+                           },
+                  oidc => #{
+                    iss => <<"issuer">>,
+                    sub => <<"joe">>,
+                    name => <<"joe">>
+                   },
+                  cache_id => 123},
     Params = [],
     Credential = <<"secret">>,
     CredState = <<"internalState">>,
@@ -120,11 +126,17 @@ request_local_test() ->
     ServiceInfo = #{con_type => local,
                    cmd => Cmd
                    },
-    UserInfo = #{uid => <<"joe">>,
-                 uidNumber => 1001,
-                 gidNumber => 1001,
-                 homeDirectory => <<"/home/joe">>
-                },
+    UserInfo = #{ site => #{uid => <<"joe">>,
+                            uidNumber => 1001,
+                            gidNumber => 1001,
+                            homeDirectory => <<"/home/joe">>
+                           },
+                  oidc => #{
+                    iss => <<"issuer">>,
+                    sub => <<"joe">>,
+                    name => <<"joe">>
+                   },
+                  cache_id => 123},
     Params = [],
     InfoFun = fun(Id) ->
                       Id = ServiceId,
@@ -144,7 +156,7 @@ request_local_test() ->
     ok = test_util:meck_done(MeckModules),
     ok.
 
-no_cmd_crah_test() ->
+no_cmd_crash_test() ->
     MeckModules = [tts_service],
 
     ServiceId = <<"local1">>,

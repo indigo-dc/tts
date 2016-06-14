@@ -16,14 +16,15 @@ get_user_info_test() ->
                         I = Issuer,
                         case S of
                             Sub1 ->
-                                {ok, #{uid => Sub1}};
+                                {ok, #{ site => #{uid => Sub1},
+                                        cache_id => 123 }};
                             _ ->
                                 {error, not_found}
                         end
                 end,
     InsertFun = fun(Info, MaxEntries) ->
                         MaxEntries = 10,
-                        #{ uid := Sub2} = Info,
+                        #{ site := #{ uid := Sub2}} = Info,
                         ok
                 end,
     IdhFun = fun(UserInfo) ->
@@ -44,8 +45,8 @@ get_user_info_test() ->
     ok = meck:expect(tts_idh, lookup_user, IdhFun),
 
     {ok, Pid} = tts_user_cache:start_link(),
-    {ok, #{uid := Sub1}} = tts_user_cache:get_user_info(Issuer, Sub1),
-    {ok, #{uid := Sub2}} = tts_user_cache:get_user_info(Issuer, Sub2),
+    {ok, #{ site := #{uid := Sub1}}} = tts_user_cache:get_user_info(Issuer, Sub1),
+    {ok, #{ site := #{uid := Sub2}}} = tts_user_cache:get_user_info(Issuer, Sub2),
     {error, not_allowed} = tts_user_cache:get_user_info(Issuer, Sub3),
 
     ok = tts_user_cache:stop(),
