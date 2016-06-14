@@ -1,6 +1,5 @@
 -module(tts_app).
 -behaviour(application).
--compile([{parse_transform, lager_transform}]).
 
 -include("tts.hrl").
 
