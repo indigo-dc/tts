@@ -40,9 +40,9 @@ request_test() ->
     UserId1 = <<"foo">>,
     UserId2 = <<"bar">>,
     UserId3 = <<"joe">>,
-    UserInfo1 = #{uid => UserId1},
-    UserInfo2 = #{uid => UserId2},
-    UserInfo3 = #{uid => UserId3},
+    UserInfo1 = #{site => #{uid => UserId1}},
+    UserInfo2 = #{site => #{uid => UserId2}},
+    UserInfo3 = #{site => #{uid => UserId3}},
     CredState = <<"some_cred">>,
     Cred = <<"secret">>,
     MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker, tts_service],
@@ -60,7 +60,7 @@ request_test() ->
              end,
     RequestFun = fun(Service, UserInfo, _Par, Pid) ->
                          Service = ServiceId,
-                         #{uid := User} = UserInfo,
+                         #{site := #{uid := User}} = UserInfo,
                          Pid = MyPid,
                          case User of
                              UserId1 -> {ok, #{credential => [Cred],
@@ -105,10 +105,11 @@ revoke_test() ->
     UserId2 = <<"bar">>,
     UserId3 = <<"joe">>,
     UserId4 = <<"ann">>,
-    UserInfo1 = #{uid => UserId1},
-    UserInfo2 = #{uid => UserId2},
-    UserInfo3 = #{uid => UserId3},
-    UserInfo4 = #{uid => UserId4},
+    UserInfo1 = #{site => #{uid => UserId1}},
+    UserInfo2 = #{site => #{uid => UserId2}},
+    UserInfo3 = #{site => #{uid => UserId3}},
+    UserInfo4 = #{site => #{uid => UserId4}},
+
     CredState = <<"some_cred">>,
     RevokeResult = <<"some info">>,
     MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker],
@@ -134,7 +135,7 @@ revoke_test() ->
              end,
     RevokeFun = fun(Service, UserInfo, _Par, Pid) ->
                          Service = ServiceId,
-                         #{uid := User} = UserInfo,
+                         #{site := #{uid := User}} = UserInfo,
                          Pid = MyPid,
                          case User of
                              UserId1 -> {ok, #{result => RevokeResult,
