@@ -3,8 +3,9 @@
 
 [[ -x $(which jq) ]] || (echo 'Please install "jq"' && exit 2)
 
-URI_SCHEME='https'
-# let curl be 
+[[ -z $URI_SCHEME ]] && URI_SCHEME='https'
+
+# let curl be
 # silent (-s)
 # write the http_code (-w)
 CURL_OPTS='-s -w %{http_code}%{redirect_url} --insecure '
@@ -25,8 +26,8 @@ function perform-post {
             -X POST $url)
     fi
     length=${#resp}
-    http_status=${resp:0:3} 
-    redirect=${resp:3:$length-3} 
+    http_status=${resp:0:3}
+    redirect=${resp:3:$length-3}
 
     if [[ $http_status = "303" ]]
     then
@@ -38,7 +39,6 @@ function perform-post {
     else
         echo $body
     fi
-
 }
 
 function perform-get {
@@ -48,16 +48,16 @@ function perform-get {
     if [[ $iss = '' ]]; then
         resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
             -X GET $url)
-    else 
+    else
         resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
             -H "X-OpenId-Connect-Issuer: $iss" \
             -X GET $url)
     fi
     length=${#resp}
-    http_status=${resp:$length-3:3} 
+    http_status=${resp:$length-3:3}
     body=${resp:0:$length-3}
 
-    http_status_first=${resp:$length-3:1} 
+    http_status_first=${resp:$length-3:1}
 
     echo $body
 
@@ -75,16 +75,16 @@ function perform-delete {
     if [[ $iss = '' ]]; then
         resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
             -X DELETE $url)
-    else 
+    else
         resp=$(curl $CURL_OPTS -H "Authorization: Bearer $ac_token" \
             -H "X-OpenId-Connect-Issuer: $iss" \
             -X DELETE $url)
     fi
     length=${#resp}
-    http_status=${resp:$length-3:3} 
+    http_status=${resp:$length-3:3}
     body=${resp:0:$length-3}
 
-    http_status_first=${resp:$length-3:1} 
+    http_status_first=${resp:$length-3:1}
 
     echo $body
 
@@ -175,7 +175,7 @@ function list-providers {
     then
 	>&2 echo Something other than JSON returned from server
     fi
-    
+
 
     ids=($(echo $provider | jq -c '.[].id'))
     issuer=($(echo $provider | jq -c '.[].issuer'))
@@ -183,7 +183,7 @@ function list-providers {
     #echo "id  issuer"
     for ((i=0; i<${#ids[@]}; i++))
     do
-	echo ${ids[$i]} ${issuer[$i]} 
+	echo ${ids[$i]} ${issuer[$i]}
     done
 }
 
