@@ -6,6 +6,7 @@
 -export([start_link/0]).
 -export([stop/0]).
 -export([get_user_info/2]).
+-export([get_user_info/3]).
 -export([verify_cache/0]).
 -export([clear_cache/0]).
 
@@ -31,7 +32,13 @@ stop() ->
 -spec get_user_info(Issuer :: binary(), Subject :: binary() ) ->
     {ok, UserInfo::tts:user_info()} | {error, term()}.
 get_user_info(Issuer, Subject) ->
-    retrieve_userinfo_if_exists(Issuer, Subject).
+    get_user_info(Issuer, Subject, undefined).
+
+-spec get_user_info(Issuer :: binary(), Subject :: binary() ,
+                    AccessToken::binary() | undefined ) ->
+    {ok, UserInfo::tts:user_info()} | {error, term()}.
+get_user_info(Issuer, Subject, AccessToken) ->
+    retrieve_userinfo_if_exists(Issuer, Subject, AccessToken).
 
 -spec verify_cache() -> ok.
 verify_cache() ->
@@ -88,21 +95,39 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-retrieve_userinfo_if_exists(Issuer, Subject) ->
-    load_user_if_needed(lookup_user(Issuer, Subject), Issuer, Subject).
+retrieve_userinfo_if_exists(Issuer, Subject, AccessToken) ->
+    load_user_if_needed(lookup_user(Issuer, Subject), Issuer, Subject,
+                        AccessToken).
 
-load_user_if_needed({ok, UserInfo}, _, _) ->
+load_user_if_needed({ok, UserInfo}, _, _, _) ->
     {ok, UserInfo};
-load_user_if_needed({error, not_found}, Issuer, Subject) ->
+load_user_if_needed({error, not_found}, Issuer, Subject, AccessToken) ->
     UserMap = #{type => openidconnect, subject => Subject, issuer => Issuer},
-    UserInfo = tts_idh:lookup_user(UserMap),
-    insert_user(UserInfo).
+    IdhInfo = tts_idh:lookup_user(UserMap),
+    case AccessToken of
+        undefined ->
+            FakeName = << Subject/binary, <<"@">>/binary, Issuer/binary >>,
+            FakeInfo = #{sub => Subject, iss => Issuer, name => FakeName},
+            insert_user(IdhInfo, {ok, FakeInfo}, Issuer);
+        Token ->
+            {ok, ProviderInfo} = oidcc:find_openid_provider(Issuer),
+            {ProviderId, _, _} = ProviderInfo,
+            OidcInfo = oidcc:retrieve_user_info(Token, ProviderId,
+                                                Subject),
+            insert_user(IdhInfo, OidcInfo, Issuer)
+    end.
 
-insert_user({ok, NewUser}) ->
-    {ok, UserInfo} = gen_server:call(?MODULE, {insert, NewUser}),
+insert_user({ok, IdhInfo}, {ok, OidcInfo0}, Issuer) ->
+    OidcInfo = maps:put(iss, Issuer, OidcInfo0),
+    Info = #{site => IdhInfo, oidc => OidcInfo},
+    {ok, UserInfo} = gen_server:call(?MODULE, {insert, Info}),
     {ok, UserInfo};
-insert_user({error, Reason}) ->
-    {error, Reason}.
+insert_user({error, Reason}, _, _) ->
+    {error, Reason};
+insert_user(_, {error, Reason}, _) ->
+    {error, Reason};
+insert_user(_, _, _) ->
+    {error, unsupported_values}.
 
 sync_insert_new_user(UserInfo) ->
     ok = add_new_user_entry(UserInfo),
