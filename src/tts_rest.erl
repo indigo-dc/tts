@@ -93,7 +93,7 @@ is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer} = State)
         {ok, ProviderId} = oidcc:find_openid_provider(Issuer),
         {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderId),
         {ok, #{sub := Subject}} = oidcc:retrieve_user_info(Token, ProviderId),
-        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject, Token),
         {true, Req, State#state{user_info=UserInfo}}
     catch _:_ -> {{false, <<"Authorization">>}, Req, State}
     end;
@@ -125,7 +125,7 @@ resource_exists(Req, #state{type=service, id=Id} = State) ->
         _ -> {false, Req, State}
     end;
 resource_exists(Req, #state{type=credential, id=Id,
-                            user_info=#{uid :=UserId}}=State) ->
+                            user_info=#{site := #{uid :=UserId}}}=State) ->
     Result = tts_credential:exists(UserId, Id),
     {Result, Req, State};
 resource_exists(Req, #state{type=cred_data}=State) ->
