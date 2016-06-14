@@ -90,12 +90,13 @@ user_lookup_info(Issuer, Subject) ->
 -spec user_insert_info(Info::tts_user_cache:user_info(),
                        MaxEntries::integer())->
     ok | {error, Reason :: atom()}.
-user_insert_info(Info, MaxEntries) ->
+user_insert_info(Info0, MaxEntries) ->
     CurrentEntries = ets:info(?TTS_USER, size),
     remove_unused_entries_if_needed(CurrentEntries, MaxEntries),
-    IssSubList = maps:get(userIds, Info, []),
-    UserId = maps:get(uid, Info),
-    Mappings = [{{Issuer, Subject} , UserId}||{Issuer, Subject} <- IssSubList ],
+    #{ site := #{ uid := UserId,
+                  userIds := IssSubList }} = Info0,
+    Info = maps:put(uid, UserId, Info0),
+    Mappings = [{{Issuer, Subject} , UserId}||{Issuer, Subject} <- IssSubList],
     CTime = epoch(),
     Tuple = {UserId, Info, CTime, CTime},
     case  insert_new(?TTS_USER, Tuple) of
@@ -119,9 +120,12 @@ user_delete_info(Issuer, Subject) ->
     ok | {error, Reason :: term() }.
 user_delete_info(#{uid := UserId}) ->
     user_delete_info(UserId);
+user_delete_info(#{site := #{uid := UserId}}) ->
+    user_delete_info(UserId);
 user_delete_info(UserId) ->
     case lookup(?TTS_USER, UserId) of
-        {ok, {UserId, #{uid := UserId, userIds := Mappings}, _, _}} ->
+        {ok, {UserId, #{uid := UserId, site := #{userIds := Mappings}},
+              _, _}} ->
             user_delete_mappings(Mappings),
             delete(?TTS_USER, UserId);
         {error, _} = Error -> Error
