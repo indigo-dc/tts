@@ -79,7 +79,76 @@ content_types_accepted_test() ->
     {{<<"application">>, <<"json">>, '*'}, post_json} = ContentType,
     ok.
 
+
 is_authorized_test() ->
+    Mapping = [
+
+               {#state{}, {false, <<"Authorization">>}},
+               {#state{type=some_unknown, token=defined}, {false, <<"Authorization">>}},
+               {#state{type=service}, {false, <<"Authorization">>}},
+               {#state{type=service, issuer= <<"issuer">>}, {false, <<"Authorization">>}},
+               {#state{type=service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"Authorization">>}},
+               {#state{type=some_service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"Authorization">>}},
+
+               {#state{type=oidcp}, true},
+               {#state{type=service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"Authorization">>}},
+               {#state{type=service, issuer= <<"unknown">>, token= <<"token">>}, {false, <<"Authorization">>}},
+               {#state{type=service, issuer= <<"known">>, token= <<"token">>}, {false, <<"Authorization">>}},
+               {#state{type=service, issuer= <<"known">>, token= <<"good1">>}, {false, <<"Authorization">>}},
+               {#state{type=service, issuer= <<"known">>, token= <<"good2">>}, true}
+
+              ],
+    Req = req,
+    MeckModules = [oidcc, tts_user_cache],
+
+    FindProvider = fun(Issuer) ->
+                           case Issuer of
+                               <<"known">> -> {ok, 1};
+                               <<"unknown">> -> {ok, 0};
+                               _ -> {error, not_found}
+                           end
+                   end,
+    GetProvider = fun(Id) ->
+                          case Id of
+                              1 ->
+                                  {ok,#{ issuer => <<"known">>}};
+                              _ ->
+                                  {error, not_found}
+                          end
+                  end,
+    RetrieveInfo = fun(Token, _Id) ->
+                           case Token of
+                               <<"good1">> ->
+                                   {ok, #{sub => <<"joe">>}};
+                               <<"good2">> ->
+                                   {ok, #{sub => <<"alice">>}};
+                               _ ->
+                                   {error, bad_token}
+                           end
+                   end,
+    GetInfo = fun(_Issuer, Subject) ->
+                      case Subject of
+                          <<"joe">> ->
+                              {error, not_found};
+                          <<"alice">> ->
+                              {ok, some_info}
+                      end
+              end,
+
+
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(oidcc, find_openid_provider, FindProvider),
+    ok = meck:expect(oidcc, get_openid_provider_info, GetProvider),
+    ok = meck:expect(oidcc, retrieve_user_info, RetrieveInfo),
+    ok = meck:expect(tts_user_cache, get_user_info, GetInfo),
+
+    Test = fun({State, ExpResult}, _AccIn) ->
+                   {Result, Req, _CState} = tts_rest:is_authorized(Req, State),
+                   ?assertEqual(ExpResult, Result),
+                   ok
+           end,
+    ok = lists:foldl(Test, ok, Mapping),
+    ok = test_util:meck_done(MeckModules),
     ok.
 
 malformed_request_test() ->
