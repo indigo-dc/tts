@@ -151,7 +151,7 @@ def create_user(username, group, oidc):
 
     credential = [{'name': 'Username', 'type': 'text', 'value': username},
                   {'name': 'Password', 'type': 'text', 'value': password}]
-    return json.dumps({'credential': credential})
+    return json.dumps({'credential': credential, 'state': username})
 
 
 def revoke_user(username):
@@ -165,7 +165,7 @@ def revoke_user(username):
             return json.dumps({'error': msg})
     else:
         if userid == "":
-            return json.dumps({'error': 'no_user'})
+            return json.dumps({'result': 'ok'})
         else:
             return json.dumps({'error': userid})
 
@@ -177,14 +177,17 @@ def main():
             jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
 
             action = jobject['action']
-            user_info = jobject['user_info']
-            oidc = user_info['oidc']
-            username = "%s_%s" % (oidc['preferred_username'], oidc['sub'])
 
             if action == "request":
+                user_info = jobject['user_info']
+                oidc = user_info['oidc']
+                username = "%s_%s" % (oidc['preferred_username'], oidc['sub'])
+
                 print create_user(username, USERS_GROUP, oidc)
             elif action == "revoke":
-                print revoke_user(username)
+                state = jobject['cred_state']
+
+                print revoke_user(state)
             else:
                 print json.dumps({"error": "unknown_action", "details": action})
         else:
