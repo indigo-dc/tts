@@ -6,8 +6,8 @@ not natively support OpenID Connect. Services that do not support OpenID Connect
 are for example ssh, S3 storage, OpenNebula.
 
 The TTS creates these by using so called plugins, which are scripts managed by
-the administrator of the TTS. An example plugin can is available 
-[here](https://github.com/indigo-dc/tts/blob/master/tts_config/sample/tts/scripts/ssh.py)
+the administrator of the TTS. An example plugin for ssh is available at
+[tts_config/sample/tts/scripts/ssh.py](https://github.com/indigo-dc/tts/blob/master/tts_config/sample/tts/scripts/ssh.py)
 
 ## Quickstart
 The Token Translation Service (TTS) requires Erlang OTP 18.1 or newer to run 
