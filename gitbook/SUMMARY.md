@@ -1,6 +1,6 @@
 # Summary
 
-* [About Token Translation Service](about.md)
-* [Developer guide](developer.md)
-* [Deployment and Administration guide](admin.md)
-* [User guide](user.md)
+* [User Guide](user.md)
+* [Deployment And Administration Guide](admin.md)
+* [Developer Guide](developer.md)
+* [REST API](api.md)
