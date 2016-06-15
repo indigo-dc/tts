@@ -10,7 +10,7 @@ the administrator of the TTS. An example plugin for ssh is available at
 [tts_config/sample/tts/scripts/ssh.py](https://github.com/indigo-dc/tts/blob/master/tts_config/sample/tts/scripts/ssh.py)
 
 ## Quickstart
-The Token Translation Service (TTS) requires Erlang OTP 18.1 or newer to run 
+The Token Translation Service (TTS) requires [Erlang](http://www.erlang.org/) OTP 18.1 or newer to run 
 (due to a bug in the cover compiler OTP 18.3 or newer is needed to run the tests)
 
 The following lines copy the [sample configuration](https://github.com/indigo-dc/tts/tree/master/tts_config/sample) 
