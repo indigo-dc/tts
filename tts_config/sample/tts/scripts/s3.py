@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 import json
@@ -145,41 +145,13 @@ def main():
             Json = str(sys.argv[1])+ '=' * (4 - len(sys.argv[1]) % 4)
             JObject = json.loads(str(base64.urlsafe_b64decode(Json)))
 
-            #general information
             Action = JObject['action']
+            UserName = JObject['user']
+            Uid = JObject['uid']
+            Gid = JObject['gid']
+            HomeDir = JObject['home_dir']
             State = JObject['cred_state']
             Params = JObject['params']
-            UserInfo = JObject['user_info']
-            Site = UserInfo['site']
-            Oidc = UserInfo['oidc']
-
-            # information coming from the site
-            # uid - the username
-            # uidNumber - the uid of the user 
-            # gidNumber - the gid of the primary group of the user 
-            # homeDirectory - the home directory of the user 
-            UserName = Site['uid']
-            Uid = Site['uidNumber']
-            Gid = Site['gidNumber']
-            HomeDir = Site['homeDirectory']
-
-            # information coming from the openid provider 
-            # which information are available depends on the 
-            # OpenId Connect provider
-            # 
-            # iss - the issuer
-            # sub - the subject 
-            # name - the full name of the user 
-            # email - the email of the user 
-            #
-            # IAM also provides
-            # groups - a list of groups each consisting of
-            #    id - uuid of the group 
-            #    name - readable name of the group 
-            # organisation_name - name of the organisation, indigo_dc 
-            # preferred_username - if possible create accounts with this name 
-            Name = Oidc['name']
-            # OidcUserName = Oidc['preferred_username']
 
             if Action == "request":
                 print create_ssh(UserName, Uid, Gid, HomeDir) 
