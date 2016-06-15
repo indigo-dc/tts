@@ -98,9 +98,10 @@ revoke(CredentialId, UserInfo) ->
 handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
-handle_request_result({ok, #{credential := Cred, state := CredState} , Log}
+handle_request_result({ok, #{credential := Cred} = CredMap , Log}
                       , ServiceId, #{site := #{uid := UserId}} = UserInfo,
                       Interface, _Token) ->
+    CredState = maps:get(state, CredMap, <<"">>),
     {ok, CredId} = sync_store_credential(UserId, ServiceId, Interface,
                                          CredState),
     lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",

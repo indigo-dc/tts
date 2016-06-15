@@ -179,7 +179,7 @@ def main():
             # organisation_name - name of the organisation, indigo_dc 
             # preferred_username - if possible create accounts with this name 
             Name = Oidc['name']
-            OidcUserName = Oidc['preferred_username']
+            # OidcUserName = Oidc['preferred_username']
 
             if Action == "request":
                 print create_ssh(UserName, Uid, Gid, HomeDir) 
