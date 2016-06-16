@@ -144,7 +144,8 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"local">>, local},
                     {<<"none">>, local},
 
-                    {<<"undefined">>, undefined}
+                    {<<"undefined">>, undefined},
+                    {<<"true">>, true}
                    ]).
 
 bin_to_atom(BinaryKey) ->
@@ -179,6 +180,8 @@ verify_value(AKey, Value) when is_list(Value) ->
     verify_value(AKey, list_to_binary(Value));
 verify_value(con_type, Value) ->
     {ok, bin_to_atom(Value, undefined)};
+verify_value(allow_same_state, Value) ->
+    {ok, bin_to_atom(Value, false)};
 verify_value(_AKey, Value) ->
     {ok, Value}.
 
