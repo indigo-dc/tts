@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+import urlparse
 import json
 import base64
 import random
@@ -181,7 +182,9 @@ def main():
             if action == "request":
                 user_info = jobject['user_info']
                 oidc = user_info['oidc']
-                username = "%s_%s" % (oidc['preferred_username'], oidc['sub'])
+                iss = urlparse.urlparse(oidc['iss'])
+                iss_host = iss[1]
+                username = "%s_%s" % (iss_host, oidc['sub'])
 
                 print create_user(username, USERS_GROUP, oidc)
             elif action == "revoke":
