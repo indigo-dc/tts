@@ -1,0 +1,6 @@
+---
+- name: Install git
+  package: name=git state=present
+
+- name: Install gcc
+  package: name=gcc state=present
