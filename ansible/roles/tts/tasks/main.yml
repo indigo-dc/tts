@@ -3,7 +3,7 @@
   git:
     dest: "{{ ansible_env.HOME }}/indigo-dc/tts"
     repo: https://github.com/indigo-dc/tts.git
-    version: devel/ansible
+    version: deployment/ansible
 
 - name: Build TTS
   make:
