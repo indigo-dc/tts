@@ -25,6 +25,7 @@
 -export([disable/1]).
 -export([enable/1]).
 -export([is_enabled/1]).
+-export([allows_same_state/1]).
 -export([get_credential_limit/1]).
 
 get_list() ->
@@ -61,11 +62,15 @@ get_credential_limit(ServiceId) ->
         _ -> {ok, 0}
     end.
 
-
-
 is_enabled(ServiceId) ->
     case tts_data:service_get(ServiceId) of
-        {ok, {_Id, Info}} -> maps:get(enabled, Info, true);
+        {ok, {_Id, Info}} -> maps:get(enabled, Info, false);
+        _ -> false
+    end.
+
+allows_same_state(ServiceId) ->
+    case tts_data:service_get(ServiceId) of
+        {ok, {_Id, Info}} -> maps:get(allow_same_state, Info, false);
         _ -> false
     end.
 
@@ -129,6 +134,8 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"ConnectionHost">>, con_host},
                     {<<"ConnectionPort">>, con_port},
                     {<<"ConnectionSshDir">>, con_ssh_user_dir},
+
+                    {<<"AllowSameState">>, allow_same_state},
 
                     {<<"Cmd">>, cmd},
 
