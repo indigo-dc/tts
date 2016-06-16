@@ -1,7 +1,9 @@
 ---
 - name: Setup TTS on all TTS servers
   hosts: tts-server
-  remote_user: root
+  remote_user: ansible
+  become_user: root
+  become: yes
 
   roles:
     - erlang
