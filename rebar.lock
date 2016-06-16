@@ -48,7 +48,7 @@
   0},
  {<<"oidcc">>,
   {git,"https://github.com/indigo-dc/oidcc.git",
-       {ref,"271230752b57ecb9b43ff35c8991c312cd4b3a25"}},
+       {ref,"06d63d51da95c06c721965f4673172bf8daff23c"}},
   0},
  {<<"quickrand">>,
   {git,"https://github.com/okeuday/quickrand.git",
