@@ -22,7 +22,8 @@ USERS_GROUP = 105
 # DB to store the data about the users
 # IMPORTANT!!! Must be only accesible by the user which executes this script!!!
 DB_USERS_FILENAME = "/tmp/users.db"
-
+# Prefix to add to all user names created 
+USER_PREFIX = "tts"
 
 # We can use the API
 def create_one_user(username, group, oidc, password):
@@ -178,19 +179,20 @@ def main():
             jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
 
             action = jobject['action']
+            user_info = jobject['user_info']
+            oidc = user_info['oidc']
+            iss = urlparse.urlparse(oidc['iss'])
+            iss_host = iss[1]
+            username = "%s_%s_%s" % (USER_PREFIX, iss_host, oidc['sub'])
 
             if action == "request":
-                user_info = jobject['user_info']
-                oidc = user_info['oidc']
-                iss = urlparse.urlparse(oidc['iss'])
-                iss_host = iss[1]
-                username = "%s_%s" % (iss_host, oidc['sub'])
-
                 print create_user(username, USERS_GROUP, oidc)
             elif action == "revoke":
                 state = jobject['cred_state']
-
-                print revoke_user(state)
+                if state != username:
+                    print json.dumps({"error": "incorrect_state"})
+                else:
+                    print revoke_user(state)
             else:
                 print json.dumps({"error": "unknown_action", "details": action})
         else:
