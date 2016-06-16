@@ -14,14 +14,14 @@ from xml.dom.minidom import parseString
 import sqlite3
 
 # URL of the XML-RPC API of the OpeNebula server
-ONE_API_ENDPOINT = "http://server.com:2633/RPC2"
+ONE_API_ENDPOINT = "http://localhost:2633/RPC2"
 # User to access the API
 SESSIONID = "oneadmin:somepass"
 # Group ID to add the users created
 USERS_GROUP = 105
 # DB to store the data about the users
 # IMPORTANT!!! Must be only accesible by the user which executes this script!!!
-DB_USERS_FILENAME = "/some_path/users.db"
+DB_USERS_FILENAME = "/tmp/users.db"
 
 
 # We can use the API
