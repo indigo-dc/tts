@@ -1,4 +1,19 @@
 ---
+- stat: path="{{ ansible_env.HOME }}/indigo-dc/tts/_build/default/rel/tts/bin/tts"
+  register: tts_binary
+
+- name: Check for running TTS
+  # TODO How to hide the error message, in case no tts is running?
+  # It looks very evil, but in fact it is expected
+  command: "{{ tts_binary.stat.path }} pid"
+  register: check_result
+  ignore_errors: yes
+  when: tts_binary.stat.exists == True
+
+- name: Stop any running TTS
+  command: "{{ tts_binary.stat.path }} stop"
+  when: tts_binary.stat.exists == True and check_result.rc == 0
+
 - name: Clone TTS git repo
   git:
     dest: "{{ ansible_env.HOME }}/indigo-dc/tts"
@@ -11,10 +26,12 @@
     chdir: "{{ ansible_env.HOME }}/indigo-dc/tts"
     target: rel
 
-- name: Generate Erlang cookie
-  command: ./utils/gen_random_cookie chdir=~/indigo-dc/tts
+- debug:
+    # This was done by 'make rel' in the task above
+    msg: "Secret cookie changed. Any still-running instance of TTS will be inaccesible through the main binary."
+
 
 - name: (Re)start TTS
-  shell: ./tts restart || ./tts start
+  command: ./tts start
   args:
     chdir: "{{ ansible_env.HOME }}/indigo-dc/tts/_build/default/rel/tts/bin/"
