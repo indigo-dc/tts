@@ -1,0 +1,8 @@
+---
+- name: Setup TTS on all TTS servers
+  hosts: tts-server
+  remote_user: root
+
+  roles:
+    - erlang
+    - tts

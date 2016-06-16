@@ -1,0 +1,20 @@
+---
+- name: Clone TTS git repo
+  git:
+    dest: "{{ ansible_env.HOME }}/indigo-dc/tts"
+    repo: https://github.com/indigo-dc/tts.git
+    version: devel/ansible
+
+- name: Build TTS
+  make:
+    # TODO How can ansible know if rebar changed anything?
+    chdir: "{{ ansible_env.HOME }}/indigo-dc/tts"
+    target: rel
+
+- name: Generate Erlang cookie
+  command: ./utils/gen_random_cookie chdir=~/indigo-dc/tts
+
+- name: (Re)start TTS
+  shell: ./tts restart || ./tts start
+  args:
+    chdir: "{{ ansible_env.HOME }}/indigo-dc/tts/_build/default/rel/tts/bin/"
