@@ -127,9 +127,8 @@ load_user_if_needed({error, not_found}, Issuer, Subject, AccessToken) ->
             FakeInfo = #{sub => Subject, iss => Issuer, name => FakeName},
             insert_user(IdhInfo, {ok, FakeInfo}, Issuer);
         Token ->
-            {ok, ProviderInfo} = oidcc:find_openid_provider(Issuer),
-            {ProviderId, _, _} = ProviderInfo,
-            OidcInfo = oidcc:retrieve_user_info(Token, ProviderId,
+            {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+            OidcInfo = oidcc:retrieve_user_info(Token, ProviderPid,
                                                 Subject),
             insert_user(IdhInfo, OidcInfo, Issuer)
     end.
