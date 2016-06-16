@@ -166,7 +166,7 @@ def revoke_user(username):
             return json.dumps({'error': msg})
     else:
         if userid == "":
-            return json.dumps({'result': 'ok'})
+            return json.dumps({'error': 'no_user'})
         else:
             return json.dumps({'error': userid})
 
