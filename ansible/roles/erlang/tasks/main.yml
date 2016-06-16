@@ -1,4 +1,14 @@
 ---
+# TODO This is CentOS specific!
+
+- name: Add erlang repo
+  get_url:
+    url: http://packages.erlang-solutions.com/rpm/centos/erlang_solutions.repo
+    dest: /etc/yum.repos.d/
+
 - name: Install erlang
-  package: name=erlang state=present
+  yum:
+    enablerepo: erlang-solutions
+    name: erlang
+    state: latest
 
