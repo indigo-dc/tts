@@ -18,7 +18,7 @@
   git:
     dest: "{{ ansible_env.HOME }}/indigo-dc/tts"
     repo: https://github.com/indigo-dc/tts.git
-    version: deployment/ansible
+    version: master
 
 - name: Build TTS
   make:
