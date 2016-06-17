@@ -151,6 +151,183 @@ is_authorized_test() ->
     ok.
 
 malformed_request_test() ->
+    MeckModules = [cowboy_req, oidcc],
+    Binding = fun(Name, #{bindings := Bindings} = Request, Default) ->
+                      case lists:keyfind(Name, 1, Bindings) of
+                          {Name, Value} -> {Value, Request};
+                          _ -> {Default, Request}
+                      end
+              end,
+    Binding2 = fun(Name, Request) ->
+                       Binding(Name, Request, undefined)
+               end,
+    Header = fun(Name, #{header := Header} = Request) ->
+                      case lists:keyfind(Name, 1, Header) of
+                          {Name, Value} -> {Value, Request};
+                          _ -> {undefined, Request}
+                      end
+             end,
+    Method = fun(#{method := Method} = Request) ->
+                     {Method, Request}
+             end,
+    Body = fun(#{body := Body} = Request) ->
+                     {ok, Body, Request}
+             end,
+    IssuerUrl = <<"https://test.tts.somewhere">>,
+    GetProvider = fun(Issuer) ->
+                          case Issuer of
+                              <<"ID1">> ->
+                                  {ok, #{issuer => IssuerUrl}};
+                              _ ->
+                                  {error, not_found}
+                          end
+                  end,
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(cowboy_req, binding, Binding),
+    ok = meck:expect(cowboy_req, binding, Binding2),
+    ok = meck:expect(cowboy_req, header, Header),
+    ok = meck:expect(cowboy_req, method, Method),
+    ok = meck:expect(cowboy_req, body, Body),
+    ok = meck:expect(oidcc, get_openid_provider_info, GetProvider),
+
+    State = #state{},
+    Requests = [
+                % GOOD request
+                {#{ bindings => [{version, <<"v1">>},
+                                 {type, <<"oidcp">>}
+                                ],
+                    header => [],
+                    method => <<"GET">>,
+                    body => []
+                  }, false },
+
+                { #{ bindings => [{version, <<"V1">>},
+                                  {type, <<"service">>}
+                                 ],
+                     header => [],
+                     method => <<"GET">>,
+                     body => []
+                   }, false},
+
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"credential">>}
+                                 ],
+                     header => [],
+                     method => <<"GET">>,
+                     body => []
+                   }, false},
+
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"credential_data">>},
+                                  {id, <<"234">>}
+                                 ],
+                     header => [],
+                     method => <<"GET">>,
+                     body => []
+                   }, false },
+
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"credential">>}
+                                 ],
+                     header => [],
+                     method => <<"POST">>,
+                     body => <<"{\"service_id\":234}">>
+                   }, false },
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"credential">>},
+                                  {id, <<"234">>}
+                                 ],
+                     header => [
+                                {<<"authorization">>,<<"Bearer SomeToken">>},
+                                {<<"x-openid-connect-issuer">>,IssuerUrl}
+                               ],
+                     method => <<"DELETE">>,
+                     body => []
+                   }, false },
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"credential">>},
+                                  {id, <<"234">>}
+                                 ],
+                     header => [
+                                {<<"authorization">>,<<"Bearer SomeToken">>},
+                                {<<"x-openid-connect-issuer">>,<<"ID1">>}
+                               ],
+                     method => <<"DELETE">>,
+                     body => []
+                   }, false },
+
+                % BAD requests
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"oidcp">>}
+                                 ],
+                     header => [],
+                     method => <<"POST">>,
+                     body => <<"no json">>
+                   }, true },
+
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"unknown_type">>}
+                                 ],
+                     header => [],
+                     method => <<"GET">>,
+                     body => []
+                   }, true },
+
+                { #{ bindings => [{version, <<"v0">>},
+                                  {type, <<"oidcp">>}
+                                 ],
+                     header => [{<<"authorization">>, <<"missingBearer">>}],
+                     method => <<"GET">>,
+                     body => []
+                   }, true },
+
+                { #{ bindings => [{version, <<"v0">>},
+                                  {type, <<"credentials">>}
+                                 ],
+                     header => [
+                                {<<"authorization">>,<<"Bearer SomeToken">>},
+                                {<<"x-openid-connect-issuer">>,<<"NO URL">>}
+                               ],
+                     method => <<"GET">>,
+                     body => []
+                   }, true },
+
+                { #{ bindings => [{version, <<"v0">>},
+                                  {type, <<"credentials">>}
+                                 ],
+                     header => [
+                                {<<"authorization">>,<<"Bearer SomeToken">>},
+                                {<<"x-openid-connect-issuer">>,<<"ID2">>}
+                               ],
+                     method => <<"GET">>,
+                     body => []
+                   }, true },
+
+                { #{ bindings => [{version, <<"vn">>},
+                                  {type, <<"oidcp">>}
+                                 ],
+                     header => [],
+                     method => <<"GET">>,
+                     body => []
+                   }, true },
+
+                { #{ bindings => [{version, <<"234">>},
+                                  {type, <<"oidcp">>}
+                                 ],
+                     header => [],
+                     method => <<"GET">>,
+                     body => []
+                   }, true }
+               ],
+
+    Test  = fun({Request, ExpResult}, _) ->
+                    {Result, Request, _} = tts_rest:malformed_request(Request,
+                                                                      State),
+                    ?assertEqual(ExpResult, Result),
+                    ok
+            end,
+    ok = lists:foldl(Test,ok,Requests),
+    ok = test_util:meck_done(MeckModules),
     ok.
 
 resource_exists_test() ->
