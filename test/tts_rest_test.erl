@@ -331,6 +331,57 @@ malformed_request_test() ->
     ok.
 
 resource_exists_test() ->
+    MeckModules = [oidcc, tts_service, tts_credential],
+
+    GetProvider = fun(ID) ->
+                          case ID of
+                              <<"123">> -> {ok, some_info};
+                              _ -> {error, not_found}
+                          end
+                  end,
+    GetInfo = fun(ID) ->
+                          case ID of
+                              <<"123">> -> {ok, some_info};
+                              _ -> {error, not_found}
+                          end
+                  end,
+    CExists = fun(_UserId, ID) ->
+                          case ID of
+                              <<"123">> -> true;
+                              _ -> false
+                          end
+              end,
+
+
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(oidcc, get_openid_provider_info, GetProvider),
+    ok = meck:expect(tts_service, get_info, GetInfo),
+    ok = meck:expect(tts_credential, exists, CExists),
+
+    Requests = [
+                %% good requests
+                {#state{id = undefined}, true},
+                {#state{id = <<"123">>, type=oidcp}, true},
+                {#state{id = <<"123">>, type=service}, true},
+                {#state{id = <<"123">>, type=credential,
+                        user_info=#{site => #{uid => <<"user1">>}}
+                       }, true},
+                {#state{type = cred_data, id= <<"someid">>}, true},
+
+                %% bad requests
+                {#state{id = <<"124">>, type=oidcp}, false},
+                {#state{id = <<"124">>, type=service}, false},
+                {#state{type = creddata, id= <<"someid">>}, false}
+
+               ],
+
+    Test  = fun({State, ExpResult}, _) ->
+                    {Result, req, _} = tts_rest:resource_exists(req, State),
+                    ?assertEqual(ExpResult, Result),
+                    ok
+            end,
+    ok = lists:foldl(Test,ok,Requests),
+    ok = test_util:meck_done(MeckModules),
     ok.
 
 get_json_test() ->
