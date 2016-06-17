@@ -110,7 +110,7 @@ handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 handle_cast(reconfigure, State) ->
-    NewState = reconfigure(?CONFIG(sqlite_db,undefined),State),
+    NewState = reconfigure(?CONFIG(sqlite_db, undefined), State),
     {noreply, NewState};
 handle_cast(stop, State) ->
     {stop, normal, State};
