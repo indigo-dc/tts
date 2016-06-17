@@ -476,7 +476,86 @@ get_json_test() ->
     ok.
 
 post_json_test() ->
+    MeckModules = [ tts_credential, tts_rest_cred],
+    CredRequest = fun(_ServiceId, #{ site := #{uid := Uid}}, _IFace, rest, []) ->
+                        case Uid of
+                            <<"123">> -> {ok, #{}, []};
+                            _ -> {error, internal}
+                        end
+                  end,
+    AddCred = fun(_Cred, UserId) ->
+                      case UserId of
+                          <<"123">> -> {ok, <<"CRED1">>};
+                          _ -> {error, internal}
+                      end
+              end,
+
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(tts_credential, request, CredRequest),
+    ok = meck:expect(tts_rest_cred, add_cred, AddCred),
+
+    Url = <<"/api/v1/credential_data/CRED1">>,
+    Requests = [
+                {#state{version = 1,
+                        type = credential,
+                        id = undefined,
+                        json = #{service_id => <<"Service1">>},
+                        user_info = #{ site => #{uid => <<"123">>}},
+                        method = post
+                       }, {true, Url} },
+                {#state{version = 1,
+                        type = credential,
+                        id = undefined,
+                        json = #{service_id => <<"Service1">>},
+                        user_info = #{ site => #{uid => <<"124">>}},
+                        method = post
+                       }, false }
+               ],
+
+    Test  = fun({State, ExpResult}, _) ->
+                    {Result, req, State} = tts_rest:post_json(req, State),
+                    ?assertEqual(ExpResult, Result),
+                    ok
+            end,
+    ok = lists:foldl(Test,ok,Requests),
+    ok = test_util:meck_done(MeckModules),
     ok.
 
 delete_resource_test() ->
+    MeckModules = [tts_credential],
+    Revoke = fun(CredentialId, #{ site := #{uid := Uid}}) ->
+                     case {CredentialId, Uid} of
+                         {<<"CRED1">>, <<"123">>} ->
+                             {ok, result, []};
+                         _ ->
+                             {error, not_found}
+                     end
+             end,
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(tts_credential, revoke, Revoke),
+
+    Requests = [
+                {#state{version = latest,
+                        type = credential,
+                        id = <<"CRED1">>,
+                        object = undefined,
+                        user_info = #{ site => #{uid => <<"123">>}},
+                        method = delete
+                       }, true },
+                {#state{version = latest,
+                        type = credential,
+                        id = <<"CRED1">>,
+                        object = undefined,
+                        user_info = #{ site => #{uid => <<"124">>}},
+                        method = delete
+                       }, false }
+               ],
+
+    Test  = fun({State, ExpResult}, _) ->
+                    {Result, req, State} = tts_rest:delete_resource(req, State),
+                    ?assertEqual(ExpResult, Result),
+                    ok
+            end,
+    ok = lists:foldl(Test,ok,Requests),
+    ok = test_util:meck_done(MeckModules),
     ok.
