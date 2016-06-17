@@ -40,9 +40,12 @@ request_test() ->
     UserId1 = <<"foo">>,
     UserId2 = <<"bar">>,
     UserId3 = <<"joe">>,
+    UserId4 = <<"john">>,
     UserInfo1 = #{site => #{uid => UserId1}},
     UserInfo2 = #{site => #{uid => UserId2}},
     UserInfo3 = #{site => #{uid => UserId3}},
+    UserInfo4 = #{site => #{uid => UserId4}},
+
     CredState = <<"some_cred">>,
     Cred = <<"secret">>,
     MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker, tts_service],
@@ -50,7 +53,7 @@ request_test() ->
     Params = [],
     MyPid = self(),
     Interface = <<"test interface">>,
-    AddFun = fun(User, Service, IFace, State) ->
+    AddFun = fun(User, Service, IFace, State, _AllowMultiple) ->
                      IFace = Interface,
                      User = UserId1,
                      Service = ServiceId,
@@ -68,9 +71,16 @@ request_test() ->
                              UserId2 -> {ok, #{
                                            credential => [Cred],
                                            error => <<>>}, []};
+                             UserId3 -> {ok, #{credential => [Cred]}, []};
                              _ -> {error, just_because, []}
                          end
                  end,
+    AllowSame = fun(ServiceId) ->
+                            case ServiceId of
+                                ServiceId1 -> true;
+                                _ -> false
+                            end
+                    end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(tts_data_sqlite, credential_add, AddFun),
     ok = meck:expect(tts_data_sqlite, credential_get_count, fun(_, _) -> {ok, 0} end),
@@ -78,17 +88,17 @@ request_test() ->
     ok = meck:expect(tts_cred_worker, request, RequestFun),
     ok = meck:expect(tts_service, is_enabled, fun(_) -> true end),
     ok = meck:expect(tts_service, get_credential_limit, fun(_) -> {ok, 100} end),
+    ok = meck:expect(tts_service, allows_same_state, AllowSame),
 
 
     {ok, Pid} = tts_credential:start_link(),
-    {ok, [_, Cred], []} = tts_credential:request(ServiceId, UserInfo1, Interface,
-                                            Token, Params),
-    {error, {script, <<>>}, []} = tts_credential:request(ServiceId, UserInfo2,
-                                                         Interface, Token, Params),
-    {error, {internal, just_because}, []} = tts_credential:request(ServiceId,
-                                                                   UserInfo3,
-                                                                   Interface,
-                                                                   Token, Params),
+    {ok, [_, Cred], []} = tts_credential:request(ServiceId, UserInfo1, Interface, Token, Params),
+
+    {error, {script, <<>>}, []} = tts_credential:request(ServiceId, UserInfo2, Interface, Token, Params),
+    {error, {missing_state, ServiceId},  []} = tts_credential:request(ServiceId, UserInfo3, Interface, Token, Params),
+    {error, {internal, just_because}, []} = tts_credential:request(ServiceId, UserInfo4, Interface, Token, Params),
+
+
     ok = tts_credential:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = test_util:meck_done(MeckModules),
