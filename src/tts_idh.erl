@@ -23,6 +23,7 @@
 -export([lookup_user/1]).
 -export([user_result/1]).
 -export([reconfigure/0]).
+-export([stop/0]).
 
 %% gen_server.
 -export([init/1]).
@@ -49,6 +50,10 @@
 -spec start_link() -> {ok, pid()}.
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+-spec stop() -> ok.
+stop() ->
+    gen_server:cast(?MODULE, stop).
 
 -spec lookup_user(Map :: map()) ->
     {ok, Info :: map()} | {error, Reason :: term}.
@@ -88,6 +93,8 @@ handle_call(_Request, _From, State) ->
 
 handle_cast(perform_next, State) ->
     {noreply, try_next_lookup(State)};
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
