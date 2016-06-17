@@ -40,3 +40,6 @@ run: cookie
 
 deb: tar
 	./packages/deb/build
+
+rpm: tar
+	./packages/rpm/build
