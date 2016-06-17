@@ -385,6 +385,94 @@ resource_exists_test() ->
     ok.
 
 get_json_test() ->
+    MeckModules = [oidcc, tts_service, tts_credential, tts_rest_cred],
+
+    GetProvider = fun() ->
+                          {ok, [{<<"ID1">>,pid}]}
+                  end,
+    GetPInfo = fun(_Id) ->
+                          {ok, #{issuer => <<"https://test.tts">>}}
+                  end,
+    GetServiceList = fun(UserId) ->
+                          case UserId of
+                              <<"123">> -> {ok, [#{}]};
+                              _ -> {ok, []}
+                          end
+                  end,
+    GetCList = fun(UserId) ->
+                          case UserId of
+                              <<"123">> -> {ok, [<<"CredId">>]};
+                              _ -> {ok, []}
+                          end
+              end,
+    GetCred = fun(Id, UserId) ->
+                          case {Id, UserId} of
+                              {<<"CRED1">>, <<"123">>} ->
+                                  {ok, #{password => <<"secret">>}};
+                              _ -> {error, not_found}
+                          end
+              end,
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(tts_service, get_list, GetServiceList),
+    ok = meck:expect(oidcc, get_openid_provider_list, GetProvider),
+    ok = meck:expect(oidcc, get_openid_provider_info, GetPInfo),
+    ok = meck:expect(tts_credential, get_list, GetCList),
+    ok = meck:expect(tts_rest_cred, get_cred, GetCred),
+
+    Requests = [
+                {#state{version = latest,
+                        type = service,
+                        id = undefined,
+                        object = undefined,
+                        user_info = #{ site => #{uid => <<"123">>}},
+                        method = get
+                       }, <<"{\"service_list\":[{}]}">> },
+                {#state{version = latest,
+                        type = service,
+                        id = undefined,
+                        object = undefined,
+                        user_info = #{ site => #{uid => <<"124">>}},
+                        method = get
+                       }, <<"{\"service_list\":[]}">> },
+                {#state{version = latest,
+                        type = oidcp,
+                        id = undefined,
+                        object = undefined,
+                        user_info = undefined,
+                        method = get
+                       },<<"{\"openid_provider_list\":[{\"id\":\"ID1\",\"issuer\":\"https://test.tts\"}]}">>
+                },
+                {#state{version = latest,
+                        type = credential,
+                        id = undefined,
+                        object = undefined,
+                        user_info = #{ site => #{uid => <<"123">>}},
+                        method = get
+                       },<<"{\"credential_list\":[{\"id\":\"CredId\"}]}">> },
+                {#state{version = latest,
+                        type = cred_data,
+                        id = <<"CRED1">>,
+                        object = undefined,
+                        user_info = #{ site => #{uid => <<"123">>}},
+                        method = get
+                       },<<"{\"password\":\"secret\"}">> },
+                {#state{version = latest,
+                        type = cred_data,
+                        id = <<"CRED1">>,
+                        object = undefined,
+                        user_info = #{ site => #{uid => <<"124">>}},
+                        method = get
+                       },<<"{}">> }
+               ],
+
+    Test  = fun({State, ExpResult}, _) ->
+                    {Result, req, State} = tts_rest:get_json(req, State),
+                    ?assertEqual(ExpResult, Result),
+                    ok
+            end,
+    ok = lists:foldl(Test,ok,Requests),
+    ok = test_util:meck_done(MeckModules),
+
     ok.
 
 post_json_test() ->
