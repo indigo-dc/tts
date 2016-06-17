@@ -1,0 +1,69 @@
+#!/bin/bash
+
+build_root=`pwd`/packages/rpm
+rpm_structure_tar=$build_root/rpm-structure.tar.gz
+rpm_structure=$build_root/RPMBUILD
+binary_structure_tar=$build_root/binary-structure.tar.gz
+binary_structure=$build_root/tts
+prod_tar=`pwd`/_build/prod/rel/tts/tts*.tar.gz
+prod_dest=$binary_structure/usr/local/lib/tts
+build=`pwd`/_build/packages
+if [[ ! -d $build ]]; then mkdir -p $build; fi
+
+
+# get binary structure
+cd $build_root
+if [[ -d $binary_structure ]]; then rm -rf $structure; fi
+echo extracting binary structure from $binary_structure_tar
+tar xaf $binary_structure_tar
+if [[ ! -d $binary_structure ]]; then echo no structure found; exit 1; fi
+echo
+
+# production tar
+pushd $prod_dest
+echo extracting production data from $prod_tar
+tar xaf $prod_tar
+popd
+echo
+
+# determine version
+version=`echo $prod_dest/lib/tts-*`
+version=${version#*-}
+version=${version#v}
+
+# create binary tar
+echo creating binary tar
+binary_tar=$build_root/tts-${version}-bin.tar.gz
+tar caf $binary_tar $binary_structure
+if [[ ! -f $binary_tar ]]; then echo no binary tar created; exit 1; fi
+echo
+
+# get rpm structure
+if [[ -d $rpm_structure ]]; then rm -rf $rpm_structure; fi
+echo extracting rpm structure from $rpm_structure_tar
+tar xaf $rpm_structure_tar
+if [[ ! -d $rpm_structure ]]; then echo no structure found; exit 1; fi
+echo
+
+## fill rpm structure
+mv $binary_tar $rpm_structure/SOURCES
+
+# handle the spec file
+pushd $rpm_structure
+spec_file=tts.spec
+rpm_spec_scheme=$build_root/$spec_file
+rpm_spec=SPECS/$spec_file
+cat $rpm_spec_scheme | sed "s|Version:.*$|Version: ${version}|" > $rpm_spec
+
+tree .
+
+#TODO build rpm package
+echo creating rpm package
+rpmbuild -ba $rpm_spec
+
+popd
+echo
+
+# clean up
+to_clean="$binary_structure $binary_tar $rpm_structure"
+for file in $to_clean; do echo cleaning: $file; rm -rf $file; done
