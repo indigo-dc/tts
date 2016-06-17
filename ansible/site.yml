@@ -4,6 +4,10 @@
   remote_user: ansible
   become_user: root
   become: yes
+  vars:
+    install_dir: "{{ ansible_env.HOME }}/indigo-dc/home"
+    config_dir: "{{ ansible_env.HOME }}/.config/tts"
+    tts_exec: "{{ install_dir }}/_build/default/rel/tts/bin/tts"
 
   roles:
     - dependencies

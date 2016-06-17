@@ -1,39 +1,39 @@
 ---
-- stat: path="{{ ansible_env.HOME }}/indigo-dc/tts/_build/default/rel/tts/bin/tts"
-  register: tts_binary
+- stat: path="{{ tts_exec }}"
+  register: tts_exec_file
 
 - name: Check for running TTS
   # TODO How to hide the error message, in case no tts is running?
   # It looks very evil, but in fact it is expected
-  command: "{{ tts_binary.stat.path }} pid"
+  command: "{{ tts_exec }} pid"
   register: check_result
   ignore_errors: yes
-  when: tts_binary.stat.exists == True
+  when: tts_exec_file.stat.exists == True
 
 - name: Stop any running TTS
-  command: "{{ tts_binary.stat.path }} stop"
-  when: tts_binary.stat.exists == True and check_result.rc == 0
+  command: "{{ tts_exec }} stop"
+  when: tts_exec_file.stat.exists == True and check_result.rc == 0
 
 - name: Clone TTS git repo
   git:
-    dest: "{{ ansible_env.HOME }}/indigo-dc/tts"
+    dest: "{{ install_dir }}"
     repo: https://github.com/indigo-dc/tts.git
     version: master
 
 - name: Build TTS
   make:
     # TODO How can ansible know if rebar changed anything?
-    chdir: "{{ ansible_env.HOME }}/indigo-dc/tts"
+    chdir: "{{ install_dir }}"
     target: rel
 
 - debug:
-    # This was done by 'make rel' in the task above
+    # This was done by 'make rel' in the task abovel
     msg: "Secret cookie changed. Any still-running instance of TTS will be inaccesible through the main binary."
 
 - name: Create configuration directory
   file:
     state: directory
-    path: "{{ ansible_env.HOME }}/.config/tts/{{ item }}"
+    path: "{{ config_dir }}/{{ item }}"
   with_items:
     - oidc
     - scripts
@@ -42,7 +42,7 @@
 - name: Copy configuration files
   template:
       src: "{{ item }}"
-      dest: "{{ ansible_env.HOME }}/.config/tts/{{ item }}"
+      dest: "{{ config_dir }}/{{ item }}"
   with_items:
     - main.conf
     - oidc/google.conf
@@ -52,6 +52,4 @@
     - services/ssh.conf
 
 - name: (Re)start TTS
-  command: ./tts start
-  args:
-    chdir: "{{ ansible_env.HOME }}/indigo-dc/tts/_build/default/rel/tts/bin/"
+  command: "{{ tts_exec }} start"
