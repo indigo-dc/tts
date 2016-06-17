@@ -26,6 +26,7 @@
 -export([credential_get_list/1]).
 -export([credential_get_count/2]).
 -export([credential_remove/2]).
+-export([stop/0]).
 
 
 %% gen_server.
@@ -53,12 +54,12 @@ reconfigure() ->
 -spec credential_add(UserId::binary(), ServiceId::binary(),
                      Interface ::binary(), CredState :: any(),
                      AllowNonUniqueStates::boolean())
--> ok | {error, Reason :: atom()}.
+-> {ok, CredentialID ::binary()} | {error, Reason :: atom()}.
 credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
     gen_server:call(?MODULE, {credential_add, UserId, ServiceId, Interface,
                               CredState, SameStateAllowed}).
 
--spec credential_get_list(UserId::binary()) -> [tts:cred()].
+-spec credential_get_list(UserId::binary()) -> {ok, [tts:cred()]}.
 credential_get_list(UserId) ->
     gen_server:call(?MODULE, {credential_get_list, UserId}).
 
@@ -74,6 +75,10 @@ credential_get(CredId) ->
     ok | {error, Reason :: atom()}.
 credential_remove(UserId, CredId) ->
     gen_server:call(?MODULE, {credential_remove, UserId, CredId}).
+
+-spec stop() -> ok.
+stop() ->
+    gen_server:cast(?MODULE, stop).
 
 %% gen_server.
 
@@ -105,8 +110,10 @@ handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 handle_cast(reconfigure, State) ->
-    NewState = reconfigure(State),
+    NewState = reconfigure(?CONFIG(sqlite_db,undefined),State),
     {noreply, NewState};
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -208,13 +215,16 @@ create_random_credential_id(Con) ->
     end.
 
 
-reconfigure(#state{con=undefined}) ->
-    {ok, Con} = esqlite3:open(?CONFIG(sqlite_db)),
+
+reconfigure(undefined, #state{con=undefined} = State) ->
+    State;
+reconfigure(NewDB, #state{con=undefined}) ->
+    {ok, Con} = esqlite3:open(NewDB),
     ok = create_tables_if_needed(Con),
     #state{con=Con};
-reconfigure(#state{con=Con} = State) ->
+reconfigure(NewDB, #state{con=Con} = State) ->
     esqlite3:close(Con),
-    reconfigure(State#state{con=undefined}).
+    reconfigure(NewDB, State#state{con=undefined}).
 
 -define(TABLES, [
                  {cred,
