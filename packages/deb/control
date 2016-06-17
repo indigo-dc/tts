@@ -1,5 +1,5 @@
 Package: tts
-Section: base
+Section: httpd
 Priority: optional
 Architecture: amd64
 Maintainer: Lukas Burgey <ubedv@student.kit.edu>
