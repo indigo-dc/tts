@@ -30,6 +30,26 @@
     # This was done by 'make rel' in the task above
     msg: "Secret cookie changed. Any still-running instance of TTS will be inaccesible through the main binary."
 
+- name: Create configuration directory
+  file:
+    state: directory
+    path: "{{ ansible_env.HOME }}/.config/tts/{{ item }}"
+  with_items:
+    - oidc
+    - scripts
+    - services
+
+- name: Copy configuration files
+  template:
+      src: "{{ item }}"
+      dest: "{{ ansible_env.HOME }}/.config/tts/{{ item }}"
+  with_items:
+    - main.conf
+    - oidc/google.conf
+    - oidc/iam.conf
+    - scripts/idh-single-user.py
+    - scripts/ssh.py
+    - services/ssh.conf
 
 - name: (Re)start TTS
   command: ./tts start
