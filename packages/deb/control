@@ -1,0 +1,6 @@
+Package: tts
+Section: base
+Priority: optional
+Architecture: amd64
+Maintainer: Lukas Burgey <ubedv@student.kit.edu>
+Description: Token Translation Service
