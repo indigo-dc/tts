@@ -15,7 +15,7 @@ eunit:
 	$(REBAR) do eunit,cover -v
 
 ct:
-	$(REBAR) ct
+	$(REBAR) do ct,cover -v
 
 elvis:
 	$(REBAR) lint
