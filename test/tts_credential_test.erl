@@ -75,9 +75,9 @@ request_test() ->
                              _ -> {error, just_because, []}
                          end
                  end,
-    AllowSame = fun(ServiceId) ->
-                            case ServiceId of
-                                ServiceId1 -> true;
+    AllowSame = fun(SerId) ->
+                            case SerId of
+                                ServiceId -> true;
                                 _ -> false
                             end
                     end,
