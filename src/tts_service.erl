@@ -182,6 +182,8 @@ verify_value(con_type, Value) ->
     {ok, bin_to_atom(Value, undefined)};
 verify_value(allow_same_state, Value) ->
     {ok, bin_to_atom(Value, false)};
+verify_value(cmd, Cmd) ->
+    {ok, tts_file_util:to_abs(Cmd)};
 verify_value(_AKey, Value) ->
     {ok, Value}.
 
