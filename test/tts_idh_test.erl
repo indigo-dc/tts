@@ -28,6 +28,6 @@ idh_test() ->
     ok = tts_idh:reconfigure(),
     {ok, _} = tts_idh:lookup_user(UserMap),
     ok = tts_idh:stop(),
-    ok = test_util:wait_for_process_to_die(Pid, 300),
+    ?assertEqual(ok, test_util:wait_for_process_to_die(Pid, 1000)),
     ok = test_util:meck_done(MeckModules),
     ok.
