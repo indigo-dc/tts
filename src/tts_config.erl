@@ -36,6 +36,7 @@
 -export([local_port/0]).
 -export([local_protocol/0]).
 -export([reload/0]).
+-export([reload/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -63,6 +64,10 @@ stop(Pid) ->
 
 reload() ->
     tts_sup:restart_config().
+
+reload(Path) ->
+    set_config(config_path, tts_file_util:to_abs(Path)),
+    reload().
 
 get_(Key) ->
     case application:get_env(tts, Key) of

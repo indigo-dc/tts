@@ -238,13 +238,13 @@ case $cmd in
 	echo '  # List all OpenId Connect providers'
 	echo '    lsprov  <host>'
 	echo '  # List all end-services provided to the user'
-	echo '    lsserv  <host> <ac_token> [<issuer>]'
+	echo '    lsserv  <host> <ac_token> <issuer>'
 	echo '  # List all credential references of the user'
-	echo '    lscred  <host> <ac_token> [<issuer>]'
+	echo '    lscred  <host> <ac_token> <issuer>'
 	echo '  # Request credentials for a service'
-	echo '    request <host> <service_id> <ac_token> [<issuer>]'
-    echo '  # Revoke the credentials, given by the credential state (c_state)'
-	echo '    revoke  <host> <c_state> <ac_token> [<issuer>]'
+	echo '    request <host> <service_id> <ac_token> <issuer>'
+    echo '  # Revoke the credentials, given by the credential id (cred_id)'
+	echo '    revoke  <host> <cred_id> <ac_token> <issuer>'
 	;;
     *)
 	echo 'Unknown command'
