@@ -101,7 +101,9 @@ handle_cast(_Msg, State) ->
 handle_info(_Info, State) ->
     {noreply, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{active = Active, ready = Ready}) ->
+    stop_worker(Ready),
+    stop_worker(Active),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -196,4 +198,16 @@ trigger_next() ->
 update_config(State) ->
     ScriptName = ?CONFIG(idh_script),
     State#state{configured=true, script=ScriptName}.
+
+stop_worker(List) ->
+    Stop = fun(Item, Acc) ->
+                   {Pid, MRef} = case Item of
+                                     {P, M} ->  {P, M};
+                                     {P, _, M} -> {P, M}
+                                 end,
+                   demonitor(MRef),
+                   ok = tts_idh_worker:stop(Pid),
+                   Acc
+           end,
+    lists:foldl(Stop, ok, List).
 
