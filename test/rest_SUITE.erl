@@ -77,7 +77,7 @@ service_config(_Config) ->
 python2_check(_Config) ->
     Result = os:cmd("env python2 --version"),
     ct:log("python2 check result ~p", [Result]),
-    [H | T] = binary:split(list_to_binary(Result),[<<":">>,<<" ">>],[global,trim_all]),
+    [H | _] = binary:split(list_to_binary(Result),[<<":">>,<<" ">>],[global,trim_all]),
     ok = case H of
              <<"Python">> -> ok;
              _ -> no_python
