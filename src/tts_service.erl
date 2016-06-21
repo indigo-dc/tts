@@ -131,9 +131,11 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
 
                     {<<"ConnectionType">>, con_type},
                     {<<"ConnectionUser">>, con_user},
+                    {<<"ConnectionPassword">>, con_pass},
                     {<<"ConnectionHost">>, con_host},
                     {<<"ConnectionPort">>, con_port},
                     {<<"ConnectionSshDir">>, con_ssh_user_dir},
+                    {<<"ConnectionSshAutoAcceptHosts">>, con_ssh_auto_accept},
 
                     {<<"AllowSameState">>, allow_same_state},
 
@@ -173,6 +175,8 @@ verify_value(con_host, Host) ->
     {ok, Host};
 verify_value(con_port, Port) ->
     {ok, list_to_integer(Port)};
+verify_value(con_ssh_auto_accept, Value) ->
+    {ok, bin_to_atom(Value, false)};
 verify_value(cred_limit, Limit) ->
     {ok, list_to_integer(Limit)};
 verify_value(AKey, Value) when is_list(Value) ->
@@ -182,6 +186,8 @@ verify_value(con_type, Value) ->
     {ok, bin_to_atom(Value, undefined)};
 verify_value(allow_same_state, Value) ->
     {ok, bin_to_atom(Value, false)};
+verify_value(cmd, Cmd) ->
+    {ok, tts_file_util:to_abs(Cmd)};
 verify_value(_AKey, Value) ->
     {ok, Value}.
 
