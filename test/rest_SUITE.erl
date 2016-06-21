@@ -9,28 +9,22 @@
          end_per_suite/1,
          %% init_per_group/2,
          %% end_per_group/2,
-         init_per_testcase/2,
-         end_per_testcase/2,
+         %% init_per_testcase/2,
+         %% end_per_testcase/2,
 
+         python2_check/1,
          update_config/1,
          service_config/1,
          %% provider_list/0,
-         provider_list/1,
-         service_list/1,
-         credential_list/1,
-         credential_request/1,
-         credential_revoke/1
+         rest_communication/1
         ]).
 
 all() ->
     [
+     python2_check,
      update_config,
      service_config,
-     provider_list,
-     service_list,
-     credential_request,
-     credential_list,
-     credential_revoke
+     rest_communication
     ].
 
 %% groups() ->
@@ -56,13 +50,13 @@ end_per_suite(Conf) ->
 %% end_per_group(_Group, Conf) ->
 %%     Conf.
 %%
-init_per_testcase(_TestCase, Conf) ->
-     mock_oidcc(),
-     Conf.
-
-end_per_testcase(_TestCase, Conf) ->
-    unmock_oidcc(),
-    Conf.
+%% init_per_testcase(_TestCase, Conf) ->
+%%      mock_oidcc(),
+%%      Conf.
+%%
+%% end_per_testcase(_TestCase, Conf) ->
+%%     unmock_oidcc(),
+%%     Conf.
 
 
 update_config(_Config) ->
@@ -80,32 +74,77 @@ service_config(_Config) ->
     ct:log("service configs:~n~p~n", [Services]),
     ok.
 
-provider_list(_Config) ->
-    {ok, _Result} = perform_rest_request("lsprov localhost:8080"),
+python2_check(_Config) ->
+    Result = os:cmd("env python2 --version"),
+    ct:log("python2 check result ~p", [Result]),
+    [H | T] = binary:split(list_to_binary(Result),[<<":">>,<<" ">>],[global,trim_all]),
+    ok = case H of
+             <<"Python">> -> ok;
+             _ -> no_python
+         end,
     ok.
 
-service_list(_Config) ->
-    {ok, _Result} = perform_rest_request("lsserv localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
-    ok.
 
 
-credential_list(_Config) ->
-    {ok, _Result} = perform_rest_request("lscred localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
-    ok.
-
-credential_request(_Config) ->
-    ServiceId = "1",
-    {ok, _Result} = perform_rest_request("request localhost:8080 ssh MockToken https://iam-test.indigo-datacloud.eu/"),
-    ok.
-
-credential_revoke(_Config) ->
+rest_communication(_Config) ->
+    mock_oidcc(),
     Issuer = <<"https://iam-test.indigo-datacloud.eu/">>,
-    Subject = <<"tts_test_user">>,
-    {ok, #{ site := #{uid := UserId}}} = tts_user_cache:get_user_info(Issuer, Subject),
-    {ok, [#{cred_id := CredIdBin} | _]} = tts_credential:get_list(UserId),
-    CredId = binary_to_list(CredIdBin),
+
+    {ok, ProviderList} = perform_rest_request("lsprov localhost:8080"),
+    {ok, ProvId} = validate_provider_list(ProviderList, Issuer),
+    {ok, ServiceList} = perform_rest_request("lsserv localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
+    {ok, ServiceList} = perform_rest_request("lsserv localhost:8080 MockToken "++ProvId),
+    {ok, ServiceId} = validate_service_list(list_to_binary(ServiceList)),
+    {ok, []} = perform_rest_request("lscred localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
+    {ok, CredentialData} = perform_rest_request("request localhost:8080 "++ServiceId++" MockToken https://iam-test.indigo-datacloud.eu/"),
+    Credential = jsx:decode(list_to_binary(CredentialData), [return_maps, {labels, attempt_atom}]),
+    {ok, CredId} = validate_credential(Credential),
+    {ok, CredList} = perform_rest_request("lscred localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
+    true = validate_credential_list(list_to_binary(CredList), list_to_binary(CredId)),
     {ok, _Result} = perform_rest_request("revoke localhost:8080 "++CredId++" MockToken https://iam-test.indigo-datacloud.eu/"),
+    {ok, []} = perform_rest_request("lscred localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
+    unmock_oidcc(),
     ok.
+
+validate_provider_list(String, Issuer) when is_list(String) ->
+    validate_provider_list(list_to_binary(String), Issuer);
+validate_provider_list(Bin, Issuer) ->
+    Entries = binary:split(Bin, [<<"\n">>, <<" ">>, <<"\"">>], [global, trim_all]),
+    ct:log("provider list entries: ~p",[Entries]),
+    find_provider(Entries, Issuer).
+find_provider([Id, Issuer | _T], Issuer) ->
+    {ok, binary_to_list(Id)};
+find_provider([_Id, _Iss | T], Issuer) ->
+    find_provider(T, Issuer).
+
+validate_service_list(Bin) ->
+    Entries = binary:split(Bin, [<<"\n">>, <<" ">>, <<"\"">>], [global, trim_all]),
+    ct:log("service list entries: ~p",[Entries]),
+    [Id | _ ] = Entries,
+    {ok, binary_to_list(Id)}.
+
+validate_credential([#{name := <<"id">>, type := <<"text">>, value := Id} | _T]) ->
+    {ok, binary_to_list(Id)};
+validate_credential([_H | T]) ->
+    validate_credential(T).
+
+validate_credential_list(Data, Id) ->
+    Map = jsx:decode(Data, [return_maps, {labels, attempt_atom}]),
+    case maps:get(cred_id,Map) of
+        Id -> true;
+        _ -> false
+    end.
+
+
+
+
+
+
+
+
+
+
+
 
 %%%%%% internal
 perform_rest_request(Params) ->
