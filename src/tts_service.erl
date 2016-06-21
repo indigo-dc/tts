@@ -135,6 +135,7 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"ConnectionHost">>, con_host},
                     {<<"ConnectionPort">>, con_port},
                     {<<"ConnectionSshDir">>, con_ssh_user_dir},
+                    {<<"ConnectionSshKeyPass">>, con_ssh_key_pass},
                     {<<"ConnectionSshAutoAcceptHosts">>, con_ssh_auto_accept},
 
                     {<<"AllowSameState">>, allow_same_state},
@@ -173,10 +174,14 @@ verify_value(con_user, User) ->
     {ok, User};
 verify_value(con_host, Host) ->
     {ok, Host};
+verify_value(con_pass, Pass) ->
+    {ok, Pass};
 verify_value(con_port, Port) ->
     {ok, list_to_integer(Port)};
 verify_value(con_ssh_auto_accept, Value) ->
     {ok, bin_to_atom(Value, false)};
+verify_value(con_ssh_key_pass, Pass) ->
+    {ok, Pass};
 verify_value(cred_limit, Limit) ->
     {ok, list_to_integer(Limit)};
 verify_value(AKey, Value) when is_list(Value) ->
