@@ -13,9 +13,7 @@ Release: 1
 # just for testing
 License: GPL+
 Group: Development/Tools
-SOURCE0 : %{name}-%{version}-bin.tar.gz
-#URL: http://toybinprog.company.com/
-
+Source: %{name}-%{version}-bin.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 %description
@@ -27,9 +25,18 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 %build
 # Empty section.
 
+%pre
+/usr/bin/getent passwd tts || /usr/sbin/useradd -r -d /usr/local/bin/tts -s /sbin/nologin tts
+
+%post
+/usr/bin/chown -R tts:tts /usr/local/lib/tts
+
 %install
 rm -rf %{buildroot}
 mkdir -p  %{buildroot}
 
 # in builddir
 cp -a * %{buildroot}
+
+%files
+/*
