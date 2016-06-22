@@ -39,4 +39,7 @@ mkdir -p  %{buildroot}
 cp -a * %{buildroot}
 
 %files
-/*
+/usr/lib/systemd/system/tts.service
+/usr/local/bin/tts
+/usr/local/lib/tts
+/var/log/tts
