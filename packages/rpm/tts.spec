@@ -9,8 +9,9 @@
 Summary: Token Translation Service
 Name: tts
 Version: 0.1.0
-#Release: 1
-#License: GPL+
+Release: 1
+# just for testing
+License: GPL+
 Group: Development/Tools
 SOURCE0 : %{name}-%{version}-bin.tar.gz
 #URL: http://toybinprog.company.com/
