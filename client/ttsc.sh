@@ -16,12 +16,11 @@ function perform-post {
     body=$3
     iss=$4
     if [[ $iss = '' ]]; then
-        resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
-            --data-raw "$body" -H "Authorization: Bearer $ac_token" \
-            -X POST $url)
+        echo "Error: issuer missing"
+        exit 10
     else
         resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
-            --data-raw "$body" -H "Authorization: Bearer $ac_token" \
+            --data-ascii "$body" -H "Authorization: Bearer $ac_token" \
             -H "X-OpenId-Connect-Issuer: $iss" \
             -X POST $url)
     fi
