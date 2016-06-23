@@ -36,8 +36,10 @@ create_db_test() ->
     file:delete(?TEST_DB),
     ok.
 
+credential_test_() ->
+    {timeout, 30, ?_assertEqual(ok, credential_check())}.
 
-credential_test() ->
+credential_check() ->
     file:delete(?TEST_DB),
     application:set_env(tts,sqlite_db,?TEST_DB),
     {ok, Pid} = tts_data_sqlite:start_link(),
