@@ -23,6 +23,7 @@
 -export([start_link/0]).
 -export([add_cred/2]).
 -export([get_cred/2]).
+-export([stop/0]).
 
 
 %% gen_server.
@@ -43,11 +44,18 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+-spec add_cred(Credential :: map(), UserId::binary()) -> {ok, Id::binary()}.
 add_cred(Credential, UserId) ->
     gen_server:call(?MODULE, {add, Credential, UserId}).
 
+-spec get_cred(CredId :: binary(), UserId::binary()) -> {ok, Credential::map} |
+                                                        {error, Reason::any()}.
 get_cred(Id, UserId) ->
     gen_server:call(?MODULE, {get, Id, UserId}).
+
+-spec stop() -> ok.
+stop() ->
+    gen_server:cast(?MODULE, stop).
 
 %% gen_server.
 
@@ -69,6 +77,8 @@ handle_call({get, Id, UserId}, _From, #state{creds=Creds}=State) ->
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

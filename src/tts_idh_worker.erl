@@ -42,13 +42,13 @@
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
--spec lookup(list(), list(), pid()) -> ok.
+-spec lookup(list(), map(), pid()) -> ok.
 lookup(Script, Params, Pid) ->
     gen_server:call(Pid, {lookup, Script, Params}).
 
 -spec stop(pid()) -> ok.
 stop(Pid) ->
-    gen_server:call(Pid, stop).
+    gen_server:cast(Pid, stop).
 %% gen_server.
 
 init([]) ->
@@ -56,11 +56,11 @@ init([]) ->
 
 handle_call({lookup, Script, ParamMap}, _From, State) ->
     {reply, ok, State#state{script=Script, param_map=ParamMap}, 1};
-handle_call(stop, _From, State) ->
-    {stop, normal, ok, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

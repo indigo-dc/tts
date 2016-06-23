@@ -169,16 +169,16 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
     Result = perform_post(Type, Id, Json, UserInfo, Version),
     {Result, Req, State}.
 
-perform_get(service, undefined, _, #{uid:=UserId}, _Version) ->
+perform_get(service, undefined, _, #{ site := #{uid:=UserId}}, _Version) ->
     {ok, ServiceList} = tts_service:get_list(UserId),
     return_service_list(ServiceList);
 perform_get(oidcp, undefined, _, _, _Version) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     return_oidc_list(OIDCList);
-perform_get(credential, undefined, _, #{uid := UserId}, _Version) ->
+perform_get(credential, undefined, _, #{ site := #{uid := UserId}}, _Version) ->
     {ok, CredList} = tts_credential:get_list(UserId),
     return_credential_list(CredList);
-perform_get(cred_data, Id, _, #{uid := UserId}, _Version) ->
+perform_get(cred_data, Id, _, #{ site := #{uid := UserId}}, _Version) ->
     case tts_rest_cred:get_cred(Id, UserId) of
         {ok, Cred} -> jsx:encode(Cred);
         _ -> jsx:encode(#{})
@@ -188,7 +188,7 @@ perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, Ver) ->
     IFace = <<"REST interface">>,
     case  tts_credential:request(ServiceId, UserInfo, IFace, rest, []) of
         {ok, Credential, _Log} ->
-            #{ uid := UserId } = UserInfo,
+            #{ site := #{ uid := UserId }} = UserInfo,
             {ok, Id} = tts_rest_cred:add_cred(Credential, UserId),
             Url = id_to_url(Id, Ver),
             {true, Url};
