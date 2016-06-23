@@ -10,9 +10,8 @@ Summary: Token Translation Service
 Name: tts
 Version: 0.1.0
 Release: 1
-# just for testing
-License: GPL+
-Group: Development/Tools
+License: ASL 2.0
+Group: Applications/Internet
 Source: %{name}-%{version}-bin.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
