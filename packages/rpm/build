@@ -1,0 +1,93 @@
+#!/bin/bash
+
+build_root=`pwd`/packages/rpm
+rpm_structure_tar=$build_root/rpm-structure.tar.gz
+rpm_structure=$build_root/RPMBUILD
+binary_structure_tar=$build_root/binary-structure.tar.gz
+binary_structure=tts
+prod_tar=`pwd`/_build/prod/rel/tts/tts*.tar.gz
+prod_dest=$build_root/$binary_structure/usr/local/lib/tts
+build=`pwd`/_build/packages
+
+if [[ ! -d $build ]]; then mkdir -p $build; fi
+
+# clean
+to_clean="$build_root/$binary_structure $binary_tar $rpm_structure"
+for file in $to_clean; do echo cleaning: $file; rm -rf $file; done
+
+# get binary structure
+pushd $build_root
+{
+	if [[ -d $binary_structure ]]; then rm -rf $structure; fi
+	echo extracting binary structure from $binary_structure_tar
+	tar xaf $binary_structure_tar
+	if [[ ! -d $binary_structure ]]; then echo no structure found; exit 1; fi
+}
+popd
+echo
+
+# production tar
+pushd $prod_dest
+{
+	echo extracting production data from $prod_tar
+	tar xaf $prod_tar
+	# determine version
+	version=`echo lib/tts-*`
+	version=${version#*-}
+	version=${version#v}
+}
+popd
+echo
+
+
+# create binary tar
+pushd $build_root
+{
+	binary_tar=tts-${version}-bin.tar.gz
+	new_binary_structure_name=${binary_structure}-$version
+	to_clean="$to_clean $build_root/$new_binary_structure_name"
+
+	echo renaming $binary_structure into $new_binary_structure_name
+	[[ -d $new_binary_structure_name ]] && rm -rf $new_binary_structure_name
+	mv $binary_structure $new_binary_structure_name
+	binary_structure=$new_binary_structure_name
+
+	echo creating binary tar
+	tar caf $binary_tar $binary_structure
+
+	if [[ ! -f $binary_tar ]]; then echo no binary tar created; exit 1; fi
+
+	# get rpm structure
+	if [[ -d $rpm_structure ]]; then rm -rf $rpm_structure; fi
+	echo extracting rpm structure from $rpm_structure_tar
+	tar xaf $rpm_structure_tar
+	if [[ ! -d $rpm_structure ]]; then echo no structure found; exit 1; fi
+
+	## fill rpm structure
+	mv $binary_tar $rpm_structure/SOURCES
+}
+popd
+echo
+
+pushd $rpm_structure
+{
+	# handle the spec file
+	spec_file=tts.spec
+	rpm_spec_scheme=$build_root/$spec_file
+	rpm_spec=SPECS/$spec_file
+	cat $rpm_spec_scheme | sed "s|Version:.*$|Version: ${version}|" > $rpm_spec
+
+	# build the rpm
+	echo creating rpm package
+	rpmbuild --define "_topdir $rpm_structure" -bb $rpm_spec
+
+	rpm=RPMS/*/*.rpm
+	if [[ -f $rpm ]]; then echo no rpm generated; exit 1; fi
+	echo moving $rpm to $build
+	mv $rpm $build
+}
+popd
+echo
+
+# clean up
+for file in $to_clean; do echo cleaning: $file; rm -rf $file; done
