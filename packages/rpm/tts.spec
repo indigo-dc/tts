@@ -26,10 +26,10 @@ Requires: jq >= 1.5, curl >= 7.29
 # Empty section.
 
 %pre
-/usr/bin/getent passwd tts || /usr/sbin/useradd -r -d /usr/local/bin/tts -s /sbin/nologin tts
+/usr/bin/getent passwd tts || /usr/sbin/useradd -r -d /usr/local/lib/tts -s /sbin/nologin tts
 
 %post
-/usr/bin/chown -R tts:tts /usr/local/lib/tts
+/usr/bin/chown -R tts:tts /usr/local/lib/tts /usr/local/bin/{tts,ttsc} /var/log/tts
 
 %install
 rm -rf %{buildroot}
