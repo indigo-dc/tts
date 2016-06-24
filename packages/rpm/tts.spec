@@ -41,6 +41,6 @@ cp -a * %{buildroot}
 %files
 /usr/lib/systemd/system/tts.service
 /usr/local/bin/tts
-/usr/local/bin/ttsc.sh
+/usr/local/bin/ttsc
 /usr/local/lib/tts
 /var/log/tts

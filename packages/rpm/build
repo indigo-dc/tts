@@ -26,7 +26,7 @@ pushd $build_root
 	if [[ ! -d $binary_structure ]]; then echo no structure found; exit 1; fi
 
 	# get the client
-	cp $repo_root/client/* $binary_structure/usr/local/bin
+	cp $repo_root/client/ttsc.sh $binary_structure/usr/local/bin/ttsc
 }
 popd
 echo
