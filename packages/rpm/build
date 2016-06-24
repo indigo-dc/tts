@@ -27,7 +27,6 @@ pushd $build_root
 
 	# get the client
 	cp $repo_root/client/* $binary_structure/usr/local/bin
-	exit
 }
 popd
 echo

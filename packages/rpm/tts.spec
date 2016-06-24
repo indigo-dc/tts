@@ -14,6 +14,7 @@ License: ASL 2.0
 Group: Applications/Internet
 Source: %{name}-%{version}-bin.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+Requires: jq >= 1.5, curl >= 7.29
 
 %description
 %{summary}
@@ -40,5 +41,6 @@ cp -a * %{buildroot}
 %files
 /usr/lib/systemd/system/tts.service
 /usr/local/bin/tts
+/usr/local/bin/ttsc.sh
 /usr/local/lib/tts
 /var/log/tts
