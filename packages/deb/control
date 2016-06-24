@@ -4,3 +4,4 @@ Priority: optional
 Architecture: amd64
 Maintainer: Lukas Burgey <ubedv@student.kit.edu>
 Description: Token Translation Service
+Depends: jq (>= 1.3), curl (>= 7.35), python2.7
