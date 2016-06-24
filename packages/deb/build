@@ -40,7 +40,7 @@ cat $control
 echo
 
 # include the client
-cp $repo_root/client/* $packages/$structure/usr/local/bin
+cp $repo_root/client/ttsc.sh $packages/$structure/usr/local/bin/ttsc
 
 # build deb package
 dpkg-deb --build $packages/$structure $build/tts-${version}.deb
