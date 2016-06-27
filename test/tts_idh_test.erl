@@ -10,7 +10,10 @@ start_stop_test() ->
     ok.
 
 
-idh_test() ->
+idh_test_() ->
+    {timeout, 30, ?_assertEqual(ok, idh_check())}.
+
+idh_check() ->
     MeckModules = [tts_idh_worker_sup],
     UserMap = #{type => openidconnect, subject => <<"sub">>, issuer =>
                 <<"iss">>},
