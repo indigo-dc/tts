@@ -44,7 +44,10 @@ session_test() ->
 -define(USER,tts_user).
 -define(MAPPING,tts_user_mapping).
 
-user_test() ->
+user_test_() ->
+    {timeout, 30, ?_assertEqual(ok, user_check())}.
+
+user_check() ->
     %% testing functions related to user information caching
     %% functions to test:
     %% user_lookup_info/2

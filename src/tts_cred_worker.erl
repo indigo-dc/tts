@@ -150,11 +150,26 @@ connect_to_service(#{con_type := local}) ->
 connect_to_service(#{con_type := ssh , con_host := Host } = Info ) ->
     Port = maps:get(con_port, Info, 22),
     User = maps:get(con_user, Info, "root"),
-    UserDir = maps:get(con_ssh_user_dir, Info),
-    ssh:connect(Host, Port,
-                [{user_dir, UserDir}, {user_interaction, false},
-                 {user, User}, {id_string, "TokenTranslationService"}]
-                , 10000).
+    AcceptHosts = maps:get(con_ssh_auto_accept, Info, false),
+    Options0 = [
+                {id_string, "TokenTranslationService"},
+                {user, User},
+                {user_interaction, false},
+                {silently_accept_hosts, AcceptHosts}
+               ],
+    OptionsMapping = [
+                      {con_ssh_user_dir, user_dir},
+                      {con_pass, password},
+                      {con_ssh_key_pass, rsa_pass_phrase}
+                     ],
+    AddOption = fun({MapKey, OptionKey}, {Inf, Options}) ->
+                        case maps:get(MapKey, Inf, undefined) of
+                            undefined -> {Inf, Options};
+                            Value -> {Inf, [{OptionKey, Value} | Options]}
+                        end
+                end,
+    {_, Options} = lists:foldl(AddOption, {Info, Options0}, OptionsMapping),
+    ssh:connect(Host, Port, Options, 10000).
 
 get_cmd(#{cmd := Cmd}) ->
     {ok, Cmd};

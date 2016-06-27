@@ -16,12 +16,11 @@ function perform-post {
     body=$3
     iss=$4
     if [[ $iss = '' ]]; then
-        resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
-            --data-raw "$body" -H "Authorization: Bearer $ac_token" \
-            -X POST $url)
+        echo "Error: issuer missing"
+        exit 10
     else
         resp=$(curl $CURL_OPTS -H "Content-Type: application/json" \
-            --data-raw "$body" -H "Authorization: Bearer $ac_token" \
+            --data-ascii "$body" -H "Authorization: Bearer $ac_token" \
             -H "X-OpenId-Connect-Issuer: $iss" \
             -X POST $url)
     fi
@@ -238,13 +237,13 @@ case $cmd in
 	echo '  # List all OpenId Connect providers'
 	echo '    lsprov  <host>'
 	echo '  # List all end-services provided to the user'
-	echo '    lsserv  <host> <ac_token> [<issuer>]'
+	echo '    lsserv  <host> <ac_token> <issuer>'
 	echo '  # List all credential references of the user'
-	echo '    lscred  <host> <ac_token> [<issuer>]'
+	echo '    lscred  <host> <ac_token> <issuer>'
 	echo '  # Request credentials for a service'
-	echo '    request <host> <service_id> <ac_token> [<issuer>]'
-    echo '  # Revoke the credentials, given by the credential state (c_state)'
-	echo '    revoke  <host> <c_state> <ac_token> [<issuer>]'
+	echo '    request <host> <service_id> <ac_token> <issuer>'
+    echo '  # Revoke the credentials, given by the credential id (cred_id)'
+	echo '    revoke  <host> <cred_id> <ac_token> <issuer>'
 	;;
     *)
 	echo 'Unknown command'
