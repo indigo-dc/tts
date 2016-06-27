@@ -24,7 +24,7 @@
 
 -include("tts.hrl").
 -record(state, {
-          bad_request = false,
+          bad_request = true,
           config_loaded = undefined,
           req_map = #{}
          }).
@@ -35,7 +35,7 @@ init(_, Req, _Opts) ->
     try extract_args(Req, tts_config:is_loaded()) of
         {ok, Req2, State} -> {ok, Req2, State}
     catch
-        _:_ -> {ok, Req, #state{bad_request=true}}
+        _:_ -> {ok, Req, #state{}}
     end.
 
 handle(Req, #state{config_loaded=false} = State) ->
@@ -138,7 +138,8 @@ extract_args(Req, true) ->
       qs => QsMap,
       body_qs => BodyQsMap
      },
-    {ok, Req99, #state{req_map = ReqMap, config_loaded = true }}.
+    {ok, Req99, #state{req_map = ReqMap, config_loaded = true,
+                       bad_request=false}}.
 
 perform_cookie_action(clear, Req, _ReqMap) ->
     Opts = create_cookie_opts(0),
