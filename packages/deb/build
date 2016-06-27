@@ -1,11 +1,13 @@
 #!/bin/bash
 
-packages=`pwd`/packages/deb
+repo_root=`pwd`
+
+packages=$repo_root/packages/deb
 structure_tar=$packages/structure.tar.gz
 structure=tts
-prod_tar=`pwd`/_build/prod/rel/tts/tts*.tar.gz
+prod_tar=$repo_root/_build/prod/rel/tts/tts*.tar.gz
 tts=$packages/$structure/usr/local/lib/tts
-build=`pwd`/_build/packages
+build=$repo_root/_build/packages
 if [[ ! -d $build ]]; then mkdir -p $build; fi
 
 
@@ -36,6 +38,9 @@ echo "Version: $version" > $version_scheme
 cat $control_scheme $version_scheme > $control
 cat $control
 echo
+
+# include the client
+cp $repo_root/client/ttsc.sh $packages/$structure/usr/local/bin/ttsc
 
 # build deb package
 dpkg-deb --build $packages/$structure $build/tts-${version}.deb
