@@ -14,6 +14,7 @@ License: ASL 2.0
 Group: Applications/Internet
 Source: %{name}-%{version}-bin.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+Requires: jq >= 1.5, curl >= 7.29
 
 %description
 %{summary}
@@ -25,10 +26,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 # Empty section.
 
 %pre
-/usr/bin/getent passwd tts || /usr/sbin/useradd -r -d /usr/local/bin/tts -s /sbin/nologin tts
+/usr/bin/getent passwd tts || /usr/sbin/useradd -r -d /usr/local/lib/tts -s /sbin/nologin tts
 
 %post
-/usr/bin/chown -R tts:tts /usr/local/lib/tts
+/usr/bin/chown -R tts:tts /usr/local/lib/tts /usr/local/bin/{tts,ttsc} /var/log/tts
 
 %install
 rm -rf %{buildroot}
@@ -40,5 +41,6 @@ cp -a * %{buildroot}
 %files
 /usr/lib/systemd/system/tts.service
 /usr/local/bin/tts
+/usr/local/bin/ttsc
 /usr/local/lib/tts
 /var/log/tts
