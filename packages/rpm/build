@@ -1,13 +1,15 @@
 #!/bin/bash
 
-build_root=`pwd`/packages/rpm
+repo_root=`pwd`
+
+build_root=$repo_root/packages/rpm
 rpm_structure_tar=$build_root/rpm-structure.tar.gz
 rpm_structure=$build_root/RPMBUILD
 binary_structure_tar=$build_root/binary-structure.tar.gz
 binary_structure=tts
-prod_tar=`pwd`/_build/prod/rel/tts/tts*.tar.gz
+prod_tar=$repo_root/_build/prod/rel/tts/tts*.tar.gz
 prod_dest=$build_root/$binary_structure/usr/local/lib/tts
-build=`pwd`/_build/packages
+build=$repo_root/_build/packages
 
 if [[ ! -d $build ]]; then mkdir -p $build; fi
 
@@ -22,6 +24,9 @@ pushd $build_root
 	echo extracting binary structure from $binary_structure_tar
 	tar xaf $binary_structure_tar
 	if [[ ! -d $binary_structure ]]; then echo no structure found; exit 1; fi
+
+	# get the client
+	cp $repo_root/client/ttsc.sh $binary_structure/usr/local/bin/ttsc
 }
 popd
 echo
