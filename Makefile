@@ -18,22 +18,22 @@ $(if $(ERLANG_BIN),,$(warning "Warning: No Erlang found in your path, this will 
 all: compile
 
 clean:
-	$(REBAR3) clean
+	$(REBAR) clean
 
 clean_all:
-	$(REBAR3) clean -a
+	$(REBAR) clean -a
 
 eunit:
-	$(REBAR3) do eunit,cover -v
+	$(REBAR) do eunit,cover -v
 
 ct:
-	$(REBAR3) do ct,cover -v
+	$(REBAR) do ct,cover -v
 
 elvis:
-	$(REBAR3) lint
+	$(REBAR) lint
 
 compile:
-	$(REBAR3) compile
+	$(REBAR) compile
 
 sample_config:
 	./utils/install_sample_config
@@ -42,13 +42,13 @@ cookie:
 	./utils/gen_random_cookie
 
 rel: cookie
-	$(REBAR3) release
+	$(REBAR) release
 
 tar: cookie
-	$(REBAR3) as prod tar
+	$(REBAR) as prod tar
 
 run: cookie
-	$(REBAR3) run
+	$(REBAR) run
 
 deb: tar
 	./packages/deb/build
