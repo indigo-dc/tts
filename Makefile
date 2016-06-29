@@ -1,4 +1,4 @@
-REPO			?= tts 
+REPO			?= tts
 PKG_BUILD        = 1
 BASE_DIR         = $(shell pwd)
 ERLANG_BIN       = $(shell dirname $(shell which erl))
