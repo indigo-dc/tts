@@ -87,6 +87,8 @@ build_clean_dir = cd distdir/$(CLONEDIR) && \
                       cd $${dep} && \
                            mkdir -p ../../../../../$(PKG_ID)/_build/default/$${dep}/priv && \
                            printf "`git describe --long --tags 2>/dev/null || git rev-parse HEAD`" > ../../../../../$(PKG_ID)/_build/default/$${dep}/priv/vsn.git && \
+                           rm -rf ../../../../../$(PKG_ID)/_build/default/$${dep}/.git && \
+                           rm -f ../../../../../$(PKG_ID)/_build/default/$${dep}/.gitignore && \
                            cd ../..; \
                   done && \
 				  cd ../..
