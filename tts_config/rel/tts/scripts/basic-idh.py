@@ -12,7 +12,7 @@ import traceback
 CREATE_LOCAL_ACCOUNTS = False
 
 
-SQLITE_DB="/var/lib/tts/idh.db"
+SQLITE_DB="/var/lib/tts/idh/idh.db"
 # the create_user python script needs to be executable using sudo  
 CREATE_USER="sudo /usr/share/tts/idh/create_user.py"
 con = None
