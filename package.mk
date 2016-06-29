@@ -43,7 +43,7 @@ archive = if [ "$(1)" = "deps/eleveldb" ]; then \
 
 # Checkout tag, fetch deps (so we don't have to do it multiple times) and collect
 # the version of all the dependencies into the MANIFEST_FILE
-CLONEDIR ?= tts-clone
+CLONEDIR ?= $(REPO)-clone
 MANIFEST_FILE ?= dependency_manifest.git
 get_dist_deps = mkdir distdir && \
                 git clone . distdir/$(CLONEDIR) && \
