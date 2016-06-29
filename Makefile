@@ -1,23 +1,17 @@
-REPO			?= tts 
-PKG_BUILD        = 1
-BASE_DIR         = $(shell pwd)
-ERLANG_BIN       = $(shell dirname $(shell which erl))
-OVERLAY_VARS    ?=
-REBAR = $(BASE_DIR)/rebar3
+REPO = tts
+REBAR = $(shell pwd)/rebar3
 
 
-$(if $(ERLANG_BIN),,$(warning "Warning: No Erlang found in your path, this will probably not work"))
-
-
-
-.PHONY: all clean clean_all eunit ct elvis compile sample_config cookie rel tar run package
+.PHONY: all cln clean eunit ct elvis compile sample_config cookie rel tar run package
 
 all: compile
 
 clean:
-	$(REBAR) clean
+	$(REBAR) clean -a
+	# this is needed for building packages
+	rm -rf _build/default/plugins
 
-clean_all:
+cln:
 	$(REBAR) clean -a
 
 eunit:
@@ -40,18 +34,6 @@ cookie:
 
 rel: cookie
 	$(REBAR) release
-
-tar: cookie
-	$(REBAR) as prod tar
-
-run: cookie
-	$(REBAR) run
-
-deb: tar
-	./packages/deb/build
-
-rpm: tar
-	./packages/rpm/build
 
 install_deps:
 	$(REBAR) install_deps

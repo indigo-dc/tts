@@ -1,3 +1,11 @@
+REPO			?= unknown 
+PKG_BUILD       ?= 1
+BASE_DIR        ?= $(shell pwd)
+OVERLAY_VARS    ?=
+
+ERLANG_BIN       = $(shell dirname $(shell which erl))
+$(if $(ERLANG_BIN),,$(warning "Warning: No Erlang found in your path, this will probably not work"))
+
 ##
 ## Version and naming variables for distribution and packaging
 ##
@@ -43,7 +51,7 @@ archive = if [ "$(1)" = "deps/eleveldb" ]; then \
 
 # Checkout tag, fetch deps (so we don't have to do it multiple times) and collect
 # the version of all the dependencies into the MANIFEST_FILE
-CLONEDIR ?= tts-clone
+CLONEDIR ?= $(REPO)-clone
 MANIFEST_FILE ?= dependency_manifest.git
 get_dist_deps = mkdir distdir && \
                 git clone . distdir/$(CLONEDIR) && \
@@ -114,7 +122,7 @@ pkgclean: ballclean
 ## Packaging targets
 ##
 
-# Yes another variable, this one is repo-<generatedhash
+# Yes another variable, this one is repo-<generatedhash>
 # which differs from $REVISION that is repo-<commitcount>-<commitsha>
 PKG_VERSION = $(shell echo $(PKG_ID) | sed -e 's/^$(REPO)-//')
 
@@ -124,7 +132,3 @@ package: distdir/$(PKG_ID).tar.gz
 
 .PHONY: package
 export PKG_VERSION PKG_ID PKG_BUILD BASE_DIR ERLANG_BIN REBAR OVERLAY_VARS RELEASE
-
-# Package up a devrel to save time later rebuilding it
-pkg-devrel: devrel
-	tar -czf $(PKG_ID)-devrel.tar.gz dev/
