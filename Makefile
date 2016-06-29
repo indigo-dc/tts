@@ -15,10 +15,8 @@ $(if $(ERLANG_BIN),,$(warning "Warning: No Erlang found in your path, this will 
 all: compile
 
 clean:
-	$(REBAR) clean
-
-clean_all:
 	$(REBAR) clean -a
+	rm -rf _build/default/plugins
 
 eunit:
 	$(REBAR) do eunit,cover -v
