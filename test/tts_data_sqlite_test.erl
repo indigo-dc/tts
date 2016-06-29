@@ -25,7 +25,10 @@ start_link_test() ->
     ok.
 
 
-create_db_test() ->
+create_db_test_() ->
+    {timeout, 30, ?_assertEqual(ok, create_db_check())}.
+
+create_db_check() ->
     file:delete(?TEST_DB),
     application:set_env(tts,sqlite_db,?TEST_DB),
     {ok, Pid} = tts_data_sqlite:start_link(),
