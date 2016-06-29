@@ -12,12 +12,9 @@ import traceback
 CREATE_LOCAL_ACCOUNTS = False
 
 
-SQLITE_DB=os.path.join(os.path.dirname(os.path.realpath(__file__)),"idh.db")
+SQLITE_DB="/var/lib/tts/idh.db"
 # the create_user python script needs to be executable using sudo  
-CREATE_USER_PYTHON="sudo %s"%os.path.join(os.path.dirname(os.path.realpath(__file__)),"create_user.py")
-# the create_user binary needs to be owned by root and the setuid flag set
-CREATE_USER_BIN=os.path.join(os.path.dirname(os.path.realpath(__file__)),"create_user")
-CREATE_USER=CREATE_USER_PYTHON
+CREATE_USER="sudo /usr/share/tts/idh/create_user.py"
 con = None
 
 def reset_database():
@@ -26,6 +23,11 @@ def reset_database():
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS oidc")
     cur.execute("DROP TABLE IF EXISTS posix")
+    create_database()
+
+def create_database():
+    global con
+    cur = con.cursor()
     cur.execute("CREATE TABLE oidc (Id INTEGER PRIMARY KEY, Issuer TEXT, Subject TEXT)")
     cur.execute("CREATE TABLE posix (Id INTEGER PRIMARY KEY, OidcID INTEGER, Uid TEXT, UidNumber INTEGER, GidNumber INTEGER, HomeDir TEXT)")
 
@@ -134,8 +136,13 @@ def add_posix(UserName, Uid, Gid, HomeDir, OidcId, Commit=True):
 
 def connect():
     global con
+    create = False
+    if not os.path.isfile(SQLITE_DB):
+        create = True
     if not con:
         con = sqlite3.connect(SQLITE_DB)
+        if create:
+            create_database()
 
 def disconnect():
     global conn
