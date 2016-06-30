@@ -7,7 +7,11 @@ start_stop_test() ->
     ok = test_util:wait_for_process_to_die(Pid,300),
     ok.
 
-lookup_test() ->
+
+lookup_test_() ->
+    {timeout, 30, ?_assertEqual(ok, lookup_check())}.
+
+lookup_check() ->
     {ok, Pid} = tts_idh_worker:start_link(),
 
     MeckModules = [tts_idh],
