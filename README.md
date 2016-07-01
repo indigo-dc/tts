@@ -25,3 +25,9 @@ The TTS starts on localhost at port 8080 and includes two OpenID Connect
 Provider, Google and IAM. 
 
 [Browse to local TTS](http://localhost:8080)
+
+If you want to stop the TTS you just need to type the following in the console
+(the '.' at the end is important):
+```
+q().
+```

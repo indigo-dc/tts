@@ -25,6 +25,7 @@
 -export([disable/1]).
 -export([enable/1]).
 -export([is_enabled/1]).
+-export([allows_same_state/1]).
 -export([get_credential_limit/1]).
 
 get_list() ->
@@ -61,11 +62,15 @@ get_credential_limit(ServiceId) ->
         _ -> {ok, 0}
     end.
 
-
-
 is_enabled(ServiceId) ->
     case tts_data:service_get(ServiceId) of
-        {ok, {_Id, Info}} -> maps:get(enabled, Info, true);
+        {ok, {_Id, Info}} -> maps:get(enabled, Info, false);
+        _ -> false
+    end.
+
+allows_same_state(ServiceId) ->
+    case tts_data:service_get(ServiceId) of
+        {ok, {_Id, Info}} -> maps:get(allow_same_state, Info, false);
         _ -> false
     end.
 
@@ -126,9 +131,14 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
 
                     {<<"ConnectionType">>, con_type},
                     {<<"ConnectionUser">>, con_user},
+                    {<<"ConnectionPassword">>, con_pass},
                     {<<"ConnectionHost">>, con_host},
                     {<<"ConnectionPort">>, con_port},
                     {<<"ConnectionSshDir">>, con_ssh_user_dir},
+                    {<<"ConnectionSshKeyPass">>, con_ssh_key_pass},
+                    {<<"ConnectionSshAutoAcceptHosts">>, con_ssh_auto_accept},
+
+                    {<<"AllowSameState">>, allow_same_state},
 
                     {<<"Cmd">>, cmd},
 
@@ -137,7 +147,8 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"local">>, local},
                     {<<"none">>, local},
 
-                    {<<"undefined">>, undefined}
+                    {<<"undefined">>, undefined},
+                    {<<"true">>, true}
                    ]).
 
 bin_to_atom(BinaryKey) ->
@@ -153,25 +164,31 @@ bin_to_atom(BinaryKey, Default) ->
 
 verify_value(con_ssh_user_dir, SshDir) ->
     AbsSshDir = tts_file_util:to_abs(SshDir, ?CONFIG(service_config_path)),
-    case filelib:is_dir(AbsSshDir) of
-        true ->
-            {ok, AbsSshDir};
-        false ->
-            {ok, <<"~/.ssh">>}
-    end;
+    {ok, AbsSshDir};
 verify_value(con_user, User) ->
     {ok, User};
 verify_value(con_host, Host) ->
     {ok, Host};
+verify_value(con_pass, Pass) ->
+    {ok, Pass};
 verify_value(con_port, Port) ->
     {ok, list_to_integer(Port)};
+verify_value(con_ssh_key_pass, Pass) ->
+    {ok, Pass};
 verify_value(cred_limit, Limit) ->
     {ok, list_to_integer(Limit)};
 verify_value(AKey, Value) when is_list(Value) ->
     % default is to convert to binary
     verify_value(AKey, list_to_binary(Value));
+%bin to atom works only after this line
+verify_value(con_ssh_auto_accept, Value) ->
+    {ok, bin_to_atom(Value, false)};
 verify_value(con_type, Value) ->
     {ok, bin_to_atom(Value, undefined)};
+verify_value(allow_same_state, Value) ->
+    {ok, bin_to_atom(Value, false)};
+verify_value(cmd, Cmd) ->
+    {ok, tts_file_util:to_abs(Cmd)};
 verify_value(_AKey, Value) ->
     {ok, Value}.
 

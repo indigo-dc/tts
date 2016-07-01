@@ -1,2 +1,3 @@
 -name tts@127.0.0.1
 -mode embedded
+-smp enable

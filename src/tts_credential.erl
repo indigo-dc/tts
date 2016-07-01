@@ -98,15 +98,22 @@ revoke(CredentialId, UserInfo) ->
 handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
-handle_request_result({ok, #{credential := Cred, state := CredState} , Log}
+handle_request_result({ok, #{credential := Cred, state := CredState}, Log}
                       , ServiceId, #{site := #{uid := UserId}} = UserInfo,
                       Interface, _Token) ->
-    {ok, CredId} = sync_store_credential(UserId, ServiceId, Interface,
-                                         CredState),
-    lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",
-               [CredId, CredState, ServiceId, UserInfo, Interface]),
-    Id = #{name => id, type => text, value => CredId},
-    return_result_with_debug([ Id | Cred], Log);
+    case sync_store_credential(UserId, ServiceId, Interface, CredState) of
+        {ok, CredId} ->
+            lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",
+                       [CredId, CredState, ServiceId, UserInfo, Interface]),
+            Id = #{name => id, type => text, value => CredId},
+            return_result_with_debug([ Id | Cred], Log);
+        Error ->
+            return_error_with_debug({storing, Error}, Log)
+    end;
+handle_request_result({ok, #{credential := _Cred}, Log} , ServiceId, UserInfo,
+                      _Interface, _Token) ->
+    lager:critical("missing state in service ~p for ~p", [ServiceId, UserInfo]),
+    return_error_with_debug({missing_state, ServiceId}, Log);
 handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Interface,
                       _Token) ->
     return_error_with_debug({internal, Error}, Log);
@@ -154,9 +161,9 @@ init([]) ->
 
 handle_call({store_credential, UserId, ServiceId, Interface, CredState}, _From,
             State) ->
-    {ok, CredentialId} = store_credential(UserId, ServiceId, Interface,
+    Result = store_credential(UserId, ServiceId, Interface,
                                           CredState),
-    {reply, {ok, CredentialId}, State};
+    {reply, Result, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
@@ -197,8 +204,9 @@ get_credential_list(UserId) ->
     tts_data_sqlite:credential_get_list(UserId).
 
 store_credential(UserId, ServiceId, Interface, CredentialState) ->
+    SameStateAllowed = tts_service:allows_same_state(ServiceId),
     tts_data_sqlite:credential_add(UserId, ServiceId, Interface,
-                                   CredentialState).
+                                   CredentialState, SameStateAllowed).
 
 remove_credential(UserId, CredentialId) ->
     tts_data_sqlite:credential_remove(UserId, CredentialId).

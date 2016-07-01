@@ -21,11 +21,12 @@
 %% API.
 -export([start_link/0]).
 -export([reconfigure/0]).
--export([credential_add/4]).
+-export([credential_add/5]).
 -export([credential_get/1]).
 -export([credential_get_list/1]).
 -export([credential_get_count/2]).
 -export([credential_remove/2]).
+-export([stop/0]).
 
 
 %% gen_server.
@@ -51,13 +52,14 @@ reconfigure() ->
     gen_server:cast(?MODULE, reconfigure).
 
 -spec credential_add(UserId::binary(), ServiceId::binary(),
-                     Interface ::binary(), CredState :: any())
--> ok | {error, Reason :: atom()}.
-credential_add(UserId, ServiceId, Interface, CredState) ->
+                     Interface ::binary(), CredState :: any(),
+                     AllowNonUniqueStates::boolean())
+-> {ok, CredentialID ::binary()} | {error, Reason :: atom()}.
+credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
     gen_server:call(?MODULE, {credential_add, UserId, ServiceId, Interface,
-                              CredState}).
+                              CredState, SameStateAllowed}).
 
--spec credential_get_list(UserId::binary()) -> [tts:cred()].
+-spec credential_get_list(UserId::binary()) -> {ok, [tts:cred()]}.
 credential_get_list(UserId) ->
     gen_server:call(?MODULE, {credential_get_list, UserId}).
 
@@ -74,6 +76,10 @@ credential_get(CredId) ->
 credential_remove(UserId, CredId) ->
     gen_server:call(?MODULE, {credential_remove, UserId, CredId}).
 
+-spec stop() -> ok.
+stop() ->
+    gen_server:cast(?MODULE, stop).
+
 %% gen_server.
 
 init([]) ->
@@ -81,9 +87,10 @@ init([]) ->
 
 handle_call(_, _From, #state{con=undefined}=State) ->
     {reply, {error, not_configured}, State};
-handle_call({credential_add, UserId, ServiceId, Interface, CredState}, _From
-            , #state{con=Con}=State) ->
-    Result = credential_add(UserId, ServiceId, Interface, CredState, Con),
+handle_call({credential_add, UserId, ServiceId, Interface, CredState,
+             SameStateAllowed}, _From , #state{con=Con}=State) ->
+    Result = credential_add(UserId, ServiceId, Interface, CredState,
+                            SameStateAllowed, Con),
     {reply, Result, State};
 handle_call({credential_get_list, UserId}, _From, #state{con=Con}=State) ->
     CredList = credential_get_list(UserId, Con),
@@ -103,8 +110,10 @@ handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 handle_cast(reconfigure, State) ->
-    NewState = reconfigure(State),
+    NewState = reconfigure(?CONFIG(sqlite_db, undefined), State),
     {noreply, NewState};
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -121,15 +130,28 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
-credential_add(UserId, ServiceId, Interface, CredState, Con) ->
+credential_add(UserId, ServiceId, Interface, CredState, SameStateOk, Con) ->
     ok = esqlite3:exec("begin;", Con),
-    CredentialId = create_random_credential_id(Con),
-    CreationTime = erlang:system_time(seconds),
-    esqlite3:q("INSERT INTO tts_cred VALUES( ?1, ?2, ?3, ?4, ?5, ?6);"
-               , [CredentialId, CreationTime, Interface, UserId, ServiceId,
-                  CredState] , Con),
+    {Unique, CredId}=credential_state_unique(UserId, ServiceId, CredState, Con),
+    Result = case (Unique) of
+                 true ->
+                     CredentialId = create_random_credential_id(Con),
+                     CreationTime = erlang:system_time(seconds),
+                     esqlite3:q("INSERT INTO tts_cred
+                                VALUES( ?1,?2,?3,?4,?5,?6);",
+                                [CredentialId, CreationTime, Interface, UserId,
+                                 ServiceId, CredState] , Con),
+                     {ok, CredentialId};
+                 false ->
+                     case SameStateOk of
+                         true ->
+                             {ok, CredId};
+                         _ ->
+                             {error, not_unique_state}
+                     end
+             end,
     ok = esqlite3:exec("commit;", Con),
-    {ok, CredentialId}.
+    Result.
 
 
 credential_get_list(UserId, Con) ->
@@ -165,6 +187,17 @@ credential_get(CredId, Con) ->
         [Cred] -> {ok, ToCred(Cred)}
     end.
 
+credential_state_unique(UserId, ServiceId, CredState, Con) ->
+    Result = esqlite3:q("SELECT credential_id FROM tts_cred
+                         WHERE user_id IS ?1 AND service_id IS ?2
+                         AND credstate IS ?3"
+                          , [UserId, ServiceId, CredState], Con),
+    case Result of
+        [] -> {true, none};
+        [{CredId}] -> {false, CredId}
+    end.
+
+
 credential_remove(UserId, CredentialId, Con) ->
     ok = esqlite3:exec("begin;", Con),
     esqlite3:q("DELETE FROM tts_cred WHERE user_id=?1 AND credential_id=?2;",
@@ -182,20 +215,27 @@ create_random_credential_id(Con) ->
     end.
 
 
-reconfigure(#state{con=undefined}) ->
-    {ok, Con} = esqlite3:open(?CONFIG(sqlite_db)),
+
+reconfigure(undefined, #state{con=undefined} = State) ->
+    State;
+reconfigure(NewDB, #state{con=undefined}) ->
+    {ok, Con} = esqlite3:open(NewDB),
     ok = create_tables_if_needed(Con),
     #state{con=Con};
-reconfigure(#state{con=Con} = State) ->
+reconfigure(NewDB, #state{con=Con} = State) ->
     esqlite3:close(Con),
-    reconfigure(State#state{con=undefined}).
+    reconfigure(NewDB, State#state{con=undefined}).
 
 -define(TABLES, [
                  {cred,
                   <<"tts_cred">>,
                   <<"CREATE TABLE tts_cred(credential_id Text, ctime INTEGER,
                   interface TEXT, user_id TEXT, service_id TEXT,
-                    credstate TEXT)">>}
+                    credstate TEXT);
+                    CREATE INDEX tts_cred_user_idx ON tts_cred(user_id);
+                    CREATE INDEX tts_cred_service_idx ON tts_cred(service_id);
+                    CREATE INDEX tts_cred_state_idx ON tts_cred(credstate);
+                    ">>}
                 ]).
 
 create_tables_if_needed(Con) ->

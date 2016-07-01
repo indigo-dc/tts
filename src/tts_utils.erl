@@ -25,6 +25,7 @@ random_string(Length) ->
                  Data -> Data
              catch
                  low_entropy ->
-                     crypto:rand_bytes(Length)
+                     timer:sleep(100),
+                     random_string(Length)
              end,
     base64url:encode(Random).

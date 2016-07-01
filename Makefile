@@ -1,21 +1,24 @@
+REPO = tts
 REBAR = $(shell pwd)/rebar3
-APP=oidcc
 
-.PHONY: all clean clean_all eunit ct elvis compile sample_config rel tar run
+
+.PHONY: all cln clean eunit ct elvis compile sample_config cookie rel tar run package
 
 all: compile
 
 clean:
-	$(REBAR) clean
+	$(REBAR) clean -a
+	# this is needed for building packages
+	rm -rf _build/default/plugins
 
-clean_all:
+cln:
 	$(REBAR) clean -a
 
 eunit:
 	$(REBAR) do eunit,cover -v
 
 ct:
-	$(REBAR) ct
+	$(REBAR) do ct,cover -v
 
 elvis:
 	$(REBAR) lint
@@ -26,13 +29,14 @@ compile:
 sample_config:
 	./utils/install_sample_config
 
-rel:
+cookie:
 	./utils/gen_random_cookie
-	$(REBAR) release 
 
-tar:
-	./utils/gen_random_cookie
-	$(REBAR) as prod tar 
-run:
-	./utils/gen_random_cookie
-	$(REBAR) run
+rel: cookie
+	$(REBAR) release
+
+install_deps:
+	$(REBAR) install_deps
+
+
+include package.mk
