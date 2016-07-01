@@ -1,4 +1,7 @@
 # User Guide
+Using the web interface of the TTS is quite simple. The only thing you basically
+need to do is press some buttons and use the information displayed to you.
+
 ## Login and Logout
 ### Login
 Open the Token Translation Service web-interface in your browser. You will see a
@@ -22,12 +25,12 @@ your computer.
 To logout simply press the `Logout` button at the lower border of the page.
 After a succesfull logout you will see the login page again.
 
-# Creating And Revoking Credentials
+## Creating And Revoking Credentials
 Once logged in you see one or two tables:
 - Services, this one should always be visible.
 - Credentials, this might be hidden, if you have no credentials.
 
-# Creating Credentials 
+### Creating Credentials 
 In the Services table each line is a service for which you can request a
 credential.
 You request a credential by simply pressing the `Request` button.
@@ -38,15 +41,15 @@ Once you close this dialog all informations are gone! The TTS does *not* store
 the credentials. It only stores a reference to the credentials you created so
 they can be removed, if needed.
 
-# Revoking Credentials
+### Revoking Credentials
 If you created credentials before, you see the Credentials Table.
 Each line representing a credential.
 By simlpy clicking the `Revoke` button the TTS revokes your credential and it
 will be removed from the list of credentials.
 
-# Additional Information
-## Show Access Token
-After pressing the `Show Access Token` button a dialog opens up. This dialog
+## Additional Information
+### Show Access Token
+After pressing the `Show Access Token` button a dialog appears. This dialog
 contains the so called OpenId Connect AccessToken, which can be used to act upon
 your behalf. It is e.g. used to request credentials using the REST Api.
 
