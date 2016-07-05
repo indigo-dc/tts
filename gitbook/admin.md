@@ -88,7 +88,7 @@ The script is located at `/usr/share/tts/idh/baisic-idh.py` and contains a few
 settings. These settings can be changed in the file by modifing it. The most 
 important settings are:
 * MIN_UID: the minimal uid to use for TTS users
-* MAX_UID: the latest uid to use for TTS users
+* MAX_UID: the latest uid to use for TTS users, set to 0 for unlimited
 * CREATE_LOCAL_ACCOUTNS: wether accounts should be created at the TTS server
 
 
@@ -101,13 +101,13 @@ file per provider is used. The filename has to end on `.conf`.
 
 The possible settings are:
 
-| Key | Description | Default |
+| Key | Description | Mandatory |
 | :---: | --- | :---: |
-| Id | The Id to refer to this Provider | randomly generated |
-| Description | A description of the Provider, shown at the login Screen | none |
-| ClientId | The client id received at registration | none |
-| Secret | The client secret received at registration | none |
-| ConfigEndpoint | The configuration endpoint of the provider | none |
+| Id | The Id to refer to this Provider | no (randomly generated) |
+| Description | A description of the Provider, shown at the login Screen | yes |
+| ClientId | The client id received at registration | yes |
+| Secret | The client secret received at registration | yes |
+| ConfigEndpoint | The configuration endpoint of the provider | yes |
 
 An example for the IAM OpenId Connect Provider:
 ```
@@ -119,4 +119,68 @@ ConfigEndpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configu
 ```
 
 ### Services 
+A service is a single entity for which a user can request credentials.
+The configuration of a service consist of one `.conf` file per service, which
+are located in the `services` subdirectory of the configuration.
+
+To create credentials the TTS connects to that service, either locally or
+remotely by using ssh. After the connection is established a given command gets
+executed and its result parsed and interpreted.
+
+The commands executed are also called plugins, for further informations on how
+plugins work and how to implement them see the documentation for developers.
+
+List of parameters:
+
+| Key | Description | Mandatory |
+| :---: | --- | :---: |
+| Id | The id to internally use when refering to this service | yes |
+| Type | A type displayed to the user | yes |
+| Host | A host displayed to the user | yes |
+| Port | A port shown to the user | yes |
+| Description | A description of the service for the user | yes |
+| CredentialLimit | The maximal number of credentials retrievable | yes |
+| Cmd | The command to execute after connecting | yes |
+| AllowSameState | Allow the plugin to return the same state, usually not needed | no |
+| ConnectionType | Either local or ssh | yes |
+| ConnectionHost | the host to connect to | no |
+| ConnectionPort | the port to connect to | no |
+| ConnectionUser | the user to use when connecting | no |
+| ConnectionPassword | the password to use when connecting | no |
+| ConnectionSshDir | the directory for known_hosts and keys | no |
+| ConnectionSshKeyPass | password for the private key | no |
+| ConnectionSshKeyAutoAcceptHosts | *WARNING* this introduces a security hole, autmatically accept all ssh hosts | no |
+
+A very basic local example:
+```
+Id = ssh_local
+Type = ssh
+Host = localhost 
+Port = 22
+Description = local ssh access to your own machine 
+
+Cmd = /usr/share/tts/scripts/ssh.py 
+
+ConnectionType = local 
+CredentialLimit = 3
+```
+
+A more advanced example with ssh:
+```
+Id = ssh_remote
+Type = ssh
+Host = ssh.example.com 
+Port = 22
+Description = ssh access to example.com 
+
+Cmd = /usr/share/tts/scripts/ssh.py 
+
+ConnectionType = ssh 
+ConnectionUser = root
+ConnectionHost =  ssh.example.com
+ConnectionPort = 22
+ConnectionSshKeyPass = secret
+
+CredentialLimit = 3
+```
 
