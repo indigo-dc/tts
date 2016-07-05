@@ -57,11 +57,8 @@ The main configuration for the TTS is `main.conf`.
 | Key | Description | Default |
 | :---: | --- | :---: |
 | HostName | The hostname to be used for the web server  |localhost |
-| Port | The port number to be used for connections default means: 80 for non
-SSL, 443 for SSL | default |
-| ListenPort | the port the server is listening at, used if the TTS listens at a
-non priviliged port and the traffic is then redirected from the priviliged ones
-e.g. 80 or 443 | default |
+| Port | The port number to be used for connections default means: 80 for non SSL, 443 for SSL | default |
+| ListenPort | the port the server is listening at, used if the TTS listens at a non priviliged port and the traffic is then redirected from the priviliged ones e.g. 80 or 443 | default |
 | SSL | Wether SSL should be used | true |
 | CaCertFile | the location of the CA file, if not absolute it is relative to the config path  | cert/ca.cert |
 | CertFile | location of the certificate (see above) | cert/tts.cert |
@@ -96,7 +93,7 @@ important settings are:
 To provide a login mechanism for the user at least one OpenId Connect Provider
 is needed. 
 
-The files reside in the `oidc` subdirectory of the tts configuration and one
+The files reside in the `oidc` subdirectory of the TTS configuration and one
 file per provider is used. The filename has to end on `.conf`.
 
 The possible settings are:
@@ -183,4 +180,7 @@ ConnectionSshKeyPass = secret
 
 CredentialLimit = 3
 ```
-
+This assumes a `.ssh` folder to be present at `~/.ssh/` with ssh.examplel.com 
+listed in `known_hosts` and at least one key file, encrypted using the passphrase 
+given with `ConnectionSshKeyPass`. The home directory in this case is the one of
+the user running the TTS.
