@@ -21,7 +21,6 @@
 
 % Path in REVERSE order
 -define(GLOBALPATH, [
-                    "/usr/local/etc/tts/",
                     "/etc/tts/"
                    ]).
 -define(HOMEPATH, ".config/tts").
