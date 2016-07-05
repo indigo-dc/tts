@@ -8,13 +8,19 @@ import os
 from pwd import getpwnam
 import traceback
 
-
+#prefix of the username, followed by a number
+USER_PREFIX="ttsuser_"
+# the minimal uid to reserve for TTS users 
+MIN_UID=2000
+# the maximal uid to reserve for TTS users, set to 0 for unlimited 
+MAX_UID=8999
+# should local posix accounts be created
 CREATE_LOCAL_ACCOUNTS = False
-
-
-SQLITE_DB="/var/lib/tts/idh/idh.db"
-# the create_user python script needs to be executable using sudo  
+# the create_user python script to use if local accounts will be created  
 CREATE_USER="sudo /usr/share/tts/idh/create_user.py"
+# the location of the sqlite database
+SQLITE_DB="/var/lib/tts/idh/idh.db"
+
 con = None
 
 def reset_database():
@@ -79,24 +85,27 @@ def create_posix(OidcId, Commit=True):
     Query = "SELECT MAX(UidNumber) FROM posix "
     cur.execute(Query)
     Result = cur.fetchall()
-    MaxUid = Result[0][0]
+    MaxUid = Result[0][0, set to 0 for unlimited]
     NextXid = None
     if MaxUid == None:
-        NextXid = 2000
+        NextXid = MIN_UID 
     else:
         NextXid = MaxUid +1
-  
-    if NextXid == None or NextXid > 9999:
+ 
+    if NextXid == None:
         return None
 
-    NextUserName = "ttsuser_%d"%NextXid 
+    if NextXid > MAX_UID and MAX_UID > 0:
+        return None
+
+    NextUserName = "%d%d"%(USER_PREFIX, UserIndex)
     HomeDir = "/home/%s"%NextUserName
     Result =  add_posix(NextUserName,NextXid,NextXid,HomeDir,OidcId,Commit)
     return Result
 
 def create_posix_account(OidcId, Commit=True):
-    UserIndex = OidcId + 2000
-    UserName = "ttsuser_%d"%UserIndex
+    UserIndex = OidcId + MIN_UID 
+    UserName = "%d%d"%(USER_PREFIX, UserIndex)
     User = create_account(UserName) 
     Result =  add_posix(User[0],User[1],User[2],User[3],OidcId,Commit)
     return Result
