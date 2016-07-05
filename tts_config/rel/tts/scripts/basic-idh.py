@@ -85,7 +85,7 @@ def create_posix(OidcId, Commit=True):
     Query = "SELECT MAX(UidNumber) FROM posix "
     cur.execute(Query)
     Result = cur.fetchall()
-    MaxUid = Result[0][0, set to 0 for unlimited]
+    MaxUid = Result[0][0]
     NextXid = None
     if MaxUid == None:
         NextXid = MIN_UID 
