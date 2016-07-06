@@ -31,3 +31,8 @@ If you want to stop the TTS you just need to type the following in the console
 ```
 q().
 ```
+
+## Documentation
+Further documentation of the TTS can be found at the [Token Translation Service
+Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details) 
+on GitBook.

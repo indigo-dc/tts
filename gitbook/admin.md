@@ -184,3 +184,16 @@ This assumes a `.ssh` folder to be present at `~/.ssh/` with ssh.examplel.com
 listed in `known_hosts` and at least one key file, encrypted using the passphrase 
 given with `ConnectionSshKeyPass`. The home directory in this case is the one of
 the user running the TTS.
+
+#### Configuring SSH for the TTS
+The TTS does not yet support hashed hosts in the `known_hosts` file. As the connection to the remote host is done without user interaction the host MUST be listed in the `known_hosts` file.
+
+To add a host to the list of known hosts in a way readable for the TTS the `ssh_config` (usually at `/etc/ssh/ssh_config`) must have the setting `HashKnownHosts no`. 
+After checking and eventually updating the configuration login as the TTS user.
+
+As TTS user connect to the remote hosts using the credential specified in the service configuration, using the verbose flag (-v). 
+During the connection two possible things can happen:
+1. The client asks wether the host should be added. If it is a host which should be accessible by the TTS answer with yes you can go on with the next host.
+2. The client silently connect without asking. This means that the host is already in the `~/.ssh/known_hosts` file. In the verbose connection output a line tells, which line in the file belongs to the remote host. Open the `known_hosts` file and delete the line at the number printed before. Save the file and start the connection step again.
+
+After adding all hosts the `ssh_config` should be change back. Open the `ssh_config` and change the hash hosts setting to `HashKnownHosts yes`.
