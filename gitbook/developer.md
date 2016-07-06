@@ -37,6 +37,7 @@ The decoded json object has the following format:
 }
 ```
 The items of the object are:
+
 | Key        | Description                                                                                         |
 |------------+-----------------------------------------------------------------------------------------------------|
 | action     | The action to perform, this can be either 'request' or 'revoke'                                     |
@@ -64,9 +65,11 @@ The expected format of the json object is:
 |------------+------------------------------------------------------------------------------------------------|
 | credential | a list of object each representing one part of the credentials. This will be shown to the user |
 | state      | a state to keep track of this credential it MUST NOT contain sensive informations              |
-| error      | if this is present the TTS expects that something bad happens and ignores the other two  |
+| error      | if this is present the TTS expects that something bad happens and ignores the other two        |
+
 
 The entries in an credential object (part of the list in 'credential' above) are:
+
 | Key   | Description                                                                                                       |
 |-------+-------------------------------------------------------------------------------------------------------------------|
 | name  | the name the user will see e.g. username or password                                                              |
@@ -88,10 +91,12 @@ one of the two elements:
 	"result":"description"
 }
 ```
+
 | Key    | Description                                                             |
 |--------+-------------------------------------------------------------------------|
 | result | a description of the result, at the moment it is ignored                |
 | error  | if the error is present the TTS expects an error and ignores the result |
+
 
 So if only the result key is present in the object the TTS assumes that everything went fine,
 if the error key is present it assumes that something went bad and does not remove the credential 
