@@ -35,6 +35,9 @@ cookie:
 rel: cookie
 	$(REBAR) release
 
+run: cookie 
+	$(REBAR) run 
+
 install_deps:
 	$(REBAR) install_deps
 
