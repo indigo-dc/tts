@@ -39,7 +39,7 @@ The decoded json object has the following format:
 The items of the object are:
 
 | Key        | Description                                                                                         |
-|------------+-----------------------------------------------------------------------------------------------------|
+|------------|-----------------------------------------------------------------------------------------------------|
 | action     | The action to perform, this can be either 'request' or 'revoke'                                     |
 | cred_state | This is only passed when revoking, it is the credential state returned when creating the credential |
 | user_info  | The user info contains two distince informations about the user: oidc and site (see below)          |
@@ -62,7 +62,7 @@ The expected format of the json object is:
 ```
 
 | Key        | Description                                                                                    |
-|------------+------------------------------------------------------------------------------------------------|
+|------------|------------------------------------------------------------------------------------------------|
 | credential | a list of object each representing one part of the credentials. This will be shown to the user |
 | state      | a state to keep track of this credential it MUST NOT contain sensive informations              |
 | error      | if this is present the TTS expects that something bad happens and ignores the other two        |
@@ -71,7 +71,7 @@ The expected format of the json object is:
 The entries in an credential object (part of the list in 'credential' above) are:
 
 | Key   | Description                                                                                                       |
-|-------+-------------------------------------------------------------------------------------------------------------------|
+|-------|-------------------------------------------------------------------------------------------------------------------|
 | name  | the name the user will see e.g. username or password                                                              |
 | type  | the type of data, this will determine how it will be displayed. At the moment 'text' and 'textfile' are supported |
 | rows  | the number of rows for the textarea in case of type textfile, else ignored                                        |
@@ -93,7 +93,7 @@ one of the two elements:
 ```
 
 | Key    | Description                                                             |
-|--------+-------------------------------------------------------------------------|
+|--------|-------------------------------------------------------------------------|
 | result | a description of the result, at the moment it is ignored                |
 | error  | if the error is present the TTS expects an error and ignores the result |
 
