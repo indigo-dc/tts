@@ -23,8 +23,27 @@
 -include("tts.hrl").
 
 
-to_abs(FileName) ->
+to_abs([First, Second | Rest] = FileName) ->
+    convert_to_abs(First, Second, Rest, FileName);
+to_abs(FileName) when is_binary(FileName) ->
+    << First:1/binary, Second:1/binary, Rest/binary >> = FileName,
+   convert_to_abs(First, Second, Rest, FileName).
+
+convert_to_abs($~, $/, Rest, _FileName) ->
+    convert_home(Rest);
+convert_to_abs(<<"~">>, <<"/">>, Rest, _FileName) ->
+    convert_home(Rest);
+convert_to_abs($/, _Second, _Rest, FileName) ->
+    FileName;
+convert_to_abs(<<"/">>, _Second, _Rest, FileName) ->
+    FileName;
+convert_to_abs(_First, _Second, _Rest, FileName) ->
     to_abs(FileName, ?CONFIG(config_path)).
+
+convert_home(Relative) ->
+    {ok, [[Home]]} =  init:get_argument(home),
+    to_abs(Relative, Home).
+
 
 to_abs(FileName, BaseDirectory) ->
     filename:join(BaseDirectory, FileName).
