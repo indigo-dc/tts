@@ -391,7 +391,7 @@ get_json_test() ->
                           {ok, [{<<"ID1">>,pid}]}
                   end,
     GetPInfo = fun(_Id) ->
-                          {ok, #{issuer => <<"https://test.tts">>}}
+                          {ok, #{issuer => <<"https://test.tts">>, ready => true}}
                   end,
     GetServiceList = fun(UserId) ->
                           case UserId of

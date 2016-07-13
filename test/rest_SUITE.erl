@@ -172,8 +172,11 @@ tts_based_dir(Dir) ->
 
 wait_for_oidcc_ready() ->
     {ok, OidcList} = oidcc:get_openid_provider_list(),
-    wait_for_oidcc_ready(OidcList).
-wait_for_oidcc_ready(List) ->
+    wait_for_oidcc_ready(OidcList, 25).
+wait_for_oidcc_ready(List, 0) ->
+    ct:log("some provider timed out: ~p",[List]),
+    timeout;
+wait_for_oidcc_ready(List, MaxTries) ->
     Ready = fun({Id, Pid}, NotReady) ->
                     case oidcc_openid_provider:is_ready(Pid) of
                         true -> NotReady;
@@ -184,7 +187,7 @@ wait_for_oidcc_ready(List) ->
         [] -> ok;
         NewList ->
             timer:sleep(200),
-            wait_for_oidcc_ready(NewList)
+            wait_for_oidcc_ready(NewList, MaxTries-1)
     end.
 
 

@@ -92,9 +92,10 @@ handle_oidc_token({error, Error}, #{session_id := SessionId} = ReqMap) ->
 show_select_page(ReqMap) ->
     {ok, OIDCList} = oidcc:get_openid_provider_list(),
     GetIdAndDesc = fun({Id, Pid}, List) ->
-                           {ok, #{description := Desc}} =
+                           {ok, #{description := Desc,
+                                  ready := Enabled }} =
                            oidcc:get_openid_provider_info(Pid),
-                           [ [ Id, Desc ] | List]
+                           [ [ Id, Desc, Enabled ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc, [], OIDCList)),
     {ok, Version} = application:get_key(tts, vsn),

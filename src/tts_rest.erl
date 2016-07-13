@@ -206,9 +206,12 @@ return_service_list(Services) ->
 
 return_oidc_list(Oidc) ->
     Id = fun({OidcId, Pid}, List) ->
-                 {ok, #{issuer := Issuer}} =
-                 oidcc:get_openid_provider_info(Pid),
-                 [#{ id => OidcId, issuer => Issuer} | List]
+                 Result = oidcc:get_openid_provider_info(Pid),
+                 case Result of
+                 {ok, #{issuer := Issuer, ready := true}}  ->
+                         [#{ id => OidcId, issuer => Issuer} | List];
+                     _ -> List
+                 end
          end,
     List = lists:reverse(lists:foldl(Id, [], Oidc)),
     jsx:encode(#{openid_provider_list => List}).

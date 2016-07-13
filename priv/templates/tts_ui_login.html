@@ -3,8 +3,8 @@ Please select your OpenId Connect Provider
     <form method="post" action="{{ ep_redirect }}" >
         <div class="input-group">
             <select id="id"  name="id" class="form-control">
-                {% for id, description in oidc_op_list %}
-                <option value="{{ id }}"> {{ description }}</option>
+                {% for id, description, enabled in oidc_op_list %}
+                <option {% if not enabled %} disabled {% endif %} value="{{ id }}"> {{ description }}</option>
                 {% endfor %}
             </select>
             <span class="input-group-btn">
