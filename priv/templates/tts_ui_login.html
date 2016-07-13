@@ -4,7 +4,7 @@ Please select your OpenId Connect Provider
         <div class="input-group">
             <select id="id"  name="id" class="form-control">
                 {% for id, description, enabled in oidc_op_list %}
-                <option {% if enabled %} value="{{ id }}" {% else %} value="" disabled {% endif %} >
+                <option {% if enabled %} value="{{ id }}" {% else %} disabled {% endif %} >
                   {{ description }} </option>
                 {% endfor %}
             </select>
