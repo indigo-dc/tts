@@ -137,7 +137,7 @@ hole, you are warned.
 
 ## REST API
 The Token Translation Service client (TTSc) from the previous chapter uses the
-REST interface to perform all the described actions described. In this chapter, the
+REST interface to perform all the described actions. In this chapter, the
 pure REST calls will be described, this is of use only if an application needs
 to communicate directly with the TTS.
 ### List Provider 
@@ -193,7 +193,7 @@ content-type: application/json
 }
 ```
 Again, it is a json object with one key, `service_list`, which holds the list of services as value.
-Each entry list is a service object, described by its fields.
+Each entry is a service object, described by its fields.
 Important for requesting a credential is the `id`.
 
 ### List Credentials 
@@ -222,7 +222,7 @@ content-type: application/json
 }
 ```
 The response consists of a json object with one key, `credential_list`. Its
-value is the list of credentials, where each element list is again a json object.  For
+value is the list of credentials, where each element is again a json object.  For
 revoking a credential, only the `id` of the credential is needed.
 
 ### Request Credential 
