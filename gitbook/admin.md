@@ -3,7 +3,7 @@
 ### From Package 
 For Ubuntu 14.04 and CentOS 7 a package is provided by the INDIGO DataCloud
 team.
-To be able to install the packages using the package manager of your system the 
+To be able to install the packages using the package manager of your system, the 
 repository needs to be added. This is done by adding the INDIGO DataCloud
 package repository to your system.
 
@@ -27,13 +27,13 @@ yum install tts
 ```
 
 ### From Source
-To be able to install the Token Translation Service from source you need Erlang
+To be able to install the Token Translation Service from source, you need Erlang
 OTP 18.1 or newer installed.
 
-Prebuilt package for your operation system can be found at [Erlang Solutions](https://www.erlang-solutions.com/resources/download.html).
+Pre-built package for your operation system can be found at [Erlang Solutions](https://www.erlang-solutions.com/resources/download.html).
 Just download and install it.
 
-Then follow these few steps:
+Then follow the next few steps:
 - clone the git repository
 - build the package yourself
 - install the package
@@ -46,32 +46,32 @@ make package
 the package can be found in `./package/packages`.
 
 ## Configuration
-The configuration files of the Token Translation Service are usually located at
-`/etc/tts`. Other places are also supported for e.g. development purposes, in
-this case please put your configuration files in `~/.config/tts`. If the later
-location is found it will override the global configuration.
+The configuration files of the Token Translation Service are usually located in
+`/etc/tts`. Other locations are also supported, for e.g. development purposes; in
+this case please place your configuration files in `~/.config/tts`. If the later
+location is found, it will override the global configuration.
 
 ### Basic Configuration (main.conf)
 The main configuration for the TTS is `main.conf`.
 
 | Key | Description | Default |
 | :---: | --- | :---: |
-| HostName | The hostname to be used for the web server  |localhost |
-| Port | The port number to be used for connections default means: 80 for non SSL, 443 for SSL | default |
-| ListenPort | the port the server is listening at, used if the TTS listens at a non priviliged port and the traffic is then redirected from the priviliged ones e.g. 80 or 443 | default |
-| SSL | Wether SSL should be used | true |
-| CaCertFile | the location of the CA file, if not absolute it is relative to the config path  | cert/ca.cert |
-| CertFile | location of the certificate (see above) | cert/tts.cert |
-| KeyFile | the path to the private key file (see CaFile) | cert/tts.key |
-| SqliteFile | path to the sqlite database | ./tts.db |
-| SessionTimeout | Timeout of a Session at the web interface (in seconds) | 600 |
-| CacheTimeout | Timeout of cached user information (seconds) |  900 |
+| HostName | Hostname of the web server  |localhost |
+| Port | Port number for connections; default port is 80 for non SSL, and 443 for SSL | default |
+| ListenPort | Port which servers listens to, used if the TTS listens at a non-privileged port; the traffic is then redirected from the privileged ports e.g. 80 or 443 | default |
+| SSL | Whether SSL should be used | true |
+| CaCertFile | Location of the CA file; if not absolute, it is relative to the config path  | cert/ca.cert |
+| CertFile | Location of the certificate (see above) | cert/tts.cert |
+| KeyFile | Path to the private key file (see CaFile) | cert/tts.key |
+| SqliteFile | Path to the sqlite database | ./tts.db |
+| SessionTimeout | Timeout of web interface Session (in seconds) | 600 |
+| CacheTimeout | Timeout of the cached user information (seconds) |  900 |
 | CacheCheckInterval | Cache validation and cleanup interval (seconds) |  300 |
-| CacheMaxEntries | Number of entries to keep in the cache at max | 50000|
-| ServiceConfigPath | the directory where the service configs are stored, relative to the main config| ./services |
-| OidcConfigPath | directory of the OpenId Connect Provider configs | ./oidc |
-| IDHScript | The Identiy Harmonization Script (IDH) to use | ./idh.py |
-| IDHMaxWorker | Max amoutn of workers looking up user data in parallel | 5 |
+| CacheMaxEntries | Max number of entries kept in the cache | 50000|
+| ServiceConfigPath | Folder where the service configs are stored, relative to the main config| ./services |
+| OidcConfigPath | Folder containing the OpenId Connect Provider configs | ./oidc |
+| IDHScript | Identiy Harmonization Script (IDH) to use | ./idh.py |
+| IDHMaxWorker | Max amount of workers looking up the user data in parallel | 5 |
 
 
 ### Identity Harmonization (IDH)
@@ -79,10 +79,10 @@ The purpose of the IDH script is to lookup or create site specific accounts for
 the OpenId Connect user. 
 
 Provided with the Token Translation Service is a baisc IDH script, which uses a
-sqlite database to keep track of virtually created users.
+sqlite database to keep track of the virtually created users.
 
-The script is located at `/usr/share/tts/idh/baisic-idh.py` and contains a few
-settings. These settings can be changed in the file by modifing it. The most 
+The script location is `/usr/share/tts/idh/baisic-idh.py` and contains several
+settings. These settings can be modified (in the file). The most 
 important settings are:
 * MIN_UID: the minimal uid to use for TTS users
 * MAX_UID: the latest uid to use for TTS users, set to 0 for unlimited
@@ -90,11 +90,11 @@ important settings are:
 
 
 ### OpenId Connect Provider 
-To provide a login mechanism for the user at least one OpenId Connect Provider
+To provide a login mechanism for the user, at least one OpenId Connect Provider
 is needed. 
 
-The files reside in the `oidc` subdirectory of the TTS configuration and one
-file per provider is used. The filename has to end on `.conf`.
+The files reside in the `oidc` subfolder of the TTS configuration and one
+file per provider is used. The filename has to end with `.conf`.
 
 The possible settings are:
 
@@ -102,8 +102,8 @@ The possible settings are:
 | :---: | --- | :---: |
 | Id | The Id to refer to this Provider | no (randomly generated) |
 | Description | A description of the Provider, shown at the login Screen | yes |
-| ClientId | The client id received at registration | yes |
-| Secret | The client secret received at registration | yes |
+| ClientId | The client id received at the registration | yes |
+| Secret | The client secret received at the registration | yes |
 | ConfigEndpoint | The configuration endpoint of the provider | yes |
 
 An example for the IAM OpenId Connect Provider:
@@ -111,42 +111,42 @@ An example for the IAM OpenId Connect Provider:
 Id = IAM
 Description = INDIGO Datacloud Identity and Access Management (IAM)
 ClientId = <insert the client id> 
-Secret =  <put your client secret here> 
+Secret =  <insert the client secret> 
 ConfigEndpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration 
 ```
 
 ### Services 
 A service is a single entity for which a user can request credentials.
 The configuration of a service consist of one `.conf` file per service, which
-are located in the `services` subdirectory of the configuration.
+are located in the `services` subfolder of the configuration.
 
-To create credentials the TTS connects to that service, either locally or
-remotely by using ssh. After the connection is established a given command gets
-executed and its result parsed and interpreted.
+To create credentials, the TTS connects to the service, either locally or
+remotely using ssh. After the connection is established, a command is
+executed and the subsequent result is parsed and interpreted.
 
-The commands executed are also called plugins, for further informations on how
-plugins work and how to implement them see the documentation for developers.
+The executed commands are also called plugins; for further information on how
+the plugins work and how to implement them, see the documentation for developers.
 
 List of parameters:
 
 | Key | Description | Mandatory |
 | :---: | --- | :---: |
-| Id | The id to internally use when refering to this service | yes |
+| Id | The id used internally when referring to this service | yes |
 | Type | A type displayed to the user | yes |
 | Host | A host displayed to the user | yes |
 | Port | A port shown to the user | yes |
 | Description | A description of the service for the user | yes |
-| CredentialLimit | The maximal number of credentials retrievable | yes |
+| CredentialLimit | The maximum number of retrievable credentials | yes |
 | Cmd | The command to execute after connecting | yes |
 | AllowSameState | Allow the plugin to return the same state, usually not needed | no |
 | ConnectionType | Either local or ssh | yes |
-| ConnectionHost | the host to connect to | no |
-| ConnectionPort | the port to connect to | no |
-| ConnectionUser | the user to use when connecting | no |
-| ConnectionPassword | the password to use when connecting | no |
-| ConnectionSshDir | the directory for known_hosts and keys | no |
-| ConnectionSshKeyPass | password for the private key | no |
-| ConnectionSshKeyAutoAcceptHosts | *WARNING* this introduces a security hole, autmatically accept all ssh hosts | no |
+| ConnectionHost | Which host to connect to | no |
+| ConnectionPort | Which port to connect to | no |
+| ConnectionUser | Which user to use when connecting | no |
+| ConnectionPassword | Password used when connecting | no |
+| ConnectionSshDir | Folder for known_hosts and keys | no |
+| ConnectionSshKeyPass | Password for the private key | no |
+| ConnectionSshKeyAutoAcceptHosts | *WARNING* This introduces a security issue, automatically accept all ssh hosts | no |
 
 A very basic local example:
 ```
@@ -162,7 +162,7 @@ ConnectionType = local
 CredentialLimit = 3
 ```
 
-A more advanced example with ssh:
+A more advanced example for ssh:
 ```
 Id = ssh_remote
 Type = ssh
@@ -180,20 +180,32 @@ ConnectionSshKeyPass = secret
 
 CredentialLimit = 3
 ```
-This assumes a `.ssh` folder to be present at `~/.ssh/` with ssh.examplel.com 
-listed in `known_hosts` and at least one key file, encrypted using the passphrase 
-given with `ConnectionSshKeyPass`. The home directory in this case is the one of
+This assumes a `.ssh` folder is present at `~/.ssh/` with ssh.example.com 
+listed in the `known_hosts` and at least one key file, encrypted using the passphrase 
+given with the `ConnectionSshKeyPass`. The home folder in this case is the one of
 the user running the TTS.
 
 #### Configuring SSH for the TTS
-The TTS does not yet support hashed hosts in the `known_hosts` file. As the connection to the remote host is done without user interaction the host MUST be listed in the `known_hosts` file.
+The TTS does not yet support hashed hosts in the `known_hosts` file. As the
+connection to the remote host is done without user interaction the host MUST be
+listed in the `known_hosts` file.
 
-To add a host to the list of known hosts in a way readable for the TTS the `ssh_config` (usually at `/etc/ssh/ssh_config`) must have the setting `HashKnownHosts no`. 
-After checking and eventually updating the configuration login as the TTS user.
+To add a host to the list of known hosts in a way readable for the TTS the
+`ssh_config` (usually at `/etc/ssh/ssh_config`) must have the setting
+`HashKnownHosts no`.  After checking and eventually updating the configuration
+login as the TTS user.
 
-As TTS user connect to the remote hosts using the credential specified in the service configuration, using the verbose flag (-v). 
-During the connection two possible things can happen:
-1. The client asks wether the host should be added. If it is a host which should be accessible by the TTS answer with yes you can go on with the next host.
-2. The client silently connect without asking. This means that the host is already in the `~/.ssh/known_hosts` file. In the verbose connection output a line tells, which line in the file belongs to the remote host. Open the `known_hosts` file and delete the line at the number printed before. Save the file and start the connection step again.
+As TTS user connects to the remote hosts using the credential specified in the
+service configuration, and potentially using the verbose flag (-v). During the
+connection there are two possibilities:
+1. The client asks whether the host should be added. In case it is a host that
+   should be accessible by the TTS, the user should answer with yes, and then
+   can go on with the next host.
+2. The client silently connects without asking. If this is the case, the host is
+   already in the `~/.ssh/known_hosts` file. In the verbose connection, the
+   output will tell which line in the file belongs to the remote host. Open the
+   `known_hosts` file and delete the line at the number printed before. Save the
+   file and start the connection step again.
 
-After adding all hosts the `ssh_config` should be change back. Open the `ssh_config` and change the hash hosts setting to `HashKnownHosts yes`.
+After adding all the hosts, the `ssh_config` should be modified. Open the
+`ssh_config` and change the hash hosts setting to `HashKnownHosts yes`.

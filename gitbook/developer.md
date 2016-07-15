@@ -1,12 +1,15 @@
 # Developer Guide
 ## Plugins
-To enable a certain type of service for the TTS it needs a corresponding plugin. Sometimes there are even multiple plugins for the same type of service e.g. due to different local policies.
+To enable a certain type of service for the TTS, a corresponding plugin is
+needed.  Sometimes there are even multiple plugins for the same type of service,
+e.g. due to different local policies.
 
 ### Writing Plugins
-The communication between the TTS and the plugin is done by passing one argument to the script and parsing the std-out of the script.
+The communication between the TTS and the plugin is done by passing one argument
+to the script and parsing the stdout of the script.
 
 #### Plugin Input
-The parameter coming from the TTS is an base64 encoded json object.
+The parameter coming from the TTS is a base64 encoded json object.
 
 The decoded json object has the following format:
 ```
@@ -40,16 +43,16 @@ The items of the object are:
 
 | Key        | Description                                                                                         |
 |------------|-----------------------------------------------------------------------------------------------------|
-| action     | The action to perform, this can be either 'request' or 'revoke'                                     |
+| action     | Which action to perform, this can be either 'request' or 'revoke'                                     |
 | cred_state | This is only passed when revoking, it is the credential state returned when creating the credential |
-| user_info  | The user info contains two distince informations about the user: oidc and site (see below)          |
-| oidc       | The information about the user coming from the OpenId Connect provider e.g. IAM                     |
-| site       | The information coming from the IDH script about the user                                           |
+| user_info  | The user info contains two distinctive information about the user: oidc and site (see below)          |
+| oidc       | The information about the user coming from the OpenId Connect provider, e.g. IAM                     |
+| site       | The information about the user coming from the IDH script                                            |
 
 #### Performing a Request
-When the `action` is set to `request` it means that the user or a service on the
-users behalf wats to create a credential.
-The plugin should perform any action needed to create the credential for the user and print
+When the `action` is set to `request`, it means that the user or a service on the
+users behalf wants to create a credential.
+The plugin should perform any necessary action to create the credential for the user and print
 a json object on stdout.
 
 The expected format of the json object is:
@@ -63,27 +66,27 @@ The expected format of the json object is:
 
 | Key        | Description                                                                                    |
 |------------|------------------------------------------------------------------------------------------------|
-| credential | a list of object each representing one part of the credentials. This will be shown to the user |
-| state      | a state to keep track of this credential it MUST NOT contain sensive informations              |
-| error      | if this is present the TTS expects that something bad happens and ignores the other two        |
+| credential | A list of objects, each representing one part of the credentials. This will be shown to the user |
+| state      | A state to keep track of the credential; it MUST NOT contain sensitive information              |
+| error      | If this is present, the TTS expects that something bad happens and ignores the other two        |
 
 
-The entries in an credential object (part of the list in 'credential' above) are:
+The entries in the credential object (part of the list in 'credential' above) are:
 
 | Key   | Description                                                                                                       |
 |-------|-------------------------------------------------------------------------------------------------------------------|
-| name  | the name the user will see e.g. username or password                                                              |
-| type  | the type of data, this will determine how it will be displayed. At the moment 'text' and 'textfile' are supported |
-| rows  | the number of rows for the textarea in case of type textfile, else ignored                                        |
-| cols  | the number of columns for the textarea when using textfile, else ignored                                          |
-| value | the value of the credential part e.g. the password or the username itself                                         |
+| name  | The name the user will see e.g. username or password                                                              |
+| type  | The type of data, this will determine how it will be displayed. At the moment 'text' and 'textfile' are supported |
+| rows  | The number of rows for the textarea in case the type is textfile, else ignored                                        |
+| cols  | The number of columns for the textarea when using textfile, else ignored                                          |
+| value | The value of the credential part, e.g. the password or the username itself                                         |
 
 
 #### Performing a Revoke
-When the `action` is set to `revoke` the credential identified by the `state` should be invalidated 
-or removed, depending on the type of service. In the SSH plugin the created ssh-key gets e.g. 
+When the `action` is set to `revoke`, the credential identified by the `state` should be invalidated 
+or removed, depending on the type of service. In the SSH plugin, e.g., the created ssh-key is  
 removed from the authorized keys.
-As with requesting the TTS expects the std out to be a json object. In case of revoke it may contain
+When performing a request, the TTS expects the stdout to be a json object. In case of a revoke, it may contain
 one of the two elements:
 ```
 {
@@ -95,9 +98,9 @@ one of the two elements:
 | Key    | Description                                                             |
 |--------|-------------------------------------------------------------------------|
 | result | a description of the result, at the moment it is ignored                |
-| error  | if the error is present the TTS expects an error and ignores the result |
+| error  | if the error is present, the TTS expects an error and ignores the result |
 
 
-So if only the result key is present in the object the TTS assumes that everything went fine,
-if the error key is present it assumes that something went bad and does not remove the credential 
-state from its database.
+Therefore, if only the result key is present in the object, the TTS assumes that
+everything went fine, however, if the error key is present it assumes that
+something went bad and does not remove the credential state from its database.
