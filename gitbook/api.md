@@ -1,32 +1,49 @@
 # Token Translation Service Client (TTSc) - REST Api
-The Token Translation Service also offers a REST inteface to perform all the actions possible via the 
-web-interface.
+The Token Translation Service also offers a REST interface to perform all the
+actions possible via the web-interface.
 ## Token Translation Service Client (TTSc)
-The TTSc is a command line client for the Token Translation Service. Authorization is based on an access token provided as a bearer token with the request. 
+The TTSc is a command line client for the Token Translation Service.
+Authorization is based on an access token provided as a bearer token with the
+request. 
 
 ### List all OpenId Provider (lsprov)
-The `lsprov` command lists all OpenId Provider a TTS instance supports. The call only needs one additional parameter that is the host to connect to:
+The `lsprov` command lists all the OpenId Providers a TTS instance supports. The call
+only needs one additional parameter, which is the host used for connection:
 ```
 $ ttsc lsprov localhost:8080
 "B4A_HsU" "https://accounts.google.com"
 "HdPwOcc" "https://iam-test.indigo-datacloud.eu/"
 ```
-In the example above the TTS at localhost on port 8080 will be asked to list all the OpenId Connect Provider it supports. In this example the TTS supports two OpenId Connect provider, accounts.google.com and iam-test.indigo-datacloud.eu. In front of the issuer URLs are the randomly generated ids, which are used by the TTS to refer to the provider.
+In the example above, the TTS at localhost on port 8080 will be asked to list all
+the OpenId Connect Providers it supports. For this example, the TTS supports two
+OpenId Connect providers, accounts.google.com and iam-test.indigo-datacloud.eu.
+In front of the issuer URLs are the randomly generated ids, which are used by
+the TTS to refer to the provider.
 
 
 ### List all service for a user (lsserv)
-The `lsserv` command lists all the services the TTS supports for the authorized user. The parameter needed are the host of the TTS instance, the access token to authorize and the issuer of the token, so the TTS can verify the token at the issuer.
+The `lsserv` command lists all the services the TTS supports for the authorized
+user. The needed parameters are the host of the TTS instance, the access token to
+authorize, and the issuer of the token, so the TTS can verify the token at the
+issuer.
 ```
 $ ttsc lsserv localhost:8080 ya29.[...]jksb https://accounts.google.com
 "opennebula" "opennebula" "oneserver.com" "2633"
 "ssh" "ssh" "localhost" "22"
 ```
-In this example the token has been shotened as they are usully pretty long. Instead of the URL of the issuer, *https://accounts.google.com* in this case, also the id *B4A_HsU* could be used.
+In this example the token has been shortened as they are usually pretty long.
+Instead of the URL of the issuer, *https://accounts.google.com* in this case,
+also the id *B4A_HsU* can be used.
 
-The result is a list of the services the user can request credentials for. Each line representing one service, printing out the id, the type, the host and the port of the service. For requesting a credential one needs the first column, the id.
+The result is a list of the services for which the user can request credentials.
+Each line represents one service, listing the id, the type, the host, and
+the port of the service. For requesting a credential, one needs the first column,
+the id.
 
 ### Listing all credentials (lscred)
-The `lscred` command lists all currently requested credentials. For this, as with lsserv, the user needs to be authorized by an access token and also providing the issuer so the TTS can verify the access token.
+The `lscred` command lists all currently requested credentials. For this, as
+with `lsserv`, the user needs to be authorized by an access token and also needs
+to provide the issuer, so the TTS can verify the access token.
 ```
 $ ttsc lscred localhost:8080 ya29.[...]jksb https://accounts.google.com
 {"cred_id":"qO10bfakPev2sbW5NWJuCdFKhzG4FmqV","cred_state":"TTS_CW0MSwY5qBZBPnn4JKpadDqCldrwdia8","ctime":1467877711,"interface":"web interface","service_id":"ssh"}
@@ -34,13 +51,17 @@ $ ttsc lscred localhost:8080 ya29.[...]jksb https://accounts.google.com
 ```
 The output is one json object per credential. 
 - `cred_id` is the internal identifier of the credential within TTS.
-- `cred_state` is the state returned by the plugin and stored at the TTS to revoke the credential. 
+- `cred_state` is the state returned by the plugin and stored at the TTS to
+  revoke the credential. 
 - `ctime` is the creation time
-- `interface` indicates at which interface the credential was created either the web or the REST inteface 
-- `service_id` is the id of the service and links to the service list (see lsserv).
+- `interface` indicates with which interface the credential was created, it is either a
+  web or the REST interface 
+- `service_id` is the id of the service and links to the service list (see `lsserv`).
 
 ### Requesting a credential (request)
-The `request` command is used to request a credential from the Token Translation Service. To create a credential the TTS needs the service_id as well as access token and the issuer as parameter.
+The `request` command is used to request a credential from the Token Translation
+Service. To create a credential, the TTS needs the service_id as well as an access
+token and the issuer as a parameter.
 
 ```
 $ ttsc request localhost:8080 ssh ya29.[...]jksb https://accounts.google.com
@@ -81,34 +102,44 @@ AOhJBqAofH9BFowVAeUQcWpgP//vwsmyzI7biZxX/DTuojOqTLXopc7hFtluKpPY\n
 {"name":"Passphrase (for Private Key)","type":"text","value":"qU1r45cgUa61f1Bn"}
 ]
 ```
-The output is a list of tuples, each tuple representing a part of the credential, most of them 
-depend on the plugin, as they are specific to the service, yet there is one entry that is always included: 
-- `id`: the value is the internal id in the TTS, see also lscred, which also shows this credential
+The output is a list of tuples, with each tuple representing a part of the
+credential. Most of them depend on the plugin, as they are specific to the
+service, yet there is one entry which is always included: 
+- `id`: the value is the internal id in the TTS, see also `lscred`, which also
+  shows this credential
 
 ### Revoking a credential (revoke)
-Revoking is very similar to requesting, yet instead of providing the service for which to request a credential the credential id is provided.
-So the list of parameter are: Credential id, access token and issuer.
+Revoking is very similar to requesting, yet instead of providing the service for
+which to request a credential, the credential id is provided.  So the list of
+parameter are: Credential id, access token, and issuer.
 
 ```
 $ ttsc request localhost:8080 2GkzHmpkgVwywckpeIiP-5dpEes0iESe ya29.[...]jksb https://accounts.google.com
 ```
-Only in case of an error you get an output, else the credential is revoked. 
-Checking the list of credentials using the lscred command shows that only one credential is left:
+Only in case of an error you get an output, otherwise the credential is revoked.
+Checking the list of credentials using the `lscred` command shows that only one
+credential is left:
 ```
 $ ttsc lscred localhost:8080 ya29.[...]jksb https://accounts.google.com
 {"cred_id":"qO10bfakPev2sbW5NWJuCdFKhzG4FmqV","cred_state":"TTS_CW0MSwY5qBZBPnn4JKpadDqCldrwdia8","ctime":1467877711,"interface":"web interface","service_id":"ssh"}
 ```
 
 ### Plugin Developer HTTP support 
-If you need to connect to an TTS instance that does not support SSL you should contact the administrator and ask him to set it up. 
-A TTS without SSL MUST NOT run in production as convidential data are transmitted.
+If you need to connect to an TTS instance that does not support SSL, you should
+contact the administrator and ask him to set it up.  A TTS without SSL MUST NOT
+run in production as confidential data are transmitted.
 
-For developers of plugins there is the possibility to set the environment variable `HTTP_SCHEME` to `http` to get a non SSL connection.
+For developers of plugins there is the possibility to set the environment
+variable `HTTP_SCHEME` to `http` to get a non SSL connection.
 
-Further explanations are not added on purpose as this creates a HUGE security hole, you are warned.
+Further explanations are omitted on purpose as this creates a HUGE security
+hole, you are warned.
 
-## REST Api
-The Token Translation Service client (TTSc) from the previous chapter uses the REST interface to perform all the actions described there. In this chapter the pure REST calls will be described, this is only of use if an application needs to directly comminicate with the TTS.
+## REST API
+The Token Translation Service client (TTSc) from the previous chapter uses the
+REST interface to perform all the described actions. In this chapter, the
+pure REST calls will be described, this is of use only if an application needs
+to communicate directly with the TTS.
 ### List Provider 
 Retrieving the list of supported OpenId Connect provider is done by 
 performing a GET request for the `/api/oidcp` path.
@@ -131,13 +162,15 @@ content-type: application/json
 	]
 }
 ```
-So a json object, which includes one key `openid_provider_list` with has the list of OpenId Provider as value.
-Each Object in the list is one OpenId Provider, the `id` is the internal id for that OpenId Provider 
-in TTS, the `issuer` is the official issuer returned by the provider.
+So it is a json object, and includes one key `openid_provider_list` which has
+the list of OpenId Providers as a value.  Each Object in the list is one OpenId
+Provider, the `id` is the internal id for that OpenId Provider in TTS, the
+`issuer` is the official issuer returned by the provider.
 
 ### List Services 
-To get the list of services for a user a GET call against the `/api/service` path.
-Authorization is needed for this request please refer to `Authorization Header` for details.
+To get the list of services for a user a GET call against the `/api/service`
+path.  Authorization is needed for this request please refer to `Authorization
+Header` for details.
 
 An example request is:
 ``` 
@@ -159,14 +192,14 @@ content-type: application/json
 	]
 }
 ```
-A json object with one key `service_list` which holds the list of services as value.
-Each list entry is a service object, described by its fields.
-Important for requesting credenital is the `id`.
+Again, it is a json object with one key, `service_list`, which holds the list of services as value.
+Each entry is a service object, described by its fields.
+Important for requesting a credential is the `id`.
 
 ### List Credentials 
 Retrieving the list of credentials currently owned by the user is done by performing a 
 GET request at the `/api/credenial` path. 
-Authorization is needed for this request please refer to `Authorization Header` for details.
+Authorization is needed for this request, please refer to `Authorization Header` for details.
 
 An example request is:
 ```
@@ -188,12 +221,14 @@ content-type: application/json
 	]
 }
 ```
-The response consists of a json object with one key, `credential_list`, its value is the list of credentials, each list element is again a json object.
-For revoking a credential only the `id` of the crendtial is needed.
+The response consists of a json object with one key, `credential_list`. Its
+value is the list of credentials, where each element is again a json object.  For
+revoking a credential, only the `id` of the credential is needed.
 
 ### Request Credential 
-The creation of a credential is triggered by a POST request to `/api/credential` with the service id as value in a json object.
-Authorization is needed for this request please refer to `Authorization Header` for details.
+The creation of the credential is triggered by a POST request to
+`/api/credential`, with the `service_id` as value in a json object.
+Authorization is needed for this request, please refer to `Authorization Header` for details.
 
 The post data is a simple json object of the form `{"service_id":"<id of service>"}`.
 
@@ -209,15 +244,15 @@ Content-Length: 24
 
 {"service_id":"ssh"}
 ```
-and the corrsponding reply of the TTS is:
+and the corresponding reply of the TTS is:
 ```
 HTTP/1.1 303 See Other
 content-length: 0
 content-type: application/json
 location: /api/v1/credential_data/rwwwNYX-LaBL0dvZ7wq44g
 ```
-This is a redirection to where the credential data is actually available.
-Following the redirection returns the credential data by the TTS:
+This is a redirection to a location where the credential data is actually available.
+Following the redirection, the credential data by the TTS are returned:
 ```
 GET /api/v1/credential_data/rwwwNYX-LaBL0dvZ7wq44g HTTP/1.1
 Host: localhost 
@@ -237,15 +272,17 @@ content-type: application/json
 {"name":"Password","type":"text","value":"secret"}
 ]
 ```
-The result is a list of attributes of the credential, each element is a json object defining one part 
-of the credential.
+The result is a list of attributes of the credential, each element is a json
+object defining one part of the credential.
 
-The only object that is always present is the object whoes `name` is `id`, all other object depend on the plugin and on the service for which the credential is requested.
+The only object that is always present is the object whose `name` is `id`, all
+other object depend on the plugin and on the service for which the credential is
+requested.
 
 ### Revoke Credential 
-To revoke a credential a DELETE request for that credential is needed. The path of a credential is 
+To revoke a credential, a DELETE request for that credential is needed. The path of a credential is 
 `/api/credential/<credential id>`.
-Authorization is needed for this request please refer to `Authorization Header` for details.
+Authorization is needed for this request, please refer to `Authorization Header` for details.
 
 A revocation of a credential might look like:
 ```
@@ -255,7 +292,7 @@ Accept: */*
 Authorization: Bearer ya29.[...]MUchM
 X-OpenId-Connect-Issuer: https://accounts.google.com
 ```
-And the result would be a pure 204, as the credential has been sucessfully deleted.
+And the result would be a pure 204, as the credential has been successfully deleted.
 ```
 HTTP/1.1 204 No Content
 content-length: 0
@@ -263,13 +300,15 @@ content-type: application/json
 ```
 
 ### Authorization Header
-To get the request authorized two header fields need to be set.
-The first header is the `Authorization` header. Following the OAuth2.0 spec, the access token will be added into the authorization header as bearer token:
+To get the request authorized, two header fields need to be set.
+The first header is the `Authorization` header. Following the OAuth2.0 spec, the
+access token will be added into the authorization header as a bearer token:
 ```
 Authorization: Bearer ya29.[...]uMUchM
 ```
 
-The second header field is the `X-OpenId-Connect-Issuer` header, which must include either the TTS id of the OpenId Connect provider or its issuer URL:
+The second header field is the `X-OpenId-Connect-Issuer` header, which must
+include either the TTS id of the OpenId Connect provider or its issuer URL:
 ```
 X-OpenId-Connect-Issuer: https://accounts.google.com
 ```
