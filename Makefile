@@ -8,7 +8,7 @@ all: compile
 
 clean:
 	$(REBAR) clean -a
-	# this is needed for building packages
+        # this is needed for building packages
 	rm -rf _build/default/plugins
 
 cln:
@@ -33,7 +33,11 @@ cookie:
 	./utils/gen_random_cookie
 
 rel: cookie
+ifeq ($(OVERLAY_VARS),)
 	$(REBAR) release
+else
+	$(REBAR) release --overlay_vars $OVERLAY_VARS
+endif
 
 run: cookie 
 	$(REBAR) run 
