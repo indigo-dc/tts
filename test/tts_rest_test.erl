@@ -49,8 +49,15 @@ init_test() ->
          }).
 
 rest_init_test() ->
+    MeckModules = [cowboy_req],
+    SetHeader = fun(_Name, _Value, ReqIn) ->
+                        ReqIn
+                end,
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(cowboy_req, set_resp_header, SetHeader),
     Req = req,
     {ok, Req, #state{}} = tts_rest:rest_init(Req, doesnt_matter),
+    ok = test_util:meck_done(MeckModules),
     ok.
 
 allowed_methods_test() ->

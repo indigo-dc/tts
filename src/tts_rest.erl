@@ -75,7 +75,8 @@ init(_, _Req, _Opts) ->
          }).
 
 rest_init(Req, _Opts) ->
-    {ok, Req, #state{}}.
+    Req2 = cowboy_req:set_resp_header(<<"Cache-control">>, <<"no-cache">>, Req),
+    {ok, Req2, #state{}}.
 
 
 allowed_methods(Req, State) ->
