@@ -15,6 +15,9 @@ cover/
 test/ct.cover.spec
 *.beam
 /config/vm.args
+/config/vars_pkg.config
 tts.db
 distdir/
 package
+*~
+
