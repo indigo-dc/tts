@@ -8,11 +8,8 @@ all: compile
 
 clean:
 	$(REBAR) clean -a
-	# this is needed for building packages
+        # this is needed for building packages
 	rm -rf _build/default/plugins
-
-cln:
-	$(REBAR) clean -a
 
 eunit:
 	$(REBAR) do eunit,cover -v
@@ -33,7 +30,13 @@ cookie:
 	./utils/gen_random_cookie
 
 rel: cookie
-	$(REBAR) release
+ifeq ($(OVERLAY_VARS),)
+	$(REBAR) release --overlay_vars ./config/vars.config
+else
+	cat ./config/vars.config > ./config/vars_pkg.config
+	cat $(OVERLAY_VARS) >> ./config/vars_pkg.config
+	$(REBAR) release --overlay_vars ./config/vars_pkg.config
+endif
 
 run: cookie 
 	$(REBAR) run 
