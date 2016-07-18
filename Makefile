@@ -33,8 +33,8 @@ rel: cookie
 ifeq ($(OVERLAY_VARS),)
 	$(REBAR) release --overlay_vars ./config/vars.config
 else
-	cat $(OVERLAY_VARS) > ./config/vars_pkg.config
-	cat ./config/vars.config >> ./config/vars_pkg.config
+	cat ./config/vars.config > ./config/vars_pkg.config
+	cat $(OVERLAY_VARS) >> ./config/vars_pkg.config
 	$(REBAR) release --overlay_vars ./config/vars_pkg.config
 endif
 
