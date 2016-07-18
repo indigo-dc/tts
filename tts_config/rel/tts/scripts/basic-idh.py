@@ -17,9 +17,9 @@ MAX_UID=8999
 # should local posix accounts be created
 CREATE_LOCAL_ACCOUNTS = False
 # the create_user python script to use if local accounts will be created  
-CREATE_USER="sudo /usr/share/tts/idh/create_user.py"
+CREATE_USER="sudo {{platform_share_dir}}/idh/create_user.py"
 # the location of the sqlite database
-SQLITE_DB="/var/lib/tts/idh/idh.db"
+SQLITE_DB="{{platform_data_dir}}/idh.db"
 
 con = None
 
