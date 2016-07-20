@@ -8,7 +8,6 @@ all: compile
 
 clean:
 	$(REBAR) clean -a
-        # this is needed for building packages
 	rm -rf _build/default/plugins
 
 eunit:
@@ -30,16 +29,14 @@ cookie:
 	./utils/gen_random_cookie
 
 rel: cookie
-ifeq ($(OVERLAY_VARS),)
-	$(REBAR) release --overlay_vars ./config/vars.config
-else
-	cat ./config/vars.config > ./config/vars_pkg.config
-	cat $(OVERLAY_VARS) >> ./config/vars_pkg.config
-	$(REBAR) release --overlay_vars ./config/vars_pkg.config
+	cat ./config/vars.config > ./config/vars_tmp.config
+ifneq ($(OVERLAY_VARS),)
+	cat $(OVERLAY_VARS) >> ./config/vars_tmp.config
 endif
+	$(REBAR) release --overlay_vars ./config/vars_tmp.config
 
-run: cookie 
-	$(REBAR) run 
+run: rel 
+	./_build/default/rel/tts/bin/tts console
 
 install_deps:
 	$(REBAR) install_deps
