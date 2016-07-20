@@ -53,7 +53,7 @@ stop() ->
 new_session() ->
     gen_server:call(?MODULE, new_session).
 
--spec get_session(ID :: uuid:uuid() | undefined) -> {ok, pid()}.
+-spec get_session(ID :: binary() | undefined) -> {ok, pid()}.
 get_session(undefined) ->
     new_session();
 get_session(ID) ->
