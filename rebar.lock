@@ -44,7 +44,7 @@
   2},
  {<<"lager">>,
   {git,"https://github.com/basho/lager.git",
-       {ref,"46f535b856e4a30c5afed34778b2b6e23560a845"}},
+       {ref,"1c42c3bffbab49b0f06c9a916b00ca4911ae6a2f"}},
   0},
  {<<"node_package">>,
   {git,"https://github.com/dergraf/node_package.git",
