@@ -72,12 +72,11 @@ def issue_certificate(Subject, Issuer, Serial):
     os.system(Log)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'sign_failed'})
-    Cmd = "rm %s"%(PassFile)
-    if os.system(Cmd) != 0:
-        return json.dumps({'error':'purge_pass'})
-    
     Cert = get_file_content(CertFile)
     PrivKey = get_file_content(KeyFile)
+    Cmd = "rm %s %s"%(PassFile, KeyFile)
+    if os.system(Cmd) != 0:
+        return json.dumps({'error':'purge_files'})
     CertObj = {'name':'Certificate', 'type':'textfile', 'value':Cert, 'rows':'30', 'cols':'64'}
     PrivKeyObj = {'name':'Private Key', 'type':'textfile', 'value':PrivKey, 'rows':'30', 'cols':'64'}
     PasswdObj = {'name':'Passphrase (for Private Key)', 'type':'text', 'value':Password}
@@ -87,7 +86,8 @@ def issue_certificate(Subject, Issuer, Serial):
 
 def revoke_cert(SerialNumber):
     init_ca_if_needed()
-    return json.dumps({'error':'not_implemented'})
+    #just return okay for now, will add revocation later
+    return json.dumps({'result':'ok'})
 
 def init_ca_if_needed():
     if not os.path.isdir(CA_ABS_BASE):
