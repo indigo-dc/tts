@@ -9,7 +9,7 @@ import traceback
 import string
 import random
 
-CA_BASE="~/.config/tts_ca"
+CA_BASE="{{platform_data_dir}}/tts_ca"
 CA_SUBJECT="/C=DE/O=KIT/OU=INDIGO/CN=TTS-CA"
 CERT_SUBJECT="/C=DE/O=KIT/OU=INDIGO/CN=%s@%s_%s"
 OPENSSL_CONF = """

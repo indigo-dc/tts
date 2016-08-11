@@ -4,7 +4,7 @@ Host = oneserver.com
 Port = 2633
 Description = Access to a OpenNebula in oneserver.com 
 
-Cmd = ~/.config/tts/scripts/opennebula.py 
+Cmd = {{platform_data_dir}}/plugins/opennebula.py 
 
 ConnectionType = local 
 AllowSameState = true

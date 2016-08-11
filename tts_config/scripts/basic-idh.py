@@ -8,16 +8,19 @@ import os
 from pwd import getpwnam
 import traceback
 
-
+#prefix of the username, followed by a number
+USER_PREFIX="ttsuser_"
+# the minimal uid to reserve for TTS users 
+MIN_UID=2000
+# the maximal uid to reserve for TTS users, set to 0 for unlimited 
+MAX_UID=8999
+# should local posix accounts be created
 CREATE_LOCAL_ACCOUNTS = False
+# the create_user python script to use if local accounts will be created  
+CREATE_USER="sudo {{platform_data_dir}}/idh/create_user.py"
+# the location of the sqlite database
+SQLITE_DB="{{platform_data_dir}}/idh/idh.db"
 
-
-SQLITE_DB=os.path.join(os.path.dirname(os.path.realpath(__file__)),"idh.db")
-# the create_user python script needs to be executable using sudo  
-CREATE_USER_PYTHON="sudo %s"%os.path.join(os.path.dirname(os.path.realpath(__file__)),"create_user.py")
-# the create_user binary needs to be owned by root and the setuid flag set
-CREATE_USER_BIN=os.path.join(os.path.dirname(os.path.realpath(__file__)),"create_user")
-CREATE_USER=CREATE_USER_PYTHON
 con = None
 
 def reset_database():
@@ -26,6 +29,11 @@ def reset_database():
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS oidc")
     cur.execute("DROP TABLE IF EXISTS posix")
+    create_database()
+
+def create_database():
+    global con
+    cur = con.cursor()
     cur.execute("CREATE TABLE oidc (Id INTEGER PRIMARY KEY, Issuer TEXT, Subject TEXT)")
     cur.execute("CREATE TABLE posix (Id INTEGER PRIMARY KEY, OidcID INTEGER, Uid TEXT, UidNumber INTEGER, GidNumber INTEGER, HomeDir TEXT)")
 
@@ -80,21 +88,24 @@ def create_posix(OidcId, Commit=True):
     MaxUid = Result[0][0]
     NextXid = None
     if MaxUid == None:
-        NextXid = 2000
+        NextXid = MIN_UID 
     else:
         NextXid = MaxUid +1
-  
-    if NextXid == None or NextXid > 9999:
+ 
+    if NextXid == None:
         return None
 
-    NextUserName = "ttsuser_%d"%NextXid 
+    if NextXid > MAX_UID and MAX_UID > 0:
+        return None
+
+    NextUserName = "%s%d"%(USER_PREFIX, UserIndex)
     HomeDir = "/home/%s"%NextUserName
     Result =  add_posix(NextUserName,NextXid,NextXid,HomeDir,OidcId,Commit)
     return Result
 
 def create_posix_account(OidcId, Commit=True):
-    UserIndex = OidcId + 2000
-    UserName = "ttsuser_%d"%UserIndex
+    UserIndex = OidcId + MIN_UID 
+    UserName = "%s%d"%(USER_PREFIX, UserIndex)
     User = create_account(UserName) 
     Result =  add_posix(User[0],User[1],User[2],User[3],OidcId,Commit)
     return Result
@@ -134,8 +145,13 @@ def add_posix(UserName, Uid, Gid, HomeDir, OidcId, Commit=True):
 
 def connect():
     global con
+    create = False
+    if not os.path.isfile(SQLITE_DB):
+        create = True
     if not con:
         con = sqlite3.connect(SQLITE_DB)
+        if create:
+            create_database()
 
 def disconnect():
     global conn
