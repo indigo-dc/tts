@@ -271,15 +271,24 @@ parse_and_apply_oidc([ConfigFile|Tail])  ->
                           _ -> In
                       end
               end,
+    RequestScopes0 = get_value(oidc, "", "RequestScopes", binary, ""),
+    RequestScopes = case RequestScopes0 of
+                       <<>> -> undefined;
+                       _ -> binary:split(RequestScopes0, [<<",">>],
+                                         [global, trim_all])
+                   end,
     case lists:foldl(IsEmpty, false, Settings) of
         false ->
             [Name, Desc, ClientId, Secret, ConfigEndpoint] = Settings,
             LocalEndpoint = ?CONFIG(local_endpoint),
-            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(Name, Desc,
+            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(undefined,
+                                                                Name, Desc,
                                                                 ClientId,
                                                                 Secret,
                                                                 ConfigEndpoint,
-                                                                LocalEndpoint);
+                                                                LocalEndpoint,
+                                                                RequestScopes
+                                                               );
         true ->
             %TODO: write some log about not adding the OIDC
             ok

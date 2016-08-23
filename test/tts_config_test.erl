@@ -53,7 +53,7 @@ config_read_test() ->
     CompileFun = fun(_) -> routing end,
     HttpStartFun = fun(_, _, _, _) -> {ok, some_info} end,
     HttpStopFun = fun(_) -> ok end,
-    AddOidcFun = fun(_, _, _, _, _, _) -> {ok, id, pid} end,
+    AddOidcFun = fun(_, _, _, _, _, _, _, _) -> {ok, id, pid} end,
     AddServiceFun = fun(_) -> ok end,
 
     ok = test_util:meck_new(MeckModules),
