@@ -52,7 +52,7 @@
   0},
  {<<"oidcc">>,
   {git,"https://github.com/indigo-dc/oidcc.git",
-       {ref,"06d63d51da95c06c721965f4673172bf8daff23c"}},
+       {ref,"e8d55433e69161194e643f8705cbb0f2f6ba4ed2"}},
   0},
  {<<"quickrand">>,
   {git,"https://github.com/okeuday/quickrand.git",

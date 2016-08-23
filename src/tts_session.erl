@@ -200,8 +200,9 @@ handle_call({set_oidc_provider_id, OP}, _From, #state{max_age=MA}=State) ->
 handle_call(get_iss_sub, _From,
             #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
     {reply, {ok, Issuer, Subject}, State, MA};
-handle_call({set_token, #{ id := #{ iss := Issuer, sub := Subject }} = Token}
-            , _From, #state{max_age=MA}=State) ->
+handle_call({set_token, #{id := #{claims :=
+                                      #{iss := Issuer, sub := Subject }}
+                         } = Token}, _From, #state{max_age=MA}=State) ->
     {reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};

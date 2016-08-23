@@ -197,7 +197,7 @@ show_user_page(Session, Credential, Log, Error) ->
     #{body => Body, status => 200, cookie => update}.
 
 
-try_to_set_user({ok, #{id := #{ sub := Subject, iss := Issuer},
+try_to_set_user({ok, #{id := #{claims := #{sub := Subject, iss := Issuer}},
                       access := #{token := AccessToken}} = Token},
                 ReqMap) ->
     set_valid_user(tts_user_cache:get_user_info(Issuer, Subject, AccessToken),
@@ -232,8 +232,14 @@ redirect_to(auth_server, #{op_id := OpenIdProviderId, session:=Session,
     {ok, OidcState} = tts_session:get_oidc_state(Session),
     {ok, OidcNonce} = tts_session:get_oidc_nonce(Session),
     ok = tts_session:set_oidc_provider(OpenIdProviderId, Session),
+    {ok, Config} = oidcc:get_openid_provider_info(OpenIdProviderId),
+    RequestScopes = case maps:get(request_scopes, Config) of
+                        List when is_list(List) -> List;
+                        _ -> ?CONFIG(request_scopes, [openid, profile])
+                    end,
     {ok, Redirection} = oidcc:create_redirect_url(OpenIdProviderId,
-                                                  [openid, email, profile],
+                                                  RequestScopes,
+                                                  %% [openid, email, profile],
                                                   OidcState, OidcNonce),
     lager:info("~p: redirecting to openid provider: ~p", [SessionId,
                                                           Redirection]),
