@@ -98,7 +98,7 @@ def create_posix(OidcId, Commit=True):
     if NextXid > MAX_UID and MAX_UID > 0:
         return None
 
-    NextUserName = "%s%d"%(USER_PREFIX, UserIndex)
+    NextUserName = "%s%d"%(USER_PREFIX, NextXid)
     HomeDir = "/home/%s"%NextUserName
     Result =  add_posix(NextUserName,NextXid,NextXid,HomeDir,OidcId,Commit)
     return Result
