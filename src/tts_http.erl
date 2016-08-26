@@ -134,10 +134,10 @@ request_credential(#{session := Session, session_id := SessionId,
             lager:info("~p: requested credential ~p",
                        [SessionId, CredId]),
             show_user_page(Session, Credential, Log);
-        {error, Reason, _Log} ->
+        {error, Reason, Log} ->
             lager:warning("~p: credential request for ~p failed with ~p",
                        [SessionId, ServiceId, Reason]),
-            show_user_page(Session, <<"failed to request credential">>)
+            show_user_page(Session, <<"failed to request credential">>, Log)
     end;
 request_credential(#{session := Session}) ->
     Desc = <<"Credential Request failed">>,
@@ -149,14 +149,14 @@ revoke_credential(#{session := Session, session_id:=SessionId,
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     case tts_credential:revoke(CredId, UserInfo) of
-        {ok, _Result, _Log} ->
+        {ok, _Result, Log} ->
             lager:info("~p: revoked credential ~p as ~p ~p",
                        [SessionId, CredId, Issuer, Subject]),
-            show_user_page(Session);
-        {error, Error, _Log} ->
+            show_user_page(Session, false, Log);
+        {error, Error, Log} ->
             lager:warning("~p: revocation of credential ~p  as ~p ~p
             failed with ~p", [SessionId, CredId, Issuer, Subject, Error]),
-            show_user_page(Session, Error)
+            show_user_page(Session, Error, Log)
     end.
 
 show_user_page(Session) ->
