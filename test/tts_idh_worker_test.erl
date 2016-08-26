@@ -22,7 +22,10 @@ lookup_check() ->
                      ok = tts_idh_worker:stop(Pid),
                      #{gidNumber := 1000, homeDirectory := <<"/home/you">>,
                        uid := <<"you">>, uidNumber := 1000,
-                       userIds := [[Issuer, Subject]]} = Res
+                       userIds := [[Iss, Sub]]} = Res,
+                     ?assertEqual(Issuer, Iss),
+                     ?assertEqual(Subject, Sub),
+                     ok
              end,
     ok = meck:expect(tts_idh, user_result, Result),
 
