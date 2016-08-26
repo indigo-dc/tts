@@ -56,7 +56,8 @@ def revoke_cert(Serial):
 
 def issue_certificate(Subject, Issuer, Serial):
     AbsBase = CA_ABS_BASE
-    IssuerDomain = string.rsplit(Issuer, "/", 1)[-1]
+    IssuerDomainSlash = string.split(Issuer, "//", 1)[-1]
+    IssuerDomain = string.replace(IssuerDomainSlash, "/", "_")
     Subject = CERT_SUBJECT%(Subject, IssuerDomain, Serial)
     Password = id_generator(32)
     CAPassFile = "%s/private/pass"%(AbsBase)
