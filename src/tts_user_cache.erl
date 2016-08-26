@@ -136,8 +136,7 @@ load_user_if_needed({error, not_found}, Issuer, Subject, AccessToken) ->
 insert_user({ok, IdhInfo}, {ok, OidcInfo0}, Issuer) ->
     OidcInfo = maps:put(iss, Issuer, OidcInfo0),
     Info = #{site => IdhInfo, oidc => OidcInfo},
-    {ok, UserInfo} = gen_server:call(?MODULE, {insert, Info}),
-    {ok, UserInfo};
+    gen_server:call(?MODULE, {insert, Info});
 insert_user({error, Reason}, _, _) ->
     {error, Reason};
 insert_user(_, {error, Reason}, _) ->
@@ -146,8 +145,10 @@ insert_user(_, _, _) ->
     {error, unsupported_values}.
 
 sync_insert_new_user(UserInfo) ->
-    ok = add_new_user_entry(UserInfo),
-    {ok, UserInfo}.
+    case add_new_user_entry(UserInfo) of
+        ok -> {ok, UserInfo};
+        {error, _} -> {error, {collision, UserInfo}}
+    end.
 
 
 %% functions with data access
@@ -160,7 +161,7 @@ verify_cache_validity() ->
     {ok, _NumDel} = tts_data:user_delete_entries_older_than(Timeout).
 
 add_new_user_entry(UserInfo) ->
-    ok = tts_data:user_insert_info(UserInfo, ?CONFIG(cache_max_entries)).
+    tts_data:user_insert_info(UserInfo, ?CONFIG(cache_max_entries)).
 
 lookup_user(Issuer, Subject) ->
     tts_data:user_lookup_info(Issuer, Subject).
