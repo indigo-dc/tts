@@ -136,7 +136,7 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateOk, Con) ->
     Result = case (Unique) of
                  true ->
                      CredentialId = create_random_credential_id(Con),
-                     CreationTime = erlang:system_time(seconds),
+                     CreationTime = cowboy_clock:rfc1123(),
                      esqlite3:q("INSERT INTO tts_cred
                                 VALUES( ?1,?2,?3,?4,?5,?6);",
                                 [CredentialId, CreationTime, Interface, UserId,
@@ -229,7 +229,7 @@ reconfigure(NewDB, #state{con=Con} = State) ->
 -define(TABLES, [
                  {cred,
                   <<"tts_cred">>,
-                  <<"CREATE TABLE tts_cred(credential_id Text, ctime INTEGER,
+                  <<"CREATE TABLE tts_cred(credential_id Text, ctime TEXT,
                   interface TEXT, user_id TEXT, service_id TEXT,
                     credstate TEXT);
                     CREATE INDEX tts_cred_user_idx ON tts_cred(user_id);

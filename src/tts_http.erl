@@ -98,10 +98,12 @@ show_select_page(ReqMap) ->
                            [ [ Id, Desc, Enabled ] | List]
                    end,
     OpList = lists:reverse(lists:foldl(GetIdAndDesc, [], OIDCList)),
+    Error = maps:get(error, ReqMap, undefined),
     {ok, Version} = application:get_key(tts, vsn),
     {ok, Body} = tts_main_dtl:render([{ep_redirect, ?CONFIG(ep_redirect)},
                                       {oidc_op_list, OpList},
                                       {version, Version},
+                                      {error, Error},
                                       {configured, true}]),
     Cookie = maps:get(cookie, ReqMap, update),
     #{body => Body, status => 200, cookie => Cookie}.
@@ -220,12 +222,9 @@ set_valid_user({ok, UserInfo}, ReqMap) ->
 set_valid_user({error, Reason}, ReqMap) ->
     #{session_id := SessionId} = ReqMap,
     lager:info("~p: login failed due to ~p", [SessionId, Reason]),
-    Desc = <<"an error occured during login">>,
-    show_error_and_close_session(Desc, ReqMap);
-set_valid_user(_, #{session_id := SessionId } = ReqMap) ->
-    lager:info("~p: user login failed ~p", [SessionId, ReqMap]),
-    Error = <<"Invalid/Unknown User">>,
-    show_error_and_close_session(Error, ReqMap).
+    Desc = <<"An error occured during login, please try again later.
+              If you keep getting the error inform an admin.">>,
+    show_error_and_close_session(Desc, ReqMap).
 
 redirect_to(auth_server, #{op_id := OpenIdProviderId, session:=Session,
                            session_id:=SessionId}) ->
@@ -252,7 +251,7 @@ redirect_to(_, _ReqMap) ->
 
 show_error_and_close_session(Error, ReqMap) ->
     #{ session := Session, session_id := SessionId } = ReqMap,
-    lager:info("~p: closing session due to ~p", [SessionId, Error]),
+    lager:info("~p: closing session due to error", [SessionId]),
     ok = tts_session:close(Session),
     Update = #{error => Error, status => 200, cookie => clear},
     NewReqMap = maps:merge(ReqMap, Update),

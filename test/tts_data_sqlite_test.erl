@@ -47,6 +47,9 @@ credential_check() ->
     application:set_env(tts,sqlite_db,?TEST_DB),
     {ok, Pid} = tts_data_sqlite:start_link(),
     ok = tts_data_sqlite:reconfigure(),
+    MockModules = [cowboy_clock],
+    test_util:meck_new(MockModules),
+    meck:expect(cowboy_clock, rfc1123, fun() -> <<"today">> end),
 
     CredState = <<"cstate">>,
     {ok, CredId} = tts_data_sqlite:credential_add(<<"user1">>, <<"service1">>,
@@ -78,6 +81,8 @@ credential_check() ->
     ?assertEqual(0,Count3),
     ok = tts_data_sqlite:stop(),
     ok = test_util:wait_for_process_to_die(Pid,1000),
+    ok = test_util:meck_done(MockModules),
+    
     file:delete(?TEST_DB),
     ok.
 
