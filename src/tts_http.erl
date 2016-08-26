@@ -137,7 +137,8 @@ request_credential(#{session := Session, session_id := SessionId,
         {error, Reason, Log} ->
             lager:warning("~p: credential request for ~p failed with ~p",
                        [SessionId, ServiceId, Reason]),
-            show_user_page(Session, <<"failed to request credential">>, Log)
+            ErrMsg = <<"failed to request credential">>,
+            show_user_page(Session, false, Log, ErrMsg)
     end;
 request_credential(#{session := Session}) ->
     Desc = <<"Credential Request failed">>,
@@ -156,7 +157,8 @@ revoke_credential(#{session := Session, session_id:=SessionId,
         {error, Error, Log} ->
             lager:warning("~p: revocation of credential ~p  as ~p ~p
             failed with ~p", [SessionId, CredId, Issuer, Subject, Error]),
-            show_user_page(Session, Error, Log)
+            ErrMsg = <<"failed to revoke credential">>,
+            show_user_page(Session, false, Log, ErrMsg)
     end.
 
 show_user_page(Session) ->
