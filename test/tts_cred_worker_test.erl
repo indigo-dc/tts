@@ -181,7 +181,7 @@ no_cmd_crash_test() ->
 
 
     ok = tts_cred_worker:stop(Pid),
-    ok = test_util:wait_for_process_to_die(Pid,100),
+    ok = test_util:wait_for_process_to_die(Pid,1000),
     ok = test_util:meck_done(MeckModules),
     ok.
 
