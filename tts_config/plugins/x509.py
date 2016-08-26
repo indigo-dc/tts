@@ -10,8 +10,8 @@ import string
 import random
 
 CA_BASE="{{platform_data_dir}}/tts_ca"
-CA_SUBJECT="/C=DE/O=KIT/OU=INDIGO/CN=TTS-CA"
-CERT_SUBJECT="/C=DE/O=KIT/OU=INDIGO/CN=%s@%s_%s"
+CA_SUBJECT="/C=EU/O=INDIGO/OU=TTS/CN=TTS-CA"
+CERT_SUBJECT="/C=EU/O=INDIGO/OU=TTS/CN=%s"
 OPENSSL_CONF = """
 [ ca ]
 default_ca = CA_default 
@@ -56,27 +56,38 @@ def revoke_cert(Serial):
 
 def issue_certificate(Subject, Issuer, Serial):
     AbsBase = CA_ABS_BASE
-    IssuerDomainSlash = string.split(Issuer, "//", 1)[-1]
-    IssuerDomain = string.replace(IssuerDomainSlash, "/", "_")
-    Subject = CERT_SUBJECT%(Subject, IssuerDomain, Serial)
+    Issuer = string.rstrip(Issuer, "/")
+    CertSubject = CERT_SUBJECT%(Serial)
     Password = id_generator(32)
+    AltSub = "subjectAltName = URI:%s/%s/%s"%(Issuer, Subject, Serial)
     CAPassFile = "%s/private/pass"%(AbsBase)
     CACertFile = "%s/certs/cacert.pem"%(AbsBase)
     CertFile = "%s/certs/usercert_%s.pem"%(AbsBase, Serial)
     CsrFile = "%s/users/csr/userreq_%s.pem"%(AbsBase, Serial)
     KeyFile = "%s/users/private/userkey_%s.pem"%(AbsBase, Serial)
     PassFile = "%s/users/private/userpass_%s"%(AbsBase, Serial)
+    TmpConfFile = "%s/users/private/userconf_%s"%(AbsBase, Serial)
     ConfFile = "%s/openssl.conf"%(AbsBase)
     LogFile = "%s/users/private/userlog_%s"%(AbsBase, Serial)
     Cmd = "echo -n \"%s\" > %s"%(Password, PassFile)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'userpass_failed'})
-    Cmd = "openssl req -newkey rsa:1024 -keyout %s -sha256 -out %s -subj \"%s\" -passout file:%s >> %s 2>&1"%(KeyFile, CsrFile, Subject, PassFile, LogFile) 
+
+    Cmd = "openssl req -newkey rsa:1024 -keyout %s -sha256 -out %s -subj \"%s\" -passout file:%s >> %s 2>&1"%(KeyFile, CsrFile, CertSubject, PassFile, LogFile) 
     Log = "echo %s > %s"%(Cmd, LogFile) 
     os.system(Log)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'csr_failed'})
-    Cmd = "openssl ca -batch -config %s -policy policy_anything -extensions usr_cert -out %s -passin file:%s -infiles %s >> %s 2>&1"%(ConfFile, CertFile, CAPassFile, CsrFile, LogFile)
+
+    Cmd = "cp %s %s"%(ConfFile, TmpConfFile)
+    if os.system(Cmd) != 0:
+        return json.dumps({'error':'conf_failed'})
+
+    Cmd = "echo \"%s\" >> %s"%(AltSub, TmpConfFile)
+    if os.system(Cmd) != 0:
+        return json.dumps({'error':'conf_update_failed'})
+
+    Cmd = "openssl ca -batch -config %s -policy policy_anything -extensions usr_cert -out %s -passin file:%s -infiles %s >> %s 2>&1"%(TmpConfFile, CertFile, CAPassFile, CsrFile, LogFile)
     Log = "echo %s >> %s"%(Cmd, LogFile) 
     os.system(Log)
     if os.system(Cmd) != 0:
