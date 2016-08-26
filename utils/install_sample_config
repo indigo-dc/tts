@@ -10,6 +10,7 @@ fi
 echo -n "copy configuration "
 export platform_data_dir=$DATA_DIR
 export idh_script="scripts/idh-single-user.py"
+export cache_entries="CacheMaxEntries = 0"
 export oidc_info="\
 # WARNING: these settings only allow http://localhost:8080\
 # NOT MENT FOR PRODUCTION!"
