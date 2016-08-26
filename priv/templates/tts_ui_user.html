@@ -73,17 +73,21 @@ You are not able to request/revoke any credentials
 </div>
 <table class="table table-striped">
     <tr>
-        <th> Command  </th> 
-        <th> Exit Status  </th> 
-        <th> Std Out  </th> 
-        <th> Std Err  </th> 
+        <th> Type  </th> 
+        <th> Value  </th> 
     </tr>
     {% for log in credential_log %}
     <tr>
-        <td> {{ log.cmd }}  </td> 
-        <td> {{ log.exit_status }}  </td> 
-        <td> {{ log.std_out }}  </td> 
-        <td> {{ log.std_err }}  </td> 
+        <td> Cmd </td><td> {{ log.cmd }}  </td> 
+    </tr>
+    <tr>
+        <td> Exit </td><td> {{ log.exit_status }}  </td> 
+    </tr>
+    <tr>
+        <td> StdOut </td><td> {{ log.std_out }}  </td> 
+    </tr>
+    <tr>
+        <td> StdErr </td><td> {{ log.std_err }}  </td> 
     </tr>
     {% endfor %}
 </table>
