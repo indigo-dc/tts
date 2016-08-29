@@ -1,8 +1,22 @@
 # Token Translation Service 
 ## Purpose
-The Token Translation Service (TTS) offers an easy way to self service
-credentials by the users. The TTS was necessary to develop for cases when OpenId
-Connect serves as the only source for authorization and identification.
-Therefore, the TTS bridges the gap between services that do not support OpenId
-Connect and the OpenId Connect provider. 
+
+Token Translation Service (TTS) returns credentials after successful
+authentication.  It offers an easy way to self service credentials by the
+users. TTS was developed for cases in which users can be (only)
+authenticated via OpenId-Connect but require different credentials for
+accessing services.
+
+## Services
+Arbitrary services can be supported via a plugin interface. Currently
+supported services include
+
+- ssh public/private keypair creation
+- S3 authentication tokens
+- X.509 certificates
+- OpenNebula credentials
+
+## Interfaces
+TTS provides a web and a REST interface for users to create/retrieve and
+remove credentials.
 
