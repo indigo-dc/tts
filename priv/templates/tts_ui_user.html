@@ -153,6 +153,8 @@ You are not able to request/revoke any credentials
         <td> <input type="text" value="{{ keyvalue.value }}" class="form-control" readonly></input> </td> 
         {% elif keyvalue.type == "textfile" %}
         <td> <textarea rows="{{ keyvalue.rows }}" class="form-control" cols="{{ keyvalue.cols }}" readonly>{{ keyvalue.value }}</textarea> </td> 
+        {% elif keyvalue.type == "textarea" %}
+        <td> <textarea class="form-control" readonly>{{ keyvalue.value }}</textarea> </td> 
         {% else %}
         <td> <input type="text" value="{{ keyvalue.value }}" class="form-control" readonly></input> </td> 
         {% endif %}
