@@ -47,7 +47,7 @@ request_test() ->
     UserInfo4 = #{site => #{uid => UserId4}},
 
     CredState = <<"some_cred">>,
-    Cred = <<"secret">>,
+    Cred = #{name => "password", type => <<"text">>, value => <<"secret">>},
     MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker, tts_service],
     Token = #{},
     Params = [],

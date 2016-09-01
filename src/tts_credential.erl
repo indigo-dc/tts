@@ -98,9 +98,10 @@ revoke(CredentialId, UserInfo) ->
 handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
-handle_request_result({ok, #{credential := Cred, state := CredState}, Log}
+handle_request_result({ok, #{credential := Cred0, state := CredState}, Log}
                       , ServiceId, #{site := #{uid := UserId}} = UserInfo,
                       Interface, _Token) ->
+    Cred = validate_credential_values(Cred0),
     case sync_store_credential(UserId, ServiceId, Interface, CredState) of
         {ok, CredId} ->
             lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",
@@ -211,4 +212,48 @@ store_credential(UserId, ServiceId, Interface, CredentialState) ->
 remove_credential(UserId, CredentialId) ->
     tts_data_sqlite:credential_remove(UserId, CredentialId).
 
+
+validate_credential_values(Credential) ->
+    validate_credential_values(Credential, []).
+
+validate_credential_values([], ValidatedCredential) ->
+    lists:reverse(ValidatedCredential);
+validate_credential_values([#{type:=<<"text">>, value:=Val0}=Entry|T],
+                           ValCred) ->
+    Value = value_to_binary(Val0),
+    NewEntry = maps:put(value, Value, Entry),
+    validate_credential_values(T, [ NewEntry | ValCred]);
+validate_credential_values([#{type:=<<"textarea">>, value:=Val0}=Entry|T],
+                           ValCred) ->
+    Value = value_to_binary(Val0),
+    NewEntry = maps:put(value, Value, Entry),
+    validate_credential_values(T, [ NewEntry | ValCred]);
+validate_credential_values([#{type:=<<"textfile">>, value:=Val0}=Entry|T],
+                           ValCred) ->
+    Value = value_to_file(Val0),
+    NewEntry = maps:put(value, Value, Entry),
+    validate_credential_values(T, [ NewEntry | ValCred]);
+validate_credential_values([#{type:=Type}=Entry|T], ValCred) ->
+    lager:critical("unknown type ~p in credential, skipping Entry ~p",
+                   [Type, Entry]),
+    validate_credential_values(T, ValCred);
+validate_credential_values([Entry|T], ValCred) ->
+    lager:critical("no type in Entry ~p *SKIPPING*", [Entry]),
+    validate_credential_values(T, ValCred).
+
+
+value_to_binary(Val) when is_binary(Val)->
+    Val;
+value_to_binary(Val0) ->
+    list_to_binary(io_lib:format("~p", [Val0])).
+
+value_to_file(Val) when is_binary(Val)->
+    Val;
+value_to_file(Val) when is_list(Val)->
+    file_lines_to_binary(Val, []).
+file_lines_to_binary([], File) ->
+    lists:reverse(File);
+file_lines_to_binary([H | T], File) ->
+    NewLine = value_to_binary(H),
+    file_lines_to_binary(T, [NewLine | File]).
 

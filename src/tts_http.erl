@@ -29,7 +29,7 @@ handle(#{path := ep_user, method := post, logged_in := true} = ReqMap) ->
     handle_user_action(ReqMap);
 handle(#{path := ep_user, method := get, logged_in := true,
          session := Session}) ->
-    show_user_page(Session);
+    show_user_page(Session, false, [], false);
 handle(#{path := ep_main} = ReqMap) ->
     show_select_page(ReqMap);
 handle( ReqMap) ->
@@ -117,8 +117,8 @@ handle_user_action(#{body_qs:=#{action := logout}, session:=Session}
                    = ReqMap) ->
     ok = tts_session:close(Session),
     maps:put(cookie, clear, redirect_to(ep_main, ReqMap));
-handle_user_action(ReqMap) ->
-    show_user_page(ReqMap).
+handle_user_action(#{session := Session}) ->
+    show_user_page(Session, false, [], false).
 
 
 request_credential(#{session := Session, session_id := SessionId,
@@ -133,7 +133,7 @@ request_credential(#{session := Session, session_id := SessionId,
             [#{name := id, value:=CredId}|_] = Credential,
             lager:info("~p: requested credential ~p",
                        [SessionId, CredId]),
-            show_user_page(Session, Credential, Log);
+            show_user_page(Session, Credential, Log, false);
         {error, Reason, Log} ->
             lager:warning("~p: credential request for ~p failed with ~p",
                        [SessionId, ServiceId, Reason]),
@@ -141,8 +141,8 @@ request_credential(#{session := Session, session_id := SessionId,
             show_user_page(Session, false, Log, ErrMsg)
     end;
 request_credential(#{session := Session}) ->
-    Desc = <<"Credential Request failed">>,
-    show_user_page(Session, Desc).
+    Error = <<"Credential Request failed">>,
+    show_user_page(Session, false, [], Error).
 
 
 revoke_credential(#{session := Session, session_id:=SessionId,
@@ -153,22 +153,13 @@ revoke_credential(#{session := Session, session_id:=SessionId,
         {ok, _Result, Log} ->
             lager:info("~p: revoked credential ~p as ~p ~p",
                        [SessionId, CredId, Issuer, Subject]),
-            show_user_page(Session, false, Log);
+            show_user_page(Session, false, Log, false);
         {error, Error, Log} ->
             lager:warning("~p: revocation of credential ~p  as ~p ~p
             failed with ~p", [SessionId, CredId, Issuer, Subject, Error]),
             ErrMsg = <<"failed to revoke credential">>,
             show_user_page(Session, false, Log, ErrMsg)
     end.
-
-show_user_page(Session) ->
-    show_user_page(Session, false, [], false).
-
-show_user_page(Session, Error) ->
-    show_user_page(Session, false, [], Error).
-
-show_user_page(Session, Credential, Log) ->
-    show_user_page(Session, Credential, Log, false).
 
 show_user_page(Session, Credential, Log, Error) ->
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
