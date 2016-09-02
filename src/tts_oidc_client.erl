@@ -9,12 +9,10 @@
 
 -define(COOKIE, <<"tts_session">>).
 
-login_succeeded(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
-                 access := #{token := AccessToken}} = TokenMap) ->
+login_succeeded(#{id := #{claims := #{ sub := Subject, iss := Issuer}}} = TokenMap) ->
     {ok, SessPid} = tts_session_mgr:new_session(),
     try
-        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject, 
-                                                      AccessToken),
+        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
         {ok, SessId} = tts_session:get_id(SessPid),
         ok = tts_session:set_token(TokenMap, SessPid),
         ok = tts_session:set_user_info(UserInfo, SessPid),
