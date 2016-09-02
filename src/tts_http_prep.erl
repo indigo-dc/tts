@@ -145,6 +145,8 @@ perform_cookie_action(clear, Req, _ReqMap) ->
     Opts = create_cookie_opts(0),
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, <<"deleted">>, Opts, Req),
     {ok, Req2};
+perform_cookie_action(update, Req, #{session := undefined}) ->
+    perform_cookie_action(clear, Req, undefined);
 perform_cookie_action(update, Req, #{session := Session}) ->
     {ok, MaxAge} = tts_session:get_max_age(Session),
     {ok, ID} = tts_session:get_id(Session),
@@ -193,6 +195,8 @@ map_to_atom(Item, Mapping, Default) ->
         false -> Default
     end.
 
+is_logged_in(_UserAgent, _IP, undefined) ->
+    false;
 is_logged_in(UserAgent, IP, Session) ->
     LoggedIn = tts_session:is_logged_in(Session),
     SameUA = tts_session:is_user_agent(UserAgent, Session),
