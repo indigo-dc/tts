@@ -52,6 +52,7 @@ start_full_debug() ->
     %debug these modules
     ListOfModules = [ "tts_http",
                       "tts_rest",
+                      "tts_oidc_client",
                       "tts_rest_cred",
                       "tts_user_cache",
                       "tts_session",
