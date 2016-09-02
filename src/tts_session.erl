@@ -171,6 +171,7 @@ clear_oidc_state_nonce(Pid) ->
           used_redirect = none,
           token = none,
           user_info = #{},
+          oidc_info = #{},
           max_age = 10
          }).
 
@@ -204,20 +205,24 @@ handle_call(get_iss_sub, _From,
     {reply, {ok, Issuer, Subject}, State, MA};
 handle_call({set_token, #{id := #{claims :=
                                       #{iss := Issuer, sub := Subject }}
-                         } = Token}, _From, #state{max_age=MA}=State) ->
-    {reply, ok, State#state{token=Token, iss=Issuer, sub=Subject}, MA};
+                         } = Token0}, _From, #state{max_age=MA}=State) ->
+    UserInfo = maps:get(user_info, Token0, undefined),
+    TokenKeys = [access, id, refres],
+    Token = maps:with(TokenKeys, Token0),
+    {reply, ok, State#state{token=Token, oidc_info=UserInfo, iss=Issuer,
+                            sub=Subject}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
-handle_call({set_user_info, #{ oidc := #{ sub := Subject }} = UserInfo}
-            , _From, #state{max_age=MA, sub=Subject}=State) ->
+handle_call({set_user_info, UserInfo}, _From, #state{max_age=MA} = State) ->
     {reply, ok, State#state{user_info=UserInfo}, MA};
-handle_call(get_user_info, _From, #state{max_age=MA, user_info=UserInfo}
-            =State) ->
-    {reply, {ok, UserInfo}, State, MA};
+handle_call(get_user_info, _From, #state{max_age=MA,
+                                         user_info=UserInfo, oidc_info=OidcInfo} =State) ->
+    LocalInfo = maps:get(oidc, UserInfo, #{}),
+    Info = maps:put(oidc, maps:merge(LocalInfo, OidcInfo), UserInfo),
+    {reply, {ok, Info}, State, MA};
 handle_call(get_display_name, _From, #state{max_age=MA, sub=Subject, iss=Issuer,
-                                            user_info=UserInfo}=State) ->
-    Oidc = maps:get(oidc, UserInfo, #{}),
-    Name = case maps:get(name, Oidc, undefined) of
+                                            oidc_info=OidcInfo}=State) ->
+    Name = case maps:get(name, OidcInfo, undefined) of
                undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
                Other -> Other
            end,
