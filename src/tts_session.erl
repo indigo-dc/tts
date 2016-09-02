@@ -73,6 +73,8 @@ close(Pid) ->
     gen_server:cast(Pid, close).
 
 -spec get_id(Pid :: pid()) -> {ok, ID::binary()}.
+get_id(undefined) ->
+    {ok, undefined};
 get_id(Pid) ->
     gen_server:call(Pid, get_id).
 

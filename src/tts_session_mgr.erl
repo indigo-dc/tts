@@ -53,11 +53,11 @@ stop() ->
 new_session() ->
     gen_server:call(?MODULE, new_session).
 
--spec get_session(ID :: binary() | undefined) -> {ok, pid()}.
+-spec get_session(ID :: binary() | undefined) -> {ok, pid() | undefined}.
 get_session(undefined) ->
-    new_session();
+    {ok, undefined};
 get_session(ID) ->
-    lookup_or_create_session_pid(ID).
+    lookup_session_pid(ID).
 
 -spec session_wants_to_close(ID :: binary()) -> ok.
 session_wants_to_close(ID) ->
@@ -135,13 +135,6 @@ repeat_id_gen_if_needed({ok, ID}) ->
 repeat_id_gen_if_needed(_) ->
     get_unique_id().
 
-lookup_or_create_session_pid({ok, Pid}) ->
-    {ok, Pid};
-lookup_or_create_session_pid({error, _}) ->
-    new_session();
-lookup_or_create_session_pid(ID) ->
-    lookup_or_create_session_pid(lookup_session_pid(ID)).
-
 %%
 %% functions with data access
 %%
@@ -155,11 +148,18 @@ add_new_session_entry(ID) ->
     end.
 
 lookup_session_pid(ID) ->
-    tts_data:sessions_get_pid(ID).
+    case tts_data:sessions_get_pid(ID) of
+        {ok, Pid} ->
+            {ok, Pid};
+        {error, _} ->
+            {ok, undefined}
+    end.
 
 set_session_for_id(ID, Pid) ->
     tts_data:sessions_update_pid(ID, Pid).
 
+delete_session(undefined) ->
+    ok;
 delete_session(ID) ->
     tts_data:sessions_delete(ID),
     ok.
