@@ -24,8 +24,8 @@ macro_test() ->
     ok.
 
 autostop_test() ->
-    MeckModules = [tts_session_mgr, tts_user_cache, tts_idh, tts_data_sqlite,
-                  cowboy_router, cowboy],
+    MeckModules = [tts_session_mgr, tts_user_cache, tts_idh, tts_data_sqlite, 
+                   oidcc_client, cowboy_router, cowboy],
 
     OkFun = fun() -> ok end,
     CompileFun = fun(_) -> routing end,
@@ -38,6 +38,7 @@ autostop_test() ->
     ok = meck:expect(tts_data_sqlite, reconfigure, OkFun),
     ok = meck:expect(cowboy_router, compile, CompileFun),
     ok = meck:expect(cowboy, start_http, HttpStartFun),
+    ok = meck:expect(oidcc_client, register, fun(_) -> ok end),
 
     {ok, Pid} = tts_config:start_link(),
     ok = test_util:wait_for_process_to_die(Pid,100),
@@ -47,7 +48,7 @@ autostop_test() ->
 config_read_test() ->
     application:ensure_all_started(econfig),
     MeckModules = [tts_session_mgr, tts_user_cache, tts_service, tts_idh,
-                   tts_data_sqlite, cowboy_router, cowboy, oidcc],
+                   tts_data_sqlite, cowboy_router, cowboy, oidcc, oidcc_client],
 
     OkFun = fun() -> ok end,
     CompileFun = fun(_) -> routing end,
@@ -67,6 +68,7 @@ config_read_test() ->
     ok = meck:expect(cowboy, start_https, HttpStartFun),
     ok = meck:expect(cowboy, stop_listener, HttpStopFun),
     ok = meck:expect(oidcc, add_openid_provider, AddOidcFun),
+    ok = meck:expect(oidcc_client, register, fun(_) -> ok end),
 
     ConfigPath = filename:absname("./test/config_test"),
     application:set_env(tts, config_path, ConfigPath),

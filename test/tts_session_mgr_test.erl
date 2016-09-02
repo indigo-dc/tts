@@ -86,7 +86,7 @@ session_lookup_create_test() ->
     ok = meck:expect(tts_data, sessions_get_pid
                      , fun(_ID) -> {error, not_found} end),
     ok = meck:expect(tts_data, sessions_create_new, fun(_ID) -> ok end),
-    {ok, Session} = tts_session_mgr:get_session(undefined),
+    {ok, Session} = tts_session_mgr:new_session(),
 
     %% Lookup an existing session
     ok = meck:expect(tts_session_sup, new_session, fun(_ID) -> not_used end),
@@ -95,13 +95,13 @@ session_lookup_create_test() ->
     ok = meck:expect(tts_data, sessions_create_new, fun(_ID) -> {error,false} end),
     {ok, Session} = tts_session_mgr:get_session(ID),
 
-    %% try to lookup a session, yet create it as it does not exist
+    %% try to lookup a session, yet fail and return undefined 
     ok = meck:expect(tts_session_sup, new_session, fun(_ID) -> {ok,Session} end),
     ok = meck:expect(tts_data, sessions_get_list, fun() -> [] end),
     ok = meck:expect(tts_data, sessions_get_pid
                      , fun(_ID) -> {error, not_found} end),
     ok = meck:expect(tts_data, sessions_create_new, fun(_ID) -> ok end),
-    {ok, Session} = tts_session_mgr:get_session(ID),
+    {ok, undefined} = tts_session_mgr:get_session(ID),
 
     ok = meck:expect(tts_data, sessions_get_list, fun() -> [] end),
     ok = tts_session_mgr:stop(),
