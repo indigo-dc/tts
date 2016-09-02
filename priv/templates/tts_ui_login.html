@@ -3,9 +3,9 @@ Please select your OpenId Connect Provider
     <form method="post" action="{{ ep_redirect }}" >
         <div class="input-group">
             <select id="provider"  name="provider" class="form-control">
-                {% for id, description, enabled in oidc_op_list %}
-                <option {% if enabled %} value="{{ id }}" {% else %} disabled {% endif %} >
-                  {{ description }} </option>
+                {% for p in oidc_op_list %}
+                <option {% if p.ready %} value="{{ p.id }}" {% else %} disabled {% endif %} >
+                  {{ p.desc }} </option>
                 {% endfor %}
             </select>
             <span class="input-group-btn">
