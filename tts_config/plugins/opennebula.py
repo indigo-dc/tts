@@ -33,11 +33,10 @@ def create_one_user(username, group, oidc, password):
     if not success:
         return False, userid
 
-    template = ('ISS="%s"\nSUB="%s"\nName="%s"\nEMAIL="%s"' % (oidc['iss'],
+    template = ('ISS="%s"\nSUB="%s"\nName="%s"' % (oidc['iss'],
                                                                oidc['sub'],
                                                               "%s %s" % (oidc['name'],
-                                                                         oidc['family_name']),
-                                                              oidc['email']))
+                                                                         oidc['family_name'])))
     success, userid, _ = server.one.user.update(SESSIONID, userid, template, 0)
     if not success:
         delete_one_user(userid)
