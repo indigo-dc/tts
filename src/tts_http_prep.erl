@@ -94,9 +94,6 @@ terminate(_Reason, _Req, _State) ->
                      ]).
 
 -define(QSMAPPING, [
-                   {<<"code">>, code},
-                   {<<"error">>, error},
-                   {<<"state">>, state},
                    {<<"action">>, action, value},
                    {<<"request">>, request},
                    {<<"revoke">>, revoke},
@@ -202,8 +199,6 @@ is_logged_in(UserAgent, IP, Session) ->
     SameUA = tts_session:is_user_agent(UserAgent, Session),
     SameIP = tts_session:is_same_ip(IP, Session),
     SameIP and SameUA and LoggedIn.
-
-
 
 get_header(Key, Headers) ->
     case lists:keyfind(Key, 1, Headers) of
