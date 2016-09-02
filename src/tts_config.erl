@@ -421,6 +421,7 @@ start_cowboy(false) ->
     ok;
 start_cowboy(_) ->
     cowboy:stop_listener(http_handler),
+    oidcc_client:register(tts_oidc_client),
     EpMain = ?CONFIG(ep_main),
     EpRedirect = ?CONFIG(ep_redirect),
     EpReturn = ?CONFIG(ep_return),
@@ -434,8 +435,8 @@ start_cowboy(_) ->
                                           {EpApi, tts_rest, []},
                                           {EpMain, tts_http_prep, []},
                                           {EpUser, tts_http_prep, []},
-                                          {EpRedirect, tts_http_prep, []},
-                                          {EpReturn, tts_http_prep, []}
+                                          {EpRedirect, oidcc_http_handler, []},
+                                          {EpReturn, oidcc_http_handler, []}
                                          ]}]),
 
     SSL = ?CONFIG(ssl),
