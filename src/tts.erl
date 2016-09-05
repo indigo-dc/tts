@@ -15,19 +15,28 @@
 %% limitations under the License.
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
+-include("tts.hrl").
 
 -export([
+         login_with_oidcc/1,
+         login_with_access_token/2,
+         logout/1,
+
+         does_provider_exist/2,
+         does_service_exist/2,
+         does_credential_exist/2,
+
          get_openid_provider_list/0,
          get_service_list_for/1,
          get_credential_list_for/1,
-         get_credential_for/2,
          request_credential_for/4,
          revoke_credential_for/2,
 
          get_access_token_for/1,
          get_display_name_for/1,
 
-         convert_to_json/2,
+         store_temp_cred/2,
+         get_temp_cred/2,
 
          start_full_debug/0,
          start_debug/1,
@@ -36,29 +45,76 @@
          set_debug_mode/1
         ]).
 
--export_type([
-              oidc_id/0,
-              user_info/0,
-              cred/0
-             ]).
 
--type oidc_id() :: { Issuer:: binary(), Subject::binary() }.
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
+= TokenMap) ->
+    {ok, SessPid} = tts_session_mgr:new_session(),
+    try
+        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+        {ok, SessId} = tts_session:get_id(SessPid),
+        ok = tts_session:set_token(TokenMap, SessPid),
+        ok = tts_session:set_user_info(UserInfo, SessPid),
+        true = tts_session:is_logged_in(SessPid),
+        lager:debug("login success"),
+        {ok, #{session_id => SessId, session_pid => SessPid}}
+    catch _:_ ->
+            tts_session:close(SessPid),
+            lager:debug("login internal fail"),
+            {error, internal}
+    end;
+login_with_oidcc(_BadToken) ->
+    lager:debug("bad token"),
+    {error, bad_token}.
 
--type user_info() :: #{ uid => binary(),
-                        uidNumber => integer(),
-                        gidNumber => integer(),
-                        homeDirectory => binary(),
-                        issuer => binary(),
-                        subject => binary(),
-                        groups => [binary()],
-                        userIds => [oidc_id()]
-                      }.
+login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
+                                                  is_binary(Issuer) ->
+    {ok, SessPid} = tts_session_mgr:new_session(),
+    try
+        {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+        {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderPid),
+        {ok, #{sub := Subject} = OidcInfo} =
+            oidcc:retrieve_user_info(AccessToken, ProviderPid),
+        Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
+        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+        {ok, SessId} = tts_session:get_id(SessPid),
+        ok = tts_session:set_token(Token, SessPid),
+        ok = tts_session:set_user_info(UserInfo, SessPid),
+        ok = tts_session:set_iss_sub(Issuer, Subject, SessPid),
+        true = tts_session:is_logged_in(SessPid),
+        lager:debug("login success"),
+        {ok, #{session_id => SessId, session_pid => SessPid}}
+    catch _:_ ->
+            tts_session:close(SessPid),
+            {error, internal}
+    end;
+login_with_access_token(_AccessToken, _Issuer) ->
+    {error, bad_data}.
 
--type cred() :: #{ cred_id => binary(), ctime => integer(),
-                   cred_state => binary(), service_id => binary(),
-                   interface => binary(), user_id => binary()
-                 }.
+logout(Session) ->
+    tts_session:close(Session).
 
+
+does_provider_exist(Id, _Session) ->
+    case oidcc:get_openid_provider_info(Id) of
+        {ok, _Info} -> true;
+        _ -> false
+    end.
+
+does_service_exist(Id, Session) ->
+    {ok, UserInfo} =  tts_session:get_user_info(Session),
+    {ok, List} = tts_service:get_list(UserInfo),
+    IsMember = fun(#{id := ServiceId}, Found) ->
+                       case ServiceId of
+                           Id ->
+                               true;
+                           _ -> Found
+                       end
+               end,
+    lists:foldl(IsMember, false, List).
+
+does_credential_exist(Id, Session) ->
+    {ok, #{site := #{uid :=UserId}}} =  tts_session:get_user_info(Session),
+    tts_credential:exists(UserId, Id).
 
 get_openid_provider_list() ->
     {ok, OidcProvList} = oidcc:get_openid_provider_list(),
@@ -75,27 +131,26 @@ get_openid_provider_list() ->
     {ok, OpList}.
 
 
-get_service_list_for(Session) -> 
+get_service_list_for(Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     #{ site := #{uid := UserId}} = UserInfo,
     {ok, ServiceList} = tts_service:get_list(UserId),
     {ok, ServiceList}.
 
-get_credential_list_for(Session) -> 
+get_credential_list_for(Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     #{ site := #{uid := UserId}} = UserInfo,
     {ok, CredentialList} = tts_credential:get_list(UserId),
     {ok, CredentialList}.
 
 
-get_credential_for(_CredId, _Session) -> ok.
-
-request_credential_for(ServiceId, Session, Params, Interface) -> 
+request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     {ok, Token} = tts_session:get_token(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     true = tts_service:is_enabled(ServiceId),
-    case tts_credential:request(ServiceId, UserInfo, Interface, Token, Params) of
+    case
+        tts_credential:request(ServiceId, UserInfo, Interface, Token, Params) of
         {ok, Credential, Log} ->
             [#{name := id, value:=CredId}|_] = Credential,
             lager:info("~p: requested credential ~p",
@@ -108,7 +163,7 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
     end.
 
 
-revoke_credential_for(CredId, Session) -> 
+revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, SessionId} = tts_session:get_id(Session),
@@ -123,8 +178,8 @@ revoke_credential_for(CredId, Session) ->
             {error, Error, Log}
     end.
 
-        
-    
+
+
 
 get_access_token_for(Session) ->
     {ok, #{access := #{token := AccessToken}}} = tts_session:get_token(Session),
@@ -134,14 +189,14 @@ get_display_name_for(Session) ->
     {ok, Name} = tts_session:get_display_name(Session),
     {ok, Name}.
 
+store_temp_cred(Credential, Session) ->
+    {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, Id} = tts_temp_cred:add_cred(Credential, UserInfo),
+    {ok, Id}.
 
-convert_to_json(provider_list, ProviderList) ->
-    IdIssuer = fun(Map, List) ->
-                       [maps:with([id, issuer], Map) | List]
-               end,
-    JsonList = lists:reverse(lists:foldl(IdIssuer, [], ProviderList)),
-    jsx:encode(#{openid_provider_list => JsonList}).
-    
+get_temp_cred(Id, Session) ->
+    {ok, UserInfo} = tts_session:get_user_info(Session),
+    tts_temp_cred:get_cred(Id, UserInfo).
 
 start_full_debug() ->
     %debug these modules
