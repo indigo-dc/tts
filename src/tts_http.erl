@@ -19,31 +19,12 @@
 -export([handle/1]).
 -include("tts.hrl").
 
-handle(#{path := ep_main, logged_in := true} = ReqMap) ->
-    redirect_to(user_page, ReqMap);
-handle(#{path := ep_user, method := post, logged_in := true} = ReqMap) ->
+handle(#{method := post, logged_in := true} = ReqMap) ->
     handle_user_action(ReqMap);
-handle(#{path := ep_user, method := get, logged_in := true,
-         session := Session}) ->
+handle(#{method := get, logged_in := true, session := Session}) ->
     show_user_page(Session, false, [], false);
-handle(#{path := ep_main} = ReqMap) ->
-    show_select_page(ReqMap);
-handle( ReqMap) ->
-    redirect_to(ep_main, ReqMap).
-
-
-show_select_page(ReqMap) ->
-    {ok, OpList} = tts:get_openid_provider_list(),
-    Error = maps:get(error, ReqMap, undefined),
-    {ok, Version} = application:get_key(tts, vsn),
-    {ok, Body} = tts_main_dtl:render([{ep_redirect, ?CONFIG(ep_redirect)},
-                                      {oidc_op_list, OpList},
-                                      {version, Version},
-                                      {error, Error},
-                                      {configured, true}]),
-    Cookie = maps:get(cookie, ReqMap, update),
-    #{body => Body, status => 200, cookie => Cookie}.
-
+handle(ReqMap) ->
+    show_select_page(ReqMap).
 
 handle_user_action(#{body_qs:=#{action := request}} = ReqMap) ->
     request_credential(ReqMap);
@@ -51,7 +32,7 @@ handle_user_action(#{body_qs:=#{action := revoke}} = ReqMap) ->
     revoke_credential(ReqMap);
 handle_user_action(#{body_qs:=#{action := logout}, session:=Session}
                    = ReqMap) ->
-    ok = tts_session:close(Session),
+    ok = tts:logout(Session),
     maps:put(cookie, clear, redirect_to(ep_main, ReqMap));
 handle_user_action(#{session := Session}) ->
     show_user_page(Session, false, [], false).
@@ -60,13 +41,8 @@ handle_user_action(#{session := Session}) ->
 request_credential(#{session := Session,
                      body_qs:= #{ service_id:=ServiceId}}) ->
     Iface = <<"web interface">>,
-    case  tts:request_credential_for(ServiceId, Session, [], Iface) of
-        {ok, Credential, Log} ->
-            show_user_page(Session, Credential, Log, false);
-        {error, _Reason, Log} ->
-            ErrMsg = <<"failed to request credential">>,
-            show_user_page(Session, false, Log, ErrMsg)
-    end;
+    Result = tts:request_credential_for(ServiceId, Session, [], Iface),
+    show_credential_request_result(Result, Session);
 request_credential(#{session := Session}) ->
     Error = <<"Credential Request failed">>,
     show_user_page(Session, false, [], Error).
@@ -74,13 +50,20 @@ request_credential(#{session := Session}) ->
 
 revoke_credential(#{session := Session,
                     body_qs:= #{ credential_id:=CredId}}) ->
-    case tts:revoke_credential_for(CredId, Session) of
-        {ok, _Result, Log} ->
+    Result = tts:revoke_credential_for(CredId, Session),
+    show_credential_revoke_result(Result, Session).
+
+show_credential_request_result({ok, Credential, Log}, Session) ->
+            show_user_page(Session, Credential, Log, false);
+show_credential_request_result({error, _Reason, Log}, Session) ->
+            ErrMsg = <<"failed to request credential">>,
+            show_user_page(Session, false, Log, ErrMsg).
+
+show_credential_revoke_result({ok, _Result, Log}, Session) ->
             show_user_page(Session, false, Log, false);
-        {error, _Error, Log} ->
+show_credential_revoke_result({error, _Error, Log}, Session) ->
             ErrMsg = <<"failed to revoke credential">>,
-            show_user_page(Session, false, Log, ErrMsg)
-    end.
+            show_user_page(Session, false, Log, ErrMsg).
 
 show_user_page(Session, Credential, Log, Error) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
@@ -103,6 +86,18 @@ show_user_page(Session, Credential, Log, Error) ->
     {ok, Body} = tts_main_dtl:render(Params),
     #{body => Body, status => 200, cookie => update}.
 
+show_select_page(ReqMap) ->
+    {ok, OpList} = tts:get_openid_provider_list(),
+    Error = maps:get(error, ReqMap, undefined),
+    {ok, Version} = application:get_key(tts, vsn),
+    {ok, Body} = tts_main_dtl:render([{ep_redirect, ?CONFIG(ep_oidc)},
+                                      {oidc_op_list, OpList},
+                                      {version, Version},
+                                      {error, Error},
+                                      {configured, true}]),
+    Cookie = maps:get(cookie, ReqMap, update),
+    #{body => Body, status => 200, cookie => Cookie}.
+
 redirect_to(user_page, _ReqMap) ->
     UserPath = ?CONFIG(ep_user),
     create_redirection(UserPath);
@@ -111,5 +106,3 @@ redirect_to(_, _ReqMap) ->
 
 create_redirection(Url) ->
     #{header => [{<<"location">>, Url}], cookie => update, status => 302}.
-
-
