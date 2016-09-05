@@ -211,10 +211,8 @@ update_status() ->
           {"HostName", hostname, binary, "localhost"},
           {"Port", port, binary, "default"},
           {"ListenPort", listen_port, binary, "default"},
-          {"EpRedirect", ep_redirect, binary, "/oidc/redirect"},
-          {"EpReturn", ep_return, binary, "/oidc/return"},
+          {"EpOidc", ep_oidc, binary, "/oidc"},
           {"EpMain", ep_main, binary, "/"},
-          {"EpUser", ep_user, binary, "/user"},
           {"EpApi", ep_api, binary, "/api"},
           {"SSL", ssl, boolean, true},
           {"CaCertFile", ca_cert_file, file, "cert/ca.cert"},
@@ -242,7 +240,7 @@ apply_existing_main_config(undefined) ->
     ok;
 apply_existing_main_config(_) ->
     apply_settings(main, "", ?MAIN_SETTINGS),
-    EpReturn = ?CONFIG(ep_return),
+    EpReturn = ?CONFIG(ep_oidc),
     HostName = ?CONFIG(hostname),
     LProt = local_protocol(),
     LPort = local_port(),
@@ -423,9 +421,7 @@ start_cowboy(_) ->
     cowboy:stop_listener(http_handler),
     oidcc_client:register(tts_oidc_client),
     EpMain = ?CONFIG(ep_main),
-    EpRedirect = ?CONFIG(ep_redirect),
-    EpReturn = ?CONFIG(ep_return),
-    EpUser = ?CONFIG(ep_user),
+    EpOidc = ?CONFIG(ep_oidc),
     EpApiBase = ?CONFIG(ep_api),
     EpApi = tts_rest:dispatch_mapping(EpApiBase),
     Dispatch = cowboy_router:compile( [{'_',
@@ -434,9 +430,7 @@ start_cowboy(_) ->
                                            {priv_dir, tts, "http_static"}},
                                           {EpApi, tts_rest, []},
                                           {EpMain, tts_http_prep, []},
-                                          {EpUser, tts_http_prep, []},
-                                          {EpRedirect, oidcc_http_handler, []},
-                                          {EpReturn, oidcc_http_handler, []}
+                                          {EpOidc, oidcc_http_handler, []}
                                          ]}]),
 
     SSL = ?CONFIG(ssl),
@@ -487,5 +481,3 @@ listen_port(<<"default">>, Port, _) ->
     erlang:binary_to_integer(Port);
 listen_port(ListenPort, _, _) ->
     erlang:binary_to_integer(ListenPort).
-
-
