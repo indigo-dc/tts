@@ -31,6 +31,8 @@
 get_list() ->
      tts_data:service_get_list().
 
+get_list(#{site := #{uid := UserId}})  ->
+    get_list(UserId);
 get_list(#{uid := UserId})  ->
     get_list(UserId);
 get_list(UserId) ->
