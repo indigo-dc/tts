@@ -1,4 +1,4 @@
--module(tts_rest_cred).
+-module(tts_temp_cred).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -44,14 +44,14 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec add_cred(Credential :: map(), UserId::binary()) -> {ok, Id::binary()}.
-add_cred(Credential, UserId) ->
-    gen_server:call(?MODULE, {add, Credential, UserId}).
+-spec add_cred(Credential :: map(), UserInfo::map()) -> {ok, Id::binary()}.
+add_cred(Credential, UserInfo) ->
+    gen_server:call(?MODULE, {add, Credential, UserInfo}).
 
--spec get_cred(CredId :: binary(), UserId::binary()) -> {ok, Credential::map} |
+-spec get_cred(CredId :: binary(), UserInfo::map()) -> {ok, Credential::map} |
                                                         {error, Reason::any()}.
-get_cred(Id, UserId) ->
-    gen_server:call(?MODULE, {get, Id, UserId}).
+get_cred(Id, UserInfo) ->
+    gen_server:call(?MODULE, {get, Id, UserInfo}).
 
 -spec stop() -> ok.
 stop() ->
@@ -62,11 +62,16 @@ stop() ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({add,  Cred, UserId}, _From, #state{creds = Creds} = State) ->
+handle_call({add,  Cred, UserInfo}, _From, #state{creds = Creds} = State) ->
+    UserId = get_userid(UserInfo),
     Id = gen_random_id(State),
-    NewCreds = [{Id, UserId, Cred} | Creds],
+    NewCreds = case UserId of
+                   undefined -> Creds;
+                   _ -> [{Id, UserId, Cred} | Creds]
+               end,
     {reply, {ok, Id}, State#state{creds=NewCreds}};
-handle_call({get, Id, UserId}, _From, #state{creds=Creds}=State) ->
+handle_call({get, Id, UserInfo}, _From, #state{creds=Creds}=State) ->
+    UserId = get_userid(UserInfo),
     case lists:keyfind(Id, 1, Creds) of
         {Id, UserId, Cred} ->
             NewCreds = lists:keydelete(Id, 1, Creds),
@@ -90,6 +95,13 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+get_userid(#{site := #{uid := UserId}}) ->
+    UserId;
+get_userid(#{ uid := UserId}) ->
+    UserId;
+get_userid(_UserId) ->
+    undefined.
 
 
 gen_random_id(#state{creds = Creds} = State) ->
