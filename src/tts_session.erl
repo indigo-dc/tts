@@ -41,6 +41,7 @@
 -export([get_user_info/1]).
 -export([get_display_name/1]).
 
+-export([set_iss_sub/3]).
 -export([get_iss_sub/1]).
 
 -export([get_used_redirect/1]).
@@ -127,6 +128,10 @@ set_oidc_provider(OpId, Pid) when is_binary(OpId) ->
 get_iss_sub( Pid) ->
     gen_server:call(Pid, get_iss_sub).
 
+-spec set_iss_sub(Issuer :: binary(), Subject::binary(), Pid :: pid()) -> ok.
+set_iss_sub(Issuer, Subject, Pid) ->
+    gen_server:call(Pid, {set_iss_sub, Issuer, Subject}).
+
 -spec is_logged_in(Pid :: pid()) -> true | false.
 is_logged_in(Pid) ->
     gen_server:call(Pid, is_logged_in).
@@ -203,20 +208,25 @@ handle_call({set_oidc_provider_id, OP}, _From, #state{max_age=MA}=State) ->
 handle_call(get_iss_sub, _From,
             #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
     {reply, {ok, Issuer, Subject}, State, MA};
-handle_call({set_token, #{id := #{claims :=
-                                      #{iss := Issuer, sub := Subject }}
-                         } = Token0}, _From, #state{max_age=MA}=State) ->
+handle_call({set_iss_sub, Issuer, Subject}, _From, #state{max_age=MA}=State) ->
+    {reply, ok, State#state{iss=Issuer, sub=Subject}, MA};
+handle_call({set_token, Token0}, _From, #state{max_age=MA}=State) ->
+    NewState = case maps:get(id, Token0, undefined) of
+                   #{claims := #{iss := Issuer, sub := Subject } } ->
+                       State#state{iss=Issuer, sub=Subject};
+                   _ -> State
+               end,
     UserInfo = maps:get(user_info, Token0, undefined),
-    TokenKeys = [access, id, refres],
+    TokenKeys = [access, id, refresh],
     Token = maps:with(TokenKeys, Token0),
-    {reply, ok, State#state{token=Token, oidc_info=UserInfo, iss=Issuer,
-                            sub=Subject}, MA};
+    {reply, ok, NewState#state{token=Token, oidc_info=UserInfo}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
 handle_call({set_user_info, UserInfo}, _From, #state{max_age=MA} = State) ->
     {reply, ok, State#state{user_info=UserInfo}, MA};
 handle_call(get_user_info, _From, #state{max_age=MA,
-                                         user_info=UserInfo, oidc_info=OidcInfo} =State) ->
+                                         user_info=UserInfo,
+                                         oidc_info=OidcInfo} =State) ->
     LocalInfo = maps:get(oidc, UserInfo, #{}),
     Info = maps:put(oidc, maps:merge(LocalInfo, OidcInfo), UserInfo),
     {reply, {ok, Info}, State, MA};
