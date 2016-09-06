@@ -23,27 +23,21 @@
 -include("tts.hrl").
 
 
-to_abs([First, Second | Rest] = FileName) ->
-    convert_to_abs(First, Second, Rest, FileName);
-to_abs(FileName) when is_binary(FileName) ->
-    << First:1/binary, Second:1/binary, Rest/binary >> = FileName,
-   convert_to_abs(First, Second, Rest, FileName).
+to_abs(FileName) ->
+    combine_or_home(FileName, undefined).
 
-convert_to_abs($~, $/, Rest, _FileName) ->
-    convert_home(Rest);
-convert_to_abs(<<"~">>, <<"/">>, Rest, _FileName) ->
-    convert_home(Rest);
-convert_to_abs($/, _Second, _Rest, FileName) ->
-    FileName;
-convert_to_abs(<<"/">>, _Second, _Rest, FileName) ->
-    FileName;
-convert_to_abs(_First, _Second, _Rest, FileName) ->
-    to_abs(FileName, ?CONFIG(config_path)).
+to_abs(FileName, BaseDirectory) ->
+    combine_or_home(FileName, BaseDirectory).
+
+combine_or_home([ $~, $/  | Relative ], _BaseDir) ->
+    convert_home(Relative);
+combine_or_home(<< $~:8, $/:8, Relative/binary >>, _BaseDir) ->
+    convert_home(Relative);
+combine_or_home(NonHome, undefined) ->
+    combine_or_home(NonHome, ?CONFIG(config_path));
+combine_or_home(NonHome, BaseDir) ->
+    filename:join(BaseDir, NonHome).
 
 convert_home(Relative) ->
     {ok, [[Home]]} =  init:get_argument(home),
-    to_abs(Relative, Home).
-
-
-to_abs(FileName, BaseDirectory) ->
-    filename:join(BaseDirectory, FileName).
+    filename:join(Home, Relative).
