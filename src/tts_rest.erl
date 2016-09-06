@@ -124,19 +124,14 @@ content_types_accepted(Req, State) ->
 
 resource_exists(Req, #state{id=undefined} = State) ->
     {true, Req, State};
-resource_exists(Req, #state{type=oidcp, id=Id, session_pid=Session} = State) ->
-    Exists = tts:does_provider_exist(Id, Session),
-    {Exists, Req, State};
-resource_exists(Req, #state{type=service, id=Id, session_pid=Session}
-                = State) ->
-    Exists = tts:does_service_exist(Id, Session),
-    {Exists, Req, State};
 resource_exists(Req, #state{type=credential, id=Id, session_pid=Session}
                 = State) ->
     Exists = tts:does_credential_exist(Id, Session),
     {Exists, Req, State};
-resource_exists(Req, #state{type=cred_data}=State) ->
-    {true, Req, State};
+resource_exists(Req, #state{type=cred_data, id=Id, session_pid=Session}
+                = State) ->
+    Exists = tts:does_temp_cred_exist(Id, Session),
+    {Exists, Req, State};
 resource_exists(Req, State) ->
     {false, Req, State}.
 

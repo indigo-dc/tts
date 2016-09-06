@@ -23,6 +23,7 @@
 -export([start_link/0]).
 -export([add_cred/2]).
 -export([get_cred/2]).
+-export([exists/2]).
 -export([stop/0]).
 
 
@@ -53,6 +54,10 @@ add_cred(Credential, UserInfo) ->
 get_cred(Id, UserInfo) ->
     gen_server:call(?MODULE, {get, Id, UserInfo}).
 
+-spec exists(CredId :: binary(), UserInfo::map()) -> true | false.
+exists(Id, UserInfo) ->
+    gen_server:call(?MODULE, {exists, Id, UserInfo}).
+
 -spec stop() -> ok.
 stop() ->
     gen_server:cast(?MODULE, stop).
@@ -70,15 +75,12 @@ handle_call({add,  Cred, UserInfo}, _From, #state{creds = Creds} = State) ->
                    _ -> [{Id, UserId, Cred} | Creds]
                end,
     {reply, {ok, Id}, State#state{creds=NewCreds}};
-handle_call({get, Id, UserInfo}, _From, #state{creds=Creds}=State) ->
-    UserId = get_userid(UserInfo),
-    case lists:keyfind(Id, 1, Creds) of
-        {Id, UserId, Cred} ->
-            NewCreds = lists:keydelete(Id, 1, Creds),
-            {reply, {ok, Cred}, State#state{creds=NewCreds}};
-        _ ->
-            {reply, {error, not_found}, State}
-    end;
+handle_call({exists, Id, UserInfo}, _From, State) ->
+    Result = credential_exists(Id, UserInfo, State),
+    {reply, Result, State};
+handle_call({get, Id, UserInfo}, _From, State) ->
+    {Result, NewState} = get_credential(Id, UserInfo, true, State),
+    {reply, Result, NewState};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
@@ -110,3 +112,27 @@ gen_random_id(#state{creds = Creds} = State) ->
         false -> Id;
         _ -> gen_random_id(State)
     end.
+
+credential_exists(Id, UserInfo, State) ->
+    case get_credential(Id, UserInfo, false, State) of
+        {{ok, _}, State} ->
+            true;
+        {_, State} ->
+            false
+    end.
+
+get_credential(Id, UserInfo, Delete, #state{creds = Creds} = State) ->
+    UserId = get_userid(UserInfo),
+    {Result, NewCreds} = case lists:keyfind(Id, 1, Creds) of
+                             {Id, UserId, Cred} ->
+                                 case Delete of
+                                     true ->
+                                         NC = lists:keydelete(Id, 1, Creds),
+                                         {{ok, Cred}, NC};
+                                     _ ->
+                                         {{ok, Cred}, Creds}
+                                 end;
+                             _ ->
+                                 {{error, not_found}, Creds}
+                         end,
+    {Result, State#state{creds = NewCreds}}.

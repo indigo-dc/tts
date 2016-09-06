@@ -29,8 +29,6 @@
           req_map = #{}
          }).
 
--define(COOKIE, <<"tts_session">>).
-
 init(_, Req, _Opts) ->
     try extract_args(Req, tts_config:is_loaded()) of
         {ok, Req2, State} -> {ok, Req2, State}
@@ -96,7 +94,8 @@ terminate(_Reason, _Req, _State) ->
 extract_args(Req, false) ->
     {ok, Req, #state{ config_loaded = false }};
 extract_args(Req, true) ->
-    {CookieSessionId, Req4} = cowboy_req:cookie(?COOKIE, Req),
+    CookieName = tts_http_util:cookie_name(),
+    {CookieSessionId, Req4} = cowboy_req:cookie(CookieName, Req),
     {ok, BodyQsList, Req5} = cowboy_req:body_qs(Req4),
     {Headers, Req6} = cowboy_req:headers(Req5),
     {Method, Req7} = cowboy_req:method(Req6),
@@ -120,26 +119,15 @@ extract_args(Req, true) ->
                        bad_request=false}}.
 
 perform_cookie_action(clear, Req, _ReqMap) ->
-    Opts = create_cookie_opts(0),
-    Req2 = cowboy_req:set_resp_cookie(?COOKIE, <<"deleted">>, Opts, Req),
+    Req2 = tts_http_util:perform_cookie_action(clear, 0, deleted, Req),
     {ok, Req2};
 perform_cookie_action(update, Req, #{session := undefined}) ->
     perform_cookie_action(clear, Req, undefined);
 perform_cookie_action(update, Req, #{session := Session}) ->
     {ok, MaxAge} = tts_session:get_max_age(Session),
     {ok, ID} = tts_session:get_id(Session),
-    Opts = create_cookie_opts(MaxAge),
-    Req2 = cowboy_req:set_resp_cookie(?COOKIE, ID, Opts, Req),
+    Req2 = tts_http_util:perform_cookie_action(update, MaxAge, ID, Req),
     {ok, Req2}.
-
-create_cookie_opts(MaxAge) ->
-    BasicOpts = [ {http_only, true}, {max_age, MaxAge}, {path, <<"/">>}],
-    case ?CONFIG(ssl) of
-        true ->
-            [{secure, true} | BasicOpts];
-        _ ->
-            BasicOpts
-    end.
 
 create_map_from_proplist(List) ->
     KeyToAtom = fun({Key, Value}, Map) ->

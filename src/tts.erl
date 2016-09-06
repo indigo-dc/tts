@@ -22,9 +22,8 @@
          login_with_access_token/2,
          logout/1,
 
-         does_provider_exist/2,
-         does_service_exist/2,
          does_credential_exist/2,
+         does_temp_cred_exist/2,
 
          get_openid_provider_list/0,
          get_service_list_for/1,
@@ -93,28 +92,14 @@ login_with_access_token(_AccessToken, _Issuer) ->
 logout(Session) ->
     tts_session:close(Session).
 
-
-does_provider_exist(Id, _Session) ->
-    case oidcc:get_openid_provider_info(Id) of
-        {ok, _Info} -> true;
-        _ -> false
-    end.
-
-does_service_exist(Id, Session) ->
-    {ok, UserInfo} =  tts_session:get_user_info(Session),
-    {ok, List} = tts_service:get_list(UserInfo),
-    IsMember = fun(#{id := ServiceId}, Found) ->
-                       case ServiceId of
-                           Id ->
-                               true;
-                           _ -> Found
-                       end
-               end,
-    lists:foldl(IsMember, false, List).
-
 does_credential_exist(Id, Session) ->
     {ok, #{site := #{uid :=UserId}}} =  tts_session:get_user_info(Session),
     tts_credential:exists(UserId, Id).
+
+does_temp_cred_exist(Id, Session) ->
+    tts_temp_cred:exists(Id, Session).
+
+
 
 get_openid_provider_list() ->
     {ok, OidcProvList} = oidcc:get_openid_provider_list(),
