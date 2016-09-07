@@ -44,50 +44,35 @@
          set_debug_mode/1
         ]).
 
-
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
 = TokenMap) ->
-    {ok, SessPid} = tts_session_mgr:new_session(),
-    try
-        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
-        {ok, SessId} = tts_session:get_id(SessPid),
-        ok = tts_session:set_token(TokenMap, SessPid),
-        ok = tts_session:set_user_info(UserInfo, SessPid),
-        true = tts_session:is_logged_in(SessPid),
-        lager:debug("login success"),
-        {ok, #{session_id => SessId, session_pid => SessPid}}
-    catch _:_ ->
-            tts_session:close(SessPid),
-            lager:debug("login internal fail"),
-            {error, internal}
-    end;
+    do_login(Issuer, Subject, TokenMap);
 login_with_oidcc(_BadToken) ->
     lager:debug("bad token"),
     {error, bad_token}.
 
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
                                                   is_binary(Issuer) ->
+    do_login(Issuer, undefined, AccessToken);
+login_with_access_token(_AccessToken, _Issuer) ->
+    {error, bad_token}.
+
+do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = tts_session_mgr:new_session(),
     try
-        {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
-        {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderPid),
-        {ok, #{sub := Subject} = OidcInfo} =
-            oidcc:retrieve_user_info(AccessToken, ProviderPid),
-        Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
-        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
-        {ok, SessId} = tts_session:get_id(SessPid),
-        ok = tts_session:set_token(Token, SessPid),
-        ok = tts_session:set_user_info(UserInfo, SessPid),
-        ok = tts_session:set_iss_sub(Issuer, Subject, SessPid),
-        true = tts_session:is_logged_in(SessPid),
-        lager:debug("login success"),
-        {ok, #{session_id => SessId, session_pid => SessPid}}
+        {Subject, Token} = case Subject0 of
+                               undefined ->
+                                   get_subject_update_token(Issuer, Token0);
+                               _ ->
+                                   {Subject0, Token0}
+                           end,
+        update_session(Issuer, Subject, Token, SessPid)
     catch _:_ ->
-            tts_session:close(SessPid),
+            logout(SessPid),
+            lager:debug("login internal fail"),
             {error, internal}
-    end;
-login_with_access_token(_AccessToken, _Issuer) ->
-    {error, bad_data}.
+    end.
+
 
 logout(Session) ->
     tts_session:close(Session).
@@ -97,7 +82,8 @@ does_credential_exist(Id, Session) ->
     tts_credential:exists(UserId, Id).
 
 does_temp_cred_exist(Id, Session) ->
-    tts_temp_cred:exists(Id, Session).
+    {ok, UserInfo} =  tts_session:get_user_info(Session),
+    tts_temp_cred:exists(Id, UserInfo).
 
 
 
@@ -214,3 +200,22 @@ start_debug(ListOfModules, Options) ->
 
 stop_debug() ->
     redbug:stop().
+
+
+update_session(Issuer, Subject, Token, SessionPid) ->
+    {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
+    {ok, SessId} = tts_session:get_id(SessionPid),
+    ok = tts_session:set_token(Token, SessionPid),
+    ok = tts_session:set_user_info(UserInfo, SessionPid),
+    ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
+    true = tts_session:is_logged_in(SessionPid),
+    lager:debug("login success"),
+    {ok, #{session_id => SessId, session_pid => SessionPid}}.
+
+get_subject_update_token(Issuer, AccessToken)  ->
+    {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+    {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderPid),
+    {ok, #{sub := Subject} = OidcInfo} =
+        oidcc:retrieve_user_info(AccessToken, ProviderPid),
+    Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
+    {Subject, Token}.
