@@ -34,7 +34,7 @@ combine_or_home([ $~, $/  | Relative ], _BaseDir) ->
 combine_or_home(<< $~:8, $/:8, Relative/binary >>, _BaseDir) ->
     convert_home(Relative);
 combine_or_home(NonHome, undefined) ->
-    combine_or_home(NonHome, ?CONFIG(config_path));
+    combine_or_home(NonHome, ?CONFIG(config_path, ""));
 combine_or_home(NonHome, BaseDir) ->
     filename:join(BaseDir, NonHome).
 
