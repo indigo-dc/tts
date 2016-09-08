@@ -182,9 +182,14 @@ verify_value(con_type, Value) ->
 verify_value(allow_same_state, Value) ->
     {ok, to_atom(Value, false)};
 verify_value(cmd, Cmd) ->
-    {ok, tts_file_util:to_abs(Cmd)};
+    {ok, tts_file_util:to_abs(to_bin(Cmd))};
 % default is to convert to binary
 verify_value(AKey, Value) when is_list(Value) ->
     verify_value(AKey, list_to_binary(Value));
 verify_value(_AKey, Value) ->
     {ok, Value}.
+
+to_bin(Val) when is_list(Val) ->
+    list_to_binary(Val);
+to_bin(Val) when is_binary(Val) ->
+    Val.

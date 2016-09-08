@@ -51,10 +51,7 @@ get_list_for_user_test() ->
     ?assertEqual(ExpResult, tts_service:get_list(UserId)),
     ?assertEqual(ExpResult, tts_service:get_list(UserInfo)),
     ?assertEqual(ExpResult, tts_service:get_list(UserInfoOidc)),
-    true = meck:validate(tts_data),
-    ok = meck:unload(tts_data),
-    true = meck:validate(tts_credential),
-    ok = meck:unload(tts_credential),
+    ok = test_util:meck_done(MeckModules),
     ok.
 
 
@@ -75,6 +72,55 @@ get_service_info_test() ->
     true = meck:validate(tts_data),
     ok = meck:unload(tts_data),
     ok.
+
+proxy_function_test() ->
+    Service1 = id1,
+    Service2 = id2,
+    Service3 = id3,
+    MeckModules = [tts_data],
+    test_util:meck_new(MeckModules),
+    GetService = fun(SId) ->
+                         case SId of
+                             Service1 ->
+                                 {ok, {id1, #{cred_limit => 2,
+                                              enabled => true,
+                                              allow_same_state => false
+                                             }}};
+                             Service2 ->
+                                 {ok, {id1, #{cred_limit => 1,
+                                              enabled => false,
+                                              allow_same_state => true
+                                             }}};
+                             Service3 ->
+                                 {error, not_found}
+                         end
+                 end,
+    ServiceUpdate = fun(_Id, _NewMap) -> ok end,
+    ok = meck:expect(tts_data, service_get, GetService),
+    ok = meck:expect(tts_data, service_update, ServiceUpdate),
+
+    ?assertEqual({ok, 2}, tts_service:get_credential_limit(Service1)),
+    ?assertEqual(true, tts_service:is_enabled(Service1)),
+    ?assertEqual(false, tts_service:allows_same_state(Service1)),
+    ?assertEqual(ok, tts_service:enable(Service1)),
+    ?assertEqual(ok, tts_service:disable(Service1)),
+
+    ?assertEqual({ok, 1}, tts_service:get_credential_limit(Service2)),
+    ?assertEqual(false, tts_service:is_enabled(Service2)),
+    ?assertEqual(true, tts_service:allows_same_state(Service2)),
+    ?assertEqual(ok, tts_service:enable(Service2)),
+    ?assertEqual(ok, tts_service:disable(Service2)),
+
+    ?assertEqual({ok, 0}, tts_service:get_credential_limit(Service3)),
+    ?assertEqual(false, tts_service:is_enabled(Service3)),
+    ?assertEqual(false, tts_service:allows_same_state(Service3)),
+    ?assertEqual({error, not_found}, tts_service:enable(Service3)),
+    ?assertEqual({error, not_found}, tts_service:disable(Service3)),
+
+    ok = test_util:meck_done(MeckModules),
+    ok.
+
+
 
 ssh_service_add_test() ->
     ServiceInfo1 = #{
