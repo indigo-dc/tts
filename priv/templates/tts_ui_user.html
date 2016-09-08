@@ -78,16 +78,20 @@ You are not able to request/revoke any credentials
     </tr>
     {% for log in credential_log %}
     <tr>
-        <td> Cmd </td><td> {{ log.cmd }}  </td> 
+      <td> Cmd </td>
+      <td><textarea class="form-control" readonly>{{ log.cmd }}</textarea></td> 
     </tr>
     <tr>
-        <td> Exit </td><td> {{ log.exit_status }}  </td> 
+      <td> Exit </td>
+      <td> {{ log.exit_status }} </td> 
     </tr>
     <tr>
-        <td> StdOut </td><td> {{ log.std_out }}  </td> 
+      <td> StdOut </td>
+      <td> <textarea class="form-control" readonly>{{ log.std_out }} </textarea> </td> 
     </tr>
     <tr>
-        <td> StdErr </td><td> {{ log.std_err }}  </td> 
+      <td> StdErr </td>
+      <td> <textarea class="form-control" readonly>{{ log.std_err }} </textarea> </td> 
     </tr>
     {% endfor %}
 </table>

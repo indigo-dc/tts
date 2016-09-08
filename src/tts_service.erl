@@ -31,6 +31,8 @@
 get_list() ->
      tts_data:service_get_list().
 
+get_list(#{site := #{uid := UserId}})  ->
+    get_list(UserId);
 get_list(#{uid := UserId})  ->
     get_list(UserId);
 get_list(UserId) ->
@@ -90,8 +92,6 @@ set_enabled_to(Value, Id) ->
 
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     tts_data:service_add(ServiceId, maps:put(enabled, true, ServiceInfo));
-add(#{ id := ServiceId } = ServiceMap) when is_list(ServiceId) ->
-    add(maps:put(id, list_to_binary(ServiceId), ServiceMap));
 add(ServiceMap) when is_map(ServiceMap) ->
     ServiceInfo = map_to_atom_keys(ServiceMap),
     add(ServiceInfo);
@@ -108,18 +108,11 @@ map_to_atom_keys(ServiceMap) ->
 
 map_to_atom_keys([], Map) ->
     Map;
-map_to_atom_keys([{Key, Value}|T], Map) when is_binary(Key) ->
-    AKey = bin_to_atom(Key),
-    NewMap = case verify_value(AKey, Value) of
-                 {ok, VerifiedValue} ->
-                     maps:put(AKey, VerifiedValue, Map);
-                 {ok, VerifiedValue, OtherMap} ->
-                     Map2 = maps:merge(Map, OtherMap),
-                     maps:put(AKey, VerifiedValue, Map2)
-             end,
-    map_to_atom_keys(T, NewMap);
-map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
-    map_to_atom_keys([{list_to_binary(Key), Value} | T], Map).
+map_to_atom_keys([{Key, Value}|T], Map) ->
+    AKey = to_atom(Key),
+    {ok, VerifiedValue} = verify_value(AKey, Value),
+    NewMap = maps:put(AKey, VerifiedValue, Map),
+    map_to_atom_keys(T, NewMap).
 
 -define(KEYMAPPING, [
                     {<<"Id">>, id},
@@ -151,10 +144,14 @@ map_to_atom_keys([{Key, Value}|T], Map) when is_list(Key) ->
                     {<<"true">>, true}
                    ]).
 
-bin_to_atom(BinaryKey) ->
-    bin_to_atom(BinaryKey, BinaryKey).
+to_atom(Value) when is_list(Value) ->
+    to_atom(list_to_binary(Value));
+to_atom(Value) when is_binary(Value)->
+    to_atom(Value, Value).
 
-bin_to_atom(BinaryKey, Default) ->
+to_atom(Value, Default) when is_list(Value) ->
+    to_atom(list_to_binary(Value), Default);
+to_atom(BinaryKey, Default) ->
     case lists:keyfind(BinaryKey, 1, ?KEYMAPPING) of
         false ->
             Default;
@@ -177,18 +174,22 @@ verify_value(con_ssh_key_pass, Pass) ->
     {ok, Pass};
 verify_value(cred_limit, Limit) ->
     {ok, list_to_integer(Limit)};
-verify_value(AKey, Value) when is_list(Value) ->
-    % default is to convert to binary
-    verify_value(AKey, list_to_binary(Value));
-%bin to atom works only after this line
+
 verify_value(con_ssh_auto_accept, Value) ->
-    {ok, bin_to_atom(Value, false)};
+    {ok, to_atom(Value, false)};
 verify_value(con_type, Value) ->
-    {ok, bin_to_atom(Value, undefined)};
+    {ok, to_atom(Value, undefined)};
 verify_value(allow_same_state, Value) ->
-    {ok, bin_to_atom(Value, false)};
+    {ok, to_atom(Value, false)};
 verify_value(cmd, Cmd) ->
-    {ok, tts_file_util:to_abs(Cmd)};
+    {ok, tts_file_util:to_abs(to_bin(Cmd))};
+% default is to convert to binary
+verify_value(AKey, Value) when is_list(Value) ->
+    verify_value(AKey, list_to_binary(Value));
 verify_value(_AKey, Value) ->
     {ok, Value}.
 
+to_bin(Val) when is_list(Val) ->
+    list_to_binary(Val);
+to_bin(Val) when is_binary(Val) ->
+    Val.

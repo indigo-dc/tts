@@ -59,7 +59,6 @@ token_login_test() ->
     Subject = "foo",
     Issuer = "https://bar.com",
     Token = #{id => #{ claims => #{sub => Subject, iss=>Issuer}}},
-    BadToken = #{id => #{ claims => #{ iss=>Issuer}}},
     false = tts_session:is_logged_in(Pid),
     ok = tts_session:set_token(Token, Pid),
     true = tts_session:is_logged_in(Pid),
@@ -67,7 +66,6 @@ token_login_test() ->
     true = tts_session:is_logged_in(Pid),
     {ok, Issuer, Subject} = tts_session:get_iss_sub(Pid),
     true = tts_session:is_logged_in(Pid),
-    ignored = tts_session:set_token(BadToken, Pid),
     ok = tts_session:close(Pid),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = test_util:meck_done(MeckModules).

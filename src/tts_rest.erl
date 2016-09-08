@@ -66,12 +66,11 @@ init(_, _Req, _Opts) ->
           version = undefined,
           type = undefined,
           id = undefined,
+
           token = undefined,
           issuer = undefined,
-          object = undefined,
-          provider = undefined,
           json = undefined,
-          user_info = undefined
+          session_pid = undefined
          }).
 
 rest_init(Req, _Opts) ->
@@ -87,33 +86,33 @@ allow_missing_post(Req, State) ->
     {false, Req, State}.
 
 malformed_request(Req, State) ->
-    {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
-    {InType, Req3} = cowboy_req:binding(type, Req2),
-    {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
-    {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
-    {InIssuer, Req5} = cowboy_req:header(<<"x-openid-connect-issuer">>, Req4),
-    {Method, Req6} = cowboy_req:method(Req5),
-    {ok, InBody, Req7} = cowboy_req:body(Req6),
-    {Result, NewState} = is_malformed(Method, InVersion, InType, InId,
-                                      InBody, InToken, InIssuer, State),
-    {Result, Req7, NewState}.
+    try
+        {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
+        {InType, Req3} = cowboy_req:binding(type, Req2),
+        {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
+        {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
+        {InIssuer, Req5} = cowboy_req:header(<<"x-openid-connect-issuer">>,
+                                             Req4),
+        {Method, Req6} = cowboy_req:method(Req5),
+        {ok, InBody, Req7} = cowboy_req:body(Req6),
+        {Result, NewState} = is_malformed(Method, InVersion, InType, InId,
+                                          InBody, InToken, InIssuer, State),
+        {Result, Req7, NewState}
+    catch _:_ ->
+            {true, Req, State}
+    end.
 
 
 is_authorized(Req, #state{type=oidcp} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{issuer=Issuer} = State) when not is_binary(Issuer) ->
-    {{false, <<"Authorization">>}, Req, State};
-is_authorized(Req, #state{token=Token} = State) when not is_binary(Token) ->
-    {{false, <<"Authorization">>}, Req, State};
 is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer} = State)
   when Type==service; Type==credential; Type==cred_data ->
-    try
-        {ok, ProviderId} = oidcc:find_openid_provider(Issuer),
-        {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderId),
-        {ok, #{sub := Subject}} = oidcc:retrieve_user_info(Token, ProviderId),
-        {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject, Token),
-        {true, Req, State#state{user_info=UserInfo}}
-    catch _:_ -> {{false, <<"Authorization">>}, Req, State}
+    case tts:login_with_access_token(Token, Issuer) of
+        {ok, #{session_pid := SessionPid}} ->
+            {true, Req, State#state{session_pid = SessionPid}};
+        {error, _} ->
+            {{false, <<"Authorization">>}, Req, State}
+
     end;
 is_authorized(Req, State) ->
     {{false, <<"Authorization">>}, Req, State}.
@@ -130,74 +129,67 @@ content_types_accepted(Req, State) ->
 
 resource_exists(Req, #state{id=undefined} = State) ->
     {true, Req, State};
-resource_exists(Req, #state{type=oidcp, id=Id} = State) ->
-    case oidcc:get_openid_provider_info(Id) of
-        {ok, Info} ->
-            {true, Req, State#state{object = Info}};
-        _ -> {false, Req, State}
-    end;
-resource_exists(Req, #state{type=service, id=Id} = State) ->
-    case tts_service:get_info(Id) of
-        {ok, Info} ->
-            {true, Req, State#state{object = Info}};
-        _ -> {false, Req, State}
-    end;
-resource_exists(Req, #state{type=credential, id=Id,
-                            user_info=#{site := #{uid :=UserId}}}=State) ->
-    Result = tts_credential:exists(UserId, Id),
-    {Result, Req, State};
-resource_exists(Req, #state{type=cred_data}=State) ->
-    {true, Req, State};
+resource_exists(Req, #state{type=credential, id=Id, session_pid=Session}
+                = State) ->
+    Exists = tts:does_credential_exist(Id, Session),
+    {Exists, Req, State};
+resource_exists(Req, #state{type=cred_data, id=Id, session_pid=Session}
+                = State) ->
+    Exists = tts:does_temp_cred_exist(Id, Session),
+    {Exists, Req, State};
 resource_exists(Req, State) ->
     {false, Req, State}.
 
 delete_resource(Req, #state{type=credential,
-                            id=CredentialId, user_info=UserInfo}=State) ->
-     case tts_credential:revoke(CredentialId, UserInfo) of
-         {ok, _, _} -> {true, Req, State};
-         _ -> {false, Req, State}
-     end.
+                            id=CredentialId, session_pid=Session}=State) ->
+    Result = case tts:revoke_credential_for(CredentialId, Session) of
+                 {ok, _, _} -> true;
+                 _ -> false
+             end,
+    ok = tts:logout(Session),
+    {Result, Req, State#state{session_pid=undefined}}.
 
 
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
-                     object=Object, user_info=UserInfo } = State) ->
-    Result = perform_get(Type, Id, Object, UserInfo, Version),
-    {Result, Req, State}.
+                     session_pid=Session } = State) ->
+    Result = perform_get(Type, Id, Session, Version),
+    ok = tts:logout(Session),
+    {Result, Req, State#state{session_pid=undefined}}.
 
 
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
-                      user_info=UserInfo, json=Json} = State) ->
-    Result = perform_post(Type, Id, Json, UserInfo, Version),
-    {Result, Req, State}.
+                      session_pid=Session, json=Json} = State) ->
+    Result = perform_post(Type, Id, Json, Session, Version),
+    ok = tts:logout(Session),
+    {Result, Req, State#state{session_pid=undefined}}.
 
-perform_get(service, undefined, _, #{ site := #{uid:=UserId}}, _Version) ->
-    {ok, ServiceList} = tts_service:get_list(UserId),
-    return_service_list(ServiceList);
-perform_get(oidcp, undefined, _, _, _Version) ->
-    {ok, OIDCList} = oidcc:get_openid_provider_list(),
-    return_oidc_list(OIDCList);
-perform_get(credential, undefined, _, #{ site := #{uid := UserId}}, _Version) ->
-    {ok, CredList} = tts_credential:get_list(UserId),
-    return_credential_list(CredList);
-perform_get(cred_data, Id, _, #{ site := #{uid := UserId}}, _Version) ->
-    case tts_rest_cred:get_cred(Id, UserId) of
+perform_get(service, undefined, Session, _Version) ->
+    {ok, ServiceList} = tts:get_service_list_for(Session),
+    return_json_service_list(ServiceList);
+perform_get(oidcp, undefined, _, _Version) ->
+    {ok, OIDCList} = tts:get_openid_provider_list(),
+    return_json_oidc_list(OIDCList);
+perform_get(credential, undefined, Session, _Version) ->
+    {ok, CredList} = tts:get_credential_list_for(Session),
+    return_json_credential_list(CredList);
+perform_get(cred_data, Id, Session, _Version) ->
+    case tts:get_temp_cred(Id, Session) of
         {ok, Cred} -> jsx:encode(Cred);
         _ -> jsx:encode(#{})
     end.
 
-perform_post(credential, undefined, #{service_id:=ServiceId}, UserInfo, Ver) ->
+perform_post(credential, undefined, #{service_id:=ServiceId}, Session, Ver) ->
     IFace = <<"REST interface">>,
-    case  tts_credential:request(ServiceId, UserInfo, IFace, rest, []) of
+    case  tts:request_credential_for(ServiceId, Session, [], IFace) of
         {ok, Credential, _Log} ->
-            #{ site := #{ uid := UserId }} = UserInfo,
-            {ok, Id} = tts_rest_cred:add_cred(Credential, UserId),
+            {ok, Id} = tts:store_temp_cred(Credential, Session),
             Url = id_to_url(Id, Ver),
             {true, Url};
         _ ->
             false
     end.
 
-return_service_list(Services) ->
+return_json_service_list(Services) ->
     Extract = fun(Map, List) ->
                       Keys = [id, type, host, port],
                       [ maps:with(Keys, Map) | List]
@@ -205,19 +197,18 @@ return_service_list(Services) ->
     List = lists:reverse(lists:foldl(Extract, [], Services)),
     jsx:encode(#{service_list => List}).
 
-return_oidc_list(Oidc) ->
-    Id = fun({OidcId, Pid}, List) ->
-                 Result = oidcc:get_openid_provider_info(Pid),
-                 case Result of
-                 {ok, #{issuer := Issuer, ready := true}}  ->
-                         [#{ id => OidcId, issuer => Issuer} | List];
+return_json_oidc_list(Oidc) ->
+    Id = fun(OidcInfo, List) ->
+                 case OidcInfo of
+                 #{issuer := Issuer, id := Id, ready := true}  ->
+                         [#{ id => Id, issuer => Issuer} | List];
                      _ -> List
                  end
          end,
     List = lists:reverse(lists:foldl(Id, [], Oidc)),
     jsx:encode(#{openid_provider_list => List}).
 
-return_credential_list(Credentials) ->
+return_json_credential_list(Credentials) ->
     Id = fun(CredId, List) ->
                  [#{ id => CredId} | List]
          end,
@@ -352,6 +343,3 @@ is_bad_version(Version) when is_integer(Version) ->
    (Version =< 0) or (Version > ?LATEST_VERSION);
 is_bad_version(_) ->
     true.
-
-
-

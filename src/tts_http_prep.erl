@@ -29,8 +29,6 @@
           req_map = #{}
          }).
 
--define(COOKIE, <<"tts_session">>).
-
 init(_, Req, _Opts) ->
     try extract_args(Req, tts_config:is_loaded()) of
         {ok, Req2, State} -> {ok, Req2, State}
@@ -66,13 +64,9 @@ show_result(#{status := 302, header := Header} = Result, Req,
             #state{req_map=ReqMap} = State) ->
     Cookie = maps:get(cookie, Result, clear),
     {ok, Req2} = perform_cookie_action(Cookie, Req, ReqMap),
-    create_redirection(Header, Req2, State).
+    {ok, Req3} = cowboy_req:reply(302, Header, Req2),
+    {ok, Req3, State}.
 
-
-
-create_redirection(Header, Req, State) ->
-    {ok, Req2} = cowboy_req:reply(302, Header, Req),
-    {ok, Req2, State}.
 
 show_html(Body, Status, Req, State) ->
     Req2 = cowboy_req:set_resp_body(Body, Req),
@@ -87,16 +81,7 @@ terminate(_Reason, _Req, _State) ->
                             {<<"POST">>, post}
                            ]).
 
--define(PATHMAPPING, [
-                      {?CONFIG(ep_redirect), ep_redirect},
-                      {?CONFIG(ep_return), ep_return},
-                      {?CONFIG(ep_user), ep_user}
-                     ]).
-
 -define(QSMAPPING, [
-                   {<<"code">>, code},
-                   {<<"error">>, error},
-                   {<<"state">>, state},
                    {<<"action">>, action, value},
                    {<<"request">>, request},
                    {<<"revoke">>, revoke},
@@ -109,9 +94,8 @@ terminate(_Reason, _Req, _State) ->
 extract_args(Req, false) ->
     {ok, Req, #state{ config_loaded = false }};
 extract_args(Req, true) ->
-    {Path, Req2} = cowboy_req:path(Req),
-    {QsList, Req3} = cowboy_req:qs_vals(Req2),
-    {CookieSessionId, Req4} = cowboy_req:cookie(?COOKIE, Req3),
+    CookieName = tts_http_util:cookie_name(),
+    {CookieSessionId, Req4} = cowboy_req:cookie(CookieName, Req),
     {ok, BodyQsList, Req5} = cowboy_req:body_qs(Req4),
     {Headers, Req6} = cowboy_req:headers(Req5),
     {Method, Req7} = cowboy_req:method(Req6),
@@ -120,46 +104,30 @@ extract_args(Req, true) ->
 
     {ok, Session} = tts_session_mgr:get_session(CookieSessionId),
     {ok, SessionId} = tts_session:get_id(Session),
-    AtomPath = map_to_atom(Path, ?PATHMAPPING, ep_main),
     AtomMethod = map_to_atom(Method, ?HTTPMETHODMAPPING),
-    QsMap = create_map_from_proplist(QsList),
     BodyQsMap = create_map_from_proplist(BodyQsList),
     UserAgent = get_header(<<"user-agent">>, Headers),
-    Referer = get_header(<<"referer">>, Headers),
     LoggedIn = is_logged_in(UserAgent, PeerIP, Session),
     ReqMap = #{
-      path => AtomPath,
       method => AtomMethod,
       session => Session,
       session_id => SessionId,
       logged_in => LoggedIn,
-      referer => Referer,
-      user_agent => UserAgent,
-      qs => QsMap,
       body_qs => BodyQsMap
      },
     {ok, Req99, #state{req_map = ReqMap, config_loaded = true,
                        bad_request=false}}.
 
 perform_cookie_action(clear, Req, _ReqMap) ->
-    Opts = create_cookie_opts(0),
-    Req2 = cowboy_req:set_resp_cookie(?COOKIE, <<"deleted">>, Opts, Req),
+    Req2 = tts_http_util:perform_cookie_action(clear, 0, deleted, Req),
     {ok, Req2};
+perform_cookie_action(update, Req, #{session := undefined}) ->
+    perform_cookie_action(clear, Req, undefined);
 perform_cookie_action(update, Req, #{session := Session}) ->
     {ok, MaxAge} = tts_session:get_max_age(Session),
     {ok, ID} = tts_session:get_id(Session),
-    Opts = create_cookie_opts(MaxAge),
-    Req2 = cowboy_req:set_resp_cookie(?COOKIE, ID, Opts, Req),
+    Req2 = tts_http_util:perform_cookie_action(update, MaxAge, ID, Req),
     {ok, Req2}.
-
-create_cookie_opts(MaxAge) ->
-    BasicOpts = [ {http_only, true}, {max_age, MaxAge}, {path, <<"/">>}],
-    case ?CONFIG(ssl) of
-        true ->
-            [{secure, true} | BasicOpts];
-        _ ->
-            BasicOpts
-    end.
 
 create_map_from_proplist(List) ->
     KeyToAtom = fun({Key, Value}, Map) ->
@@ -193,13 +161,13 @@ map_to_atom(Item, Mapping, Default) ->
         false -> Default
     end.
 
+is_logged_in(_UserAgent, _IP, undefined) ->
+    false;
 is_logged_in(UserAgent, IP, Session) ->
     LoggedIn = tts_session:is_logged_in(Session),
     SameUA = tts_session:is_user_agent(UserAgent, Session),
     SameIP = tts_session:is_same_ip(IP, Session),
     SameIP and SameUA and LoggedIn.
-
-
 
 get_header(Key, Headers) ->
     case lists:keyfind(Key, 1, Headers) of

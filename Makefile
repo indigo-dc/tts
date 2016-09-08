@@ -2,7 +2,7 @@ REPO = tts
 REBAR = $(shell pwd)/rebar3
 
 
-.PHONY: check all cln clean eunit ct elvis compile sample_config cookie rel tar run package
+.PHONY: check all cln clean eunit ct elvis compile tests sample_config cookie rel tar run package
 
 all: compile
 
@@ -10,7 +10,7 @@ check:
 	./utils/check_erlang.sh
 
 clean: check
-	$(REBAR) clean -a
+	$(REBAR) do clean -a, cover -r
 	rm -rf _build/default/plugins
 
 eunit: check
@@ -18,6 +18,9 @@ eunit: check
 
 ct: check
 	$(REBAR) do ct,cover -v
+
+tests: check
+	$(REBAR) do eunit, ct, cover -v
 
 elvis: check
 	$(REBAR) lint
@@ -38,7 +41,7 @@ ifneq ($(OVERLAY_VARS),)
 endif
 	$(REBAR) release --overlay_vars ./config/vars_tmp.config
 
-run: rel 
+run: rel
 	./_build/default/rel/tts/bin/tts console
 
 install_deps:
