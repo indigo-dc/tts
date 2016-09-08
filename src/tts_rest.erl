@@ -86,16 +86,21 @@ allow_missing_post(Req, State) ->
     {false, Req, State}.
 
 malformed_request(Req, State) ->
-    {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
-    {InType, Req3} = cowboy_req:binding(type, Req2),
-    {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
-    {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
-    {InIssuer, Req5} = cowboy_req:header(<<"x-openid-connect-issuer">>, Req4),
-    {Method, Req6} = cowboy_req:method(Req5),
-    {ok, InBody, Req7} = cowboy_req:body(Req6),
-    {Result, NewState} = is_malformed(Method, InVersion, InType, InId,
-                                      InBody, InToken, InIssuer, State),
-    {Result, Req7, NewState}.
+    try
+        {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
+        {InType, Req3} = cowboy_req:binding(type, Req2),
+        {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
+        {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
+        {InIssuer, Req5} = cowboy_req:header(<<"x-openid-connect-issuer">>,
+                                             Req4),
+        {Method, Req6} = cowboy_req:method(Req5),
+        {ok, InBody, Req7} = cowboy_req:body(Req6),
+        {Result, NewState} = is_malformed(Method, InVersion, InType, InId,
+                                          InBody, InToken, InIssuer, State),
+        {Result, Req7, NewState}
+    catch _:_ ->
+            {true, Req, State}
+    end.
 
 
 is_authorized(Req, #state{type=oidcp} = State) ->
