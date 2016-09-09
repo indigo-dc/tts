@@ -119,15 +119,13 @@ extract_args(Req, true) ->
                        bad_request=false}}.
 
 perform_cookie_action(clear, Req, _ReqMap) ->
-    Req2 = tts_http_util:perform_cookie_action(clear, 0, deleted, Req),
-    {ok, Req2};
+    tts_http_util:perform_cookie_action(clear, 0, deleted, Req);
 perform_cookie_action(update, Req, #{session := undefined}) ->
     perform_cookie_action(clear, Req, undefined);
 perform_cookie_action(update, Req, #{session := Session}) ->
     {ok, MaxAge} = tts_session:get_max_age(Session),
     {ok, ID} = tts_session:get_id(Session),
-    Req2 = tts_http_util:perform_cookie_action(update, MaxAge, ID, Req),
-    {ok, Req2}.
+    tts_http_util:perform_cookie_action(update, MaxAge, ID, Req).
 
 create_map_from_proplist(List) ->
     KeyToAtom = fun({Key, Value}, Map) ->

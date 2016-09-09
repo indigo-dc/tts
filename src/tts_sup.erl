@@ -36,6 +36,7 @@ init([]) ->
              idh_supervisor(),
              user_cache(),
              sqlite_worker(),
+             temp_cred_sup(),
              temp_cred(),
              config_worker()
             ],
@@ -82,6 +83,12 @@ user_cache() ->
      }.
 
 temp_cred() ->
-    #{ id => rest_cred,
+    #{ id => temp_cred,
        start => {tts_temp_cred, start_link, []}
+     }.
+
+temp_cred_sup() ->
+    #{ id => temp_cred_sup,
+       start => {tts_temp_cred_sup, start_link, []},
+       type => supervisor
      }.
