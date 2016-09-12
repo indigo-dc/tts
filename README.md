@@ -1,12 +1,14 @@
 # Token Translation Service 
 
 ## Purpose
-The Token Translation Service (TTS) is creating credentials for services that do
-not natively support OpenID Connect. Services that do not support OpenID Connect
-are for example ssh, S3 storage, OpenNebula.
+Token Translation Service (TTS) creates credentials for services that do
+not natively support OpenID Connect. Such services are for example ssh, S3
+storage, OpenNebula or certificate authorities, CAs.  
 
-The TTS creates these by using so called plugins, which are scripts managed by
-the administrator of the TTS. An example plugin for ssh is available at
+TTS creates credentials for these services by using plugins. Plugins are
+scripts than can be adapted by a site- administrator. Examples for ssh,
+X.509 and OpenNEbula are provided.  An example plugin for ssh is available
+at
 [tts_config/sample/tts/scripts/ssh.py](https://github.com/indigo-dc/tts/blob/master/tts_config/sample/tts/scripts/ssh.py)
 
 ## Quickstart
