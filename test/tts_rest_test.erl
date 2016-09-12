@@ -87,6 +87,12 @@ malformed_request_test() ->
                           _ -> {undefined, Request}
                       end
              end,
+    ParseHeader = fun(Name, #{header := Header} = Request) ->
+                      case lists:keyfind(Name, 1, Header) of
+                          {Name, {Res, Value}} -> {Res, Value, Request};
+                          _ -> {undefined, undefined, Request}
+                      end
+             end,
     Method = fun(#{method := Method} = Request) ->
                      {Method, Request}
              end,
@@ -106,6 +112,7 @@ malformed_request_test() ->
     ok = meck:expect(cowboy_req, binding, Binding),
     ok = meck:expect(cowboy_req, binding, Binding2),
     ok = meck:expect(cowboy_req, header, Header),
+    ok = meck:expect(cowboy_req, parse_header, ParseHeader),
     ok = meck:expect(cowboy_req, method, Method),
     ok = meck:expect(cowboy_req, body, Body),
     ok = meck:expect(oidcc, get_openid_provider_info, GetProvider),
@@ -149,7 +156,8 @@ malformed_request_test() ->
                 { #{ bindings => [{version, <<"latest">>},
                                   {type, <<"credential">>}
                                  ],
-                     header => [],
+                     header => [{<<"content-type">>,{ok, {<<"application">>,
+                                                           <<"json">>,[]}}}],
                      method => <<"POST">>,
                      body => <<"{\"service_id\":234}">>
                    }, false },
@@ -177,6 +185,13 @@ malformed_request_test() ->
                    }, false },
 
                 % BAD requests
+                { #{ bindings => [{version, <<"latest">>},
+                                  {type, <<"credential">>}
+                                 ],
+                     header => [],
+                     method => <<"POST">>,
+                     body => <<"{\"service_id\":234}">>
+                   }, true },
                 { #{ bindings => [{version, <<"latest">>},
                                   {type, <<"oidcp">>}
                                  ],
@@ -241,8 +256,10 @@ malformed_request_test() ->
                ],
 
     Test  = fun({Request, ExpResult}, _) ->
+                    io:format("testing with request ~p~n",[Request]),
                     {Result, Request, _} = tts_rest:malformed_request(Request,
                                                                       State),
+                    io:format("got result ~p, expecting ~p~n",[Result, ExpResult]),
                     ?assertEqual(ExpResult, Result),
                     ok
             end,
@@ -285,7 +302,9 @@ is_authorized_test() ->
     ok = meck:expect(tts, login_with_access_token, Login),
 
     Test = fun({State, ExpResult}, _AccIn) ->
+                   io:format("testing with state ~p~n",[State]),
                    {Result, Req, _CState} = tts_rest:is_authorized(Req, State),
+                   io:format("got result ~p, expecting ~p~n",[Result, ExpResult]),
                    ?assertEqual(ExpResult, Result),
                    ok
            end,

@@ -86,21 +86,21 @@ allow_missing_post(Req, State) ->
     {false, Req, State}.
 
 malformed_request(Req, State) ->
-    try
-        {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
-        {InType, Req3} = cowboy_req:binding(type, Req2),
-        {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
-        {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
-        {InIssuer, Req5} = cowboy_req:header(<<"x-openid-connect-issuer">>,
-                                             Req4),
-        {Method, Req6} = cowboy_req:method(Req5),
-        {ok, InBody, Req7} = cowboy_req:body(Req6),
-        {Result, NewState} = is_malformed(Method, InVersion, InType, InId,
-                                          InBody, InToken, InIssuer, State),
-        {Result, Req7, NewState}
-    catch _:_ ->
-            {true, Req, State}
-    end.
+    {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
+    {InType, Req3} = cowboy_req:binding(type, Req2),
+    {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
+    {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
+    {InIssuer, Req6} = cowboy_req:header(<<"x-openid-connect-issuer">>,
+                                         Req5),
+    {Res, ContentType, Req7} = cowboy_req:parse_header(<<"content-type">>,
+                                                       Req6),
+    {Method, Req8} = cowboy_req:method(Req7),
+    {ok, InBody, Req9} = cowboy_req:body(Req8),
+
+    {Result, NewState} = is_malformed(Method, {Res, ContentType}, InVersion,
+                                      InType , InId, InBody, InToken,
+                                      InIssuer , State),
+    {Result, Req9, NewState}.
 
 
 is_authorized(Req, #state{type=oidcp} = State) ->
@@ -216,20 +216,21 @@ return_json_credential_list(Credentials) ->
     jsx:encode(#{credential_list => List}).
 
 
-is_malformed(InMethod, InVersion, InType, InId, InBody, InToken, InIssuer,
-             State) ->
+is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
+             InIssuer, State) ->
     Version = verify_version(InVersion),
     Type = verify_type(InType),
     Id = verify_id(InId),
     Token = verify_token(InToken),
     Issuer = verify_issuer(InIssuer),
     Method = verify_method(InMethod),
+    ContentType = verify_content_type(InContentType),
     Body = verify_body(InBody),
     case is_bad_version(Version) of
         true -> {true, State#state{method=Method, version=Version, type=Type,
                                    id=Id, token=Token, issuer=Issuer,
                                    json=Body}};
-        false -> Result = is_malformed(Method, Type, Id, Body),
+        false -> Result = is_malformed(Method, ContentType, Type, Id, Body),
                  {Result, State#state{method=Method, version=Version, type=Type,
                                       id=Id, token=Token, json=Body,
                                       issuer=Issuer}}
@@ -251,6 +252,14 @@ verify_token(Token) when is_binary(Token) ->
     bad_token;
 verify_token(Token) when is_atom(Token) ->
     Token.
+
+verify_content_type({ok, {<<"application">>, <<"json">>, _}}) ->
+    json;
+verify_content_type({undefined, _}) ->
+    undefined;
+verify_content_type(_) ->
+    unsupported.
+
 
 verify_issuer(undefined) ->
     undefined;
@@ -324,19 +333,19 @@ verify_type(Type) ->
 verify_id(Id) ->
     Id.
 
-is_malformed(get, oidcp, undefined, undefined) ->
+is_malformed(get, _, oidcp, undefined, undefined) ->
     false;
-is_malformed(get, service, undefined, undefined) ->
+is_malformed(get, _, service, undefined, undefined) ->
     false;
-is_malformed(get, credential, undefined, undefined) ->
+is_malformed(get, _, credential, undefined, undefined) ->
     false;
-is_malformed(get, cred_data, Id, undefined) ->
+is_malformed(get, _, cred_data, Id, undefined) ->
     not is_binary(Id);
-is_malformed(post,  credential, undefined, #{service_id:=_Id}) ->
+is_malformed(post, json, credential, undefined, #{service_id:=_Id}) ->
     false;
-is_malformed(delete, credential, Id, undefined) ->
+is_malformed(delete, _, credential, Id, undefined) ->
     not is_binary(Id);
-is_malformed(_, _, _, _) ->
+is_malformed(_, _, _, _, _) ->
     true.
 
 is_bad_version(Version) when is_integer(Version) ->
