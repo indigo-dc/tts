@@ -10,7 +10,7 @@ import pwd, json, sys, os, traceback
 
 def oidc_lookup(Issuer, Subject, Create):
     return json.dumps({
-        "uid": "you",
+        "uid": Subject,
         "uidNumber": 1000,
         "gidNumber": 1000,
         "homeDirectory": "/home/you",
