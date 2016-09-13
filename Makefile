@@ -10,7 +10,7 @@ check:
 	./utils/check_erlang.sh
 
 clean: check
-	$(REBAR) do clean -a, cover -r
+	$(REBAR) do clean -a
 	rm -rf _build/default/plugins
 
 eunit: check
