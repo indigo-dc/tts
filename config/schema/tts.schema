@@ -1,0 +1,67 @@
+
+
+
+{mapping, "hostname", "tts.hostname", [
+          {default, "localhost"}
+          ]}.
+
+{mapping, "ssl", "tts.ssl", [
+          {default, false},
+          {commented, true},
+          {datatype, {enum, [true, false]}}
+          ]}.
+
+{mapping, "port", "tts.port", [
+          {commented, 8080},
+          {default, 8080},
+          {datatype,  [integer, {atom, default}]}
+          ]}.
+
+{mapping, "listen_port", "tts.listen_port", [
+          {commented, 8080},
+          {default, 8080},
+          {datatype,  [integer, {atom, default}]}
+          ]}.
+
+{mapping, "main_path", "tts.ep_main", [
+          {default, "/"},
+          hidden
+          ]}.
+
+{mapping, "oidc_path", "tts.ep_oidc", [
+          {default, "/oidc"},
+          hidden
+          ]}.
+
+{mapping, "api_path", "tts.ep_api", [
+          {default, "/api"},
+          hidden
+          ]}.
+
+{mapping, "debug_mode", "tts.debug_mode", [
+          hidden,
+          {datatype ,    {enum ,  [true, false]}},
+          {default, false}
+          ]}.
+
+{mapping, "erlang.smp", "vm_args.-smp", [
+        {default , enable},
+        {datatype ,    {enum ,    [enable , auto , disable]}},
+        hidden
+        ]}.
+
+{mapping, "erlang.mode", "vm_args.-mode", [
+        {default , embedded},
+        {datatype ,    {enum ,    [embedded]}},
+        hidden
+        ]}.
+
+{mapping, "erlang.name", "vm_args.-name", [
+        {default , "tts@127.0.0.1"},
+        hidden
+        ]}.
+
+{mapping, "erlang.cookie", "vm_args.-setcookie", [
+        {default , "tts"},
+        hidden
+        ]}.

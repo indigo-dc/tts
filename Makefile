@@ -35,11 +35,12 @@ cookie:
 	./utils/gen_random_cookie
 
 rel: cookie check
-	cat ./config/vars.config > ./config/vars_tmp.config
+	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
-	cat $(OVERLAY_VARS) >> ./config/vars_tmp.config
+	cat $(OVERLAY_VARS) >> ./config/vars_gen.config
 endif
-	$(REBAR) release --overlay_vars ./config/vars_tmp.config
+	$(REBAR) release
+
 
 run: rel
 	./_build/default/rel/tts/bin/tts console
