@@ -21,7 +21,7 @@ lookup_check() ->
     Result = fun(Res) ->
                      ok = tts_idh_worker:stop(Pid),
                      #{gidNumber := 1000, homeDirectory := <<"/home/you">>,
-                       uid := <<"you">>, uidNumber := 1000,
+                       uid := Sub, uidNumber := 1000,
                        userIds := [[Iss, Sub]]} = Res,
                      ?assertEqual(Issuer, Iss),
                      ?assertEqual(Subject, Sub),
