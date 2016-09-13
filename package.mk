@@ -1,4 +1,4 @@
-REPO			?= unknown 
+REPO  		?= unknown
 PKG_BUILD       ?= 1
 BASE_DIR        ?= $(shell pwd)
 OVERLAY_VARS    ?=
@@ -18,7 +18,7 @@ $(if $(ERLANG_BIN),,$(warning "Warning: No Erlang found in your path, this will 
 #                                 Hash of commit:    g1170096
 REPO_TAG 	:= $(shell git describe --tags)
 
-# Split off the repo name and/or a leading v, if they exist 
+# Split off the repo name and/or a leading v, if they exist
 # Changes to 1.0.3 or 1.1.0pre1-27-g1170096 from example above
 REVISION = $(shell echo $(REPO_TAG) | sed -e 's/^$(REPO)-//' | sed -e 's/^[vV]//')
 
