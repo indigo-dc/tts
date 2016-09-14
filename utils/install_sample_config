@@ -9,6 +9,7 @@ fi
 
 echo -n "copy configuration "
 export platform_data_dir=$DATA_DIR
+export platform_etc_dir=$DATA_DIR
 export idh_script="scripts/idh-single-user.py"
 export cache_entries="CacheMaxEntries = 0"
 export oidc_info="\
@@ -18,7 +19,8 @@ export oidc_google_id="65375832888-m99kcr0vu8qq95h588b1rhi52ei234qo.apps.googleu
 export oidc_google_secret="MEfMXcaQtckJPBctTrAuSQkJ"
 export oidc_iam_id="e70e7190-f19a-44be-8f6c-d64cad3771b9"
 export oidc_iam_secret="AN5pY379_Z_1jgiiAzmQFB4lYMsBYJOAQrCoTtf2stPA6dMghW5KAoKob4zCDCg_yKBEHe8zKP2KuiWxV34zWzw"
-export main_additional_entries="DebugMode = false" 
+export main_additional_entries="DebugMode = false"
+export plugin_ssh_override_user="False"
 
 CONF_DIRS="./
 oidc/
@@ -26,7 +28,7 @@ services/"
 SCRIPT_DIRS="scripts/
 plugins/"
 
-for d in $CONF_DIRS 
+for d in $CONF_DIRS
 do
     OutDir=`realpath -m $DATA_DIR/$d`
     mkdir -p $OutDir
@@ -43,7 +45,7 @@ do
         fi
     done
 done
-for d in $SCRIPT_DIRS 
+for d in $SCRIPT_DIRS
 do
     OutDir=`realpath -m $DATA_DIR/$d`
     mkdir -p $OutDir
