@@ -52,7 +52,7 @@ def create_ssh_for(UserName,HomeDir):
 
     if DEMO:
         #make this a really locked down ssh access
-        Prepend='command="cat /etc/ssh-welcome",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
+        Prepend='command="cat {{platform_etc_dir}}/services/ssh.msg",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
     else:
         Prepend='no-port-forwarding,no-X11-forwarding,no-agent-forwarding '
     Cmd = "echo -n '%s' |  cat - %s.pub >> %s"%(Prepend,OutputFile,AuthorizedFile)
