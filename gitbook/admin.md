@@ -11,7 +11,7 @@ The INDIGO DataCloud repository can be found at http://repo.indigo-datacloud.eu 
 
 
 For informations on how to add the repository to your system refer to the
-documentation of your operation system.
+documentation of your operating system.
 
 #### Ubuntu 14.04
 After adding the repository one needs to update the package list and then install
