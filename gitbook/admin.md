@@ -62,7 +62,7 @@ Typical values that should be changed during the initial setup are:
 - ListenPort, will be set to the internal port the TTS is listening at
 
 And for production use:
-- ssl, set to 'true'
+- SSL, set to 'true'
 - CaCertFile, set to the path to the file
 - CertFile, set to the path to the file
 - KeyFile, set to the path to the file
@@ -92,16 +92,16 @@ The purpose of the IDH script is to lookup or create site specific accounts for
 the OpenId Connect user. Usually there is no need for a simple setup to change
 this setting.
 
-Provided with the Token Translation Service is a baisc IDH script, which uses a
+Provided with the Token Translation Service is a basic IDH script, which uses a
 sqlite database to keep track of the virtually created users.
 
 
-The script location is `/var/lib/tts/idh/baisic-idh.py` and contains several
+The script location is `/var/lib/tts/idh/basic-idh.py` and contains several
 settings. These settings can be modified (in the file). The most
 important settings are:
 * MIN_UID: the minimal uid to use for TTS users
 * MAX_UID: the latest uid to use for TTS users, set to 0 for unlimited
-* CREATE_LOCAL_ACCOUTNS: wether accounts should be created at the TTS server
+* CREATE_LOCAL_ACCOUNTS: wether accounts should be created at the TTS server
 
 
 ### OpenId Connect Provider
@@ -122,12 +122,12 @@ The redirect uri is created from three settings:
 For the default settings this results in the redirect uri:
 http://localhost:8080/oidc.
 
-The redirect uri for the settings SSL = true, Port = 443, host=tts.example.com
+The redirect uri for the settings 'SSL = true', 'Port = 443', 'HostName=tts.example.com'
 would be https://tts.example.com/oidc (the port is not added as it is the default
 port for https, it would be the same for port 80 on SSL = false).
 
 
-The Token Translation uses the code-auth flow and is a web-application.
+The Token Translation uses the 'code-auth-flow' and is a 'web-application'.
 
 #### Configuration File
 The files reside in the `oidc` subfolder of the TTS configuration and one
