@@ -12,8 +12,10 @@ from pwd import getpwnam
 
 STATE_PREFIX="TTS_"
 
-# change this to False, to enable SSH
-DEMO=True
+# change this to False to enable real user login
+OVERRIDE_USER_NAME={{plugin_ssh_override_user}}
+# change this to True, to enable SSH
+FULL_ACCESS=False
 
 def create_ssh(UserName, Uid, Gid, HomeDir):
     UserExists = does_user_exist(UserName,Uid,Gid,HomeDir)
@@ -50,11 +52,11 @@ def create_ssh_for(UserName,HomeDir):
     if os.system(Cmd) != 0:
         return json.dumps({'error':'keygen_failed'})
 
-    if DEMO:
-        #make this a really locked down ssh access
-        Prepend='command="cat /etc/ssh-welcome",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
-    else:
+    if FULL_ACCESS:
         Prepend='no-port-forwarding,no-X11-forwarding,no-agent-forwarding '
+    else:
+        #make this a really locked down ssh access
+        Prepend='command="cat {{platform_etc_dir}}/services/ssh.msg",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
     Cmd = "echo -n '%s' |  cat - %s.pub >> %s"%(Prepend,OutputFile,AuthorizedFile)
     os.system(Cmd)
     PrivKey = get_file_content(OutputFile),
@@ -187,9 +189,9 @@ def main():
             Name = Oidc['name']
             # OidcUserName = Oidc['preferred_username']
 
-            if DEMO:
-                # override usernam, uid, gid and homedir in DEMO mode
-                UserName = {{package_install_user}}
+            if OVERRIDE_USER_NAME:
+                # override username, uid, gid and homedir in DEMO mode
+                UserName = "{{runner_user}}"
                 Uid = getpwnam(UserName).pw_uid
                 Gid = getpwnam(UserName).pw_gid
                 HomeDir = getpwnam(UserName).pw_dir
