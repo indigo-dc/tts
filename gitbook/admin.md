@@ -119,6 +119,7 @@ The redirect uri is created from three settings:
 - HostName: localhost (default)
 - Port: 8080 (default)
 - fix path: /oidc
+
 For the default settings this results in the redirect uri:
 http://localhost:8080/oidc.
 
