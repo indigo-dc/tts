@@ -159,7 +159,7 @@ def main():
             Params = JObject['params']
             UserInfo = JObject['user_info']
             Site = UserInfo['site']
-            Oidc = UserInfo['oidc']
+            #Oidc = UserInfo['oidc']
 
             # information coming from the site
             # uid - the username
@@ -186,7 +186,7 @@ def main():
             #    name - readable name of the group
             # organisation_name - name of the organisation, indigo_dc
             # preferred_username - if possible create accounts with this name
-            Name = Oidc['name']
+            # Name = Oidc['name']
             # OidcUserName = Oidc['preferred_username']
 
             if OVERRIDE_USER_NAME:
