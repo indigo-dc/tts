@@ -12,8 +12,11 @@ from pwd import getpwnam
 
 STATE_PREFIX="TTS_"
 
+# change this to False, to enable SSH
+DEMO=True
+
 def create_ssh(UserName, Uid, Gid, HomeDir):
-    UserExists = does_user_exist(UserName,Uid,Gid,HomeDir) 
+    UserExists = does_user_exist(UserName,Uid,Gid,HomeDir)
     if UserExists:
         return create_ssh_for(UserName,HomeDir)
     else:
@@ -22,7 +25,7 @@ def create_ssh(UserName, Uid, Gid, HomeDir):
 
 
 def revoke_ssh(UserName, Uid, Gid, HomeDir, State):
-    UserExists = does_user_exist(UserName,Uid,Gid,HomeDir) 
+    UserExists = does_user_exist(UserName,Uid,Gid,HomeDir)
     if UserExists:
         return delete_ssh_for(UserName,HomeDir,State)
     else:
@@ -34,8 +37,8 @@ def create_ssh_for(UserName,HomeDir):
     SshDir = create_ssh_dir(UserName,HomeDir)
     if SshDir == None:
         return json.dumps({'error':'ssh_dir_missing'})
-    Password = id_generator() 
-    State = "%s%s"%(STATE_PREFIX,id_generator(32)) 
+    Password = id_generator()
+    State = "%s%s"%(STATE_PREFIX,id_generator(32))
     # maybe change this to random/temp file
     OutputFile = os.path.join(SshDir,"tts_ssh_key")
     AuthorizedFile = os.path.join(SshDir,"authorized_keys")
@@ -46,9 +49,12 @@ def create_ssh_for(UserName,HomeDir):
     Cmd = "ssh-keygen -N %s -C %s -f %s > /dev/null"%(Password,State,OutputFile)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'keygen_failed'})
-    #Prepend='no-port-forwarding,no-X11-forwarding,no-agent-forwarding '
-#make this a really locked down ssh access
-    Prepend='command="cat /etc/ssh-welcome",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
+
+    if DEMO:
+        #make this a really locked down ssh access
+        Prepend='command="cat /etc/ssh-welcome",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
+    else:
+        Prepend='no-port-forwarding,no-X11-forwarding,no-agent-forwarding '
     Cmd = "echo -n '%s' |  cat - %s.pub >> %s"%(Prepend,OutputFile,AuthorizedFile)
     os.system(Cmd)
     PrivKey = get_file_content(OutputFile),
@@ -77,10 +83,10 @@ def delete_ssh_for(UserName, HomeDir, State):
         return json.dumps({'error':'delete_failed', "details":{"copy":Res1, "remove":Res2, "delete":Res3 }})
 
     return json.dumps({'result':'ok'})
-        
 
 
-    
+
+
 
 def get_file_content(File):
     fo = open(File)
@@ -94,7 +100,7 @@ def create_ssh_dir(UserName,HomeDir):
     SshDir=os.path.join(HomeDir,".ssh/")
     AuthorizedFile=os.path.join(SshDir,"authorized_keys")
     if not os.path.exists(SshDir):
-        CreateSshDir = "mkdir -p %s"%SshDir 
+        CreateSshDir = "mkdir -p %s"%SshDir
         if os.system(CreateSshDir) != 0:
             return None
     if not os.path.exists(AuthorizedFile):
@@ -103,9 +109,9 @@ def create_ssh_dir(UserName,HomeDir):
             return None
 
     # always enfore mod and ownership
-    ChOwnSshDir = "chown %s %s"%(UserName,SshDir) 
-    ChModSshDir = "chmod 700 %s"%SshDir 
-    ChOwnAuthFile = "chown %s %s"%(UserName,AuthorizedFile) 
+    ChOwnSshDir = "chown %s %s"%(UserName,SshDir)
+    ChModSshDir = "chmod 700 %s"%SshDir
+    ChOwnAuthFile = "chown %s %s"%(UserName,AuthorizedFile)
     ChModAuthFile = "chmod 600 %s"%AuthorizedFile
     if os.system(ChOwnSshDir) != 0:
         return None
@@ -125,7 +131,7 @@ def does_user_exist(UserName, Uid, Gid, HomeDir):
     try:
         SysUid = getpwnam(UserName).pw_uid
         SysGid = getpwnam(UserName).pw_gid
-        SysHomeDir = getpwnam(UserName).pw_dir 
+        SysHomeDir = getpwnam(UserName).pw_dir
         UidOk =  (SysUid == Uid)
         GidOk = (SysGid == Gid)
         DirOk = (SysHomeDir == HomeDir)
@@ -155,36 +161,43 @@ def main():
 
             # information coming from the site
             # uid - the username
-            # uidNumber - the uid of the user 
-            # gidNumber - the gid of the primary group of the user 
-            # homeDirectory - the home directory of the user 
+            # uidNumber - the uid of the user
+            # gidNumber - the gid of the primary group of the user
+            # homeDirectory - the home directory of the user
             UserName = Site['uid']
             Uid = Site['uidNumber']
             Gid = Site['gidNumber']
             HomeDir = Site['homeDirectory']
 
-            # information coming from the openid provider 
-            # which information are available depends on the 
+            # information coming from the openid provider
+            # which information are available depends on the
             # OpenId Connect provider
-            # 
+            #
             # iss - the issuer
-            # sub - the subject 
-            # name - the full name of the user 
-            # email - the email of the user 
+            # sub - the subject
+            # name - the full name of the user
+            # email - the email of the user
             #
             # IAM also provides
             # groups - a list of groups each consisting of
-            #    id - uuid of the group 
-            #    name - readable name of the group 
-            # organisation_name - name of the organisation, indigo_dc 
-            # preferred_username - if possible create accounts with this name 
+            #    id - uuid of the group
+            #    name - readable name of the group
+            # organisation_name - name of the organisation, indigo_dc
+            # preferred_username - if possible create accounts with this name
             Name = Oidc['name']
             # OidcUserName = Oidc['preferred_username']
 
+            if DEMO:
+                # override usernam, uid, gid and homedir in DEMO mode
+                UserName = {{package_install_user}}
+                Uid = getpwnam(UserName).pw_uid
+                Gid = getpwnam(UserName).pw_gid
+                HomeDir = getpwnam(UserName).pw_dir
+
             if Action == "request":
-                print create_ssh(UserName, Uid, Gid, HomeDir) 
+                print create_ssh(UserName, Uid, Gid, HomeDir)
             elif Action == "revoke":
-                print revoke_ssh(UserName, Uid, Gid, HomeDir, State) 
+                print revoke_ssh(UserName, Uid, Gid, HomeDir, State)
             else:
                 print json.dumps({"error":"unknown_action", "details":Action})
         else:
