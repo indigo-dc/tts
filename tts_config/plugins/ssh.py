@@ -189,7 +189,7 @@ def main():
 
             if DEMO:
                 # override username, uid, gid and homedir in DEMO mode
-                UserName = "{{package_install_user}}"
+                UserName = "{{runner_user}}"
                 Uid = getpwnam(UserName).pw_uid
                 Gid = getpwnam(UserName).pw_gid
                 HomeDir = getpwnam(UserName).pw_dir
