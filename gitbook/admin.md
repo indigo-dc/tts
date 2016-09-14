@@ -7,8 +7,11 @@ To be able to install the packages using the package manager of your system, the
 repository needs to be added. This is done by adding the INDIGO DataCloud
 package repository to your system.
 
+The INDIGO DataCloud repository can be found at http://repo.indigo-datacloud.eu .
+
+
 For informations on how to add the repository to your system refer to the
-documentation at @TODO
+documentation of your operation system.
 
 #### Ubuntu 14.04
 After adding the repository one needs to update the package list and then install
