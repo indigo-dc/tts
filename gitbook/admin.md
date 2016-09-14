@@ -1,16 +1,16 @@
-# Deployment And Administration Guide 
+# Deployment And Administration Guide
 ## Installation
-### From Package 
+### From Package
 For Ubuntu 14.04 and CentOS 7 a package is provided by the INDIGO DataCloud
 team.
-To be able to install the packages using the package manager of your system, the 
+To be able to install the packages using the package manager of your system, the
 repository needs to be added. This is done by adding the INDIGO DataCloud
 package repository to your system.
 
 For informations on how to add the repository to your system refer to the
 documentation at @TODO
 
-#### Ubuntu 14.04 
+#### Ubuntu 14.04
 After adding the repository one needs to update the package list and then install
 the Token Translation Service.
 ```
@@ -53,6 +53,19 @@ location is found, it will override the global configuration.
 
 ### Basic Configuration (main.conf)
 The main configuration for the TTS is `main.conf`.
+The TTS comes shipped with sane defaults, you only need to touch settings that you
+want to change.
+
+Typical values that should be changed during the initial setup are:
+- HostName, changing to the actual fully qualified hostname
+- Port, can be removed if the incomming traffic will arrive at port 80 for http or 443 for https
+- ListenPort, will be set to the internal port the TTS is listening at
+
+And for production use:
+- ssl, set to 'true'
+- CaCertFile, set to the path to the file
+- CertFile, set to the path to the file
+- KeyFile, set to the path to the file
 
 | Key | Description | Default |
 | :---: | --- | :---: |
@@ -76,23 +89,47 @@ The main configuration for the TTS is `main.conf`.
 
 ### Identity Harmonization (IDH)
 The purpose of the IDH script is to lookup or create site specific accounts for
-the OpenId Connect user. 
+the OpenId Connect user. Usually there is no need for a simple setup to change
+this setting.
 
 Provided with the Token Translation Service is a baisc IDH script, which uses a
 sqlite database to keep track of the virtually created users.
 
-The script location is `/usr/share/tts/idh/baisic-idh.py` and contains several
-settings. These settings can be modified (in the file). The most 
+
+The script location is `/var/lib/tts/idh/baisic-idh.py` and contains several
+settings. These settings can be modified (in the file). The most
 important settings are:
 * MIN_UID: the minimal uid to use for TTS users
 * MAX_UID: the latest uid to use for TTS users, set to 0 for unlimited
 * CREATE_LOCAL_ACCOUTNS: wether accounts should be created at the TTS server
 
 
-### OpenId Connect Provider 
+### OpenId Connect Provider
 To provide a login mechanism for the user, at least one OpenId Connect Provider
-is needed. 
+is needed.
 
+The TTS needs to be registered as a client at an OpenId Connect Provider. For this
+you need to perform the registration process at the Provider of your choice. The
+registration process heavily depends on the Provider and is out of the scope of this
+documentation, if you are unsure you can ask the provider.
+
+During the registration some informations need to be provided.
+The redirect uri is created from three settings:
+- SSL: http:// (false, default) and https:// (true)
+- HostName: localhost (default)
+- Port: 8080 (default)
+- fix path: /oidc
+For the default settings this results in the redirect uri:
+http://localhost:8080/oidc.
+
+The redirect uri for the settings SSL = true, Port = 443, host=tts.example.com
+would be https://tts.example.com/oidc (the port is not added as it is the default
+port for https, it would be the same for port 80 on SSL = false).
+
+
+The Token Translation uses the code-auth flow and is a web-application.
+
+#### Configuration File
 The files reside in the `oidc` subfolder of the TTS configuration and one
 file per provider is used. The filename has to end with `.conf`.
 
@@ -110,15 +147,22 @@ An example for the IAM OpenId Connect Provider:
 ```
 Id = IAM
 Description = INDIGO Datacloud Identity and Access Management (IAM)
-ClientId = <insert the client id> 
-Secret =  <insert the client secret> 
-ConfigEndpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration 
+ClientId = <insert the client id>
+Secret =  <insert the client secret>
+ConfigEndpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration
 ```
 
-### Services 
+### Services
 A service is a single entity for which a user can request credentials.
 The configuration of a service consist of one `.conf` file per service, which
 are located in the `services` subfolder of the configuration.
+
+The TTS comes with some sample configurations for included plugins.
+you can easily test them by renaming them from .sample to .conf.
+Three services run out of the box after renaming the file:
+- info
+- ssh
+- x509
 
 To create credentials, the TTS connects to the service, either locally or
 remotely using ssh. After the connection is established, a command is
@@ -152,13 +196,13 @@ A very basic local example:
 ```
 Id = ssh_local
 Type = ssh
-Host = localhost 
+Host = localhost
 Port = 22
-Description = local ssh access to your own machine 
+Description = local ssh access to your own machine
 
-Cmd = /usr/share/tts/scripts/ssh.py 
+Cmd = /usr/share/tts/scripts/ssh.py
 
-ConnectionType = local 
+ConnectionType = local
 CredentialLimit = 3
 ```
 
@@ -166,13 +210,13 @@ A more advanced example for ssh:
 ```
 Id = ssh_remote
 Type = ssh
-Host = ssh.example.com 
+Host = ssh.example.com
 Port = 22
-Description = ssh access to example.com 
+Description = ssh access to example.com
 
-Cmd = /usr/share/tts/scripts/ssh.py 
+Cmd = /usr/share/tts/scripts/ssh.py
 
-ConnectionType = ssh 
+ConnectionType = ssh
 ConnectionUser = root
 ConnectionHost =  ssh.example.com
 ConnectionPort = 22
@@ -180,8 +224,8 @@ ConnectionSshKeyPass = secret
 
 CredentialLimit = 3
 ```
-This assumes a `.ssh` folder is present at `~/.ssh/` with ssh.example.com 
-listed in the `known_hosts` and at least one key file, encrypted using the passphrase 
+This assumes a `.ssh` folder is present at `~/.ssh/` with ssh.example.com
+listed in the `known_hosts` and at least one key file, encrypted using the passphrase
 given with the `ConnectionSshKeyPass`. The home folder in this case is the one of
 the user running the TTS.
 

@@ -4,7 +4,7 @@ actions possible via the web-interface.
 ## Token Translation Service Client (TTSc)
 The TTSc is a command line client for the Token Translation Service.
 Authorization is based on an access token provided as a bearer token with the
-request. 
+request.
 
 ### List all OpenId Provider (lsprov)
 The `lsprov` command lists all the OpenId Providers a TTS instance supports. The call
@@ -49,13 +49,13 @@ $ ttsc lscred localhost:8080 ya29.[...]jksb https://accounts.google.com
 {"cred_id":"qO10bfakPev2sbW5NWJuCdFKhzG4FmqV","cred_state":"TTS_CW0MSwY5qBZBPnn4JKpadDqCldrwdia8","ctime":1467877711,"interface":"web interface","service_id":"ssh"}
 {"cred_id":"2GkzHmpkgVwywckpeIiP-5dpEes0iESe","cred_state":"TTS_nI4XxZPkLCLaQuTCkroAQfGaRVkXCcvY","ctime":1467878940,"interface":"REST interface","service_id":"ssh_tts"}
 ```
-The output is one json object per credential. 
+The output is one json object per credential.
 - `cred_id` is the internal identifier of the credential within TTS.
 - `cred_state` is the state returned by the plugin and stored at the TTS to
-  revoke the credential. 
+  revoke the credential.
 - `ctime` is the creation time
 - `interface` indicates with which interface the credential was created, it is either a
-  web or the REST interface 
+  web or the REST interface
 - `service_id` is the id of the service and links to the service list (see `lsserv`).
 
 ### Requesting a credential (request)
@@ -104,7 +104,7 @@ AOhJBqAofH9BFowVAeUQcWpgP//vwsmyzI7biZxX/DTuojOqTLXopc7hFtluKpPY\n
 ```
 The output is a list of tuples, with each tuple representing a part of the
 credential. Most of them depend on the plugin, as they are specific to the
-service, yet there is one entry which is always included: 
+service, yet there is one entry which is always included:
 - `id`: the value is the internal id in the TTS, see also `lscred`, which also
   shows this credential
 
@@ -124,7 +124,7 @@ $ ttsc lscred localhost:8080 ya29.[...]jksb https://accounts.google.com
 {"cred_id":"qO10bfakPev2sbW5NWJuCdFKhzG4FmqV","cred_state":"TTS_CW0MSwY5qBZBPnn4JKpadDqCldrwdia8","ctime":1467877711,"interface":"web interface","service_id":"ssh"}
 ```
 
-### Plugin Developer HTTP support 
+### Plugin Developer HTTP support
 If you need to connect to an TTS instance that does not support SSL, you should
 contact the administrator and ask him to set it up.  A TTS without SSL MUST NOT
 run in production as confidential data are transmitted.
@@ -140,15 +140,16 @@ The Token Translation Service client (TTSc) from the previous chapter uses the
 REST interface to perform all the described actions. In this chapter, the
 pure REST calls will be described, this is of use only if an application needs
 to communicate directly with the TTS.
-### List Provider 
-Retrieving the list of supported OpenId Connect provider is done by 
+
+### List Provider
+Retrieving the list of supported OpenId Connect provider is done by
 performing a GET request for the `/api/oidcp` path.
 ```
 GET /api/oidcp HTTP/1.1
-Host: localhost 
+Host: localhost
 User-Agent: curl/7.47.0
 Accept: */*
-Authorization: Bearer 
+Authorization: Bearer
 ```
 and the reply is (with line breaking for nicer display):
 ```
@@ -167,15 +168,15 @@ the list of OpenId Providers as a value.  Each Object in the list is one OpenId
 Provider, the `id` is the internal id for that OpenId Provider in TTS, the
 `issuer` is the official issuer returned by the provider.
 
-### List Services 
+### List Services
 To get the list of services for a user a GET call against the `/api/service`
 path.  Authorization is needed for this request please refer to `Authorization
 Header` for details.
 
 An example request is:
-``` 
+```
 GET /api/service HTTP/1.1
-Host: localhost 
+Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
 X-OpenId-Connect-Issuer: https://accounts.google.com
@@ -196,15 +197,15 @@ Again, it is a json object with one key, `service_list`, which holds the list of
 Each entry is a service object, described by its fields.
 Important for requesting a credential is the `id`.
 
-### List Credentials 
-Retrieving the list of credentials currently owned by the user is done by performing a 
-GET request at the `/api/credenial` path. 
+### List Credentials
+Retrieving the list of credentials currently owned by the user is done by performing a
+GET request at the `/api/credenial` path.
 Authorization is needed for this request, please refer to `Authorization Header` for details.
 
 An example request is:
 ```
 GET /api/credential HTTP/1.1
-Host: localhost 
+Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
 X-OpenId-Connect-Issuer: https://accounts.google.com
@@ -225,17 +226,19 @@ The response consists of a json object with one key, `credential_list`. Its
 value is the list of credentials, where each element is again a json object.  For
 revoking a credential, only the `id` of the credential is needed.
 
-### Request Credential 
+### Request Credential
 The creation of the credential is triggered by a POST request to
 `/api/credential`, with the `service_id` as value in a json object.
 Authorization is needed for this request, please refer to `Authorization Header` for details.
+It is important to include the 'Content-Type' header with the value 'application/json', else
+the request will fail with a 'BAD REQUEST'.
 
 The post data is a simple json object of the form `{"service_id":"<id of service>"}`.
 
 An example would be:
 ```
 POST /api/credential HTTP/1.1
-Host: localhost 
+Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
 X-OpenId-Connect-Issuer: https://accounts.google.com
@@ -255,7 +258,7 @@ This is a redirection to a location where the credential data is actually availa
 Following the redirection, the credential data by the TTS are returned:
 ```
 GET /api/v1/credential_data/rwwwNYX-LaBL0dvZ7wq44g HTTP/1.1
-Host: localhost 
+Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
 X-OpenId-Connect-Issuer: https://accounts.google.com
@@ -279,15 +282,15 @@ The only object that is always present is the object whose `name` is `id`, all
 other object depend on the plugin and on the service for which the credential is
 requested.
 
-### Revoke Credential 
-To revoke a credential, a DELETE request for that credential is needed. The path of a credential is 
+### Revoke Credential
+To revoke a credential, a DELETE request for that credential is needed. The path of a credential is
 `/api/credential/<credential id>`.
 Authorization is needed for this request, please refer to `Authorization Header` for details.
 
 A revocation of a credential might look like:
 ```
 DELETE /api/credential/qO10bfakPev2sbW5NWJuCdFKhzG4FmqV HTTP/1.1
-Host: localhost 
+Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
 X-OpenId-Connect-Issuer: https://accounts.google.com
