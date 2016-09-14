@@ -188,8 +188,8 @@ def main():
             # OidcUserName = Oidc['preferred_username']
 
             if DEMO:
-                # override usernam, uid, gid and homedir in DEMO mode
-                UserName = {{package_install_user}}
+                # override username, uid, gid and homedir in DEMO mode
+                UserName = "{{package_install_user}}"
                 Uid = getpwnam(UserName).pw_uid
                 Gid = getpwnam(UserName).pw_gid
                 HomeDir = getpwnam(UserName).pw_dir
