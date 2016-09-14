@@ -67,9 +67,11 @@ do_login(Issuer, Subject0, Token0) ->
                                    {Subject0, Token0}
                            end,
         update_session(Issuer, Subject, Token, SessPid)
-    catch _:_ ->
+    catch Error:Reason ->
             logout(SessPid),
-            lager:debug("login internal fail"),
+            StackTrace = erlang:get_stacktrace(),
+            lager:error("login failed due to ~p:~p at ~p", [Error, Reason,
+                                                            StackTrace]),
             {error, internal}
     end.
 
