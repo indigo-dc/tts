@@ -70,8 +70,8 @@ do_login(Issuer, Subject0, Token0) ->
     catch Error:Reason ->
             logout(SessPid),
             StackTrace = erlang:get_stacktrace(),
-            lager:error("login failed due to ~p:~p at ~p",[Error, Reason
-                                                          , StackTrace]),
+            lager:error("login failed due to ~p:~p at ~p", [Error, Reason,
+                                                            StackTrace]),
             {error, internal}
     end.
 
