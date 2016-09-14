@@ -1,34 +1,33 @@
-# Token Translation Service 
+# Token Translation Service
 
 ## Purpose
-The Token Translation Service (TTS) is creating credentials for services that do
-not natively support OpenID Connect. Services that do not support OpenID Connect
-are for example ssh, S3 storage, OpenNebula or certificate authorities, CAs.
+The Token Translation Service (TTS) creates credentials for services that do
+not natively support OpenID Connect. Such services are for example ssh, S3 storage,
+OpenNebula or certificate authorities, CAs.
 
-The TTS creates credentials for these services by using so called plugins, scripts 
-managed by the administrator of the TTS. 
+The TTS creates credentials for these services by using plugins. Plugins are scripts
+that can be adapted by a site-administrator.
 
 Plugins provided include:
  * [ssh private key](https://github.com/indigo-dc/tts/blob/master/tts_config/plugins/ssh.py)
  * [x.509 (certificate authority)](https://github.com/indigo-dc/tts/blob/master/tts_config/plugins/x509.py)
  * [OpenNebula user/password](https://github.com/indigo-dc/tts/blob/master/tts_config/plugins/opennebula.py)
 
-whith these different type of credentials can be created and retrieved by the user
 
 ## Quickstart
-The Token Translation Service (TTS) requires [Erlang](http://www.erlang.org/) OTP 18.1 or newer to run 
+The Token Translation Service (TTS) requires [Erlang](http://www.erlang.org/) OTP 18.1 or newer to run
 (due to a bug in the cover compiler OTP 18.3 or newer is needed to run the tests)
 
-The following lines adjust and copy the [configuration](https://github.com/indigo-dc/tts/tree/master/tts_config/) 
-to `~/.config/tts`, build the TTS and run it. 
+The following lines adjust and copy the [configuration](https://github.com/indigo-dc/tts/tree/master/tts_config/)
+to `~/.config/tts`, build the TTS and run it.
 ```
 git clone https://github.com/indigo-dc/tts.git
 cd tts
 make sample_config
-make run 
+make run
 ```
-The TTS starts on localhost at port 8080 and includes two OpenID Connect 
-Provider, Google and Indigo Identity and Access Managent (IAM) [IAM on Github](https://github.com/indigo-iam/iam) 
+The TTS starts on localhost at port 8080 and includes two OpenID Connect
+Provider, Google and Indigo Identity and Access Managent (IAM) [IAM on Github](https://github.com/indigo-iam/iam)
 
 [Browse to local TTS](http://localhost:8080)
 
@@ -40,5 +39,5 @@ q().
 
 ## Documentation
 Further documentation of the TTS can be found at the [Token Translation Service
-Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details) 
+Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details)
 on GitBook.
