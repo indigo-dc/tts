@@ -3,6 +3,7 @@ module Pages.Login.View exposing (..)
 import Html exposing (Html, div, text, form, select, option, button, span)
 import Html.Attributes exposing (action, class, method, id, name, value, type')
 import Provider.Model as Provider exposing (Model)
+import Provider.View as Provider exposing (view)
 
 
 type alias ViewContext =
