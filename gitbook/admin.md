@@ -48,6 +48,14 @@ make package
 ```
 the package can be found in `./package/packages`.
 
+## Upgrade the TTS
+### v0.2.2 to v0.4.0
+Upgrading the TTS from version 0.2.2 to 0.4.0 is straight forward.
+As the configuration files are compatible the only actions to do are:
+* stop the TTS `tts stop`
+* install the new package
+* start the newly installed TTS `tts start`
+
 ## Configuration
 The configuration files of the Token Translation Service are usually located in
 `/etc/tts`. Other locations are also supported, for e.g. development purposes; in
