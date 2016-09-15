@@ -2,9 +2,12 @@ REPO = tts
 REBAR = $(shell pwd)/rebar3
 
 
-.PHONY: check all cln clean eunit ct elvis compile tests sample_config cookie rel tar run package
+.PHONY: check all cln clean eunit ct elvis compile ui tests sample_config cookie rel tar run package
 
 all: compile
+
+ui:
+	make -C ui
 
 check:
 	./utils/check_erlang.sh
