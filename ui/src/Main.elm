@@ -3,10 +3,8 @@ module Main exposing (..)
 import Html exposing (Html, div, h1, text, small)
 import Html.App exposing (program)
 import Html.Attributes exposing (class)
-import Html.Events exposing (onClick)
-import Http exposing (get)
+import Http exposing (get, Error)
 import Pages.Login.View as Login exposing (view)
-import Provider.Model as Provider exposing (Model)
 import ProviderList.Decoder as ProviderList exposing (decodeProviderList)
 import ProviderList.Model as ProviderList exposing (Model, initModel)
 import Task exposing (perform)
@@ -15,6 +13,7 @@ import Task exposing (perform)
 -- programWithFlags later on so I can decide if user is logged in or not ...
 
 
+main : Program Never
 main =
     Html.App.program
         { init = init
@@ -27,7 +26,8 @@ main =
 type Msg
     = RetrieveProviderList
     | ProviderList ProviderList.Model
-    | ProviderListFailed
+    | Debug String
+    | ProviderListFailed String
 
 
 type Page
@@ -40,6 +40,7 @@ type alias Model =
     , redirectPath : String
     , activePage : Page
     , providerList : ProviderList.Model
+    , text : String
     }
 
 
@@ -52,8 +53,11 @@ update msg model =
         ProviderList providerlist ->
             ( { model | providerList = providerlist }, Cmd.none )
 
-        ProviderListFailed ->
-            ( model, Cmd.none )
+        Debug data ->
+            ( { model | text = data }, Cmd.none )
+
+        ProviderListFailed info ->
+            ( { model | text = info }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -72,6 +76,7 @@ view model =
                 ]
             , mainContent model
             ]
+        , div [] [ text model.text ]
         ]
 
 
@@ -91,25 +96,40 @@ mainContent model =
             text "what ever ..."
 
 
+init : ( Model, Cmd Msg )
 init =
     ( { version = "0.0.1-alpha"
       , redirectPath = "/oidc"
       , providerList = ProviderList.initModel
       , activePage = Login
+      , text = ""
       }
     , getProviderList
     )
 
 
+getProviderList : Cmd Msg
 getProviderList =
     let
         url =
             "http://localhost:8080/api/v2/oidcp/"
 
-        fail something =
-            ProviderListFailed
+        fail error =
+            case error of
+                Http.Timeout ->
+                    ProviderListFailed "Timeout"
+
+                Http.NetworkError ->
+                    ProviderListFailed "Network error"
+
+                Http.UnexpectedPayload load ->
+                    ProviderListFailed ("UnexpectedPayload: " ++ load)
+
+                Http.BadResponse status body ->
+                    ProviderListFailed ("bad response: " ++ body)
 
         success providerlist =
             ProviderList providerlist
     in
-        Task.perform fail success (Http.get ProviderList.decodeProviderList url)
+        Http.get ProviderList.decodeProviderList url
+            |> Task.perform fail success
