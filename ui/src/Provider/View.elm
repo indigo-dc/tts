@@ -7,11 +7,11 @@ import Provider.Model as Provider exposing (Model)
 
 view : Provider.Model -> Html msg
 view provider =
-    option attributes provider [ text provider.description ]
+    option (attributes provider) [ text provider.description ]
 
 
 attributes provider =
     if provider.ready then
         [ value provider.id ]
     else
-        [ disabled ]
+        [ disabled True ]

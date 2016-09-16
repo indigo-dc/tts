@@ -1,13 +1,13 @@
 module Pages.Login.View exposing (..)
 
 import Html exposing (Html, div, text, form, select, option, button, span)
-import Html.Attributes exposing (action, class, method, id, name, value, type')
-import Provider.Model as Provider exposing (Model)
-import Provider.View as Provider exposing (view)
+import Html.Attributes exposing (disabled, action, class, method, id, name, value, type')
+import ProviderList.Model as ProviderList exposing (Model)
+import ProviderList.View as ProviderList exposing (view)
 
 
 type alias ViewContext =
-    { provider : List Provider.Model
+    { providerList : ProviderList.Model
     , path : String
     }
 
@@ -20,11 +20,13 @@ view context =
             [ form [ method "post", action context.path ]
                 [ div [ class "input-group" ]
                     [ select [ id "provider", name "provider", class "form-control" ]
-                        [ option [ value "id1" ] [ text "description one" ]
-                        , option [ value "id2" ] [ text "description two" ]
-                        ]
+                        (ProviderList.view context.providerList)
                     , span [ class "input-group-btn" ]
-                        [ button [ type' "submit", class "btn btn-primary" ]
+                        [ button
+                            [ type' "submit"
+                            , class "btn btn-primary"
+                            , disabled (not (ProviderList.hasReadyEntries context.providerList))
+                            ]
                             [ text "Login"
                             ]
                         ]

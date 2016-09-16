@@ -42,13 +42,13 @@ dispatch_mapping(InBasePath) ->
                    _ ->
                        InBasePath
                end,
-    << BasePath/binary, <<"/[:version]/:type/[:id]">>/binary >>.
+    << BasePath/binary, <<"/:version/:type/[:id]">>/binary >>.
 
 %%
 %% REST implementation
 %%
 
--define(LATEST_VERSION, 1).
+-define(LATEST_VERSION, 2).
 
 %
 % list of API methods:
@@ -86,7 +86,7 @@ allow_missing_post(Req, State) ->
     {false, Req, State}.
 
 malformed_request(Req, State) ->
-    {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
+    {InVersion, Req2} = cowboy_req:binding(version, Req, no_version),
     {InType, Req3} = cowboy_req:binding(type, Req2),
     {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
     {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
@@ -166,9 +166,12 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
 perform_get(service, undefined, Session, _Version) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
     return_json_service_list(ServiceList);
-perform_get(oidcp, undefined, _, _Version) ->
+perform_get(oidcp, undefined, _, 1) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);
+perform_get(oidcp, undefined, _, 2) ->
+    {ok, OIDCList} = tts:get_openid_provider_list(),
+    jsx:encode(#{openid_provider_list => OIDCList});
 perform_get(credential, undefined, Session, _Version) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
     return_json_credential_list(CredList);
@@ -236,10 +239,8 @@ is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
                                       issuer=Issuer}}
     end.
 
-verify_version(latest) ->
-    ?LATEST_VERSION;
 verify_version(<<"latest">>) ->
-    verify_version(latest);
+    ?LATEST_VERSION;
 verify_version(<< V:1/binary, Version/binary >>) when V==<<"v">>; V==<<"V">> ->
      safe_binary_to_integer(Version);
 verify_version(_) ->
@@ -255,6 +256,8 @@ verify_token(Token) when is_atom(Token) ->
 
 verify_content_type({ok, {<<"application">>, <<"json">>, _}}) ->
     json;
+verify_content_type({ok, undefined}) ->
+    undefined;
 verify_content_type({undefined, _}) ->
     undefined;
 verify_content_type(_) ->

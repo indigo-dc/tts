@@ -13,4 +13,6 @@ decodeProvider : Json.Decode.Decoder Provider.Model
 decodeProvider =
     Json.Decode.Pipeline.decode Provider.Model
         |> Json.Decode.Pipeline.required "id" (Json.Decode.string)
+        |> Json.Decode.Pipeline.required "desc" (Json.Decode.string)
         |> Json.Decode.Pipeline.required "issuer" (Json.Decode.string)
+        |> Json.Decode.Pipeline.required "ready" (Json.Decode.bool)
