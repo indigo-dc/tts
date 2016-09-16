@@ -429,7 +429,10 @@ start_cowboy(_) ->
                                           {"/static/[...]", cowboy_static,
                                            {priv_dir, tts, "http_static"}},
                                           {EpApi, tts_rest, []},
-                                          {EpMain, tts_http_prep, []},
+                                          %% {EpMain, tts_http_prep, []},
+                                          {EpMain, cowboy_static,
+                                           {priv_file, tts,
+                                            "http_static/index.html"}},
                                           {EpOidc, oidcc_http_handler, []}
                                          ]}]),
 
