@@ -17,6 +17,7 @@ test/ct.cover.spec
 /config/vm.args
 /config/generated
 /config/vars_gen.config
+priv/http_static/index.html
 tts.db
 distdir/
 package
