@@ -9,6 +9,9 @@ all: compile
 ui:
 	make -C ui
 
+ui_install: ui
+	make install -C ui
+
 check:
 	./utils/check_erlang.sh
 
@@ -37,7 +40,7 @@ sample_config:
 cookie:
 	./utils/gen_random_cookie
 
-rel: cookie check
+rel: cookie check ui_install
 	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
 	cat $(OVERLAY_VARS) >> ./config/vars_gen.config
