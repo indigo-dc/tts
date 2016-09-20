@@ -111,6 +111,8 @@ is_authorized(Req, #state{type=oidcp} = State) ->
     {true, Req, State};
 is_authorized(Req, #state{type=info} = State) ->
     {true, Req, State};
+is_authorized(Req, #state{type=logout} = State) ->
+    {true, Req, State};
 is_authorized(Req, #state{session_pid=Pid} = State) when is_pid(Pid) ->
     {true, Req, State};
 is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer,
@@ -172,9 +174,14 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
     ok = perform_logout(State),
     {Result, Req, State#state{session_pid=undefined}}.
 
-perform_get(service, undefined, Session, _Version) ->
+perform_get(service, undefined, Session, 1) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
-    return_json_service_list(ServiceList);
+    return_json_service_list(ServiceList, [id, type, host, port]);
+perform_get(service, undefined, Session, _) ->
+    {ok, ServiceList} = tts:get_service_list_for(Session),
+    return_json_service_list(ServiceList, [id, type, host, port, description,
+                                           enabled, cred_count, cred_limit,
+                                           limit_reached] );
 perform_get(oidcp, undefined, _, 1) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);
@@ -195,12 +202,17 @@ perform_get(info, undefined, Session, _) ->
              display_name => DName
             },
     jsx:encode(Info);
+perform_get(logout, undefined, undefined, _) ->
+    jsx:encode(#{result => ok});
+perform_get(logout, undefined, Session, _) ->
+    ok = tts:logout(Session),
+    jsx:encode(#{result => ok});
 perform_get(credential, undefined, Session, 1) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
     return_json_credential_list(CredList);
 perform_get(credential, undefined, Session, _) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
-    return_json_credential_list(#{credential => CredList});
+    return_json_credential_list(CredList);
 perform_get(cred_data, Id, Session, _Version) ->
     case tts:get_temp_cred(Id, Session) of
         {ok, Cred} -> jsx:encode(Cred);
@@ -218,9 +230,8 @@ perform_post(credential, undefined, #{service_id:=ServiceId}, Session, Ver) ->
             false
     end.
 
-return_json_service_list(Services) ->
+return_json_service_list(Services, Keys) ->
     Extract = fun(Map, List) ->
-                      Keys = [id, type, host, port],
                       [ maps:with(Keys, Map) | List]
               end,
     List = lists:reverse(lists:foldl(Extract, [], Services)),
@@ -344,9 +355,10 @@ safe_binary_to_integer(Version) ->
 
 
 -define(TYPE_MAPPING, [
-                       {<<"service">>, service},
                        {<<"oidcp">>, oidcp},
                        {<<"info">>, info},
+                       {<<"logout">>, logout},
+                       {<<"service">>, service},
                        {<<"credential">>, credential},
                        {<<"credential_data">>, cred_data }
                       ]).
@@ -376,6 +388,8 @@ is_malformed(get, _, oidcp, undefined, undefined) ->
     false;
 is_malformed(get, _, info, undefined, undefined) ->
     false;
+is_malformed(get, _, logout, undefined, undefined) ->
+    false;
 is_malformed(get, _, service, undefined, undefined) ->
     false;
 is_malformed(get, _, credential, undefined, undefined) ->
@@ -395,6 +409,6 @@ is_bad_version(_) ->
     true.
 
 perform_logout(#state{session_pid = Session, cookie_based = false}) ->
-    tts:logout(Session) ;
+    tts:logout(Session);
 perform_logout(_) ->
     ok.

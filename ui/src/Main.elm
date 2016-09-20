@@ -2,6 +2,9 @@ module Main exposing (..)
 
 -- import Navigation as Nav exposing (Location)
 
+import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
+import CredentialList.Model as CredentialList exposing (Model, initModel)
+import Debug exposing (log)
 import Html exposing (Html, div, h1, text, small)
 import Html.App exposing (program)
 import Html.Attributes exposing (class)
@@ -9,8 +12,12 @@ import Http exposing (get, Error)
 import Info.Decoder as Info exposing (decodeInfo)
 import Info.Model as Info exposing (Model)
 import Pages.Login.View as Login exposing (view)
+import Pages.User.View as User exposing (view)
 import ProviderList.Decoder as ProviderList exposing (decodeProviderList)
 import ProviderList.Model as ProviderList exposing (Model, initModel)
+import Service.Model as Service exposing (Msg)
+import ServiceList.Decoder as ServiceList exposing (decodeServiceList)
+import ServiceList.Model as ServiceList exposing (Model, initModel)
 import String exposing (dropRight, endsWith)
 import Task exposing (perform)
 
@@ -29,8 +36,14 @@ type Msg
     = Info Info.Model
     | InfoFailed String
     | ProviderList ProviderList.Model
-    | Debug String
+    | ServiceList ServiceList.Model
+    | CredentialList CredentialList.Model
     | ProviderListFailed String
+    | ServiceListFailed String
+    | CredentialListFailed String
+    | LoggedOut
+    | LogoutFailed String
+    | ServiceMsg Service.Msg
 
 
 type Page
@@ -50,7 +63,8 @@ type alias Model =
     , restVersion : String
     , activePage : Page
     , providerList : ProviderList.Model
-    , text : String
+    , serviceList : ServiceList.Model
+    , credentialList : CredentialList.Model
     , loggedIn : Bool
     , displayName : String
     }
@@ -59,18 +73,12 @@ type alias Model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ProviderList providerlist ->
-            ( { model | providerList = providerlist }, Cmd.none )
-
-        ProviderListFailed reason ->
-            ( { model | text = reason }, Cmd.none )
-
         Info info ->
             let
                 ( nextPage, nextCmd ) =
                     case info.loggedIn of
                         True ->
-                            ( User, Cmd.none )
+                            ( User, retrieveServiceList model.url model.restVersion )
 
                         False ->
                             ( Login, retrieveProviderList model.url model.restVersion )
@@ -81,16 +89,54 @@ update msg model =
                     , loggedIn = info.loggedIn
                     , displayName = info.displayName
                     , activePage = nextPage
-                    , text = model.text ++ " " ++ info.displayName
                   }
                 , nextCmd
                 )
 
-        InfoFailed reason ->
-            ( { model | text = model.text ++ "\n" ++ reason }, Cmd.none )
+        LoggedOut ->
+            initModel model.url model.restVersion
 
-        Debug data ->
-            ( { model | text = data }, Cmd.none )
+        ProviderList providerlist ->
+            ( { model
+                | providerList = providerlist
+              }
+            , Cmd.none
+            )
+
+        ServiceList servicelist ->
+            ( { model
+                | serviceList = servicelist
+              }
+            , retrieveCredentialList model.url model.restVersion
+            )
+
+        CredentialList credentiallist ->
+            ( { model
+                | credentialList = credentiallist
+              }
+            , Cmd.none
+            )
+
+        InfoFailed reason ->
+            initModel model.url model.restVersion
+
+        ProviderListFailed reason ->
+            initModel model.url model.restVersion
+
+        ServiceListFailed reason ->
+            initModel model.url model.restVersion
+
+        CredentialListFailed reason ->
+            initModel model.url model.restVersion
+
+        LogoutFailed reason ->
+            initModel model.url model.restVersion
+
+        ServiceMsg (Service.Logout) ->
+            ( model, logout model.url model.restVersion )
+
+        ServiceMsg (Service.Request serviceId) ->
+            ( model, request model.url model.restVersion serviceId )
 
 
 subscriptions : Model -> Sub Msg
@@ -105,11 +151,10 @@ view model =
             [ h1 []
                 [ text "Token Translation Service"
                 , text " "
+                , small [] [ text model.serverVersion ]
                 ]
-            , small [] [ text model.serverVersion ]
             , mainContent model
             ]
-        , div [] [ text model.text ]
         ]
 
 
@@ -126,10 +171,23 @@ mainContent model =
                 Login.view context
 
         User ->
-            text "you are logged in :)"
+            let
+                context =
+                    { serviceList = model.serviceList
+                    , credentialList = model.credentialList
+                    , displayName = model.displayName
+                    }
+            in
+                Html.App.map ServiceMsg <| User.view context
 
         Unknown ->
-            text "what ever ..."
+            let
+                context =
+                    { providerList = model.providerList
+                    , path = model.redirectPath
+                    }
+            in
+                Login.view context
 
 
 init : Flags -> ( Model, Cmd Msg )
@@ -146,18 +204,24 @@ init flags =
         restVersion =
             "v2"
     in
-        ( { serverVersion = "unknown"
-          , restVersion = restVersion
-          , url = baseUrl
-          , redirectPath = "unknown"
-          , providerList = ProviderList.initModel
-          , activePage = Login
-          , text = baseUrl
-          , loggedIn = False
-          , displayName = "unknown"
-          }
-        , retrieveInfo baseUrl restVersion
-        )
+        initModel baseUrl restVersion
+
+
+initModel : String -> String -> ( Model, Cmd Msg )
+initModel baseUrl restVersion =
+    ( { serverVersion = "unknown"
+      , restVersion = restVersion
+      , url = baseUrl
+      , redirectPath = "unknown"
+      , providerList = ProviderList.initModel
+      , serviceList = ServiceList.initModel
+      , credentialList = CredentialList.initModel
+      , activePage = Login
+      , loggedIn = False
+      , displayName = "unknown"
+      }
+    , retrieveInfo baseUrl restVersion
+    )
 
 
 retrieveInfo : String -> String -> Cmd Msg
@@ -214,24 +278,107 @@ retrieveProviderList baseUrl restVersion =
             |> Task.perform fail success
 
 
+retrieveServiceList : String -> String -> Cmd Msg
+retrieveServiceList baseUrl restVersion =
+    let
+        apiUrl =
+            baseUrl ++ "/api/" ++ restVersion ++ "/service/"
 
--- retrieveServiceList : String -> String -> Cmd Msg
--- retrieveServiceList baseUrl restVersion =
---     let
---         apiUrl =
---             baseUrl ++ "/api/" ++ restVersion ++ "/service/"
---         fail error =
---             case error of
---                 Http.Timeout ->
---                     ServiceListFailed "Timeout"
---                 Http.NetworkError ->
---                     ServiceListFailed "Network error"
---                 Http.UnexpectedPayload load ->
---                     ServiceListFailed ("UnexpectedPayload: " ++ load)
---                 Http.BadResponse status body ->
---                     ServiceListFailed ("bad response: " ++ body)
---         success servicelist =
---             ServiceList servicelist
---     in
---         Http.get ServiceList.decodeServiceList apiUrl
---             |> Task.perform fail success
+        fail error =
+            case error of
+                Http.Timeout ->
+                    ServiceListFailed "Timeout"
+
+                Http.NetworkError ->
+                    ServiceListFailed "Network error"
+
+                Http.UnexpectedPayload load ->
+                    ServiceListFailed ("UnexpectedPayload: " ++ load)
+
+                Http.BadResponse status body ->
+                    ServiceListFailed ("bad response: " ++ body)
+
+        success servicelist =
+            ServiceList (log "serviceList" servicelist)
+    in
+        Http.get ServiceList.decodeServiceList apiUrl
+            |> Task.perform fail success
+
+
+retrieveCredentialList : String -> String -> Cmd Msg
+retrieveCredentialList baseUrl restVersion =
+    let
+        apiUrl =
+            baseUrl ++ "/api/" ++ restVersion ++ "/credential/"
+
+        fail error =
+            case error of
+                Http.Timeout ->
+                    CredentialListFailed "Timeout"
+
+                Http.NetworkError ->
+                    CredentialListFailed "Network error"
+
+                Http.UnexpectedPayload load ->
+                    CredentialListFailed ("UnexpectedPayload: " ++ load)
+
+                Http.BadResponse status body ->
+                    CredentialListFailed ("bad response: " ++ body)
+
+        success credentiallist =
+            CredentialList (log "credentialList" credentiallist)
+    in
+        Http.get CredentialList.decodeCredentialList apiUrl
+            |> Task.perform fail success
+
+
+logout : String -> String -> Cmd Msg
+logout baseUrl restVersion =
+    let
+        apiUrl =
+            baseUrl ++ "/api/" ++ restVersion ++ "/logout/"
+
+        fail error =
+            case error of
+                Http.Timeout ->
+                    LogoutFailed "Timeout"
+
+                Http.NetworkError ->
+                    LogoutFailed "Network error"
+
+                Http.UnexpectedPayload load ->
+                    LogoutFailed ("UnexpectedPayload: " ++ load)
+
+                Http.BadResponse status body ->
+                    LogoutFailed ("bad response: " ++ body)
+
+        success data =
+            LoggedOut
+    in
+        Http.getString apiUrl
+            |> Task.perform fail success
+logout : String -> String -> String -> Cmd Msg
+logout baseUrl restVersion =
+    let
+        apiUrl =
+            baseUrl ++ "/api/" ++ restVersion ++ "/logout/"
+
+        fail error =
+            case error of
+                Http.Timeout ->
+                    LogoutFailed "Timeout"
+
+                Http.NetworkError ->
+                    LogoutFailed "Network error"
+
+                Http.UnexpectedPayload load ->
+                    LogoutFailed ("UnexpectedPayload: " ++ load)
+
+                Http.BadResponse status body ->
+                    LogoutFailed ("bad response: " ++ body)
+
+        success data =
+            LoggedOut
+    in
+        Http.getString apiUrl
+            |> Task.perform fail success
