@@ -212,11 +212,16 @@ perform_get(credential, undefined, Session, 1) ->
     return_json_credential_list(CredList);
 perform_get(credential, undefined, Session, _) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
-    return_json_credential_list(CredList);
-perform_get(cred_data, Id, Session, _Version) ->
+    return_json_credential_list(CredList, [cred_id, ctime, interface, service_id]);
+perform_get(cred_data, Id, Session, 1) ->
     case tts:get_temp_cred(Id, Session) of
         {ok, Cred} -> jsx:encode(Cred);
         _ -> jsx:encode(#{})
+    end;
+perform_get(cred_data, Id, Session, _Version) ->
+    case tts:get_temp_cred(Id, Session) of
+        {ok, Cred} -> jsx:encode(#{credential => Cred});
+        _ -> jsx:encode(#{credential => []})
     end.
 
 perform_post(credential, undefined, #{service_id:=ServiceId}, Session, Ver) ->
@@ -249,12 +254,18 @@ return_json_oidc_list(Oidc) ->
     jsx:encode(#{openid_provider_list => List}).
 
 return_json_credential_list(Credentials) ->
-    Id = fun(CredId, List) ->
+    Id = fun(#{cred_id := CredId}, List) ->
                  [#{ id => CredId} | List]
          end,
     List = lists:reverse(lists:foldl(Id, [], Credentials)),
     jsx:encode(#{credential_list => List}).
 
+return_json_credential_list(Credentials, Keys) ->
+    Id = fun(Cred, List) ->
+                 [maps:with(Keys, Cred) | List]
+         end,
+    List = lists:reverse(lists:foldl(Id, [], Credentials)),
+    jsx:encode(#{credential_list => List}).
 
 is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
              InIssuer, InCookieSession, State) ->
