@@ -4,9 +4,10 @@ import Credential.View as Credential exposing (view)
 import CredentialList.Model as CredentialList exposing (Model)
 import Html exposing (Html, div, h2, text, form, select, option, button, span, tr, th, table, thead, tbody, p)
 import Html.Attributes exposing (class, method, value, disabled, name, type', action)
+import Messages exposing (Msg)
 
 
-view : CredentialList.Model -> Html msg
+view : CredentialList.Model -> Html Msg
 view model =
     let
         append service list =

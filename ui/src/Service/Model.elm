@@ -1,11 +1,6 @@
 module Service.Model exposing (..)
 
 
-type Msg
-    = Request String
-    | Logout
-
-
 type alias Model =
     { id : String
     , description : String

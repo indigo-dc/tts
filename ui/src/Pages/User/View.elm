@@ -5,7 +5,7 @@ import CredentialList.View as CredentialList exposing (view)
 import Html exposing (Html, div, text, form, select, option, button, span, br, input)
 import Html.Attributes exposing (disabled, action, class, method, id, name, value, type')
 import Html.Events exposing (onClick)
-import Service.Model as Service exposing (Msg)
+import Messages exposing (Msg)
 import ServiceList.Model as ServiceList exposing (Model)
 import ServiceList.View as ServiceList exposing (view)
 
@@ -17,7 +17,7 @@ type alias ViewContext =
     }
 
 
-view : ViewContext -> Html Service.Msg
+view : ViewContext -> Html Msg
 view context =
     div []
         [ text ("Hello " ++ context.displayName ++ ", welcome!")
@@ -28,5 +28,5 @@ view context =
         , br [] []
         , ServiceList.view context.serviceList
         , CredentialList.view context.credentialList
-        , button [ class "btn btn-primary", onClick Service.Logout ] [ text "Logout" ]
+        , button [ class "btn btn-primary", onClick Messages.Logout ] [ text "Logout" ]
         ]

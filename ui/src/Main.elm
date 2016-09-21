@@ -1,6 +1,6 @@
 module Main exposing (..)
 
--- import Navigation as Nav exposing (Location)
+-- import Json.Decode as Decoder
 
 import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
 import CredentialList.Model as CredentialList exposing (Model, initModel)
@@ -8,14 +8,15 @@ import Debug exposing (log)
 import Html exposing (Html, div, h1, text, small)
 import Html.App exposing (program)
 import Html.Attributes exposing (class)
-import Http exposing (get, Error)
+import Http exposing (get, post, send, defaultSettings, Error)
 import Info.Decoder as Info exposing (decodeInfo)
-import Info.Model as Info exposing (Model)
+import Messages exposing (Msg)
 import Pages.Login.View as Login exposing (view)
 import Pages.User.View as User exposing (view)
 import ProviderList.Decoder as ProviderList exposing (decodeProviderList)
 import ProviderList.Model as ProviderList exposing (Model, initModel)
-import Service.Model as Service exposing (Msg)
+import Secret.Decoder exposing (decodeSecret)
+import Secret.Model as Secret exposing (Model)
 import ServiceList.Decoder as ServiceList exposing (decodeServiceList)
 import ServiceList.Model as ServiceList exposing (Model, initModel)
 import String exposing (dropRight, endsWith)
@@ -30,20 +31,6 @@ main =
         , update = update
         , subscriptions = subscriptions
         }
-
-
-type Msg
-    = Info Info.Model
-    | InfoFailed String
-    | ProviderList ProviderList.Model
-    | ServiceList ServiceList.Model
-    | CredentialList CredentialList.Model
-    | ProviderListFailed String
-    | ServiceListFailed String
-    | CredentialListFailed String
-    | LoggedOut
-    | LogoutFailed String
-    | ServiceMsg Service.Msg
 
 
 type Page
@@ -65,6 +52,7 @@ type alias Model =
     , providerList : ProviderList.Model
     , serviceList : ServiceList.Model
     , credentialList : CredentialList.Model
+    , credential : Maybe Secret.Model
     , loggedIn : Bool
     , displayName : String
     }
@@ -73,7 +61,7 @@ type alias Model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Info info ->
+        Messages.Info info ->
             let
                 ( nextPage, nextCmd ) =
                     case info.loggedIn of
@@ -93,50 +81,76 @@ update msg model =
                 , nextCmd
                 )
 
-        LoggedOut ->
+        Messages.LoggedOut ->
             initModel model.url model.restVersion
 
-        ProviderList providerlist ->
+        Messages.ProviderList providerlist ->
             ( { model
                 | providerList = providerlist
               }
             , Cmd.none
             )
 
-        ServiceList servicelist ->
+        Messages.ServiceList servicelist ->
             ( { model
                 | serviceList = servicelist
               }
             , retrieveCredentialList model.url model.restVersion
             )
 
-        CredentialList credentiallist ->
+        Messages.CredentialList credentiallist ->
             ( { model
                 | credentialList = credentiallist
               }
             , Cmd.none
             )
 
-        InfoFailed reason ->
+        Messages.Credential credential ->
+            ( { model
+                | credential = Just credential
+              }
+            , retrieveCredentialList model.url model.restVersion
+            )
+
+        Messages.InfoFailed reason ->
             initModel model.url model.restVersion
 
-        ProviderListFailed reason ->
-            initModel model.url model.restVersion
+        Messages.ProviderListFailed reason ->
+            ( model, Cmd.none )
 
-        ServiceListFailed reason ->
-            initModel model.url model.restVersion
-
-        CredentialListFailed reason ->
-            initModel model.url model.restVersion
-
-        LogoutFailed reason ->
-            initModel model.url model.restVersion
-
-        ServiceMsg (Service.Logout) ->
+        Messages.ServiceListFailed reason ->
             ( model, logout model.url model.restVersion )
 
-        ServiceMsg (Service.Request serviceId) ->
+        Messages.RequestFailed reason ->
+            ( model, Cmd.none )
+
+        Messages.RevokeFailed reason ->
+            ( model, Cmd.none )
+
+        Messages.CredentialListFailed reason ->
+            ( model, Cmd.none )
+
+        Messages.LogoutFailed reason ->
+            initModel model.url model.restVersion
+
+        Messages.Logout ->
+            ( model, logout model.url model.restVersion )
+
+        Messages.Request serviceId ->
             ( model, request model.url model.restVersion serviceId )
+
+        Messages.Revoke credId ->
+            ( model, revoke model.url model.restVersion credId )
+
+        Messages.Requested credential ->
+            ( { model
+                | credential = Just credential
+              }
+            , retrieveServiceList model.url model.restVersion
+            )
+
+        Messages.Revoked ->
+            ( model, retrieveServiceList model.url model.restVersion )
 
 
 subscriptions : Model -> Sub Msg
@@ -178,7 +192,7 @@ mainContent model =
                     , displayName = model.displayName
                     }
             in
-                Html.App.map ServiceMsg <| User.view context
+                User.view context
 
         Unknown ->
             let
@@ -193,13 +207,21 @@ mainContent model =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
     let
-        baseUrl =
-            case String.endsWith "/" flags.url of
+        withoutHash =
+            case String.endsWith "#" flags.url of
                 True ->
                     String.dropRight 1 flags.url
 
                 False ->
                     flags.url
+
+        baseUrl =
+            case String.endsWith "/" withoutHash of
+                True ->
+                    String.dropRight 1 withoutHash
+
+                False ->
+                    withoutHash
 
         restVersion =
             "v2"
@@ -211,10 +233,11 @@ initModel : String -> String -> ( Model, Cmd Msg )
 initModel baseUrl restVersion =
     ( { serverVersion = "unknown"
       , restVersion = restVersion
-      , url = baseUrl
+      , url = (log "baseUrl" baseUrl)
       , redirectPath = "unknown"
       , providerList = ProviderList.initModel
       , serviceList = ServiceList.initModel
+      , credential = Nothing
       , credentialList = CredentialList.initModel
       , activePage = Login
       , loggedIn = False
@@ -233,19 +256,19 @@ retrieveInfo baseUrl restVersion =
         fail error =
             case error of
                 Http.Timeout ->
-                    InfoFailed "Timeout"
+                    Messages.InfoFailed "Timeout"
 
                 Http.NetworkError ->
-                    InfoFailed "Network error"
+                    Messages.InfoFailed "Network error"
 
                 Http.UnexpectedPayload load ->
-                    InfoFailed ("UnexpectedPayload: " ++ load)
+                    Messages.InfoFailed ("UnexpectedPayload: " ++ load)
 
                 Http.BadResponse status body ->
-                    InfoFailed ("bad response: " ++ body)
+                    Messages.InfoFailed ("bad response: " ++ body)
 
         success providerlist =
-            Info providerlist
+            Messages.Info providerlist
     in
         Http.get Info.decodeInfo apiUrl
             |> Task.perform fail success
@@ -260,19 +283,19 @@ retrieveProviderList baseUrl restVersion =
         fail error =
             case error of
                 Http.Timeout ->
-                    ProviderListFailed "Timeout"
+                    Messages.ProviderListFailed "Timeout"
 
                 Http.NetworkError ->
-                    ProviderListFailed "Network error"
+                    Messages.ProviderListFailed "Network error"
 
                 Http.UnexpectedPayload load ->
-                    ProviderListFailed ("UnexpectedPayload: " ++ load)
+                    Messages.ProviderListFailed ("UnexpectedPayload: " ++ load)
 
                 Http.BadResponse status body ->
-                    ProviderListFailed ("bad response: " ++ body)
+                    Messages.ProviderListFailed ("bad response: " ++ body)
 
         success providerlist =
-            ProviderList providerlist
+            Messages.ProviderList providerlist
     in
         Http.get ProviderList.decodeProviderList apiUrl
             |> Task.perform fail success
@@ -287,19 +310,19 @@ retrieveServiceList baseUrl restVersion =
         fail error =
             case error of
                 Http.Timeout ->
-                    ServiceListFailed "Timeout"
+                    Messages.ServiceListFailed "Timeout"
 
                 Http.NetworkError ->
-                    ServiceListFailed "Network error"
+                    Messages.ServiceListFailed "Network error"
 
                 Http.UnexpectedPayload load ->
-                    ServiceListFailed ("UnexpectedPayload: " ++ load)
+                    Messages.ServiceListFailed ("UnexpectedPayload: " ++ load)
 
                 Http.BadResponse status body ->
-                    ServiceListFailed ("bad response: " ++ body)
+                    Messages.ServiceListFailed ("bad response: " ++ body)
 
         success servicelist =
-            ServiceList (log "serviceList" servicelist)
+            Messages.ServiceList (log "serviceList" servicelist)
     in
         Http.get ServiceList.decodeServiceList apiUrl
             |> Task.perform fail success
@@ -312,21 +335,21 @@ retrieveCredentialList baseUrl restVersion =
             baseUrl ++ "/api/" ++ restVersion ++ "/credential/"
 
         fail error =
-            case error of
+            case (log "credlistfail" error) of
                 Http.Timeout ->
-                    CredentialListFailed "Timeout"
+                    Messages.CredentialListFailed "Timeout"
 
                 Http.NetworkError ->
-                    CredentialListFailed "Network error"
+                    Messages.CredentialListFailed "Network error"
 
                 Http.UnexpectedPayload load ->
-                    CredentialListFailed ("UnexpectedPayload: " ++ load)
+                    Messages.CredentialListFailed ("UnexpectedPayload: " ++ load)
 
                 Http.BadResponse status body ->
-                    CredentialListFailed ("bad response: " ++ body)
+                    Messages.CredentialListFailed ("bad response: " ++ body)
 
         success credentiallist =
-            CredentialList (log "credentialList" credentiallist)
+            Messages.CredentialList (log "credentialList" credentiallist)
     in
         Http.get CredentialList.decodeCredentialList apiUrl
             |> Task.perform fail success
@@ -341,44 +364,97 @@ logout baseUrl restVersion =
         fail error =
             case error of
                 Http.Timeout ->
-                    LogoutFailed "Timeout"
+                    Messages.LogoutFailed "Timeout"
 
                 Http.NetworkError ->
-                    LogoutFailed "Network error"
+                    Messages.LogoutFailed "Network error"
 
                 Http.UnexpectedPayload load ->
-                    LogoutFailed ("UnexpectedPayload: " ++ load)
+                    Messages.LogoutFailed ("UnexpectedPayload: " ++ load)
 
                 Http.BadResponse status body ->
-                    LogoutFailed ("bad response: " ++ body)
+                    Messages.LogoutFailed ("bad response: " ++ body)
 
         success data =
-            LoggedOut
+            Messages.LoggedOut
     in
         Http.getString apiUrl
             |> Task.perform fail success
-logout : String -> String -> String -> Cmd Msg
-logout baseUrl restVersion =
+
+
+request : String -> String -> String -> Cmd Msg
+request baseUrl restVersion serviceId =
     let
         apiUrl =
-            baseUrl ++ "/api/" ++ restVersion ++ "/logout/"
+            baseUrl ++ "/api/" ++ restVersion ++ "/credential/"
+
+        data =
+            Http.string ("{\"service_id\":\"" ++ serviceId ++ "\"}")
+
+        request =
+            { verb = "POST"
+            , headers = [ ( "Content-Type", "application/json" ) ]
+            , url = apiUrl
+            , body = data
+            }
 
         fail error =
-            case error of
+            case (log "credentialFail" error) of
                 Http.Timeout ->
-                    LogoutFailed "Timeout"
+                    Messages.RequestFailed "Timeout"
 
                 Http.NetworkError ->
-                    LogoutFailed "Network error"
+                    Messages.RequestFailed "Network error"
 
                 Http.UnexpectedPayload load ->
-                    LogoutFailed ("UnexpectedPayload: " ++ load)
+                    Messages.RequestFailed ("UnexpectedPayload: " ++ load)
 
                 Http.BadResponse status body ->
-                    LogoutFailed ("bad response: " ++ body)
+                    Messages.RequestFailed ("bad response: " ++ body)
 
-        success data =
-            LoggedOut
+        success credential =
+            Messages.Requested (log "credential" credential)
     in
-        Http.getString apiUrl
+        Http.send Http.defaultSettings request
+            |> Http.fromJson decodeSecret
             |> Task.perform fail success
+
+
+revoke : String -> String -> String -> Cmd Msg
+revoke baseUrl restVersion credId =
+    let
+        temp =
+            (log "revoke" credId)
+    in
+        Cmd.none
+
+
+
+-- let
+--     apiUrl =
+--         baseUrl ++ "/api/" ++ restVersion ++ "/credential/" ++ credId
+--     credId2 =
+--         (log "revoke" credId)
+--     request =
+--         { verb = "DELETE"
+--         , headers = []
+--         , url = apiUrl
+--         , body = Http.empty
+--         }
+--     fail error =
+--         case (log "revokeFail" error) of
+--             Http.Timeout ->
+--                 Messages.RevokeFailed "Timeout"
+--             Http.NetworkError ->
+--                 Messages.RevokeFailed "Network error"
+--             Http.UnexpectedPayload load ->
+--                 Messages.RevokeFailed ("UnexpectedPayload: " ++ load)
+--             Http.BadResponse status body ->
+--                 Messages.RevokeFailed ("bad response: " ++ body)
+--     success data =
+--         Messages.Revoked
+--     handleResponse task =
+-- in
+--     Http.send Http.defaultSettings request
+--         |> Http.fromJson (Decoder.succeed )
+--         |> Task.perform fail success

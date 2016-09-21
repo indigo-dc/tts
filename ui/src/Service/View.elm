@@ -3,10 +3,11 @@ module Service.View exposing (..)
 import Html exposing (Html, text, button, option, tr, td, form, input)
 import Html.Attributes exposing (class, method, value, disabled, name, type', action)
 import Html.Events exposing (onClick)
-import Service.Model as Service exposing (Model, Msg)
+import Messages exposing (Msg)
+import Service.Model as Service exposing (Model)
 
 
-view : Service.Model -> Html Service.Msg
+view : Service.Model -> Html Msg
 view service =
     let
         credText =
@@ -25,7 +26,7 @@ view service =
                 [ button
                     [ class "btn btn-default"
                     , disabled serviceDisabled
-                    , onClick (Service.Request service.id)
+                    , onClick (Messages.Request service.id)
                     ]
                     [ text "Request" ]
                 ]
