@@ -62,7 +62,7 @@ def create_ssh_for(UserName,HomeDir):
     PrivKey = get_file_content(OutputFile),
     os.system(DelKey)
     UserNameObj = {'name':'Username', 'type':'text', 'value':UserName}
-    PrivKeyObj = {'name':'Private Key', 'type':'textfile', 'value':PrivKey, 'rows':'30', 'cols':'64'}
+    PrivKeyObj = {'name':'Private Key', 'type':'textfile', 'value':PrivKey, 'rows':30, 'cols':64}
     PasswdObj = {'name':'Passphrase (for Private Key)', 'type':'text', 'value':Password}
     Credential = [UserNameObj, PrivKeyObj, PasswdObj]
     return json.dumps({'credential':Credential, 'state':State})
