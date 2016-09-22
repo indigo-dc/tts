@@ -2,7 +2,7 @@ module Secret.Model exposing (..)
 
 
 type alias Model =
-    { credential : List Entry
+    { entries : List Entry
     }
 
 
@@ -10,6 +10,6 @@ type alias Entry =
     { name : String
     , type' : String
     , value : String
-    , rows : String
-    , cols : String
+    , rows : Int
+    , cols : Int
     }

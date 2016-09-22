@@ -27,6 +27,7 @@ type Msg
     | Revoke String
     | Revoked
     | HideAccessToken
+    | HideSecret
     | RetrieveAccessToken
     | AccessTokenFailed String
     | AccessToken AccessToken.Model

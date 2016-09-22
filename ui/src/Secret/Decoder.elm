@@ -3,7 +3,7 @@
 
 module Secret.Decoder exposing (decodeSecret)
 
-import Json.Decode exposing (string, list, Decoder)
+import Json.Decode exposing (string, list, int, Decoder)
 import Json.Decode.Pipeline exposing (decode, required, optional)
 import Secret.Model as Secret exposing (Model, Entry)
 
@@ -20,5 +20,5 @@ decodeEntry =
         |> required "name" string
         |> required "type" string
         |> required "value" string
-        |> optional "rows" string "30"
-        |> optional "cols" string "30"
+        |> optional "rows" int 30
+        |> optional "cols" int 30

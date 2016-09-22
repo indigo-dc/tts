@@ -167,6 +167,9 @@ update msg model =
         Messages.HideAccessToken ->
             ( { model | accessToken = AccessToken.initModel }, Cmd.none )
 
+        Messages.HideSecret ->
+            ( { model | credential = Nothing }, Cmd.none )
+
         Messages.Revoked ->
             ( model, retrieveServiceList model.url model.restVersion )
 
@@ -209,6 +212,7 @@ mainContent model =
                     , credentialList = model.credentialList
                     , displayName = model.displayName
                     , accessToken = model.accessToken
+                    , secret = model.credential
                     }
             in
                 User.view context
