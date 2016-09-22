@@ -1,5 +1,6 @@
 module Messages exposing (..)
 
+import AccessToken.Model as AccessToken exposing (Model)
 import CredentialList.Model as CredentialList exposing (Model)
 import Info.Model as Info exposing (Model)
 import ProviderList.Model as ProviderList exposing (Model)
@@ -21,8 +22,13 @@ type Msg
     | LoggedOut
     | LogoutFailed String
     | Request String
+    | AdvancedRequest String
     | Requested Secret.Model
     | Revoke String
     | Revoked
+    | HideAccessToken
+    | RetrieveAccessToken
+    | AccessTokenFailed String
+    | AccessToken AccessToken.Model
     | RevokeFailed String
     | Logout

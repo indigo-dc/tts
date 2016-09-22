@@ -2,6 +2,8 @@ module Main exposing (..)
 
 -- import Json.Decode as Decoder
 
+import AccessToken.Decoder exposing (decodeAccessToken)
+import AccessToken.Model as AccessToken exposing (Model)
 import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
 import CredentialList.Model as CredentialList exposing (Model, initModel)
 import Debug exposing (log)
@@ -53,6 +55,7 @@ type alias Model =
     , serviceList : ServiceList.Model
     , credentialList : CredentialList.Model
     , credential : Maybe Secret.Model
+    , accessToken : AccessToken.Model
     , loggedIn : Bool
     , displayName : String
     }
@@ -139,8 +142,14 @@ update msg model =
         Messages.Request serviceId ->
             ( model, request model.url model.restVersion serviceId )
 
+        Messages.AdvancedRequest serviceId ->
+            ( model, Cmd.none )
+
         Messages.Revoke credId ->
             ( model, revoke model.url model.restVersion credId )
+
+        Messages.RetrieveAccessToken ->
+            ( model, retrieveAccessToken model.url model.restVersion )
 
         Messages.Requested credential ->
             ( { model
@@ -148,6 +157,15 @@ update msg model =
               }
             , retrieveServiceList model.url model.restVersion
             )
+
+        Messages.AccessTokenFailed error ->
+            ( model, Cmd.none )
+
+        Messages.AccessToken token ->
+            ( { model | accessToken = token }, Cmd.none )
+
+        Messages.HideAccessToken ->
+            ( { model | accessToken = AccessToken.initModel }, Cmd.none )
 
         Messages.Revoked ->
             ( model, retrieveServiceList model.url model.restVersion )
@@ -190,6 +208,7 @@ mainContent model =
                     { serviceList = model.serviceList
                     , credentialList = model.credentialList
                     , displayName = model.displayName
+                    , accessToken = model.accessToken
                     }
             in
                 User.view context
@@ -237,6 +256,7 @@ initModel baseUrl restVersion =
       , redirectPath = "unknown"
       , providerList = ProviderList.initModel
       , serviceList = ServiceList.initModel
+      , accessToken = AccessToken.initModel
       , credential = Nothing
       , credentialList = CredentialList.initModel
       , activePage = Login
@@ -355,6 +375,33 @@ retrieveCredentialList baseUrl restVersion =
             |> Task.perform fail success
 
 
+retrieveAccessToken : String -> String -> Cmd Msg
+retrieveAccessToken baseUrl restVersion =
+    let
+        apiUrl =
+            baseUrl ++ "/api/" ++ restVersion ++ "/access_token/"
+
+        fail error =
+            case (log "accessTokenFail" error) of
+                Http.Timeout ->
+                    Messages.AccessTokenFailed "Timeout"
+
+                Http.NetworkError ->
+                    Messages.AccessTokenFailed "Network error"
+
+                Http.UnexpectedPayload load ->
+                    Messages.AccessTokenFailed ("UnexpectedPayload: " ++ load)
+
+                Http.BadResponse status body ->
+                    Messages.AccessTokenFailed ("bad response: " ++ body)
+
+        success accessToken =
+            Messages.AccessToken (log "accessToken" accessToken)
+    in
+        Http.get decodeAccessToken apiUrl
+            |> Task.perform fail success
+
+
 logout : String -> String -> Cmd Msg
 logout baseUrl restVersion =
     let
@@ -423,38 +470,26 @@ request baseUrl restVersion serviceId =
 revoke : String -> String -> String -> Cmd Msg
 revoke baseUrl restVersion credId =
     let
-        temp =
-            (log "revoke" credId)
+        apiUrl =
+            baseUrl ++ "/api/" ++ restVersion ++ "/credential/" ++ (log "revoke" credId)
+
+        request =
+            { verb = "DELETE"
+            , headers = []
+            , url = apiUrl
+            , body = Http.empty
+            }
+
+        fail error =
+            case (log "revokeFail" error) of
+                Http.RawTimeout ->
+                    Messages.RevokeFailed "Timeout"
+
+                Http.RawNetworkError ->
+                    Messages.RevokeFailed "Network error"
+
+        success data =
+            Messages.Revoked
     in
-        Cmd.none
-
-
-
--- let
---     apiUrl =
---         baseUrl ++ "/api/" ++ restVersion ++ "/credential/" ++ credId
---     credId2 =
---         (log "revoke" credId)
---     request =
---         { verb = "DELETE"
---         , headers = []
---         , url = apiUrl
---         , body = Http.empty
---         }
---     fail error =
---         case (log "revokeFail" error) of
---             Http.Timeout ->
---                 Messages.RevokeFailed "Timeout"
---             Http.NetworkError ->
---                 Messages.RevokeFailed "Network error"
---             Http.UnexpectedPayload load ->
---                 Messages.RevokeFailed ("UnexpectedPayload: " ++ load)
---             Http.BadResponse status body ->
---                 Messages.RevokeFailed ("bad response: " ++ body)
---     success data =
---         Messages.Revoked
---     handleResponse task =
--- in
---     Http.send Http.defaultSettings request
---         |> Http.fromJson (Decoder.succeed )
---         |> Task.perform fail success
+        Http.send Http.defaultSettings request
+            |> Task.perform fail success

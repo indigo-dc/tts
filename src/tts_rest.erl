@@ -157,21 +157,22 @@ delete_resource(Req, #state{type=credential,
                  {ok, _, _} -> true;
                  _ -> false
              end,
-    ok = perform_logout(State),
+    ok = end_session_if_rest(State),
     {Result, Req, State#state{session_pid=undefined}}.
 
 
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
                      session_pid=Session } = State) ->
     Result = perform_get(Type, Id, Session, Version),
-    ok = perform_logout(State),
+    ok = end_session_if_rest(State),
     {Result, Req, State#state{session_pid=undefined}}.
 
 
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
-                      session_pid=Session, json=Json} = State) ->
-    Result = perform_post(Type, Id, Json, Session, Version),
-    ok = perform_logout(State),
+                      session_pid=Session, json=Json,
+                      cookie_based=CookieBased} = State) ->
+    Result = perform_post(Type, Id, Json, Session, CookieBased, Version),
+    ok = end_session_if_rest(State),
     {Result, Req, State#state{session_pid=undefined}}.
 
 perform_get(service, undefined, Session, 1) ->
@@ -205,8 +206,11 @@ perform_get(info, undefined, Session, _) ->
 perform_get(logout, undefined, undefined, _) ->
     jsx:encode(#{result => ok});
 perform_get(logout, undefined, Session, _) ->
-    ok = tts:logout(Session),
+    ok = perform_logout(Session),
     jsx:encode(#{result => ok});
+perform_get(access_token, undefined, Session, _) ->
+    {ok, AccessToken} = tts:get_access_token_for(Session),
+    jsx:encode(#{access_token => AccessToken});
 perform_get(credential, undefined, Session, 1) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
     return_json_credential_list(CredList);
@@ -224,8 +228,12 @@ perform_get(cred_data, Id, Session, _Version) ->
         _ -> jsx:encode(#{credential => []})
     end.
 
-perform_post(credential, undefined, #{service_id:=ServiceId}, Session, Ver) ->
-    IFace = <<"REST interface">>,
+perform_post(credential, undefined, #{service_id:=ServiceId}, Session,
+             CookieBased, Ver) ->
+    IFace =  case CookieBased of
+                 false -> <<"REST interface">>;
+                 true ->  <<"Web App">>
+             end,
     case  tts:request_credential_for(ServiceId, Session, [], IFace) of
         {ok, Credential, _Log} ->
             {ok, Id} = tts:store_temp_cred(Credential, Session),
@@ -371,6 +379,7 @@ safe_binary_to_integer(Version) ->
                        {<<"logout">>, logout},
                        {<<"service">>, service},
                        {<<"credential">>, credential},
+                       {<<"access_token">>, access_token},
                        {<<"credential_data">>, cred_data }
                       ]).
 
@@ -405,6 +414,8 @@ is_malformed(get, _, service, undefined, undefined) ->
     false;
 is_malformed(get, _, credential, undefined, undefined) ->
     false;
+is_malformed(get, _, access_token, undefined, undefined) ->
+    false;
 is_malformed(get, _, cred_data, Id, undefined) ->
     not is_binary(Id);
 is_malformed(post, json, credential, undefined, #{service_id:=_Id}) ->
@@ -419,7 +430,12 @@ is_bad_version(Version) when is_integer(Version) ->
 is_bad_version(_) ->
     true.
 
-perform_logout(#state{session_pid = Session, cookie_based = false}) ->
-    tts:logout(Session);
-perform_logout(_) ->
+end_session_if_rest(#state{session_pid = Session, cookie_based = false}) ->
+    perform_logout(Session);
+end_session_if_rest(_) ->
     ok.
+
+
+
+perform_logout(Session) ->
+    tts:logout(Session).
