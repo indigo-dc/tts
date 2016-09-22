@@ -6,7 +6,6 @@ import AccessToken.Decoder exposing (decodeAccessToken)
 import AccessToken.Model as AccessToken exposing (Model)
 import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
 import CredentialList.Model as CredentialList exposing (Model, initModel)
-import Debug exposing (log)
 import Html exposing (Html, div, h1, text, small)
 import Html.App exposing (program)
 import Html.Attributes exposing (class)
@@ -256,7 +255,7 @@ initModel : String -> String -> ( Model, Cmd Msg )
 initModel baseUrl restVersion =
     ( { serverVersion = "unknown"
       , restVersion = restVersion
-      , url = (log "baseUrl" baseUrl)
+      , url = baseUrl
       , redirectPath = "unknown"
       , providerList = ProviderList.initModel
       , serviceList = ServiceList.initModel
@@ -346,7 +345,7 @@ retrieveServiceList baseUrl restVersion =
                     Messages.ServiceListFailed ("bad response: " ++ body)
 
         success servicelist =
-            Messages.ServiceList (log "serviceList" servicelist)
+            Messages.ServiceList servicelist
     in
         Http.get ServiceList.decodeServiceList apiUrl
             |> Task.perform fail success
@@ -359,7 +358,7 @@ retrieveCredentialList baseUrl restVersion =
             baseUrl ++ "/api/" ++ restVersion ++ "/credential/"
 
         fail error =
-            case (log "credlistfail" error) of
+            case error of
                 Http.Timeout ->
                     Messages.CredentialListFailed "Timeout"
 
@@ -373,7 +372,7 @@ retrieveCredentialList baseUrl restVersion =
                     Messages.CredentialListFailed ("bad response: " ++ body)
 
         success credentiallist =
-            Messages.CredentialList (log "credentialList" credentiallist)
+            Messages.CredentialList credentiallist
     in
         Http.get CredentialList.decodeCredentialList apiUrl
             |> Task.perform fail success
@@ -386,7 +385,7 @@ retrieveAccessToken baseUrl restVersion =
             baseUrl ++ "/api/" ++ restVersion ++ "/access_token/"
 
         fail error =
-            case (log "accessTokenFail" error) of
+            case error of
                 Http.Timeout ->
                     Messages.AccessTokenFailed "Timeout"
 
@@ -400,7 +399,7 @@ retrieveAccessToken baseUrl restVersion =
                     Messages.AccessTokenFailed ("bad response: " ++ body)
 
         success accessToken =
-            Messages.AccessToken (log "accessToken" accessToken)
+            Messages.AccessToken accessToken
     in
         Http.get decodeAccessToken apiUrl
             |> Task.perform fail success
@@ -450,7 +449,7 @@ request baseUrl restVersion serviceId =
             }
 
         fail error =
-            case (log "credentialFail" error) of
+            case error of
                 Http.Timeout ->
                     Messages.RequestFailed "Timeout"
 
@@ -464,7 +463,7 @@ request baseUrl restVersion serviceId =
                     Messages.RequestFailed ("bad response: " ++ body)
 
         success credential =
-            Messages.Requested (log "credential" credential)
+            Messages.Requested credential
     in
         Http.send Http.defaultSettings request
             |> Http.fromJson decodeSecret
@@ -475,7 +474,7 @@ revoke : String -> String -> String -> Cmd Msg
 revoke baseUrl restVersion credId =
     let
         apiUrl =
-            baseUrl ++ "/api/" ++ restVersion ++ "/credential/" ++ (log "revoke" credId)
+            baseUrl ++ "/api/" ++ restVersion ++ "/credential/" ++ credId
 
         request =
             { verb = "DELETE"
@@ -485,7 +484,7 @@ revoke baseUrl restVersion credId =
             }
 
         fail error =
-            case (log "revokeFail" error) of
+            case error of
                 Http.RawTimeout ->
                     Messages.RevokeFailed "Timeout"
 
