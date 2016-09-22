@@ -19,9 +19,7 @@ perform_cookie_action(update, _, deleted, Req) ->
 perform_cookie_action(update, MaxAge, Value, Req) ->
     Opts = create_cookie_opts(MaxAge),
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, Value, Opts, Req),
-    {ok, Req2};
-perform_cookie_action(set, MaxAge, Value, Req) ->
-    perform_cookie_action(update, MaxAge, Value, Req).
+    {ok, Req2}.
 
 create_cookie_opts(MaxAge) ->
     BasicOpts = [ {http_only, true}, {max_age, MaxAge}, {path, <<"/">>}],

@@ -409,7 +409,9 @@ start_cowboy(false) ->
     Dispatch = cowboy_router:compile([{'_', [
                                              {"/static/[...]", cowboy_static,
                                               {priv_dir, tts, "http_static"} },
-                                             {"/", tts_http_prep, []}
+                                             {"/", cowboy_static,
+                                              {priv_file, tts,
+                                               "http_static/index.html"}}
                                             ]}]),
     _ = cowboy:start_http( http_handler
                            , 100
