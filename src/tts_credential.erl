@@ -250,10 +250,10 @@ value_to_binary(Val0) ->
 value_to_file(Val) when is_binary(Val)->
     Val;
 value_to_file(Val) when is_list(Val)->
-    file_lines_to_binary(Val, []).
+    file_lines_to_binary(Val, <<>>).
+
 file_lines_to_binary([], File) ->
-    lists:reverse(File);
+    File;
 file_lines_to_binary([H | T], File) ->
     NewLine = value_to_binary(H),
-    file_lines_to_binary(T, [NewLine | File]).
-
+    file_lines_to_binary(T, << File/binary, NewLine/binary >>).
