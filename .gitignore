@@ -23,6 +23,7 @@ distdir/
 package
 elm-stuff/
 tts_ui.js
+tts_ui_elm.js
 TAGS
 *~
 *#
