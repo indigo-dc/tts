@@ -11,16 +11,29 @@ type alias Model =
     , credCount : Int
     , credLimit : Int
     , limitReached : Bool
+    , parameter : List Param
     }
 
 
+type alias Param =
+    { name : String
+    , value : String
+    , mandatory : Bool
+    }
 
--- isEnabled : Model -> Bool
--- isEnabled model =
---     let
---         notLimit =
---             not model.limitReached
---         enabled =
---             model.enabled
---     in
---         enabled (&&) notLimit
+
+onlyAdvanced : Model -> Bool
+onlyAdvanced service =
+    let
+        countMandatory param count =
+            case param.mandatory of
+                True ->
+                    count + 1
+
+                False ->
+                    count
+
+        numMandatory =
+            List.foldl countMandatory 0 service.parameter
+    in
+        numMandatory > 0
