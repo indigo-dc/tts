@@ -162,10 +162,11 @@ delete_resource(Req, #state{type=credential,
 
 
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
-                     session_pid=Session } = State) ->
+                     session_pid=Session} = State) ->
     Result = perform_get(Type, Id, Session, Version),
     ok = end_session_if_rest(State),
-    {Result, Req, State#state{session_pid=undefined}}.
+    {ok, Req2} = update_cookie_if_used(Req, State),
+    {Result, Req2, State#state{session_pid=undefined}}.
 
 
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
@@ -173,7 +174,8 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
                       cookie_based=CookieBased} = State) ->
     Result = perform_post(Type, Id, Json, Session, CookieBased, Version),
     ok = end_session_if_rest(State),
-    {Result, Req, State#state{session_pid=undefined}}.
+    {ok, Req2} = update_cookie_if_used(Req, State),
+    {Result, Req2, State#state{session_pid=undefined}}.
 
 perform_get(service, undefined, Session, 1) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
@@ -216,7 +218,8 @@ perform_get(credential, undefined, Session, 1) ->
     return_json_credential_list(CredList);
 perform_get(credential, undefined, Session, _) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
-    return_json_credential_list(CredList, [cred_id, ctime, interface, service_id]);
+    Keys = [cred_id, ctime, interface, service_id],
+    return_json_credential_list(CredList, Keys);
 perform_get(cred_data, Id, Session, 1) ->
     case tts:get_temp_cred(Id, Session) of
         {ok, Cred} -> jsx:encode(Cred);
@@ -435,6 +438,14 @@ end_session_if_rest(#state{session_pid = Session, cookie_based = false}) ->
 end_session_if_rest(_) ->
     ok.
 
+update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
+    tts_http_util:perform_cookie_action(clear, 0, deleted, Req);
+update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
+    {ok, Max} = tts_session:get_max_age(Session),
+    {ok, Id} = tts_session:get_id(Session),
+    tts_http_util:perform_cookie_action(update, Max, Id, Req);
+update_cookie_if_used(Req, #state{cookie_based = _}) ->
+    {ok, Req}.
 
 
 perform_logout(Session) ->
