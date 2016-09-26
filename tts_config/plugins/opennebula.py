@@ -21,36 +21,44 @@ SESSIONID = "oneadmin:somepass"
 USERS_GROUP = 105
 # DB to store the data about the users
 # IMPORTANT!!! Must be only accesible by the user which executes this script!!!
+# ALSO IMPORTANT!!! Must be only stored in persistent storage (be careful in containers)
 DB_USERS_FILENAME = "/tmp/users.db"
-# Prefix to add to all user names created 
+# Prefix to add to all user names created
 USER_PREFIX = "tts"
 
-# We can use the API
+
 def create_one_user(username, group, oidc, password):
+    """
+    Create the specified user in the OpenNebula site
+    """
     server = xmlrpclib.ServerProxy(ONE_API_ENDPOINT, allow_none=True)
+
+    template = ('ISS="%s"\nSUB="%s"\nName="%s"' % (oidc['iss'],
+                                                   oidc['sub'],
+                                                   "%s %s" % (oidc['name'],
+                                                              oidc['family_name'])))
 
     success, userid, _ = server.one.user.allocate(SESSIONID, username, password, "core")
     if not success:
         return False, userid
 
-    template = ('ISS="%s"\nSUB="%s"\nName="%s"' % (oidc['iss'],
-                                                               oidc['sub'],
-                                                              "%s %s" % (oidc['name'],
-                                                                         oidc['family_name'])))
-    success, userid, _ = server.one.user.update(SESSIONID, userid, template, 0)
+    success, msg, _ = server.one.user.update(SESSIONID, userid, template, 0)
     if not success:
         delete_one_user(userid)
-        return False, userid
+        return False, msg
 
-    success, userid, _ = server.one.user.chgrp(SESSIONID, userid, group)
+    success, msg, _ = server.one.user.chgrp(SESSIONID, userid, group)
     if not success:
         delete_one_user(userid)
-        return False, userid
+        return False, msg
 
     return True, userid
 
 
 def delete_one_user(userid):
+    """
+    Delete the specified user from the OpenNebula site
+    """
     server = xmlrpclib.ServerProxy(ONE_API_ENDPOINT, allow_none=True)
 
     success, userid, _ = server.one.user.delete(SESSIONID, userid)
@@ -60,10 +68,16 @@ def delete_one_user(userid):
 
 
 def id_generator(size=16, chars=string.ascii_uppercase + string.digits + string.ascii_lowercase):
+    """
+    Genererate a random password
+    """
     return ''.join(random.choice(chars) for _ in range(size))
 
 
 def user_exist(username):
+    """
+    Check if a username exists in the OpenNebula site, and return the ID
+    """
     server = xmlrpclib.ServerProxy(ONE_API_ENDPOINT, allow_none=True)
 
     success, userpool, _ = server.one.userpool.info(SESSIONID)
@@ -81,6 +95,9 @@ def user_exist(username):
 
 
 def init_db():
+    """
+    Initialize the users DB
+    """
     connection = sqlite3.connect(DB_USERS_FILENAME)
     cursor = connection.cursor()
     sql = 'select name from sqlite_master where type="table" and name="one_users"'
@@ -97,6 +114,9 @@ def init_db():
 
 
 def save_user_data(username, password):
+    """
+    Save the user data into the DB
+    """
     init_db()
 
     connection = sqlite3.connect(DB_USERS_FILENAME)
@@ -110,6 +130,9 @@ def save_user_data(username, password):
 
 
 def delete_user_data(username):
+    """
+    Delete the user data from the DB
+    """
     created = init_db()
     if created:
         return False
@@ -124,6 +147,9 @@ def delete_user_data(username):
 
 
 def get_user_password(username):
+    """
+    Get the user password stored in the DB
+    """
     created = init_db()
     if created:
         return None
@@ -141,7 +167,10 @@ def get_user_password(username):
 
 
 def create_user(username, group, oidc):
-    exists, _ = user_exist(username)
+    """
+    Create a new user and return the appropriate credentials
+    """
+    exists, user_id = user_exist(username)
     if not exists:
         password = id_generator()
         success, userid = create_one_user(username, group, oidc, password)
@@ -152,7 +181,20 @@ def create_user(username, group, oidc):
     else:
         password = get_user_password(username)
         if not password:
-            return json.dumps({'error': 'no_user'})
+            # This case only happens in case of previous error
+            # The user has been created without storing the password in the DB
+            # First delete the incorrect user data from DB
+            delete_user_data(username)
+            # Generate new password
+            password = id_generator()
+            # Update in ONE
+            server = xmlrpclib.ServerProxy(ONE_API_ENDPOINT, allow_none=True)
+            success, user, _ = server.one.user.passwd(SESSIONID, user_id, password)
+            if not success:
+                return json.dumps({'error': 'Error setting user password: %s' % user})
+            else:
+                # And save in the DB
+                save_user_data(username, password)
 
     credential = [{'name': 'Username', 'type': 'text', 'value': username},
                   {'name': 'Password', 'type': 'text', 'value': password}]
@@ -160,6 +202,9 @@ def create_user(username, group, oidc):
 
 
 def revoke_user(username):
+    """
+    Revoke user credentials
+    """
     exists, userid = user_exist(username)
     if exists:
         success, msg = delete_one_user(userid)
@@ -175,29 +220,36 @@ def revoke_user(username):
             return json.dumps({'error': userid})
 
 
+def process_request(request):
+    """
+    Process the TTS request from the json data provided
+    """
+    json_data = str(request) + '=' * (4 - len(request) % 4)
+    jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
+
+    action = jobject['action']
+    user_info = jobject['user_info']
+    oidc = user_info['oidc']
+    iss = urlparse.urlparse(oidc['iss'])
+    iss_host = iss[1]
+    username = "%s_%s_%s" % (USER_PREFIX, iss_host, oidc['sub'])
+
+    if action == "request":
+        return create_user(username, USERS_GROUP, oidc)
+    elif action == "revoke":
+        state = jobject['cred_state']
+        if state != username:
+            return json.dumps({"error": "incorrect_state"})
+        else:
+            return revoke_user(state)
+    else:
+        return json.dumps({"error": "unknown_action", "details": action})
+
+
 def main():
     try:
         if len(sys.argv) == 2:
-            json_data = str(sys.argv[1]) + '=' * (4 - len(sys.argv[1]) % 4)
-            jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
-
-            action = jobject['action']
-            user_info = jobject['user_info']
-            oidc = user_info['oidc']
-            iss = urlparse.urlparse(oidc['iss'])
-            iss_host = iss[1]
-            username = "%s_%s_%s" % (USER_PREFIX, iss_host, oidc['sub'])
-
-            if action == "request":
-                print create_user(username, USERS_GROUP, oidc)
-            elif action == "revoke":
-                state = jobject['cred_state']
-                if state != username:
-                    print json.dumps({"error": "incorrect_state"})
-                else:
-                    print revoke_user(state)
-            else:
-                print json.dumps({"error": "unknown_action", "details": action})
+            print process_request(sys.argv[1])
         else:
             print json.dumps({"error": "no_parameter"})
     except Exception, E:
