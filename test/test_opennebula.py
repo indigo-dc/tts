@@ -65,9 +65,9 @@ class TestONEPlugin(unittest.TestCase):
         req = base64.b64encode(req)
 
         one_server = MagicMock()
-        one_server.one.user.allocate.return_value = (True, "1", 0)
-        one_server.one.user.update.return_value = (True, "1", 0)
-        one_server.one.user.chgrp.return_value = (True, "1", 0)
+        one_server.one.user.allocate.return_value = (True, 1, 0)
+        one_server.one.user.update.return_value = (True, 1, 0)
+        one_server.one.user.chgrp.return_value = (True, 1, 0)
         user_xml = """
             <USER>
                 <NAME>username</NAME>
@@ -117,6 +117,11 @@ class TestONEPlugin(unittest.TestCase):
                 self.fail("Credential name %s not expected." % elem["name"])
         self.assertTrue(username_ret, "Username credential not returned.")
         self.assertTrue(pass_ret, "Password credential not returned.")
+        
+        self.assertEqual(one_server.one.user.update.call_args_list[0][0][2],
+                         ('ISS="https://iam-test.indigo-datacloud.eu/"\n'
+                          'SUB="dc5d5ab7-6db9-4079-985c-80ac05017066"\n'
+                          'Name="Miguel Caballer"'))
 
     @patch('xmlrpclib.ServerProxy')
     def test_10_revoke_cred(self, server_proxy):
@@ -164,7 +169,7 @@ class TestONEPlugin(unittest.TestCase):
         req = base64.b64encode(req)
 
         one_server = MagicMock()
-        one_server.one.user.delete.return_value = (True, "1", 0)
+        one_server.one.user.delete.return_value = (True, 1, 0)
         user_xml = """
             <USER>
                 <NAME>tts_iam-test.indigo-datacloud.eu_dc5d5ab7-6db9-4079-985c-80ac05017066</NAME>

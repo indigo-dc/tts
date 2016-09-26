@@ -35,8 +35,7 @@ def create_one_user(username, group, oidc, password):
 
     template = ('ISS="%s"\nSUB="%s"\nName="%s"' % (oidc['iss'],
                                                    oidc['sub'],
-                                                   "%s %s" % (oidc['name'],
-                                                              oidc['family_name'])))
+                                                   oidc['name']))
 
     success, userid, _ = server.one.user.allocate(SESSIONID, username, password, "core")
     if not success:
