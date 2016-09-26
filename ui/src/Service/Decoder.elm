@@ -27,5 +27,6 @@ decodeParam : Decoder Service.Param
 decodeParam =
     decode Service.Param
         |> required "name" string
-        |> required "value" string
+        |> required "description" string
+        |> required "type" string
         |> required "mandatory" bool

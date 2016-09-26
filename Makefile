@@ -40,7 +40,7 @@ sample_config:
 cookie:
 	./utils/gen_random_cookie
 
-rel: cookie check ui_install
+rel: cookie check
 	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
 	cat $(OVERLAY_VARS) >> ./config/vars_gen.config

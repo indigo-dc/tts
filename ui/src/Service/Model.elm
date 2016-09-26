@@ -17,7 +17,8 @@ type alias Model =
 
 type alias Param =
     { name : String
-    , value : String
+    , description : String
+    , type' : String
     , mandatory : Bool
     }
 

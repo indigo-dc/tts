@@ -17,13 +17,12 @@ test/ct.cover.spec
 /config/vm.args
 /config/generated
 /config/vars_gen.config
-priv/http_static/index.html
 tts.db
 distdir/
 package
 elm-stuff/
-tts_ui.js
-tts_ui_elm.js
+ui/tts_ui.js
+ui/tts_ui_elm.js
 TAGS
 *~
 *#
