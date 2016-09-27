@@ -45,6 +45,11 @@ keyUsage                =digitalSignature, keyEncipherment
 """
 CA_ABS_BASE=os.path.abspath(os.path.expanduser(CA_BASE))
 
+def list_params():
+    RequestParams = []
+    ConfParams = []
+    return json.dumps({'conf_params': ConfParams, 'request_params': RequestParams})
+
 def create_cert(Subject, Issuer):
     init_ca_if_needed()
     Serial = read_serial()

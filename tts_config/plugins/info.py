@@ -79,7 +79,7 @@ def main():
             jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
             action = jobject['action']
 
-            if Action == "get_params":
+            if action == "get_params":
                 print list_params()
 
             else:
