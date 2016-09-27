@@ -6,11 +6,14 @@ import AccessToken.Decoder exposing (decodeAccessToken)
 import AccessToken.Model as AccessToken exposing (Model)
 import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
 import CredentialList.Model as CredentialList exposing (Model, initModel)
+import Debug exposing (log)
+import Dict exposing (Dict, empty, insert)
 import Html exposing (Html, div, h1, text, small)
 import Html.App exposing (program)
 import Html.Attributes exposing (class)
 import Http exposing (get, post, send, defaultSettings, Error)
 import Info.Decoder as Info exposing (decodeInfo)
+import Json.Encode as Json exposing (encode)
 import Messages exposing (Msg)
 import Pages.Login.View as Login exposing (view)
 import Pages.User.View as User exposing (view)
@@ -18,6 +21,7 @@ import ProviderList.Decoder as ProviderList exposing (decodeProviderList)
 import ProviderList.Model as ProviderList exposing (Model, initModel)
 import Secret.Decoder exposing (decodeSecret)
 import Secret.Model as Secret exposing (Model)
+import Service.Model as Service exposing (Model)
 import ServiceList.Decoder as ServiceList exposing (decodeServiceList)
 import ServiceList.Model as ServiceList exposing (Model, initModel)
 import String exposing (dropRight, endsWith)
@@ -57,6 +61,8 @@ type alias Model =
     , accessToken : AccessToken.Model
     , loggedIn : Bool
     , displayName : String
+    , current_service : Maybe Service.Model
+    , current_param : Maybe (Dict String Json.Value)
     }
 
 
@@ -139,10 +145,46 @@ update msg model =
             ( model, logout model.url model.restVersion )
 
         Messages.Request serviceId ->
-            ( model, request model.url model.restVersion serviceId )
+            ( { model
+                | current_service = Nothing
+                , current_param = Nothing
+              }
+            , request model.url model.restVersion serviceId model.current_param
+            )
 
-        Messages.AdvancedRequest serviceId ->
-            ( model, Cmd.none )
+        Messages.AdvancedRequest service ->
+            ( { model
+                | current_service = Just service
+              }
+            , Cmd.none
+            )
+
+        Messages.AdvancedChange name value ->
+            let
+                jsonValue =
+                    Json.string value
+
+                newParams =
+                    case model.current_param of
+                        Just params ->
+                            Dict.insert name jsonValue params
+
+                        Nothing ->
+                            Dict.insert name jsonValue Dict.empty
+            in
+                ( { model
+                    | current_param = Just newParams
+                  }
+                , Cmd.none
+                )
+
+        Messages.AdvancedCancel ->
+            ( { model
+                | current_service = Nothing
+                , current_param = Nothing
+              }
+            , Cmd.none
+            )
 
         Messages.Revoke credId ->
             ( model, revoke model.url model.restVersion credId )
@@ -212,6 +254,7 @@ mainContent model =
                     , displayName = model.displayName
                     , accessToken = model.accessToken
                     , secret = model.credential
+                    , service = model.current_service
                     }
             in
                 User.view context
@@ -265,6 +308,8 @@ initModel baseUrl restVersion =
       , activePage = Login
       , loggedIn = False
       , displayName = "unknown"
+      , current_service = Nothing
+      , current_param = Nothing
       }
     , retrieveInfo baseUrl restVersion
     )
@@ -432,20 +477,32 @@ logout baseUrl restVersion =
             |> Task.perform fail success
 
 
-request : String -> String -> String -> Cmd Msg
-request baseUrl restVersion serviceId =
+request : String -> String -> String -> Maybe (Dict String Json.Value) -> Cmd Msg
+request baseUrl restVersion serviceId dict =
     let
         apiUrl =
             baseUrl ++ "/api/" ++ restVersion ++ "/credential/"
 
+        dataList =
+            case dict of
+                Nothing ->
+                    Json.object
+                        [ ( "service_id", Json.string serviceId ) ]
+
+                Just paramsDict ->
+                    Json.object
+                        [ ( "service_id", Json.string serviceId )
+                        , ( "params", Json.object (Dict.toList paramsDict) )
+                        ]
+
         data =
-            Http.string ("{\"service_id\":\"" ++ serviceId ++ "\"}")
+            Http.string (Json.encode 0 dataList)
 
         request =
             { verb = "POST"
             , headers = [ ( "Content-Type", "application/json" ) ]
             , url = apiUrl
-            , body = data
+            , body = (log "post data" data)
             }
 
         fail error =

@@ -5,6 +5,7 @@ import CredentialList.Model as CredentialList exposing (Model)
 import Info.Model as Info exposing (Model)
 import ProviderList.Model as ProviderList exposing (Model)
 import Secret.Model as Secret exposing (Model)
+import Service.Model as Service exposing (Model)
 import ServiceList.Model as ServiceList exposing (Model)
 
 
@@ -22,7 +23,7 @@ type Msg
     | LoggedOut
     | LogoutFailed String
     | Request String
-    | AdvancedRequest String
+    | AdvancedRequest Service.Model
     | Requested Secret.Model
     | Revoke String
     | Revoked
@@ -32,4 +33,6 @@ type Msg
     | AccessTokenFailed String
     | AccessToken AccessToken.Model
     | RevokeFailed String
+    | AdvancedCancel
+    | AdvancedChange String String
     | Logout

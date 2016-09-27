@@ -10,6 +10,8 @@ import Html.Events exposing (onClick)
 import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model)
 import Secret.View as Secret exposing (view)
+import Service.Model as Service exposing (Model)
+import Service.View as Service exposing (advancedView)
 import ServiceList.Model as ServiceList exposing (Model)
 import ServiceList.View as ServiceList exposing (view)
 
@@ -20,6 +22,7 @@ type alias ViewContext =
     , credentialList : CredentialList.Model
     , accessToken : AccessToken.Model
     , secret : Maybe Secret.Model
+    , service : Maybe Service.Model
     }
 
 
@@ -37,6 +40,7 @@ view context =
             [ text "show access token" ]
         , AccessToken.view context.accessToken
         , Secret.view context.secret
+        , Service.advancedView context.service
         , br [] []
         , br [] []
         , ServiceList.view context.serviceList
