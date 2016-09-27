@@ -16,7 +16,7 @@ FULL_ACCESS=False
 
 
 def list_params():
-    RequestParams = [{'name':'public_key', 'description':'the public key to upload to the service',
+    RequestParams = [{'name':'public key', 'description':'the public key to upload to the service',
                      'type':'textarea', 'mandatory':False}]
     ConfParams = [{'name':'full_access', 'type':'boolean', 'default': False},
                   {'name':'state_prefix', 'type':'string', 'default':'TTS_'},
@@ -27,8 +27,8 @@ def list_params():
 def create_ssh(UserName, Uid, Gid, HomeDir, Params):
     UserExists = does_user_exist(UserName,Uid,Gid,HomeDir)
     if UserExists:
-        if Params.has_key('public_key'):
-            return insert_ssh_key(UserName, HomeDir, Params['public_key'])
+        if Params.has_key('public key'):
+            return insert_ssh_key(UserName, HomeDir, Params['public key'])
         else:
             return create_ssh_for(UserName,HomeDir)
     else:
@@ -63,10 +63,12 @@ def create_ssh_for(UserName,HomeDir):
     if os.system(Cmd) != 0:
         return json.dumps({'error':'keygen_failed'})
 
-    PubKey = get_file_content(OutputPubFile)
-    do_insert_key(SshDir, PubKey)
-
+    PubKey = validate_and_update_key(get_file_content(OutputPubFile), State)
     PrivKey = get_file_content(OutputFile)
+    if PubKey == None:
+        return json.dumps({'error':'bad_key'})
+
+    do_insert_key(SshDir, PubKey)
     os.system(DelKey)
     UserNameObj = {'name':'Username', 'type':'text', 'value':UserName}
     PrivKeyObj = {'name':'Private Key', 'type':'textfile', 'value':PrivKey, 'rows':30, 'cols':64}
@@ -79,15 +81,28 @@ def insert_ssh_key(UserName, HomeDir, InKey):
     if SshDir == None:
         return json.dumps({'error':'ssh_dir_missing'})
     State = "%s%s"%(STATE_PREFIX,id_generator(32))
-    Key = set_key_state(InKey, State)
+    Key = validate_and_update_key(InKey, State)
+    if Key == None:
+        return json.dumps({'error':'bad_key'})
+
     do_insert_key(SshDir, Key)
     UserNameObj = {'name':'Username', 'type':'text', 'value':UserName}
     Credential = [UserNameObj]
     return json.dumps({'credential':Credential, 'state':State})
 
-def set_key_state(Key, State):
-    [KeyPart, KeyName] = Key.rsplit(" ",1)
-    return "%s %s"%(KeyPart, State)
+def validate_and_update_key(Key, State):
+    if len(Key) < 3:
+        return None
+    KeyParts = Key.split(" ")
+    if len(KeyParts) != 3:
+        return None
+    KeyType = KeyParts[0]
+    PubKey = KeyParts[1]
+    if not KeyType.startswith("ssh-"):
+        return None
+    if len(PubKey) < 4:
+        return None
+    return "%s %s %s"%(KeyType, PubKey, State)
 
 
 def do_insert_key(SshDir, Key):
