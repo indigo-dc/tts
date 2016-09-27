@@ -25,6 +25,7 @@
 -export([stop/1]).
 -export([request/4]).
 -export([revoke/4]).
+-export([get_params/2]).
 
 %% gen_server.
 -export([init/1]).
@@ -75,6 +76,13 @@ revoke(ServiceId, UserInfo, CredState, Pid) ->
     gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo,
                           CredState}, infinity).
 
+-spec get_params(ServiceId ::any(), Pid::pid()) -> {ok, map()} |
+                                                   {error, atom(), list()} |
+                                                   {error, atom()}.
+get_params(ServiceId, Pid) ->
+    gen_server:call(Pid, {get_params, ServiceId}, infinity).
+
+
 %% gen_server.
 
 init([]) ->
@@ -97,6 +105,13 @@ handle_call({revoke_credential, ServiceId, UserInfo, CredState}, From,
                             service_id = ServiceId,
                             user_info = UserInfo,
                             cred_state = CredState
+                          },
+    gen_server:cast(self(), perform_action),
+    {noreply, NewState, 200};
+handle_call({get_params, ServiceId}, From, #state{client = undefined} = State) ->
+    NewState = State#state{ action = get_params,
+                            client = From,
+                            service_id = ServiceId
                           },
     gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
@@ -177,39 +192,43 @@ get_cmd(_) ->
     {error, no_cmd}.
 
 
-create_command_list_and_update_state(Cmd, UserInfo, #{con_type := ConType},
+create_command_list_and_update_state(Cmd, UserInfo,
+                                     #{con_type := ConType} = ServiceInfo,
                                      {ok, Connection}, State)
   when is_binary(Cmd) ->
-    #{ site := Site } = UserInfo,
-    #{ uid := User,
-       uidNumber := Uid,
-       gidNumber := Gid,
-       homeDirectory := HomeDir
-     } = Site,
     #state{
        action = Action,
        params = Params,
        cred_state = CredState
       } = State,
-    ScriptParam = #{
+    ConfParams = maps:get(plugin_conf, ServiceInfo, []),
+    ScriptParam0 = #{
       action => Action,
       params => Params,
-      cred_state => CredState,
-      user_info => UserInfo
-
-      %% deprecated!
-      ,
-      user => User,
-      uid => Uid,
-      gid => Gid,
-      home_dir => HomeDir
-     },
+      conf_params => ConfParams,
+      cred_state => CredState
+      },
+    ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo),
     lager:debug("script params are: ~p", [ScriptParam]),
     EncodedJson = base64url:encode(jsx:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,
                      connection = Connection, con_type = ConType}}.
+
+
+add_user_info_if_present(ScriptParam, #{site := #{uid:= User, uidNumber := Uid,
+                                                  gidNumber := Gid,
+                                                  homeDirectory := HomeDir}}
+                         = UserInfo) ->
+    %% deprecated!
+    Update = #{user_info => UserInfo, user => User, uid => Uid, gid => Gid,
+               home_dir => HomeDir},
+    maps:merge(ScriptParam, Update);
+add_user_info_if_present(ScriptParam, _UserInfo) ->
+    ScriptParam.
+
+
 
 trigger_next_command() ->
     gen_server:cast(self(), execute_cmd).
@@ -318,4 +337,3 @@ send_reply(_Reply, #state{client=undefined}=State) ->
 send_reply(Reply, #state{client=Client}=State) ->
     gen_server:reply(Client, Reply),
     {ok, State#state{client=undefined}}.
-

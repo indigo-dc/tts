@@ -21,12 +21,14 @@
 -export([get_list/1]).
 -export([get_info/1]).
 -export([add/1]).
+-export([update_params/1]).
 
 -export([disable/1]).
 -export([enable/1]).
 -export([is_enabled/1]).
 -export([allows_same_state/1]).
 -export([get_credential_limit/1]).
+-export([group_plugin_configs/1]).
 
 get_list() ->
      tts_data:service_get_list().
@@ -91,7 +93,8 @@ set_enabled_to(Value, Id) ->
 
 
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
-    tts_data:service_add(ServiceId, maps:put(enabled, true, ServiceInfo));
+    tts_data:service_add(ServiceId, maps:put(enabled, false, ServiceInfo)),
+    {ok, ServiceId};
 add(ServiceMap) when is_map(ServiceMap) ->
     ServiceInfo = map_to_atom_keys(ServiceMap),
     add(ServiceInfo);
@@ -99,12 +102,27 @@ add(_ServiceMap)  ->
     {error, invalid_config}.
 
 
+update_params(Id) ->
+    case tts_data:service_get(Id) of
+        {ok, {Id, Info}} ->
+            case tts_credential:get_params(Id) of
+                {ok, ConfParams, RequestParams} ->
+                    Update = #{enabled => true, params => RequestParams,
+                               conf_params => ConfParams},
+                    tts_data:service_update(Id, maps:merge(Info, Update));
+                _ -> {error, update}
+            end;
+        _ -> {error, not_found}
+    end.
+
+
 -include("tts.hrl").
 -include_lib("public_key/include/public_key.hrl").
 
 map_to_atom_keys(ServiceMap) ->
     List = maps:to_list(ServiceMap),
-    map_to_atom_keys(List, #{}).
+    Map0 = maps:put(plugin_conf, [], map_to_atom_keys(List, #{})),
+    group_plugin_configs(Map0).
 
 map_to_atom_keys([], Map) ->
     Map;
@@ -193,3 +211,16 @@ to_bin(Val) when is_list(Val) ->
     list_to_binary(Val);
 to_bin(Val) when is_binary(Val) ->
     Val.
+
+group_plugin_configs(Map) ->
+    group_plugin_configs(maps:to_list(Map),#{}).
+
+group_plugin_configs([], Map) ->
+    Map;
+group_plugin_configs([ {<< Prefix:7/binary, Key/binary >>, Value} | T],
+                        Map) when Prefix == <<"Plugin.">> ->
+    PluginConf = maps:get(plugin_conf, Map),
+    NewPluginConf = [ {Key, Value} | PluginConf ],
+    group_plugin_configs( T, maps:put( plugin_conf, NewPluginConf, Map));
+group_plugin_configs([{K, V} | T], Map) ->
+    group_plugin_configs(T, maps:put(K, V, Map)).

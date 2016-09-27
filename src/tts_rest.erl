@@ -184,7 +184,7 @@ perform_get(service, undefined, Session, _) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
     return_json_service_list(ServiceList, [id, type, host, port, description,
                                            enabled, cred_count, cred_limit,
-                                           limit_reached] );
+                                           limit_reached, params] );
 perform_get(oidcp, undefined, _, 1) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);
@@ -231,13 +231,14 @@ perform_get(cred_data, Id, Session, _Version) ->
         _ -> jsx:encode(#{credential => []})
     end.
 
-perform_post(credential, undefined, #{service_id:=ServiceId}, Session,
+perform_post(credential, undefined, #{service_id:=ServiceId} = Data, Session,
              CookieBased, Ver) ->
     IFace =  case CookieBased of
                  false -> <<"REST interface">>;
                  true ->  <<"Web App">>
              end,
-    case  tts:request_credential_for(ServiceId, Session, [], IFace) of
+    Params = maps:get(params, Data, #{}),
+    case  tts:request_credential_for(ServiceId, Session, Params, IFace) of
         {ok, Credential, _Log} ->
             {ok, Id} = tts:store_temp_cred(Credential, Session),
             Url = id_to_url(Id, Ver),

@@ -26,7 +26,8 @@
          get_count/2,
          exists/2,
          request/5,
-         revoke/2
+         revoke/2,
+         get_params/1
         ]).
 
 %% gen_server.
@@ -95,6 +96,13 @@ revoke(CredentialId, UserInfo) ->
     end.
 
 
+get_params(ServiceId) ->
+    {ok, Pid} = tts_cred_sup:new_worker(),
+    Result = tts_cred_worker:get_params(ServiceId, Pid),
+    handle_params_result(Result).
+
+
+
 handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
@@ -146,6 +154,18 @@ return_error_with_debug(Error, Log, true) ->
     {error, Error, Log};
 return_error_with_debug(Error, _Log, false) ->
     {error, Error, []}.
+
+handle_params_result({ok, #{conf_params := ConfParams,
+                            request_params := RequestParams}, _Log}) ->
+    {ok, ConfParams, RequestParams};
+handle_params_result({ok, #{conf_params := ConfParams}, _Log}) ->
+    {ok, ConfParams, []};
+handle_params_result({ok, #{request_params := RequestParams}, _Log}) ->
+    {ok, [], RequestParams};
+handle_params_result(_) ->
+    {error, bad_result}.
+
+
 
 
 

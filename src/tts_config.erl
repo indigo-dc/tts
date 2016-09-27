@@ -301,7 +301,8 @@ parse_and_apply_services([ConfigFile|Tail])  ->
     ok = econfig:register_config(service, [ConfigFile]),
     ServiceConfig = econfig:get_value(service, ""),
     ConfigMap = maps:from_list(ServiceConfig),
-    tts_service:add(ConfigMap),
+    {ok, Id} = tts_service:add(ConfigMap),
+    tts_service:update_params(Id),
     ok = econfig:unregister_config(service),
     parse_and_apply_services(Tail).
 
