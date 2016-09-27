@@ -9,6 +9,11 @@ import string
 import sys
 import traceback
 
+def list_params():
+    RequestParams = []
+    ConfParams = []
+    return json.dumps({'conf_params': ConfParams, 'request_params': RequestParams})
+
 def request_info(UserInfo):
     Credential = info_to_credential(UserInfo)
     return json.dumps({'credential': Credential, 'state': 'user_info'})
@@ -36,7 +41,7 @@ def site_to_credential(Site):
 def oidc_to_credential(Oidc):
     OidcCredential = []
     for Key in Oidc:
-        KeyName = oidc_key_to_name(Key) 
+        KeyName = oidc_key_to_name(Key)
         Type = oidc_key_to_type(Key)
         Name = "Oidc-%s"%KeyName
         Value = Oidc[Key]
@@ -56,12 +61,12 @@ def oidc_key_to_name(Key):
     if Key == "email":
         return "E-Mail"
     return Key
-    
+
 
 def oidc_key_to_type(Key):
     if Key == "groups":
         return "textarea"
-    return "text" 
+    return "text"
 
 def revoke_info():
     return json.dumps({'result': 'ok'})
@@ -73,14 +78,18 @@ def main():
             json_data = str(sys.argv[1]) + '=' * (4 - len(sys.argv[1]) % 4)
             jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
             action = jobject['action']
-            user_info = jobject['user_info']
 
-            if action == "request":
-                print request_info(user_info)
-            elif action == "revoke":
-                print revoke_info()
+            if Action == "get_params":
+                print list_params()
+
             else:
-                print json.dumps({"error": "unknown_action", "details": action})
+                user_info = jobject['user_info']
+                if action == "request":
+                    print request_info(user_info)
+                elif action == "revoke":
+                    print revoke_info()
+                else:
+                    print json.dumps({"error": "unknown_action", "details": action})
         else:
             print json.dumps({"error": "no_parameter"})
     except Exception, E:

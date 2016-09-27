@@ -11,16 +11,26 @@ import random
 from pwd import getpwnam
 
 STATE_PREFIX="TTS_"
-
-# change this to False to enable real user login
 OVERRIDE_USER_NAME={{plugin_ssh_override_user}}
-# change this to True, to enable SSH
 FULL_ACCESS=False
 
-def create_ssh(UserName, Uid, Gid, HomeDir):
+
+def list_params():
+    RequestParams = [{'name':'public_key', 'description':'the public key to upload to the service',
+                     'type':'textarea', 'mandatory':False}]
+    ConfParams = [{'name':'full_access', 'type':'boolean', 'default': False},
+                  {'name':'state_prefix', 'type':'string', 'default':'TTS_'},
+                  {'name':'override_user_name', 'type':'boolean',
+                   'default':{{plugin_ssh_override_user}} }]
+    return json.dumps({'conf_params': ConfParams, 'request_params': RequestParams})
+
+def create_ssh(UserName, Uid, Gid, HomeDir, Params):
     UserExists = does_user_exist(UserName,Uid,Gid,HomeDir)
     if UserExists:
-        return create_ssh_for(UserName,HomeDir)
+        if Params.has_key('public_key'):
+            return insert_ssh_key(UserName, HomeDir, Params['public_key'])
+        else:
+            return create_ssh_for(UserName,HomeDir)
     else:
         # dear admin, this is not the problem of tts
         return json.dumps({'error':'no_user'})
@@ -43,6 +53,7 @@ def create_ssh_for(UserName,HomeDir):
     State = "%s%s"%(STATE_PREFIX,id_generator(32))
     # maybe change this to random/temp file
     OutputFile = os.path.join(SshDir,"tts_ssh_key")
+    OutputPubFile = os.path.join(SshDir,"tts_ssh_key.pub")
     AuthorizedFile = os.path.join(SshDir,"authorized_keys")
     DelKey = "rm -f %s %s.pub > /dev/null"%(OutputFile,OutputFile)
     # DelKey = "srm -f %s %s.pub > /dev/null"%(OutputFile,OutputFile)
@@ -52,20 +63,43 @@ def create_ssh_for(UserName,HomeDir):
     if os.system(Cmd) != 0:
         return json.dumps({'error':'keygen_failed'})
 
-    if FULL_ACCESS:
-        Prepend='no-port-forwarding,no-X11-forwarding,no-agent-forwarding '
-    else:
-        #make this a really locked down ssh access
-        Prepend='command="cat {{platform_etc_dir}}/services/ssh.msg",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
-    Cmd = "echo -n '%s' |  cat - %s.pub >> %s"%(Prepend,OutputFile,AuthorizedFile)
-    os.system(Cmd)
-    PrivKey = get_file_content(OutputFile),
+    PubKey = get_file_content(OutputPubFile)
+    do_insert_key(SshDir, PubKey)
+
+    PrivKey = get_file_content(OutputFile)
     os.system(DelKey)
     UserNameObj = {'name':'Username', 'type':'text', 'value':UserName}
     PrivKeyObj = {'name':'Private Key', 'type':'textfile', 'value':PrivKey, 'rows':30, 'cols':64}
     PasswdObj = {'name':'Passphrase (for Private Key)', 'type':'text', 'value':Password}
     Credential = [UserNameObj, PrivKeyObj, PasswdObj]
     return json.dumps({'credential':Credential, 'state':State})
+
+def insert_ssh_key(UserName, HomeDir, InKey):
+    SshDir = create_ssh_dir(UserName,HomeDir)
+    if SshDir == None:
+        return json.dumps({'error':'ssh_dir_missing'})
+    State = "%s%s"%(STATE_PREFIX,id_generator(32))
+    Key = set_key_state(InKey, State)
+    do_insert_key(SshDir, Key)
+    UserNameObj = {'name':'Username', 'type':'text', 'value':UserName}
+    Credential = [UserNameObj]
+    return json.dumps({'credential':Credential, 'state':State})
+
+def set_key_state(Key, State):
+    [KeyPart, KeyName] = Key.rsplit(" ",1)
+    return "%s %s"%(KeyPart, State)
+
+
+def do_insert_key(SshDir, Key):
+    AuthorizedFile = os.path.join(SshDir,"authorized_keys")
+    if FULL_ACCESS:
+        Prepend='no-port-forwarding,no-X11-forwarding,no-agent-forwarding '
+    else:
+        #make this a really locked down ssh access
+        Prepend='command="cat {{platform_etc_dir}}/services/ssh.msg",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty '
+    Cmd = "echo '%s %s' >> %s"%(Prepend,Key,AuthorizedFile)
+    os.system(Cmd)
+
 
 
 def delete_ssh_for(UserName, HomeDir, State):
@@ -153,55 +187,66 @@ def main():
             Json = str(sys.argv[1])+ '=' * (4 - len(sys.argv[1]) % 4)
             JObject = json.loads(str(base64.urlsafe_b64decode(Json)))
 
-            #general information
+            #get the action to perform
             Action = JObject['action']
-            State = JObject['cred_state']
-            Params = JObject['params']
-            UserInfo = JObject['user_info']
-            Site = UserInfo['site']
-            #Oidc = UserInfo['oidc']
 
-            # information coming from the site
-            # uid - the username
-            # uidNumber - the uid of the user
-            # gidNumber - the gid of the primary group of the user
-            # homeDirectory - the home directory of the user
-            UserName = Site['uid']
-            Uid = Site['uidNumber']
-            Gid = Site['gidNumber']
-            HomeDir = Site['homeDirectory']
+            if Action == "get_params":
+                print list_params()
 
-            # information coming from the openid provider
-            # which information are available depends on the
-            # OpenId Connect provider
-            #
-            # iss - the issuer
-            # sub - the subject
-            # name - the full name of the user
-            # email - the email of the user
-            #
-            # IAM also provides
-            # groups - a list of groups each consisting of
-            #    id - uuid of the group
-            #    name - readable name of the group
-            # organisation_name - name of the organisation, indigo_dc
-            # preferred_username - if possible create accounts with this name
-            # Name = Oidc['name']
-            # OidcUserName = Oidc['preferred_username']
-
-            if OVERRIDE_USER_NAME:
-                # override username, uid, gid and homedir in DEMO mode
-                UserName = "{{runner_user}}"
-                Uid = getpwnam(UserName).pw_uid
-                Gid = getpwnam(UserName).pw_gid
-                HomeDir = getpwnam(UserName).pw_dir
-
-            if Action == "request":
-                print create_ssh(UserName, Uid, Gid, HomeDir)
-            elif Action == "revoke":
-                print revoke_ssh(UserName, Uid, Gid, HomeDir, State)
             else:
-                print json.dumps({"error":"unknown_action", "details":Action})
+                State = JObject['cred_state']
+                Params = JObject['params']
+                # ConfParams = JObject['conf_params']
+
+                # STATE_PREFIX=ConfParams['state_prefix']
+                # OVERRIDE_USER_NAME=ConfParmas['override_user_name']
+                # FULL_ACCESS=ConfParmas['full_access']
+                #UserInfo
+                UserInfo = JObject['user_info']
+                Site = UserInfo['site']
+                #Oidc = UserInfo['oidc']
+
+                # information coming from the site
+                # uid - the username
+                # uidNumber - the uid of the user
+                # gidNumber - the gid of the primary group of the user
+                # homeDirectory - the home directory of the user
+                UserName = Site['uid']
+                Uid = Site['uidNumber']
+                Gid = Site['gidNumber']
+                HomeDir = Site['homeDirectory']
+
+                # information coming from the openid provider
+                # which information are available depends on the
+                # OpenId Connect provider
+                #
+                # iss - the issuer
+                # sub - the subject
+                # name - the full name of the user
+                # email - the email of the user
+                #
+                # IAM also provides
+                # groups - a list of groups each consisting of
+                #    id - uuid of the group
+                #    name - readable name of the group
+                # organisation_name - name of the organisation, indigo_dc
+                # preferred_username - if possible create accounts with this name
+                # Name = Oidc['name']
+                # OidcUserName = Oidc['preferred_username']
+
+                if OVERRIDE_USER_NAME:
+                    # override username, uid, gid and homedir in DEMO mode
+                    UserName = "{{runner_user}}"
+                    Uid = getpwnam(UserName).pw_uid
+                    Gid = getpwnam(UserName).pw_gid
+                    HomeDir = getpwnam(UserName).pw_dir
+
+                if Action == "request":
+                    print create_ssh(UserName, Uid, Gid, HomeDir, Params)
+                elif Action == "revoke":
+                    print revoke_ssh(UserName, Uid, Gid, HomeDir, State)
+                else:
+                    print json.dumps({"error":"unknown_action", "details":Action})
         else:
             print json.dumps({"error":"no_parameter"})
     except Exception, E:

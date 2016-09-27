@@ -185,47 +185,51 @@ def main():
 
             #general information
             Action = JObject['action']
-            State = JObject['cred_state']
-            Params = JObject['params']
-            UserInfo = JObject['user_info']
-            # Site = UserInfo['site']
-            Oidc = UserInfo['oidc']
 
-            # information coming from the site
-            # uid - the username
-            # uidNumber - the uid of the user
-            # gidNumber - the gid of the primary group of the user
-            # homeDirectory - the home directory of the user
-            # UserName = Site['uid']
-            # Uid = Site['uidNumber']
-            # Gid = Site['gidNumber']
-            # HomeDir = Site['homeDirectory']
-
-            # information coming from the openid provider
-            # which information are available depends on the
-            # OpenId Connect provider
-            #
-            # iss - the issuer
-            # sub - the subject
-            # name - the full name of the user
-            # email - the email of the user
-            #
-            # IAM also provides
-            # groups - a list of groups each consisting of
-            #    id - uuid of the group
-            #    name - readable name of the group
-            # organisation_name - name of the organisation, indigo_dc
-            # preferred_username - if possible create accounts with this name
-            Issuer = Oidc['iss']
-            Subject = Oidc['sub']
-            # OidcUserName = Oidc['preferred_username']
-
-            if Action == "request":
-                print create_cert(Subject, Issuer)
-            elif Action == "revoke":
-                print revoke_cert(State)
+            if Action == "get_params":
+                print list_params()
             else:
-                print json.dumps({"error":"unknown_action", "details":Action})
+
+                State = JObject['cred_state']
+                Params = JObject['params']
+                UserInfo = JObject['user_info']
+                # Site = UserInfo['site']
+                Oidc = UserInfo['oidc']
+                # information coming from the site
+                # uid - the username
+                # uidNumber - the uid of the user
+                # gidNumber - the gid of the primary group of the user
+                # homeDirectory - the home directory of the user
+                # UserName = Site['uid']
+                # Uid = Site['uidNumber']
+                # Gid = Site['gidNumber']
+                # HomeDir = Site['homeDirectory']
+
+                # information coming from the openid provider
+                # which information are available depends on the
+                # OpenId Connect provider
+                #
+                # iss - the issuer
+                # sub - the subject
+                # name - the full name of the user
+                # email - the email of the user
+                #
+                # IAM also provides
+                # groups - a list of groups each consisting of
+                #    id - uuid of the group
+                #    name - readable name of the group
+                # organisation_name - name of the organisation, indigo_dc
+                # preferred_username - if possible create accounts with this name
+                Issuer = Oidc['iss']
+                Subject = Oidc['sub']
+                # OidcUserName = Oidc['preferred_username']
+
+                if Action == "request":
+                    print create_cert(Subject, Issuer)
+                elif Action == "revoke":
+                    print revoke_cert(State)
+                else:
+                    print json.dumps({"error":"unknown_action", "details":Action})
         else:
             print json.dumps({"error":"no_parameter"})
     except Exception, E:
