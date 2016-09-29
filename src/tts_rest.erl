@@ -185,10 +185,10 @@ perform_get(service, undefined, Session, _) ->
     return_json_service_list(ServiceList, [id, type, host, port, description,
                                            enabled, cred_count, cred_limit,
                                            limit_reached, params] );
-perform_get(oidcp, undefined, _, 1) ->
+perform_get(oidcp, _, _, 1) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);
-perform_get(oidcp, undefined, _, _) ->
+perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     jsx:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
