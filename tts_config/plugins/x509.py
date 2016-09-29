@@ -49,16 +49,16 @@ ISSUER_MAPPING=""" { "https://iam-test.indigo-datacloud.eu/":"indigo-iam-test",
                      "https://accounts.google.com":"google"
                    } """
 
-def create_cert(Subject, Issuer):
+def create_cert(Subject, Issuer, NumDaysValid):
     init_ca_if_needed()
     Serial = read_serial()
-    return issue_certificate(Subject, Issuer, Serial)
+    return issue_certificate(Subject, Issuer, NumDaysValid, Serial)
 
 def revoke_cert(Serial):
     init_ca_if_needed()
     return revoke_certificate(Serial)
 
-def issue_certificate(Subject, Issuer, Serial):
+def issue_certificate(Subject, Issuer, NumDaysValid, Serial):
     ShortIss = shorten_issuer(Issuer)
     if ShortIss == None:
         return json.dumps({'error':'unknown issuer'})
@@ -96,7 +96,7 @@ def issue_certificate(Subject, Issuer, Serial):
     if os.system(Cmd) != 0:
         return json.dumps({'error':'conf_update_failed'})
 
-    Cmd = "openssl ca -batch -config %s -policy policy_anything -extensions usr_cert -out %s -passin file:%s -infiles %s >> %s 2>&1"%(TmpConfFile, CertFile, CAPassFile, CsrFile, LogFile)
+    Cmd = "openssl ca -batch -config %s -days %s -policy policy_anything -extensions usr_cert -out %s -passin file:%s -infiles %s >> %s 2>&1"%(TmpConfFile, NumDaysValid, CertFile, CAPassFile, CsrFile, LogFile)
     Log = "echo %s >> %s"%(Cmd, LogFile)
     os.system(Log)
     if os.system(Cmd) != 0:
@@ -104,6 +104,7 @@ def issue_certificate(Subject, Issuer, Serial):
     Cert = get_file_content(CertFile)
     CACert = get_file_content(CACertFile)
     PrivKey = get_file_content(KeyFile)
+    # Cmd = "shred --remove=wipe %s %s"%(PassFile, KeyFile)
     Cmd = "rm %s %s"%(PassFile, KeyFile)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'purge_files'})
@@ -235,8 +236,10 @@ def main():
             Subject = Oidc['sub']
             # OidcUserName = Oidc['preferred_username']
 
+            NumDaysValid = "7"
+
             if Action == "request":
-                print create_cert(Subject, Issuer)
+                print create_cert(Subject, Issuer, NumDaysValid)
             elif Action == "revoke":
                 print revoke_cert(State)
             else:
