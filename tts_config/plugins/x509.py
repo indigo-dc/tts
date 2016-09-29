@@ -236,7 +236,7 @@ def main():
             Subject = Oidc['sub']
             # OidcUserName = Oidc['preferred_username']
 
-            NumDaysValid = "7"
+            NumDaysValid = "11"
 
             if Action == "request":
                 print create_cert(Subject, Issuer, NumDaysValid)
