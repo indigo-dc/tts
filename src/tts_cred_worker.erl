@@ -217,13 +217,8 @@ create_command_list_and_update_state(Cmd, UserInfo,
                      connection = Connection, con_type = ConType}}.
 
 
-add_user_info_if_present(ScriptParam, #{site := #{uid:= User, uidNumber := Uid,
-                                                  gidNumber := Gid,
-                                                  homeDirectory := HomeDir}}
-                         = UserInfo) ->
-    %% deprecated!
-    Update = #{user_info => UserInfo, user => User, uid => Uid, gid => Gid,
-               home_dir => HomeDir},
+add_user_info_if_present(ScriptParam, #{userid:= UserId} = UserInfo) ->
+    Update = #{user_info => UserInfo, userid => UserId},
     maps:merge(ScriptParam, Update);
 add_user_info_if_present(ScriptParam, _UserInfo) ->
     ScriptParam.

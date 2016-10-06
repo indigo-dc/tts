@@ -80,12 +80,12 @@ logout(Session) ->
     tts_session:close(Session).
 
 does_credential_exist(Id, Session) ->
-    {ok, #{site := #{uid :=UserId}}} =  tts_session:get_user_info(Session),
+    {ok, UserId} =  tts_session:get_userid(Session),
     tts_credential:exists(UserId, Id).
 
 does_temp_cred_exist(Id, Session) ->
-    {ok, UserInfo} =  tts_session:get_user_info(Session),
-    tts_temp_cred:exists(Id, UserInfo).
+    {ok, UserId} =  tts_session:get_userid(Session),
+    tts_temp_cred:exists(Id, UserId).
 
 
 
@@ -105,14 +105,12 @@ get_openid_provider_list() ->
 
 
 get_service_list_for(Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    #{ site := #{uid := UserId}} = UserInfo,
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, ServiceList} = tts_service:get_list(UserId),
     {ok, ServiceList}.
 
 get_credential_list_for(Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    #{ site := #{uid := UserId}} = UserInfo,
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, CredentialList} = tts_credential:get_list(UserId),
     {ok, CredentialList}.
 
@@ -163,13 +161,13 @@ get_display_name_for(Session) ->
     {ok, Name}.
 
 store_temp_cred(Credential, Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, Id} = tts_temp_cred:add_cred(Credential, UserInfo),
+    {ok, UserId} = tts_session:get_userid(Session),
+    {ok, Id} = tts_temp_cred:add_cred(Credential, UserId),
     {ok, Id}.
 
 get_temp_cred(Id, Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    tts_temp_cred:get_cred(Id, UserInfo).
+    {ok, UserId} = tts_session:get_userid(Session),
+    tts_temp_cred:get_cred(Id, UserId).
 
 start_full_debug() ->
     %debug these modules
@@ -177,11 +175,8 @@ start_full_debug() ->
                       "tts_rest",
                       "tts_oidc_client",
                       "tts_rest_cred",
-                      "tts_user_cache",
                       "tts_session",
                       "tts_session_mgr",
-                      "tts_idh",
-                      "tts_idh_worker",
                       "tts_service",
                       "tts_credential",
                       "tts_cred_worker"
@@ -205,10 +200,8 @@ stop_debug() ->
 
 
 update_session(Issuer, Subject, Token, SessionPid) ->
-    {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok, SessId} = tts_session:get_id(SessionPid),
     ok = tts_session:set_token(Token, SessionPid),
-    ok = tts_session:set_user_info(UserInfo, SessionPid),
     ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = tts_session:is_logged_in(SessionPid),
     lager:debug("login success"),

@@ -152,7 +152,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 stop_services() ->
     ok = tts_session_mgr:close_all_sessions(),
-    ok = tts_user_cache:clear_cache(),
     ok.
 
 clear_config() ->
@@ -168,7 +167,6 @@ read_configs() ->
     ok = update_status().
 
 trigger_services() ->
-    ok = tts_idh:reconfigure(),
     ok = tts_data_sqlite:reconfigure(),
     ok = start_cowboy().
 
@@ -222,13 +220,8 @@ update_status() ->
           {"SqliteFile", sqlite_db, file, "./tts.db"},
           {"LogFile", log_file, binary, "tts.log"},
           {"SessionTimeout", session_timeout, seconds, 600},
-          {"CacheTimeout", cache_timeout, seconds, 900},
-          {"CacheCheckInterval", cache_check_interval, seconds, 300},
-          {"CacheMaxEntries", cache_max_entries, integer, 50000},
           {"ServiceConfigPath", service_config_path, directory, "./services"},
-          {"OidcConfigPath", oidc_config_path, directory, "./oidc"},
-          {"IDHScript", idh_script, file, "./idh.py"},
-          {"IDHMaxWorker", idh_max_worker, integer, 5}
+          {"OidcConfigPath", oidc_config_path, directory, "./oidc"}
         ]).
 
 

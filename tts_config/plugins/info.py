@@ -19,32 +19,12 @@ def request_info(UserInfo):
     return json.dumps({'credential': Credential, 'state': 'user_info'})
 
 def info_to_credential(UserInfo):
-    Site = UserInfo['site']
-    Oidc = UserInfo['oidc']
-    SiteInfo = site_to_credential(Site)
-    OidcInfo = oidc_to_credential(Oidc)
-    return SiteInfo + OidcInfo
-
-def site_to_credential(Site):
-    UserName = Site['uid']
-    Uid = Site['uidNumber']
-    Gid = Site['gidNumber']
-    HomeDir = Site['homeDirectory']
-
-    NameObj = {'name':'Site-Username', 'type':'text', 'value':UserName}
-    UidObj = {'name':'Site-Uid', 'type':'text', 'value':Uid}
-    GidObj = {'name':'Site-Gid', 'type':'text', 'value':Gid}
-    DirObj = {'name':'Site-HomeDirectory', 'type':'text', 'value':HomeDir}
-    SiteCredential = [NameObj, UidObj, GidObj, DirObj]
-    return SiteCredential
-
-def oidc_to_credential(Oidc):
     OidcCredential = []
-    for Key in Oidc:
+    for Key in UserInfo:
         KeyName = oidc_key_to_name(Key)
         Type = oidc_key_to_type(Key)
-        Name = "Oidc-%s"%KeyName
-        Value = Oidc[Key]
+        Name = "%s"%KeyName
+        Value = UserInfo[Key]
         NewObj = [{'name':Name, 'type':Type, 'value':Value  }]
         OidcCredential = OidcCredential + NewObj
     return OidcCredential
@@ -52,6 +32,8 @@ def oidc_to_credential(Oidc):
 def oidc_key_to_name(Key):
     if Key == "iss":
         return "Issuer"
+    if Key == "userid":
+        return "UserId (encoded iss/sub)"
     if Key == "sub":
         return "Subject"
     if Key == "name":
@@ -60,11 +42,15 @@ def oidc_key_to_name(Key):
         return "Groups"
     if Key == "email":
         return "E-Mail"
+    if Key == "gender":
+        return "Gender"
     return Key
 
 
 def oidc_key_to_type(Key):
     if Key == "groups":
+        return "textarea"
+    if Key == "userid":
         return "textarea"
     return "text"
 

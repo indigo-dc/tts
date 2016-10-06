@@ -198,22 +198,11 @@ def main():
                 State = JObject['cred_state']
                 Params = JObject['params']
                 UserInfo = JObject['user_info']
-                # Site = UserInfo['site']
-                Oidc = UserInfo['oidc']
-                # information coming from the site
-                # uid - the username
-                # uidNumber - the uid of the user
-                # gidNumber - the gid of the primary group of the user
-                # homeDirectory - the home directory of the user
-                # UserName = Site['uid']
-                # Uid = Site['uidNumber']
-                # Gid = Site['gidNumber']
-                # HomeDir = Site['homeDirectory']
-
                 # information coming from the openid provider
                 # which information are available depends on the
                 # OpenId Connect provider
                 #
+                # userid - issuer/subject encoded into one string
                 # iss - the issuer
                 # sub - the subject
                 # name - the full name of the user
@@ -225,9 +214,9 @@ def main():
                 #    name - readable name of the group
                 # organisation_name - name of the organisation, indigo_dc
                 # preferred_username - if possible create accounts with this name
-                Issuer = Oidc['iss']
-                Subject = Oidc['sub']
-                # OidcUserName = Oidc['preferred_username']
+                Issuer = UserInfo['iss']
+                Subject = UserInfo['sub']
+                # UserName = UserInfo['preferred_username']
 
                 if Action == "request":
                     print create_cert(Subject, Issuer)

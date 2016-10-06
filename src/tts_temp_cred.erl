@@ -46,18 +46,18 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec add_cred(Credential :: list(), UserInfo::map()) -> {ok, Id::binary()}.
-add_cred(Credential, UserInfo) ->
-    gen_server:call(?MODULE, {add, Credential, UserInfo}).
+-spec add_cred(Credential :: list(), UserId::binary()) -> {ok, Id::binary()}.
+add_cred(Credential, UserId) ->
+    gen_server:call(?MODULE, {add, Credential, UserId}).
 
--spec get_cred(CredId :: binary(), UserInfo::map()) -> {ok, Credential::list()}|
+-spec get_cred(CredId :: binary(), UserId::binary()) -> {ok, Credential::list()}|
                                                         {error, Reason::any()}.
-get_cred(Id, UserInfo) ->
-    gen_server:call(?MODULE, {get, Id, UserInfo}).
+get_cred(Id, UserId) ->
+    gen_server:call(?MODULE, {get, Id, UserId}).
 
--spec exists(CredId :: binary(), UserInfo::map()) -> true | false.
-exists(Id, UserInfo) ->
-    gen_server:call(?MODULE, {exists, Id, UserInfo}).
+-spec exists(CredId :: binary(), UserId::binary()) -> true | false.
+exists(Id, UserId) ->
+    gen_server:call(?MODULE, {exists, Id, UserId}).
 
 -spec get_all_creds() -> {ok, Creds::list()}.
 get_all_creds() ->
@@ -72,23 +72,17 @@ stop() ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({add,  Cred, UserInfo}, _From, #state{creds = Creds} = State) ->
-    UserId = get_userid(UserInfo),
-    case UserId of
-        undefined ->
-            {reply, {error, bad_userid}, State};
-        _ ->
-            Id = gen_random_id(State),
-            {ok, DataPid} = tts_temp_cred_sup:new_temp_cred(Cred),
-            MRef = monitor(process, DataPid),
-            NewCreds = [{Id, UserId, DataPid, MRef} | Creds],
-            {reply, {ok, Id}, State#state{creds=NewCreds}}
-    end;
-handle_call({exists, Id, UserInfo}, _From, State) ->
-    Result = credential_exists(Id, UserInfo, State),
+handle_call({add,  Cred, UserId}, _From, #state{creds = Creds} = State) ->
+    Id = gen_random_id(State),
+    {ok, DataPid} = tts_temp_cred_sup:new_temp_cred(Cred),
+    MRef = monitor(process, DataPid),
+    NewCreds = [{Id, UserId, DataPid, MRef} | Creds],
+    {reply, {ok, Id}, State#state{creds=NewCreds}};
+handle_call({exists, Id, UserId}, _From, State) ->
+    Result = credential_exists(Id, UserId, State),
     {reply, Result, State};
-handle_call({get, Id, UserInfo}, _From, State) ->
-    Result = get_credential(Id, UserInfo, State),
+handle_call({get, Id, UserId}, _From, State) ->
+    Result = get_credential(Id, UserId, State),
     {reply, Result, State};
 handle_call(get_all_creds, _From, #state{creds=Creds} = State) ->
     {reply, {ok, Creds}, State};
@@ -112,11 +106,6 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-get_userid(#{site := #{uid := UserId}}) ->
-    UserId;
-get_userid(_UserId) ->
-    undefined.
-
 
 gen_random_id(#state{creds = Creds} = State) ->
     Id = tts_utils:random_string(16),
@@ -125,16 +114,15 @@ gen_random_id(#state{creds = Creds} = State) ->
         _ -> gen_random_id(State)
     end.
 
-credential_exists(Id, UserInfo, State) ->
-    case get_cred_pid(Id, UserInfo, State) of
+credential_exists(Id, UserId, State) ->
+    case get_cred_pid(Id, UserId, State) of
         {ok, _} ->
             true;
         _ ->
             false
     end.
 
-get_cred_pid(Id, UserInfo, #state{creds=Creds}) ->
-    UserId = get_userid(UserInfo),
+get_cred_pid(Id, UserId, #state{creds=Creds}) ->
     case lists:keyfind(Id, 1, Creds) of
         {Id, UserId, CredPid, _MRef} ->
             {ok, CredPid};
@@ -143,8 +131,8 @@ get_cred_pid(Id, UserInfo, #state{creds=Creds}) ->
     end.
 
 
-get_credential(Id, UserInfo, State) ->
-    case get_cred_pid(Id, UserInfo, State) of
+get_credential(Id, UserId, State) ->
+    case get_cred_pid(Id, UserId, State) of
         {ok, Pid} ->
             case tts_temp_cred_data:get_credential(Pid) of
                 {ok, Credential} ->

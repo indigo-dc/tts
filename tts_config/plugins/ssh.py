@@ -195,6 +195,21 @@ def id_generator(size=16, chars=string.ascii_uppercase + string.digits+string.as
     return ''.join(random.choice(chars) for _ in range(size))
 
 
+def lookupPosix(UserId):
+    if OVERRIDE_USER_NAME:
+        # override username, uid, gid and homedir in DEMO mode
+        UserName = "{{runner_user}}"
+        Uid = getpwnam(UserName).pw_uid
+        Gid = getpwnam(UserName).pw_gid
+        HomeDir = getpwnam(UserName).pw_dir
+        return (UserName, Uid, Gid, HomeDir)
+    else:
+        # need to consult a mapping file
+        # TODO
+        return False
+
+
+
 def main():
     try:
         Cmd = None
@@ -217,20 +232,6 @@ def main():
                 # OVERRIDE_USER_NAME=ConfParmas['override_user_name']
                 # FULL_ACCESS=ConfParmas['full_access']
                 #UserInfo
-                UserInfo = JObject['user_info']
-                Site = UserInfo['site']
-                #Oidc = UserInfo['oidc']
-
-                # information coming from the site
-                # uid - the username
-                # uidNumber - the uid of the user
-                # gidNumber - the gid of the primary group of the user
-                # homeDirectory - the home directory of the user
-                UserName = Site['uid']
-                Uid = Site['uidNumber']
-                Gid = Site['gidNumber']
-                HomeDir = Site['homeDirectory']
-
                 # information coming from the openid provider
                 # which information are available depends on the
                 # OpenId Connect provider
@@ -249,12 +250,13 @@ def main():
                 # Name = Oidc['name']
                 # OidcUserName = Oidc['preferred_username']
 
-                if OVERRIDE_USER_NAME:
-                    # override username, uid, gid and homedir in DEMO mode
-                    UserName = "{{runner_user}}"
-                    Uid = getpwnam(UserName).pw_uid
-                    Gid = getpwnam(UserName).pw_gid
-                    HomeDir = getpwnam(UserName).pw_dir
+                UserInfo = JObject['user_info']
+                UserId = UserInfo['userid']
+                Issuer = UserInfo['iss']
+                Subject = UserInfo['sub']
+
+                (UserName, Uid, Gid, HomeDir) = lookupPosix(UserId)
+
 
                 if Action == "request":
                     print create_ssh(UserName, Uid, Gid, HomeDir, Params)
