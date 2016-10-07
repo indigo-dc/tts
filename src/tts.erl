@@ -123,7 +123,7 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
     case
         tts_credential:request(ServiceId, UserInfo, Interface, Token, Params) of
         {ok, Credential, Log} ->
-            [#{name := id, value:=CredId}|_] = Credential,
+            #{id := CredId} = Credential,
             lager:info("~p: requested credential ~p",
                        [SessionId, CredId]),
             {ok, Credential, Log};

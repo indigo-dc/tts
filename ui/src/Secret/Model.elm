@@ -2,7 +2,13 @@ module Secret.Model exposing (..)
 
 
 type alias Model =
-    { entries : List Entry
+    { credential : Credential
+    }
+
+
+type alias Credential =
+    { id : String
+    , entries : List Entry
     }
 
 

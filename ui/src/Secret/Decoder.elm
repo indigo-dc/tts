@@ -5,13 +5,20 @@ module Secret.Decoder exposing (decodeSecret)
 
 import Json.Decode exposing (string, list, int, Decoder)
 import Json.Decode.Pipeline exposing (decode, required, optional)
-import Secret.Model as Secret exposing (Model, Entry)
+import Secret.Model as Secret exposing (Model, Credential, Entry)
 
 
 decodeSecret : Decoder Secret.Model
 decodeSecret =
     decode Secret.Model
-        |> required "credential" (list decodeEntry)
+        |> required "credential" decodeCredential
+
+
+decodeCredential : Decoder Secret.Credential
+decodeCredential =
+    decode Secret.Credential
+        |> required "id" string
+        |> required "entries" (list decodeEntry)
 
 
 decodeEntry : Decoder Secret.Entry

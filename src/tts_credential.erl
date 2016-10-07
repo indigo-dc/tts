@@ -114,8 +114,7 @@ handle_request_result({ok, #{credential := Cred0, state := CredState}, Log}
         {ok, CredId} ->
             lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",
                        [CredId, CredState, ServiceId, UserInfo, Interface]),
-            Id = #{name => id, type => text, value => CredId},
-            return_result_with_debug([ Id | Cred], Log);
+            return_result_with_debug(#{id => CredId, entries => Cred}, Log);
         Error ->
             return_error_with_debug({storing, Error}, Log)
     end;

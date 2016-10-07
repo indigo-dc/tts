@@ -1,7 +1,7 @@
 module Secret.View exposing (..)
 
 import Dialog
-import Html exposing (Html, h4, div, p, text, input, button, tr, td, form, table, textarea, tbody)
+import Html exposing (Html, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
 import Html.Attributes exposing (class, value, type', readonly, rows, cols)
 import Html.Events exposing (onClick)
 import Messages exposing (Msg)
@@ -17,32 +17,40 @@ view scrt =
                     Nothing
 
                 Just secret ->
-                    Just
-                        { closeMessage = Just Messages.HideSecret
-                        , containerClass = Nothing
-                        , header =
-                            Just
-                                (h4 [ class "modal-title" ] [ text "Your Credential" ])
-                        , body =
-                            Just
-                                (div []
-                                    [ p [] [ text "This information will be gone once you perform any action, the credential is also not stored on the server" ]
-                                    , table [ class "table table-striped" ]
-                                        [ tbody []
-                                            (List.map viewEntry secret.entries)
+                    let
+                        cred =
+                            secret.credential
+                    in
+                        Just
+                            { closeMessage = Just Messages.HideSecret
+                            , containerClass = Nothing
+                            , header =
+                                Just
+                                    (h4 [ class "modal-title" ]
+                                        [ text "Your Credential"
+                                        , small [] [ text ("  id: " ++ cred.id) ]
                                         ]
-                                    ]
-                                )
-                        , footer =
-                            Just
-                                (button
-                                    [ type' "button"
-                                    , class "btn btn-default"
-                                    , onClick Messages.HideSecret
-                                    ]
-                                    [ text "Close" ]
-                                )
-                        }
+                                    )
+                            , body =
+                                Just
+                                    (div []
+                                        [ p [] [ text "This information will be gone once you perform any action, the credential is also not stored on the server" ]
+                                        , table [ class "table table-striped" ]
+                                            [ tbody []
+                                                (List.map viewEntry cred.entries)
+                                            ]
+                                        ]
+                                    )
+                            , footer =
+                                Just
+                                    (button
+                                        [ type' "button"
+                                        , class "btn btn-default"
+                                        , onClick Messages.HideSecret
+                                        ]
+                                        [ text "Close" ]
+                                    )
+                            }
     in
         Dialog.view config
 
