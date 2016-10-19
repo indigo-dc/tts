@@ -1,0 +1,9 @@
+---
+# For all other distributions. Assuming Erlang/OTP >= 18.1 is in their official repos
+# TODO How to check this?
+
+- name: Install erlang from official repositories
+  package:
+    name: erlang
+    # TODO Better would be state=present version>=18.1 or sth similar
+    state: latest

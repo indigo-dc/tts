@@ -1,0 +1,14 @@
+---
+# This is CentOS specific. We need it because Erlang/OTP 18 is not in the CentOS 7 release
+
+- name: Add erlang repo
+  get_url:
+    url: http://packages.erlang-solutions.com/rpm/centos/erlang_solutions.repo
+    dest: /etc/yum.repos.d/
+
+- name: Install erlang from erlang-solutions repository
+  yum:
+    enablerepo: erlang-solutions
+    name: erlang
+    state: latest
+

@@ -1,0 +1,4 @@
+[tts-server]
+# Make sure you have sshd running on localhost and an ssh key in your
+# ssh-agent (or an entry in ~/.ssh/config)
+localhost
