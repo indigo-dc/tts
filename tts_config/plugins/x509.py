@@ -164,6 +164,9 @@ def init_ca():
     Cmd = "touch %s/index.txt > /dev/null"%(AbsBase)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'touch_failed'})
+    Cmd = "echo \"unique_subject = no\" > %s/index.txt.attr"%(AbsBase)
+    if os.system(Cmd) != 0:
+        return json.dumps({'error':'index.attr_failed'})
     Cmd = "echo \"01\" > %s/serial"%(AbsBase)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'serial_failed'})
