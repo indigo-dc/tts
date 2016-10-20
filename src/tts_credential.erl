@@ -112,7 +112,7 @@ handle_request_result({ok, #{credential := Cred0, state := CredState}, Log}
     Cred = validate_credential_values(Cred0),
     case sync_store_credential(UserId, ServiceId, Interface, CredState) of
         {ok, CredId} ->
-            lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",
+            lager:debug("New Credential ~p [~p] at service ~p for ~p using ~p",
                        [CredId, CredState, ServiceId, UserInfo, Interface]),
             return_result_with_debug(#{id => CredId, entries => Cred}, Log);
         Error ->

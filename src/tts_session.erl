@@ -20,10 +20,11 @@
 
 
 %% API.
--export([start_link/1]).
+-export([start_link/2]).
 -export([close/1]).
 
 -export([get_id/1]).
+-export([get_sess_token/1]).
 -export([get_userid/1]).
 
 -export([get_max_age/1]).
@@ -53,9 +54,9 @@
 
 %% API.
 
--spec start_link(ID :: binary()) -> {ok, pid()}.
-start_link(ID) ->
-    gen_server:start_link(?MODULE, ID, []).
+-spec start_link(Id :: binary(), Token :: binary()) -> {ok, pid()}.
+start_link(Id, Token) ->
+    gen_server:start_link(?MODULE, [Id, Token], []).
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
@@ -66,6 +67,12 @@ get_id(undefined) ->
     {ok, undefined};
 get_id(Pid) ->
     gen_server:call(Pid, get_id).
+
+-spec get_sess_token(Pid :: pid()) -> {ok, Token::binary()}.
+get_sess_token(undefined) ->
+    {ok, undefined};
+get_sess_token(Pid) ->
+    gen_server:call(Pid, get_sess_token).
 
 -spec get_userid(Pid :: pid()) -> {ok, ID::binary()}.
 get_userid(Pid) ->
@@ -118,6 +125,7 @@ is_same_ip(IP, Pid) ->
 -include("tts.hrl").
 -record(state, {
           id = unkonwn,
+          sess_token = undefined,
           iss = undefined,
           sub = undefined,
           user_agent = undefined,
@@ -128,13 +136,16 @@ is_same_ip(IP, Pid) ->
          }).
 
 
-init(ID) ->
-    lager:info("~p: session starting", [ID]),
+init([Id, Token]) ->
+    lager:info("SESS[~p] starting", [Id]),
     MaxAge = ?CONFIG(session_timeout, 10000),
-    {ok, #state{id = ID, max_age=MaxAge}}.
+    {ok, #state{id = Id, sess_token=Token, max_age=MaxAge}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
     {reply, {ok, Id}, State, MA};
+handle_call(get_sess_token, _From, #state{sess_token=Token,
+                                          max_age=MA}=State) ->
+    {reply, {ok, Token}, State, MA};
 handle_call(get_userid, _From, #state{max_age=MA}=State) ->
     {reply, userid(State), State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
@@ -170,13 +181,8 @@ handle_call(get_user_info, _From,
     Update = #{userid => UserId, iss => Iss, sub => Sub},
     Info = maps:merge(Info0, Update),
     {reply, {ok, Info}, State, MA};
-handle_call(get_display_name, _From, #state{max_age=MA, sub=Subject, iss=Issuer,
-                                            oidc_info=OidcInfo}=State) ->
-    Name = case maps:get(name, OidcInfo, undefined) of
-               undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
-               Other -> Other
-           end,
-    {reply, {ok, Name}, State, MA};
+handle_call(get_display_name, _From, #state{max_age=MA}=State) ->
+    {reply, {ok, display_name(State)}, State, MA};
 handle_call(is_logged_in, _From, #state{iss=Iss, sub=Sub, max_age=MA}=State)
   when is_binary(Iss), is_binary(Sub)->
     {reply, true, State, MA};
@@ -202,21 +208,21 @@ handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 handle_cast(close, #state{id=ID} = State) ->
-    lager:info("~p: session stopping", [ID]),
+    lager:debug("SESS[~p] stopping", [ID]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info(timeout, #state{id=ID} = State) ->
-    lager:info("~p: timeout, asking for termination", [ID]),
-    tts_session_mgr:session_wants_to_close(ID),
+handle_info(timeout, #state{id=ID, sess_token=Token} = State) ->
+    lager:info("SESS[~p] timeout, asking for termination", [ID]),
+    tts_session_mgr:session_wants_to_close(Token),
     {noreply, State, 5000};
 handle_info(_Info, State) ->
     {noreply, State}.
 
-terminate(_Reason, #state{id=ID}) ->
-    lager:info("~p: session terminating", [ID]),
-    tts_session_mgr:session_terminating(ID),
+terminate(_Reason, #state{id=ID, sess_token=Token}) ->
+    lager:info("SESS[~p] terminating", [ID]),
+    tts_session_mgr:session_terminating(Token),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
@@ -230,3 +236,9 @@ userid(#state{iss=Issuer, sub=Subject})
     {ok, Id};
 userid(_) ->
     {error, not_set}.
+
+display_name(#state{sub=Subject, iss=Issuer, oidc_info=OidcInfo}) ->
+    case maps:get(name, OidcInfo, undefined) of
+        undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
+        Other -> Other
+    end.

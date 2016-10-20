@@ -88,8 +88,8 @@ allow_missing_post(Req, State) ->
 
 malformed_request(Req, State) ->
     CookieName = tts_http_util:cookie_name(),
-    {CookieSessionId, Req2} = cowboy_req:cookie(CookieName, Req),
-    CookieSession = tts_session_mgr:get_session(CookieSessionId),
+    {CookieSessionToken, Req2} = cowboy_req:cookie(CookieName, Req),
+    CookieSession = tts_session_mgr:get_session(CookieSessionToken),
     {InVersion, Req3} = cowboy_req:binding(version, Req2, no_version),
     {InType, Req4} = cowboy_req:binding(type, Req3),
     {InId, Req5} = cowboy_req:binding(id, Req4, undefined),
@@ -443,8 +443,8 @@ update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
     tts_http_util:perform_cookie_action(clear, 0, deleted, Req);
 update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
     {ok, Max} = tts_session:get_max_age(Session),
-    {ok, Id} = tts_session:get_id(Session),
-    tts_http_util:perform_cookie_action(update, Max, Id, Req);
+    {ok, Token} = tts_session:get_sess_token(Session),
+    tts_http_util:perform_cookie_action(update, Max, Token, Req);
 update_cookie_if_used(Req, #state{cookie_based = _}) ->
     {ok, Req}.
 

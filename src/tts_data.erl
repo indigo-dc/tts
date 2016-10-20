@@ -21,6 +21,7 @@
 
 -export([
          sessions_get_list/0,
+         sessions_count/0,
          sessions_create_new/1,
          sessions_get_pid/1,
          sessions_update_pid/2,
@@ -47,7 +48,6 @@
                     , ?TTS_USER_MAPPING
                     , ?TTS_USER
                     , ?TTS_SERVICE
-                    %% , ?TTS_CRED_USER
                    ]).
 
 init() ->
@@ -62,28 +62,33 @@ sessions_get_list() ->
                    end,
     lists:reverse(lists:foldl(ExtractValue, [], Entries)).
 
+-spec sessions_count() -> integer.
+sessions_count() ->
+    get_num_entries(?TTS_SESSIONS).
 
--spec sessions_create_new(ID :: binary()) -> ok | {error, Reason :: atom()}.
-sessions_create_new(ID) ->
-    return_ok_or_error(insert_new(?TTS_SESSIONS, {ID, none_yet})).
 
 
--spec sessions_get_pid(ID :: binary()) -> {ok, Pid :: pid()} |
+-spec sessions_create_new(Token :: binary()) -> ok | {error, Reason :: atom()}.
+sessions_create_new(Token) ->
+    return_ok_or_error(insert_new(?TTS_SESSIONS, {Token, none_yet})).
+
+
+-spec sessions_get_pid(Token :: binary()) -> {ok, Pid :: pid()} |
                                           {error, Reason :: atom()}.
-sessions_get_pid(ID) ->
-    case return_value(lookup(?TTS_SESSIONS, ID)) of
+sessions_get_pid(Token) ->
+    case return_value(lookup(?TTS_SESSIONS, Token)) of
         {ok, none_yet} -> {error, none_yet};
         Other -> Other
     end.
 
--spec sessions_update_pid(ID :: binary(), Pid :: pid()) -> ok.
-sessions_update_pid(ID, Pid) ->
-    insert(?TTS_SESSIONS, {ID, Pid}),
+-spec sessions_update_pid(Token :: binary(), Pid :: pid()) -> ok.
+sessions_update_pid(Token, Pid) ->
+    insert(?TTS_SESSIONS, {Token, Pid}),
     ok.
 
--spec sessions_delete(ID :: binary()) -> true.
-sessions_delete(ID) ->
-    delete(?TTS_SESSIONS, ID).
+-spec sessions_delete(Token :: binary()) -> true.
+sessions_delete(Token) ->
+    delete(?TTS_SESSIONS, Token).
 
 
 % functions for service  management
@@ -136,6 +141,8 @@ create_table(TableName) ->
     ets:new(TableName, [set, public, named_table, {keypos, 1}]).
 
 
+get_num_entries(Table) ->
+    ets:info(Table, size).
 
 get_all_entries(Table) ->
     GetVal = fun(Entry, List) ->

@@ -9,12 +9,12 @@
 
 login_succeeded(TokenMap) ->
     case tts:login_with_oidcc(TokenMap) of
-        {ok, #{session_id := SessId, session_pid := SessPid}} ->
+        {ok, #{session_token := Token, session_pid := SessPid}} ->
             {ok, MaxAge} = tts_session:get_max_age(SessPid),
             Opts = tts_http_util:create_cookie_opts(MaxAge),
             CookieName = tts_http_util:cookie_name(),
             {ok, [{redirect, ?CONFIG(ep_main)},
-                  {cookie, CookieName, SessId, Opts}]};
+                  {cookie, CookieName, Token, Opts}]};
         {error, _} ->
             %% TODO:
             %% show an error on the login page

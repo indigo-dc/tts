@@ -59,6 +59,7 @@ login_with_access_token(_AccessToken, _Issuer) ->
 
 do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = tts_session_mgr:new_session(),
+    SessionId = tts_session:get_id(SessPid),
     try
         {Subject, Token} = case Subject0 of
                                undefined ->
@@ -70,8 +71,8 @@ do_login(Issuer, Subject0, Token0) ->
     catch Error:Reason ->
             logout(SessPid),
             StackTrace = erlang:get_stacktrace(),
-            lager:error("login failed due to ~p:~p at ~p", [Error, Reason,
-                                                            StackTrace]),
+            lager:error("SESS[~p] login failed due to ~p:~p at ~p",
+                        [SessionId, Error, Reason, StackTrace]),
             {error, internal}
     end.
 
@@ -124,11 +125,11 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
         tts_credential:request(ServiceId, UserInfo, Interface, Token, Params) of
         {ok, Credential, Log} ->
             #{id := CredId} = Credential,
-            lager:info("~p: requested credential ~p",
+            lager:info("SESS[~p] requested credential ~p",
                        [SessionId, CredId]),
             {ok, Credential, Log};
         {error, Reason, Log} ->
-            lager:warning("~p: credential request for ~p failed with ~p",
+            lager:warning("SESS[~p] credential request for ~p failed with ~p",
                           [SessionId, ServiceId, Reason]),
             {error, Reason, Log}
     end.
@@ -136,16 +137,15 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
 
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     case tts_credential:revoke(CredId, UserInfo) of
         {ok, Result, Log}  ->
-            lager:info("~p: revoked credential ~p as ~p ~p",
-                       [SessionId, CredId, Issuer, Subject]),
+            lager:info("SESS[~p] revoked credential ~p",
+                       [SessionId, CredId]),
             {ok, Result, Log};
         {error, Error, Log} ->
-            lager:warning("~p: revocation of credential ~p  as ~p ~p
-            failed with ~p", [SessionId, CredId, Issuer, Subject, Error]),
+            lager:warning("SESS[~p] revocation of credential ~p failed with ~p",
+                          [SessionId, CredId, Error]),
             {error, Error, Log}
     end.
 
@@ -201,11 +201,16 @@ stop_debug() ->
 
 update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, SessId} = tts_session:get_id(SessionPid),
+    {ok, SessToken} = tts_session:get_sess_token(SessionPid),
     ok = tts_session:set_token(Token, SessionPid),
     ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = tts_session:is_logged_in(SessionPid),
-    lager:debug("login success"),
-    {ok, #{session_id => SessId, session_pid => SessionPid}}.
+    {ok, DisplayName} = tts_session:get_display_name(SessionPid),
+    lager:info("SESS[~p] logged in as ~p at ~p (~p)",
+               [SessId, Issuer, Subject, DisplayName]),
+
+    {ok, #{session_id => SessId, session_token => SessToken,
+           session_pid => SessionPid}}.
 
 get_subject_update_token(Issuer, AccessToken)  ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
