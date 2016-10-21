@@ -158,7 +158,7 @@ handle_call(get_iss_sub, _From,
 handle_call({set_iss_sub, Issuer, Subject}, _From, #state{max_age=MA}=State) ->
     {reply, ok, State#state{iss=Issuer, sub=Subject}, MA};
 handle_call({set_token, Token0}, _From, #state{max_age=MA}=State) ->
-    UserInfo0 = maps:get(user_info, Token0, #{}),
+    UserInfo0 = parse_known_fields((maps:get(user_info, Token0, #{}))),
     IdToken = maps:get(id, Token0, #{}),
     NewState = case IdToken of
                    #{claims := #{iss := Issuer, sub := Subject } } ->
@@ -242,3 +242,15 @@ display_name(#state{sub=Subject, iss=Issuer, oidc_info=OidcInfo}) ->
         undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
         Other -> Other
     end.
+
+parse_known_fields(Map) ->
+    List = maps:to_list(Map),
+    parse_known_fields(List, []).
+
+parse_known_fields([], List) ->
+    maps:from_list(lists:reverse(List));
+parse_known_fields([{groups,GroupData} | T], List) when is_binary(GroupData) ->
+    Groups = binary:split(GroupData,[<<",">>],[global, trim_all]),
+    parse_known_fields(T, [{groups, Groups} | List]);
+parse_known_fields([H | T], List) ->
+    parse_known_fields(T, [H | List]).
