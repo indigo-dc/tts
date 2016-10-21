@@ -2,7 +2,7 @@ module Secret.View exposing (..)
 
 import Dialog
 import Html exposing (Html, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
-import Html.Attributes exposing (class, value, type', readonly, rows, cols)
+import Html.Attributes exposing (class, value, type', readonly, rows, cols, style)
 import Html.Events exposing (onClick)
 import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
@@ -29,7 +29,6 @@ view scrt =
                                 Just
                                     (h4 [ class "modal-title" ]
                                         [ text "Your Credential"
-                                        , small [] [ text ("  id: " ++ cred.id) ]
                                         ]
                                     )
                             , body =
@@ -44,12 +43,18 @@ view scrt =
                                     )
                             , footer =
                                 Just
-                                    (button
-                                        [ type' "button"
-                                        , class "btn btn-default"
-                                        , onClick Messages.HideSecret
+                                    (div []
+                                        [ div [ style [ ( "float", "left" ), ( "color", "#737373" ) ] ]
+                                            [ small [] [ text ("  id: " ++ cred.id) ] ]
+                                        , div [ style [ ( "float", "right" ) ] ]
+                                            [ button
+                                                [ type' "button"
+                                                , class "btn btn-default"
+                                                , onClick Messages.HideSecret
+                                                ]
+                                                [ text "Close" ]
+                                            ]
                                         ]
-                                        [ text "Close" ]
                                     )
                             }
     in
