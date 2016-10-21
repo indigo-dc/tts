@@ -11,7 +11,7 @@ import random
 
 CA_BASE="{{platform_data_dir}}/tts_ca"
 CA_SUBJECT="/C=EU/O=INDIGO/OU=TTS/CN=TTS-CA"
-CERT_SUBJECT="/C=EU/O=INDIGO/OU=TTS/CN=%s"
+CERT_SUBJECT="/C=EU/O=INDIGO/OU=TTS/CN=%s@%s"
 OPENSSL_CONF = """
 [ ca ]
 default_ca = CA_default
@@ -45,26 +45,33 @@ keyUsage                =digitalSignature, keyEncipherment
 """
 CA_ABS_BASE=os.path.abspath(os.path.expanduser(CA_BASE))
 
+ISSUER_MAPPING=""" { "https://iam-test.indigo-datacloud.eu/":"indigo-iam-test",
+                     "https://accounts.google.com":"google"
+                   } """
 def list_params():
     RequestParams = []
     ConfParams = []
     return json.dumps({'conf_params': ConfParams, 'request_params': RequestParams})
 
-def create_cert(Subject, Issuer):
+def create_cert(Subject, Issuer, NumDaysValid):
     init_ca_if_needed()
     Serial = read_serial()
-    return issue_certificate(Subject, Issuer, Serial)
+    return issue_certificate(Subject, Issuer, NumDaysValid, Serial)
 
 def revoke_cert(Serial):
     init_ca_if_needed()
     return revoke_certificate(Serial)
 
-def issue_certificate(Subject, Issuer, Serial):
+def issue_certificate(Subject, Issuer, NumDaysValid, Serial):
+    ShortIss = shorten_issuer(Issuer)
+    if ShortIss == None:
+        return json.dumps({'error':'unknown issuer'})
+
     AbsBase = CA_ABS_BASE
     Issuer = string.rstrip(Issuer, "/")
-    CertSubject = CERT_SUBJECT%(Serial)
     Password = id_generator(32)
-    AltSub = "subjectAltName = URI:%s/%s/%s"%(Issuer, Subject, Serial)
+    CertSubject = CERT_SUBJECT%(Subject, ShortIss)
+    AltSub = "subjectAltName = URI:%s/%s"%(Issuer, Subject)
     CAPassFile = "%s/private/pass"%(AbsBase)
     CACertFile = "%s/certs/cacert.pem"%(AbsBase)
     CertFile = "%s/certs/usercert_%s.pem"%(AbsBase, Serial)
@@ -75,6 +82,7 @@ def issue_certificate(Subject, Issuer, Serial):
     ConfFile = "%s/openssl.conf"%(AbsBase)
     LogFile = "%s/users/private/userlog_%s"%(AbsBase, Serial)
     Cmd = "echo -n \"%s\" > %s"%(Password, PassFile)
+
     if os.system(Cmd) != 0:
         return json.dumps({'error':'userpass_failed'})
 
@@ -92,7 +100,7 @@ def issue_certificate(Subject, Issuer, Serial):
     if os.system(Cmd) != 0:
         return json.dumps({'error':'conf_update_failed'})
 
-    Cmd = "openssl ca -batch -config %s -policy policy_anything -extensions usr_cert -out %s -passin file:%s -infiles %s >> %s 2>&1"%(TmpConfFile, CertFile, CAPassFile, CsrFile, LogFile)
+    Cmd = "openssl ca -batch -config %s -days %s -policy policy_anything -extensions usr_cert -out %s -passin file:%s -infiles %s >> %s 2>&1"%(TmpConfFile, NumDaysValid, CertFile, CAPassFile, CsrFile, LogFile)
     Log = "echo %s >> %s"%(Cmd, LogFile)
     os.system(Log)
     if os.system(Cmd) != 0:
@@ -100,6 +108,7 @@ def issue_certificate(Subject, Issuer, Serial):
     Cert = get_file_content(CertFile)
     CACert = get_file_content(CACertFile)
     PrivKey = get_file_content(KeyFile)
+    # Cmd = "shred --remove=wipe %s %s"%(PassFile, KeyFile)
     Cmd = "rm %s %s"%(PassFile, KeyFile)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'purge_files'})
@@ -110,6 +119,12 @@ def issue_certificate(Subject, Issuer, Serial):
     Credential = [CertObj, PrivKeyObj, PasswdObj, CACertObj]
     return json.dumps({'credential':Credential, 'state':Serial})
 
+
+def shorten_issuer(Issuer):
+    IssuerDict = json.loads(ISSUER_MAPPING.replace("\n",""))
+    if Issuer in IssuerDict:
+        return IssuerDict[Issuer]
+    return None
 
 def revoke_certificate(Serial):
     AbsBase = CA_ABS_BASE
@@ -153,6 +168,9 @@ def init_ca():
     Cmd = "touch %s/index.txt > /dev/null"%(AbsBase)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'touch_failed'})
+    Cmd = "echo \"unique_subject = no\" > %s/index.txt.attr"%(AbsBase)
+    if os.system(Cmd) != 0:
+        return json.dumps({'error':'index.attr_failed'})
     Cmd = "echo \"01\" > %s/serial"%(AbsBase)
     if os.system(Cmd) != 0:
         return json.dumps({'error':'serial_failed'})
@@ -216,10 +234,10 @@ def main():
                 # preferred_username - if possible create accounts with this name
                 Issuer = UserInfo['iss']
                 Subject = UserInfo['sub']
-                # UserName = UserInfo['preferred_username']
+                NumDaysValid = "11"
 
                 if Action == "request":
-                    print create_cert(Subject, Issuer)
+                    print create_cert(Subject, Issuer, NumDaysValid)
                 elif Action == "revoke":
                     print revoke_cert(State)
                 else:
