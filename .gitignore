@@ -26,6 +26,7 @@ ui/tts_ui_elm.js
 TAGS
 *~
 *#
+.#*
 ttsc
 pkg 
 github.com
