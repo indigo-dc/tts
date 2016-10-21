@@ -5,7 +5,6 @@
  {<<"econfig">>,{pkg,<<"econfig">>,<<"0.7.3">>},0},
  {<<"eper">>,{pkg,<<"eper">>,<<"0.94.0">>},0},
  {<<"erljwt">>,{pkg,<<"erljwt">>,<<"0.1.0">>},1},
- {<<"erlydtl">>,{pkg,<<"erlydtl">>,<<"0.11.1">>},0},
  {<<"esqlite">>,{pkg,<<"esqlite">>,<<"0.2.2">>},0},
  {<<"getopt">>,{pkg,<<"getopt">>,<<"0.8.2">>},1},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
