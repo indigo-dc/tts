@@ -213,7 +213,7 @@ to_bin(Val) when is_binary(Val) ->
     Val.
 
 group_plugin_configs(Map) ->
-    group_plugin_configs(maps:to_list(Map),#{}).
+    group_plugin_configs(maps:to_list(Map), #{}).
 
 group_plugin_configs([], Map) ->
     Map;

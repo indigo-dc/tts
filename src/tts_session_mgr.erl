@@ -75,7 +75,7 @@ close_all_sessions() ->
 %% gen_server.
 
 init([]) ->
-    RestartTrigger = application:get_env(tts,session_min_restart_id,8000),
+    RestartTrigger = application:get_env(tts, session_min_restart_id, 8000),
     {ok, #state{restart_num=RestartTrigger}}.
 
 handle_call(new_session, _From, #state{next_session_num = Id} = State) ->

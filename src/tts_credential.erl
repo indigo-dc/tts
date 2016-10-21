@@ -103,7 +103,7 @@ get_params(ServiceId) ->
 
 
 
-handle_request_result({ok, #{error := Error}, Log}, _ServiceId,_UserId,
+handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserId,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
 handle_request_result({ok, #{credential := Cred0, state := CredState}, Log}

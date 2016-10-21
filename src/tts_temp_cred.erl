@@ -50,8 +50,8 @@ start_link() ->
 add_cred(Credential, UserId) ->
     gen_server:call(?MODULE, {add, Credential, UserId}).
 
--spec get_cred(CredId :: binary(), UserId::binary()) -> {ok, Credential::list()}|
-                                                        {error, Reason::any()}.
+-spec get_cred(CredId :: binary(), UserId::binary()) ->
+                      {ok, Credential::list()} | {error, Reason::any()}.
 get_cred(Id, UserId) ->
     gen_server:call(?MODULE, {get, Id, UserId}).
 

@@ -249,8 +249,9 @@ parse_known_fields(Map) ->
 
 parse_known_fields([], List) ->
     maps:from_list(lists:reverse(List));
-parse_known_fields([{groups,GroupData} | T], List) when is_binary(GroupData) ->
-    Groups = binary:split(GroupData,[<<",">>],[global, trim_all]),
+parse_known_fields([ {groups, GroupData} | T], List)
+  when is_binary(GroupData) ->
+    Groups = binary:split(GroupData, [<<",">>], [global, trim_all]),
     parse_known_fields(T, [{groups, Groups} | List]);
 parse_known_fields([H | T], List) ->
     parse_known_fields(T, [H | List]).
