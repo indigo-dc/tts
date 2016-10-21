@@ -178,8 +178,7 @@ handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
 %%     {reply, ok, State#state{user_info=UserInfo}, MA};
 handle_call(get_user_info, _From,
             #state{max_age=MA, oidc_info=Info0, sub=Sub, iss=Iss} =State) ->
-    {ok, UserId} = userid(State),
-    Update = #{tts_userid => UserId, iss => Iss, sub => Sub},
+    Update = #{iss => Iss, sub => Sub},
     Info = maps:merge(Info0, Update),
     {reply, {ok, Info}, State, MA};
 handle_call(get_display_name, _From, #state{max_age=MA}=State) ->
