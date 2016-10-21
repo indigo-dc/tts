@@ -23,8 +23,8 @@
 -export([start_link/0]).
 -export([start/0]).
 -export([stop/1]).
--export([request/4]).
--export([revoke/4]).
+-export([request/5]).
+-export([revoke/5]).
 -export([get_params/2]).
 
 %% gen_server.
@@ -40,6 +40,7 @@
           client = undefined,
           service_id = undefined,
           user_info = undefined,
+          user_id = undefined,
           params = undefined,
           cred_state = undefined,
           connection = undefined,
@@ -64,16 +65,18 @@ start() ->
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
--spec request(ServiceId :: any(), UserInfo :: map(), Params::any(), pid()) ->
-    {ok, map(), list()} | {error, any(), list()} | {error, atom()}.
-request(ServiceId, UserInfo, Params, Pid) ->
-    gen_server:call(Pid, {request_credential, ServiceId, UserInfo,
+-spec request(ServiceId :: binary(), UserId :: binary(), UserInfo :: map(),
+              Params::any(), pid()) -> {ok, map(), list()} |
+                                       {error, any(), list()} | {error, atom()}.
+request(ServiceId, UserId, UserInfo, Params, Pid) ->
+    gen_server:call(Pid, {request_credential, ServiceId, UserId, UserInfo,
                           Params}, infinity).
 
--spec revoke(ServiceId :: any(), UserInfo :: map(), CredState::any(), pid()) ->
-    {ok, map(), list()} | {error, any(), list()} | {error, atom()}.
-revoke(ServiceId, UserInfo, CredState, Pid) ->
-    gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo,
+-spec revoke(ServiceId :: binary(), UserId :: binary(), UserInfo :: map(),
+             CredState::any(), pid()) -> {ok, map(), list()} |
+                                         {error, any(), list()}|{error, atom()}.
+revoke(ServiceId, UserId, UserInfo, CredState, Pid) ->
+    gen_server:call(Pid, {revoke_credential, ServiceId, UserId, UserInfo,
                           CredState}, infinity).
 
 -spec get_params(ServiceId ::any(), Pid::pid()) -> {ok, map()} |
@@ -88,20 +91,22 @@ get_params(ServiceId, Pid) ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({request_credential, ServiceId, UserInfo, Params}, From,
+handle_call({request_credential, ServiceId, UserId, UserInfo, Params}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = request,
                             client = From,
                             service_id = ServiceId,
+                            user_id = UserId,
                             user_info = UserInfo,
                             params = Params
                           },
     gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
-handle_call({revoke_credential, ServiceId, UserInfo, CredState}, From,
+handle_call({revoke_credential, ServiceId, UserId, UserInfo, CredState}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = revoke,
                             client = From,
+                            user_id = UserId,
                             service_id = ServiceId,
                             user_info = UserInfo,
                             cred_state = CredState
@@ -199,17 +204,20 @@ create_command_list_and_update_state(Cmd, UserInfo,
     #state{
        action = Action,
        params = Params,
+       user_id = UserId,
        cred_state = CredState
       } = State,
-    ConfParams = maps:get(plugin_conf, ServiceInfo, []),
+    ConfParams = maps:get(plugin_conf, ServiceInfo, #{}),
+    {ok, Version} = application:get_key(tts, vsn),
     ScriptParam0 = #{
+      tts_version => list_to_binary(Version),
+      tts_userid => UserId,
       action => Action,
       params => Params,
       conf_params => ConfParams,
       cred_state => CredState
       },
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo),
-    lager:debug("script params are: ~p", [ScriptParam]),
     EncodedJson = base64url:encode(jsx:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
@@ -217,8 +225,8 @@ create_command_list_and_update_state(Cmd, UserInfo,
                      connection = Connection, con_type = ConType}}.
 
 
-add_user_info_if_present(ScriptParam, #{userid:= UserId} = UserInfo) ->
-    Update = #{user_info => UserInfo, userid => UserId},
+add_user_info_if_present(ScriptParam, #{} = UserInfo) ->
+    Update = #{user_info => UserInfo},
     maps:merge(ScriptParam, Update);
 add_user_info_if_present(ScriptParam, _UserInfo) ->
     ScriptParam.

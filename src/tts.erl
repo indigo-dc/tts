@@ -120,15 +120,16 @@ get_credential_list_for(Session) ->
 
 request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, Token} = tts_session:get_token(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     true = tts_service:is_enabled(ServiceId),
-    case
-        tts_credential:request(ServiceId, UserInfo, Interface, Token, Params) of
+    case tts_credential:request(ServiceId, UserId, UserInfo, Interface, Token,
+                                Params) of
         {ok, Credential, Log} ->
             #{id := CredId} = Credential,
-            lager:info("SESS[~p] requested credential ~p",
-                       [SessionId, CredId]),
+            lager:info("SESS[~p] got credential ~p for ~p",
+                       [SessionId, CredId, ServiceId]),
             {ok, Credential, Log};
         {error, Reason, Log} ->
             lager:warning("SESS[~p] credential request for ~p failed with ~p",
@@ -139,8 +140,9 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
 
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, SessionId} = tts_session:get_id(Session),
-    case tts_credential:revoke(CredId, UserInfo) of
+    case tts_credential:revoke(CredId, UserId, UserInfo) of
         {ok, Result, Log}  ->
             lager:info("SESS[~p] revoked credential ~p",
                        [SessionId, CredId]),
@@ -208,8 +210,8 @@ update_session(Issuer, Subject, Token, SessionPid) ->
     ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = tts_session:is_logged_in(SessionPid),
     {ok, DisplayName} = tts_session:get_display_name(SessionPid),
-    lager:info("SESS[~p] logged in as ~p at ~p (~p)",
-               [SessId, Issuer, Subject, DisplayName]),
+    lager:info("SESS[~p] logged in as ~p [~p at ~p]",
+               [SessId, DisplayName, Subject, Issuer]),
 
     {ok, #{session_id => SessId, session_token => SessToken,
            session_pid => SessionPid}}.
