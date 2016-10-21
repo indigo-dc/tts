@@ -14,12 +14,18 @@ def list_params():
     ConfParams = []
     return json.dumps({'conf_params': ConfParams, 'request_params': RequestParams})
 
-def request_info(UserInfo):
-    Credential = info_to_credential(UserInfo)
+def request_info(Version, UserId, UserInfo):
+    Credential = info_to_credential(Version, UserId, UserInfo)
     return json.dumps({'credential': Credential, 'state': 'user_info'})
 
-def info_to_credential(UserInfo):
-    OidcCredential = []
+def info_to_credential(Version, UserId, UserInfo):
+    UserId_data = str(UserId) + '=' * (4 - len(sys.argv[1]) % 4)
+    DecodedUserId = str(base64.urlsafe_b64decode(UserId_data))
+    OidcCredential = [
+        {'name':'TTS version', 'type':'text', 'value':Version},
+        {'name':'TTS userid', 'type':'text', 'value':UserId},
+        {'name':'TTS userid (decoded)', 'type':'text', 'value':DecodedUserId}]
+
     for Key in UserInfo:
         KeyName = oidc_key_to_name(Key)
         Type = oidc_key_to_type(Key)
@@ -32,8 +38,6 @@ def info_to_credential(UserInfo):
 def oidc_key_to_name(Key):
     if Key == "iss":
         return "Issuer"
-    if Key == "userid":
-        return "UserId (encoded iss/sub)"
     if Key == "sub":
         return "Subject"
     if Key == "name":
@@ -50,8 +54,6 @@ def oidc_key_to_name(Key):
 def oidc_key_to_type(Key):
     if Key == "groups":
         return "textarea"
-    if Key == "userid":
-        return "textarea"
     return "text"
 
 def revoke_info():
@@ -64,6 +66,8 @@ def main():
             json_data = str(sys.argv[1]) + '=' * (4 - len(sys.argv[1]) % 4)
             jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
             action = jobject['action']
+            version = jobject['tts_version']
+            userid = jobject['tts_userid']
 
             if action == "get_params":
                 print list_params()
@@ -71,7 +75,7 @@ def main():
             else:
                 user_info = jobject['user_info']
                 if action == "request":
-                    print request_info(user_info)
+                    print request_info(version, userid, user_info)
                 elif action == "revoke":
                     print revoke_info()
                 else:
