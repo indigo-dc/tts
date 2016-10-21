@@ -63,8 +63,10 @@ do_login(Issuer, Subject0, Token0) ->
     try
         {Subject, Token} = case Subject0 of
                                undefined ->
+                                   %% logged in with access token
                                    get_subject_update_token(Issuer, Token0);
                                _ ->
+                                   %% logged in via auth code flow
                                    {Subject0, Token0}
                            end,
         update_session(Issuer, Subject, Token, SessPid)
@@ -217,5 +219,6 @@ get_subject_update_token(Issuer, AccessToken)  ->
     {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderPid),
     {ok, #{sub := Subject} = OidcInfo} =
         oidcc:retrieve_user_info(AccessToken, ProviderPid),
+    %% TODO: check access token
     Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
     {Subject, Token}.

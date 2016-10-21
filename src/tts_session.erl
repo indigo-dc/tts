@@ -165,7 +165,8 @@ handle_call({set_token, Token0}, _From, #state{max_age=MA}=State) ->
                        State#state{iss=Issuer, sub=Subject};
                    _ -> State
                end,
-    RemoveClaims = [aud, at_hash, exp, azp, iat],
+    RemoveClaims = [aud, exp, nbf, iat, jti, azp, kid, aud, auth_time, at_hash,
+                    c_hash],
     Claims = maps:without(RemoveClaims, maps:get(claims, IdToken, #{})),
     UserInfo = maps:merge(UserInfo0, Claims),
     TokenKeys = [access, id, refresh],
@@ -178,7 +179,7 @@ handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
 handle_call(get_user_info, _From,
             #state{max_age=MA, oidc_info=Info0, sub=Sub, iss=Iss} =State) ->
     {ok, UserId} = userid(State),
-    Update = #{userid => UserId, iss => Iss, sub => Sub},
+    Update = #{tts_userid => UserId, iss => Iss, sub => Sub},
     Info = maps:merge(Info0, Update),
     {reply, {ok, Info}, State, MA};
 handle_call(get_display_name, _From, #state{max_age=MA}=State) ->
