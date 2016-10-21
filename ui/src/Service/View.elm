@@ -60,6 +60,7 @@ advancedView srvc =
                     Just
                         { closeMessage = Just Messages.AdvancedCancel
                         , containerClass = Nothing
+                        , dialogSize = Just Dialog.Large
                         , header =
                             Just
                                 (h4 [ class "modal-title" ] [ text "Parameter" ])

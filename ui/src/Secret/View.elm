@@ -24,6 +24,7 @@ view scrt =
                         Just
                             { closeMessage = Just Messages.HideSecret
                             , containerClass = Nothing
+                            , dialogSize = Just Dialog.Large
                             , header =
                                 Just
                                     (h4 [ class "modal-title" ]
