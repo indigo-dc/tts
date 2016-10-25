@@ -346,7 +346,7 @@ verify_issuer(_Issuer)  ->
 verify_session({ok, Pid}) when is_pid(Pid) ->
     Pid;
 verify_session(_) ->
-    bad_session.
+    undefined.
 
 
 verify_method(<<"GET">>) ->

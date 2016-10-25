@@ -14,11 +14,14 @@ def list_params():
     ConfParams = []
     return json.dumps({'conf_params': ConfParams, 'request_params': RequestParams})
 
-def request_info(Version, UserId, UserInfo):
-    Credential = info_to_credential(Version, UserId, UserInfo)
+def request_info(JObject):
+    Credential = info_to_credential(JObject)
     return json.dumps({'credential': Credential, 'state': 'user_info'})
 
-def info_to_credential(Version, UserId, UserInfo):
+def info_to_credential(JObject):
+    Version = JObject['tts_version']
+    UserId = JObject['tts_userid']
+    UserInfo = JObject['user_info']
     UserId_data = str(UserId) + '=' * (4 - len(sys.argv[1]) % 4)
     DecodedUserId = str(base64.urlsafe_b64decode(UserId_data))
     OidcCredential = [
@@ -33,6 +36,10 @@ def info_to_credential(Version, UserId, UserInfo):
         Value = UserInfo[Key]
         NewObj = [{'name':Name, 'type':Type, 'value':Value  }]
         OidcCredential = OidcCredential + NewObj
+
+    Json = json.dumps(JObject, sort_keys=True, indent=4, separators=(',',': '))
+    WholeJsonObject = [{'name':'json object', 'type':'textarea', 'value':Json}]
+    OidcCredential = OidcCredential + WholeJsonObject
     return OidcCredential
 
 def oidc_key_to_name(Key):
@@ -66,16 +73,11 @@ def main():
             json_data = str(sys.argv[1]) + '=' * (4 - len(sys.argv[1]) % 4)
             jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
             action = jobject['action']
-            version = jobject['tts_version']
-            userid = jobject['tts_userid']
-
             if action == "get_params":
                 print list_params()
-
             else:
-                user_info = jobject['user_info']
                 if action == "request":
-                    print request_info(version, userid, user_info)
+                    print request_info(jobject)
                 elif action == "revoke":
                     print revoke_info()
                 else:
