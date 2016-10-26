@@ -13,7 +13,6 @@
         econfig,
         jsx,
         esqlite,
-        erlydtl,
         base64url,
         oidcc,
         lager,

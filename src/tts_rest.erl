@@ -422,8 +422,8 @@ is_malformed(get, _, access_token, undefined, undefined) ->
     false;
 is_malformed(get, _, cred_data, Id, undefined) ->
     not is_binary(Id);
-is_malformed(post, json, credential, undefined, #{service_id:=_Id}) ->
-    false;
+is_malformed(post, json, credential, undefined, #{service_id:=Id}) ->
+    not is_binary(Id);
 is_malformed(delete, _, credential, Id, undefined) ->
     not is_binary(Id);
 is_malformed(_, _, _, _, _) ->
