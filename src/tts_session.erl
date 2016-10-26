@@ -20,35 +20,24 @@
 
 
 %% API.
--export([start_link/1]).
+-export([start_link/2]).
 -export([close/1]).
 
 -export([get_id/1]).
+-export([get_sess_token/1]).
+-export([get_userid/1]).
 
 -export([get_max_age/1]).
 -export([set_max_age/2]).
 
--export([get_oidc_state/1]).
--export([is_oidc_state/2]).
--export([get_oidc_nonce/1]).
--export([is_oidc_nonce/2]).
--export([clear_oidc_state_nonce/1]).
-
 -export([set_token/2]).
 -export([get_token/1]).
 
--export([set_user_info/2]).
 -export([get_user_info/1]).
 -export([get_display_name/1]).
 
 -export([set_iss_sub/3]).
 -export([get_iss_sub/1]).
-
--export([get_used_redirect/1]).
--export([set_used_redirect/2]).
-
--export([get_oidc_provider/1]).
--export([set_oidc_provider/2]).
 
 -export([is_user_agent/2]).
 -export([is_same_ip/2]).
@@ -65,9 +54,9 @@
 
 %% API.
 
--spec start_link(ID :: binary()) -> {ok, pid()}.
-start_link(ID) ->
-    gen_server:start_link(?MODULE, ID, []).
+-spec start_link(Id :: binary(), Token :: binary()) -> {ok, pid()}.
+start_link(Id, Token) ->
+    gen_server:start_link(?MODULE, [Id, Token], []).
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
@@ -78,6 +67,16 @@ get_id(undefined) ->
     {ok, undefined};
 get_id(Pid) ->
     gen_server:call(Pid, get_id).
+
+-spec get_sess_token(Pid :: pid()) -> {ok, Token::binary()}.
+get_sess_token(undefined) ->
+    {ok, undefined};
+get_sess_token(Pid) ->
+    gen_server:call(Pid, get_sess_token).
+
+-spec get_userid(Pid :: pid()) -> {ok, ID::binary()}.
+get_userid(Pid) ->
+    gen_server:call(Pid, get_userid).
 
 -spec get_max_age(Pid :: pid()) -> {ok, MaxAge::non_neg_integer()}.
 get_max_age(Pid) ->
@@ -99,29 +98,9 @@ set_token(Token, Pid) ->
 get_user_info(Pid) ->
     gen_server:call(Pid, get_user_info).
 
--spec set_user_info(UserInfo :: map(), Pid :: pid()) -> ok.
-set_user_info(UserInfo, Pid) ->
-    gen_server:call(Pid, {set_user_info, UserInfo}).
-
 -spec get_display_name(Pid :: pid()) -> {ok, Name::binary()}.
 get_display_name(Pid) ->
     gen_server:call(Pid, get_display_name).
-
--spec get_used_redirect(Pid :: pid()) -> {ok, binary()} | none.
-get_used_redirect(Pid) ->
-    gen_server:call(Pid, get_used_redirect).
-
--spec set_used_redirect(Redirect ::binary(), Pid :: pid()) -> ok.
-set_used_redirect(Redirect, Pid) ->
-    gen_server:call(Pid, {set_used_redirect, Redirect}).
-
--spec get_oidc_provider(Pid :: pid()) -> {ok, map()} | none.
-get_oidc_provider(Pid) ->
-    gen_server:call(Pid, get_oidc_provider_id).
-
--spec set_oidc_provider(OidcProviderId :: binary(), Pid :: pid()) -> ok.
-set_oidc_provider(OpId, Pid) when is_binary(OpId) ->
-    gen_server:call(Pid, {set_oidc_provider_id, OpId}).
 
 -spec get_iss_sub(Pid :: pid()) ->
     {ok, Issuer :: binary(), Subject :: binary()}.
@@ -142,123 +121,73 @@ is_user_agent(UserAgent, Pid) ->
 is_same_ip(IP, Pid) ->
     gen_server:call(Pid, {is_same_ip, IP}).
 
--spec get_oidc_state(Pid :: pid()) -> {ok, OidcState::binary()}.
-get_oidc_state(Pid) ->
-    gen_server:call(Pid, get_oidc_state).
-
--spec is_oidc_state(State :: binary(), Pid :: pid()) -> true | false.
-is_oidc_state(State, Pid) ->
-    gen_server:call(Pid, {compare_oidc_state, State}).
-
--spec get_oidc_nonce(Pid :: pid()) -> {ok, OidcNonce::binary()}.
-get_oidc_nonce(Pid) ->
-    gen_server:call(Pid, get_oidc_nonce).
-
--spec is_oidc_nonce(Nonce :: binary(), Pid :: pid()) -> true | false.
-is_oidc_nonce(Nonce, Pid) ->
-    gen_server:call(Pid, {compare_oidc_nonce, Nonce}).
-
--spec clear_oidc_state_nonce(Pid :: pid()) -> ok.
-clear_oidc_state_nonce(Pid) ->
-    gen_server:call(Pid, clear_oidc_state_nonce).
-
 %% gen_server.
 -include("tts.hrl").
 -record(state, {
           id = unkonwn,
-          oidc_state = none,
-          oidc_nonce = none,
-          iss = none,
-          sub = none,
-          op_id = none,
+          sess_token = undefined,
+          iss = undefined,
+          sub = undefined,
           user_agent = undefined,
           ip = undefined,
-          used_redirect = none,
           token = none,
-          user_info = #{},
           oidc_info = #{},
           max_age = 10
          }).
 
 
-init(ID) ->
-    lager:info("~p: session starting", [ID]),
-    OidcState = create_random_state(16),
-    OidcNonce = create_random_state(64),
+init([Id, Token]) ->
+    lager:info("SESS[~p] starting", [Id]),
     MaxAge = ?CONFIG(session_timeout, 10000),
-    {ok, #state{id = ID, oidc_state = OidcState, oidc_nonce = OidcNonce,
-                max_age=MaxAge}}.
+    {ok, #state{id = Id, sess_token=Token, max_age=MaxAge}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
     {reply, {ok, Id}, State, MA};
+handle_call(get_sess_token, _From, #state{sess_token=Token,
+                                          max_age=MA}=State) ->
+    {reply, {ok, Token}, State, MA};
+handle_call(get_userid, _From, #state{max_age=MA}=State) ->
+    {reply, userid(State), State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
     {reply, ok, State#state{max_age=MA}, MA};
-handle_call(get_used_redirect, _From,
-            #state{used_redirect=Redir, max_age=MA}=State) ->
-    {reply, {ok, Redir}, State, MA};
-handle_call({set_used_redirect, Redir}, _From, #state{max_age=MA}=State)
-  when is_binary(Redir) ->
-    {reply, ok, State#state{used_redirect=Redir}, MA};
-handle_call(get_oidc_provider_id, _From, #state{op_id=OP, max_age=MA}=State) ->
-    {reply, {ok, OP}, State, MA};
-handle_call({set_oidc_provider_id, OP}, _From, #state{max_age=MA}=State) ->
-    {reply, ok, State#state{op_id=OP}, MA};
 handle_call(get_iss_sub, _From,
             #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
     {reply, {ok, Issuer, Subject}, State, MA};
 handle_call({set_iss_sub, Issuer, Subject}, _From, #state{max_age=MA}=State) ->
     {reply, ok, State#state{iss=Issuer, sub=Subject}, MA};
 handle_call({set_token, Token0}, _From, #state{max_age=MA}=State) ->
-    NewState = case maps:get(id, Token0, undefined) of
+    UserInfo0 = parse_known_fields((maps:get(user_info, Token0, #{}))),
+    IdToken = maps:get(id, Token0, #{}),
+    NewState = case IdToken of
                    #{claims := #{iss := Issuer, sub := Subject } } ->
                        State#state{iss=Issuer, sub=Subject};
                    _ -> State
                end,
-    UserInfo = maps:get(user_info, Token0, undefined),
+    RemoveClaims = [aud, exp, nbf, iat, jti, azp, kid, aud, auth_time, at_hash,
+                    c_hash],
+    Claims = maps:without(RemoveClaims, maps:get(claims, IdToken, #{})),
+    UserInfo = maps:merge(UserInfo0, Claims),
     TokenKeys = [access, id, refresh],
     Token = maps:with(TokenKeys, Token0),
     {reply, ok, NewState#state{token=Token, oidc_info=UserInfo}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
-handle_call({set_user_info, UserInfo}, _From, #state{max_age=MA} = State) ->
-    {reply, ok, State#state{user_info=UserInfo}, MA};
-handle_call(get_user_info, _From, #state{max_age=MA,
-                                         user_info=UserInfo,
-                                         oidc_info=OidcInfo} =State) ->
-    LocalInfo = maps:get(oidc, UserInfo, #{}),
-    Info = maps:put(oidc, maps:merge(LocalInfo, OidcInfo), UserInfo),
+%% handle_call({set_user_info, UserInfo}, _From, #state{max_age=MA} = State) ->
+%%     {reply, ok, State#state{user_info=UserInfo}, MA};
+handle_call(get_user_info, _From,
+            #state{max_age=MA, oidc_info=Info0, sub=Sub, iss=Iss} =State) ->
+    Update = #{iss => Iss, sub => Sub},
+    Info = maps:merge(Info0, Update),
     {reply, {ok, Info}, State, MA};
-handle_call(get_display_name, _From, #state{max_age=MA, sub=Subject, iss=Issuer,
-                                            oidc_info=OidcInfo}=State) ->
-    Name = case maps:get(name, OidcInfo, undefined) of
-               undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
-               Other -> Other
-           end,
-    {reply, {ok, Name}, State, MA};
-handle_call(is_logged_in, _From, #state{iss=none, max_age=MA}=State) ->
-    {reply, false, State, MA};
-handle_call(is_logged_in, _From, #state{iss=_, max_age=MA}=State) ->
+handle_call(get_display_name, _From, #state{max_age=MA}=State) ->
+    {reply, {ok, display_name(State)}, State, MA};
+handle_call(is_logged_in, _From, #state{iss=Iss, sub=Sub, max_age=MA}=State)
+  when is_binary(Iss), is_binary(Sub)->
     {reply, true, State, MA};
-handle_call(get_oidc_state, _From,
-            #state{oidc_state=OidcState, max_age=MA}=State) ->
-    {reply, {ok, OidcState}, State, MA};
-handle_call({compare_oidc_state, OidcState}, _From,
-            #state{oidc_state=OidcState, max_age=MA}=State) ->
-    {reply, true, State, MA};
-handle_call({compare_oidc_state, _}, _From, #state{ max_age=MA } = State) ->
+handle_call(is_logged_in, _From, #state{max_age=MA}=State) ->
     {reply, false, State, MA};
-handle_call(get_oidc_nonce, _From,
-            #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-    {reply, {ok, OidcNonce}, State, MA};
-handle_call({compare_oidc_nonce, OidcNonce}, _From,
-            #state{oidc_nonce=OidcNonce, max_age=MA}=State) ->
-    {reply, true, State, MA};
-handle_call({compare_oidc_nonce, _}, _From, #state{ max_age=MA } = State) ->
-    {reply, false, State, MA};
-handle_call(clear_oidc_state_nonce, _From, #state{ max_age=MA } = State) ->
-    {reply, ok, State#state{oidc_state=cleared, oidc_nonce=cleared}, MA};
 handle_call({is_user_agent, UserAgent}, _From,
             #state{user_agent=undefined, max_age=MA}=State) ->
     {reply, true, State#state{user_agent=UserAgent}, MA};
@@ -279,26 +208,50 @@ handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 handle_cast(close, #state{id=ID} = State) ->
-    lager:info("~p: session stopping", [ID]),
+    lager:debug("SESS[~p] stopping", [ID]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info(timeout, #state{id=ID} = State) ->
-    lager:info("~p: timeout, asking for termination", [ID]),
-    tts_session_mgr:session_wants_to_close(ID),
+handle_info(timeout, #state{id=ID, sess_token=Token} = State) ->
+    lager:info("SESS[~p] timeout, asking for termination", [ID]),
+    tts_session_mgr:session_wants_to_close(Token),
     {noreply, State, 5000};
 handle_info(_Info, State) ->
     {noreply, State}.
 
-terminate(_Reason, #state{id=ID}) ->
-    lager:info("~p: session terminating", [ID]),
-    tts_session_mgr:session_terminating(ID),
+terminate(_Reason, #state{id=ID, sess_token=Token}) ->
+    lager:info("SESS[~p] terminating", [ID]),
+    tts_session_mgr:session_terminating(Token),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
-create_random_state(Length) ->
-    tts_utils:random_string(Length).
+
+userid(#state{iss=Issuer, sub=Subject})
+  when is_binary(Issuer), is_binary(Subject) ->
+    Id = base64url:encode(jsx:encode(#{issuer => Issuer, subject => Subject})),
+    {ok, Id};
+userid(_) ->
+    {error, not_set}.
+
+display_name(#state{sub=Subject, iss=Issuer, oidc_info=OidcInfo}) ->
+    case maps:get(name, OidcInfo, undefined) of
+        undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
+        Other -> Other
+    end.
+
+parse_known_fields(Map) ->
+    List = maps:to_list(Map),
+    parse_known_fields(List, []).
+
+parse_known_fields([], List) ->
+    maps:from_list(lists:reverse(List));
+parse_known_fields([ {groups, GroupData} | T], List)
+  when is_binary(GroupData) ->
+    Groups = binary:split(GroupData, [<<",">>], [global, trim_all]),
+    parse_known_fields(T, [{groups, Groups} | List]);
+parse_known_fields([H | T], List) ->
+    parse_known_fields(T, [H | List]).

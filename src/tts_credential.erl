@@ -25,8 +25,9 @@
          get_list/1,
          get_count/2,
          exists/2,
-         request/5,
-         revoke/2
+         request/6,
+         revoke/3,
+         get_params/1
         ]).
 
 %% gen_server.
@@ -60,28 +61,27 @@ exists(UserId, CredId) ->
         _ -> false
     end.
 
--spec request(binary(), tts:user_info(), binary(), map()|atom(), list()) ->
-    {ok, map(), list()} | {error, any(), list()}.
-request(ServiceId, UserInfo, Interface, Token, Params) ->
+-spec request(binary(), binary(), tts:user_info(), binary(), map()|atom(),
+              list()) -> {ok, map(), list()} | {error, any(), list()}.
+request(ServiceId, UserId, UserInfo, Interface, Token, Params) ->
     {ok, Limit} = tts_service:get_credential_limit(ServiceId),
-    {ok, Count} = get_credential_count(UserInfo, ServiceId),
+    {ok, Count} = get_credential_count(UserId, ServiceId),
     Enabled = tts_service:is_enabled(ServiceId),
     case {Enabled, Count < Limit } of
         {true, true} ->
             {ok, Pid} = tts_cred_sup:new_worker(),
-            Result = tts_cred_worker:request(ServiceId, UserInfo, Params, Pid),
-            handle_request_result(Result, ServiceId, UserInfo, Interface,
-                                  Token);
+            Result = tts_cred_worker:request(ServiceId, UserId, UserInfo,
+                                             Params, Pid),
+            handle_request_result(Result, ServiceId, UserId, Interface, Token);
         {false, _} ->
             {error, service_disabled, []};
         {true, false} ->
             {error, limit_reached, []}
     end.
 
--spec revoke(binary(), tts:user_info ()) ->
+-spec revoke(binary(), binary(), map()) ->
     {ok, tts:cred(), list()} | {error, any(), list()}.
-revoke(CredentialId, UserInfo) ->
-    #{site := #{uid := UserId }} = UserInfo,
+revoke(CredentialId, UserId, UserInfo) ->
     case get_credential(UserId, CredentialId) of
         {ok, Cred} ->
             #{ service_id := ServiceId,
@@ -89,46 +89,49 @@ revoke(CredentialId, UserInfo) ->
                cred_id := CredId
              } = Cred,
             {ok, Pid} = tts_cred_sup:new_worker(),
-            Result=tts_cred_worker:revoke(ServiceId, UserInfo, CredState, Pid),
-            handle_revoke_result(Result, UserInfo, CredId);
+            Result=tts_cred_worker:revoke(ServiceId, UserId, UserInfo,
+                                          CredState, Pid),
+            handle_revoke_result(Result, UserId, CredId);
         {error, Reason} -> {error, Reason, []}
     end.
 
 
-handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
+get_params(ServiceId) ->
+    {ok, Pid} = tts_cred_sup:new_worker(),
+    Result = tts_cred_worker:get_params(ServiceId, Pid),
+    handle_params_result(Result).
+
+
+
+handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserId,
                       _Interface, _Token) ->
     return_error_with_debug({script, Error}, Log);
 handle_request_result({ok, #{credential := Cred0, state := CredState}, Log}
-                      , ServiceId, #{site := #{uid := UserId}} = UserInfo,
-                      Interface, _Token) ->
+                      , ServiceId, UserId, Interface, _Token) ->
     Cred = validate_credential_values(Cred0),
     case sync_store_credential(UserId, ServiceId, Interface, CredState) of
         {ok, CredId} ->
-            lager:info("New Credential ~p [~p] at service ~p for ~p using ~p",
-                       [CredId, CredState, ServiceId, UserInfo, Interface]),
-            Id = #{name => id, type => text, value => CredId},
-            return_result_with_debug([ Id | Cred], Log);
+            return_result_with_debug(#{id => CredId, entries => Cred}, Log);
         Error ->
             return_error_with_debug({storing, Error}, Log)
     end;
-handle_request_result({ok, #{credential := _Cred}, Log} , ServiceId, UserInfo,
+handle_request_result({ok, #{credential := _Cred}, Log} , ServiceId, UserId,
                       _Interface, _Token) ->
-    lager:critical("missing state in service ~p for ~p", [ServiceId, UserInfo]),
+    lager:critical("missing state in service ~p for ~p", [ServiceId, UserId]),
     return_error_with_debug({missing_state, ServiceId}, Log);
-handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Interface,
+handle_request_result({error, Error, Log}, _ServiceId, _UserId, _Interface,
                       _Token) ->
     return_error_with_debug({internal, Error}, Log);
-handle_request_result({error, Error}, _ServiceId, _UserInfo, _Interface,
+handle_request_result({error, Error}, _ServiceId, _UserId, _Interface,
                       _Token) ->
     return_error_with_debug(Error, []).
 
-handle_revoke_result({ok, #{error := Error}, Log}, _UserInfo, _CredId) ->
+handle_revoke_result({ok, #{error := Error}, Log}, _UserId, _CredId) ->
     return_error_with_debug({script, Error}, Log);
-handle_revoke_result({ok, #{result := Result}, Log}, #{ site := #{uid:=UserId}},
-                     CredId) ->
+handle_revoke_result({ok, #{result := Result}, Log}, UserId, CredId) ->
     ok = remove_credential(UserId, CredId),
     return_result_with_debug(Result, Log);
-handle_revoke_result({error, Error, Log}, _UserInfo, _CredId) ->
+handle_revoke_result({error, Error, Log}, _UserId, _CredId) ->
     return_error_with_debug({internal, Error}, Log).
 
 return_result_with_debug(Result, Log) ->
@@ -146,6 +149,18 @@ return_error_with_debug(Error, Log, true) ->
     {error, Error, Log};
 return_error_with_debug(Error, _Log, false) ->
     {error, Error, []}.
+
+handle_params_result({ok, #{conf_params := ConfParams,
+                            request_params := RequestParams}, _Log}) ->
+    {ok, ConfParams, RequestParams};
+handle_params_result({ok, #{conf_params := ConfParams}, _Log}) ->
+    {ok, ConfParams, []};
+handle_params_result({ok, #{request_params := RequestParams}, _Log}) ->
+    {ok, [], RequestParams};
+handle_params_result(_) ->
+    {error, bad_result}.
+
+
 
 
 
@@ -193,9 +208,7 @@ get_credential(UserId, CredentialId) ->
     end.
 
 % functions with data access
-get_credential_count(#{site := #{uid := UserId}}, ServiceId) ->
-    get_credential_count(UserId, ServiceId);
-get_credential_count(UserId, ServiceId) when is_binary(UserId) ->
+get_credential_count(UserId, ServiceId) ->
     tts_data_sqlite:credential_get_count(UserId, ServiceId).
 
 get_credential(CredId) ->
@@ -250,10 +263,10 @@ value_to_binary(Val0) ->
 value_to_file(Val) when is_binary(Val)->
     Val;
 value_to_file(Val) when is_list(Val)->
-    file_lines_to_binary(Val, []).
+    file_lines_to_binary(Val, <<>>).
+
 file_lines_to_binary([], File) ->
-    lists:reverse(File);
+    File;
 file_lines_to_binary([H | T], File) ->
     NewLine = value_to_binary(H),
-    file_lines_to_binary(T, [NewLine | File]).
-
+    file_lines_to_binary(T, << File/binary, NewLine/binary >>).

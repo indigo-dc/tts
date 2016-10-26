@@ -20,13 +20,13 @@
 
 -export([start_link/0]).
 -export([init/1]).
--export([new_session/1]).
+-export([new_session/2]).
 
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-new_session(ID) ->
-    supervisor:start_child(?MODULE, [ID]).
+new_session(Id, Token) ->
+    supervisor:start_child(?MODULE, [Id, Token]).
 
 init([]) ->
     Session = #{

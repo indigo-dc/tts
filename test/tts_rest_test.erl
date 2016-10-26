@@ -6,7 +6,7 @@ dispatch_mapping_test() ->
     BasePath1 = <<"/test">>,
     BasePath2 = <<"/test/">>,
 
-    ExpMapping = <<"/test/[:version]/:type/[:id]">>,
+    ExpMapping = <<"/test/:version/:type/[:id]">>,
 
     Mapping1 = tts_rest:dispatch_mapping(BasePath1),
     Mapping2 = tts_rest:dispatch_mapping(BasePath2),
@@ -29,7 +29,8 @@ init_test() ->
           token = undefined,
           issuer = undefined,
           json = undefined,
-          session_pid = undefined
+          session_pid = undefined,
+          cookie_based = false
          }).
 
 rest_init_test() ->
@@ -87,8 +88,8 @@ malformed_request_test() ->
                           _ -> {undefined, Request}
                       end
              end,
-    ParseHeader = fun(Name, #{header := Header} = Request) ->
-                      case lists:keyfind(Name, 1, Header) of
+    ParseHeader = fun(Name, #{header := Hdr} = Request) ->
+                      case lists:keyfind(Name, 1, Hdr) of
                           {Name, {Res, Value}} -> {Res, Value, Request};
                           _ -> {undefined, undefined, Request}
                       end
@@ -98,6 +99,9 @@ malformed_request_test() ->
              end,
     Body = fun(#{body := Body} = Request) ->
                      {ok, Body, Request}
+             end,
+    GetCookie = fun(_, Request) ->
+                     {maps:get(cookie, Request, undefined), Request}
              end,
     IssuerUrl = <<"https://test.tts.somewhere">>,
     GetProvider = fun(Issuer) ->
@@ -111,6 +115,7 @@ malformed_request_test() ->
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(cowboy_req, binding, Binding),
     ok = meck:expect(cowboy_req, binding, Binding2),
+    ok = meck:expect(cowboy_req, cookie, GetCookie),
     ok = meck:expect(cowboy_req, header, Header),
     ok = meck:expect(cowboy_req, parse_header, ParseHeader),
     ok = meck:expect(cowboy_req, method, Method),
@@ -159,7 +164,7 @@ malformed_request_test() ->
                      header => [{<<"content-type">>,{ok, {<<"application">>,
                                                            <<"json">>,[]}}}],
                      method => <<"POST">>,
-                     body => <<"{\"service_id\":234}">>
+                     body => <<"{\"service_id\":\"234\"}">>
                    }, false },
                 { #{ bindings => [{version, <<"latest">>},
                                   {type, <<"credential">>},
@@ -313,232 +318,232 @@ is_authorized_test() ->
     ok.
 
 
-resource_exists_test() ->
-    MeckModules = [tts],
+%% resource_exists_test() ->
+%%     MeckModules = [tts],
 
-    CredExists = fun(CredId, _Session) ->
-                          case CredId of
-                              <<"123">> -> true;
-                              _ -> false
-                          end
-              end,
-    CredDataExists = fun(DataId, _Session) ->
-                          case DataId of
-                              <<"someid">> -> true;
-                              _ -> false
-                          end
-              end,
+%%     CredExists = fun(CredId, _Session) ->
+%%                           case CredId of
+%%                               <<"123">> -> true;
+%%                               _ -> false
+%%                           end
+%%               end,
+%%     CredDataExists = fun(DataId, _Session) ->
+%%                           case DataId of
+%%                               <<"someid">> -> true;
+%%                               _ -> false
+%%                           end
+%%               end,
 
 
-    ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts, does_credential_exist, CredExists),
-    ok = meck:expect(tts, does_temp_cred_exist, CredDataExists),
+%%     ok = test_util:meck_new(MeckModules),
+%%     ok = meck:expect(tts, does_credential_exist, CredExists),
+%%     ok = meck:expect(tts, does_temp_cred_exist, CredDataExists),
 
-    Requests = [
-                %% good requests
-                {#state{id = undefined}, true},
-                {#state{id = undefined, type=oidcp}, true},
-                {#state{id = undefined, type=service}, true},
-                {#state{id = undefined, type=credential}, true},
-                {#state{id = <<"123">>, type=credential}, true},
-                {#state{type = cred_data, id= <<"someid">>}, true},
+%%     Requests = [
+%%                 %% good requests
+%%                 {#state{id = undefined}, true},
+%%                 {#state{id = undefined, type=oidcp}, true},
+%%                 {#state{id = undefined, type=service}, true},
+%%                 {#state{id = undefined, type=credential}, true},
+%%                 {#state{id = <<"123">>, type=credential}, true},
+%%                 {#state{type = cred_data, id= <<"someid">>}, true},
 
-                %% bad requests
-                {#state{id = <<"123">>, type=oidcp}, false},
-                {#state{id = <<"123">>, type=service}, false},
-                {#state{id = <<"124">>, type=oidcp}, false},
-                {#state{id = <<"124">>, type=service}, false},
-                {#state{type = creddata, id= <<"someid">>}, false}
+%%                 %% bad requests
+%%                 {#state{id = <<"123">>, type=oidcp}, false},
+%%                 {#state{id = <<"123">>, type=service}, false},
+%%                 {#state{id = <<"124">>, type=oidcp}, false},
+%%                 {#state{id = <<"124">>, type=service}, false},
+%%                 {#state{type = creddata, id= <<"someid">>}, false}
 
-               ],
+%%                ],
 
-    Test  = fun({State, ExpResult}, _) ->
-                    io:format("testing ~p, expecting: ~p~n", [State, ExpResult]),
-                    {Result, req, _} = tts_rest:resource_exists(req, State),
-                    ?assertEqual(ExpResult, Result),
-                    ok
-            end,
-    ok = lists:foldl(Test,ok,Requests),
-    ok = test_util:meck_done(MeckModules),
-    ok.
+%%     Test  = fun({State, ExpResult}, _) ->
+%%                     io:format("testing ~p, expecting: ~p~n", [State, ExpResult]),
+%%                     {Result, req, _} = tts_rest:resource_exists(req, State),
+%%                     ?assertEqual(ExpResult, Result),
+%%                     ok
+%%             end,
+%%     ok = lists:foldl(Test,ok,Requests),
+%%     ok = test_util:meck_done(MeckModules),
+%%     ok.
 
-get_json_test() ->
-    MeckModules = [tts],
+%% get_json_test() ->
+%%     MeckModules = [tts],
 
-    GetProvider = fun() ->
-                          {ok, [#{id => <<"ID1">>,
-                                  issuer =>  <<"https://test.tts">>,
-                                  ready => true
-                                 },
-                                #{id => <<"ID2">>,
-                                  issuer => <<"https://other.tts">>,
-                                  ready => false
-                                 },
-                                #{id => <<"ID3">>,
-                                  issuer => <<"https://last.tts">>
-                                 }
-                               ]}
-                  end,
-    GetServiceList = fun(SessionPid) ->
-                          case SessionPid of
-                              pid1 -> {ok, [#{}]};
-                              _ -> {ok, []}
-                          end
-                  end,
-    GetCredList = fun(SessionPid) ->
-                          case SessionPid of
-                              pid1 -> {ok, [<<"CredId">>]};
-                              _ -> {ok, []}
-                          end
-              end,
-    GetCred = fun(Id, SessionPid) ->
-                          case {Id, SessionPid} of
-                              {<<"CRED1">>, pid1} ->
-                                  {ok, #{password => <<"secret">>}};
-                              _ -> {error, not_found}
-                          end
-              end,
-    ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts, get_service_list_for, GetServiceList),
-    ok = meck:expect(tts, get_openid_provider_list, GetProvider),
-    ok = meck:expect(tts, get_credential_list_for, GetCredList),
-    ok = meck:expect(tts, get_temp_cred, GetCred),
-    ok = meck:expect(tts, logout, fun(_) -> ok end),
+%%     GetProvider = fun() ->
+%%                           {ok, [#{id => <<"ID1">>,
+%%                                   issuer =>  <<"https://test.tts">>,
+%%                                   ready => true
+%%                                  },
+%%                                 #{id => <<"ID2">>,
+%%                                   issuer => <<"https://other.tts">>,
+%%                                   ready => false
+%%                                  },
+%%                                 #{id => <<"ID3">>,
+%%                                   issuer => <<"https://last.tts">>
+%%                                  }
+%%                                ]}
+%%                   end,
+%%     GetServiceList = fun(SessionPid) ->
+%%                           case SessionPid of
+%%                               pid1 -> {ok, [#{}]};
+%%                               _ -> {ok, []}
+%%                           end
+%%                   end,
+%%     GetCredList = fun(SessionPid) ->
+%%                           case SessionPid of
+%%                               pid1 -> {ok, [<<"CredId">>]};
+%%                               _ -> {ok, []}
+%%                           end
+%%               end,
+%%     GetCred = fun(Id, SessionPid) ->
+%%                           case {Id, SessionPid} of
+%%                               {<<"CRED1">>, pid1} ->
+%%                                   {ok, #{password => <<"secret">>}};
+%%                               _ -> {error, not_found}
+%%                           end
+%%               end,
+%%     ok = test_util:meck_new(MeckModules),
+%%     ok = meck:expect(tts, get_service_list_for, GetServiceList),
+%%     ok = meck:expect(tts, get_openid_provider_list, GetProvider),
+%%     ok = meck:expect(tts, get_credential_list_for, GetCredList),
+%%     ok = meck:expect(tts, get_temp_cred, GetCred),
+%%     ok = meck:expect(tts, logout, fun(_) -> ok end),
 
-    Requests = [
-                {#state{version = latest,
-                        type = service,
-                        id = undefined,
-                        session_pid = pid1,
-                        method = get
-                       }, <<"{\"service_list\":[{}]}">> },
-                {#state{version = latest,
-                        type = service,
-                        id = undefined,
-                        session_pid = pid2,
-                        method = get
-                       }, <<"{\"service_list\":[]}">> },
-                {#state{version = latest,
-                        type = oidcp,
-                        id = undefined,
-                        session_pid = undefined,
-                        method = get
-                       },<<"{\"openid_provider_list\":[{\"id\":\"ID1\",\"issuer\":\"https://test.tts\"}]}">>
-                },
-                {#state{version = latest,
-                        type = credential,
-                        id = undefined,
-                        session_pid = pid1,
-                        method = get
-                       },<<"{\"credential_list\":[{\"id\":\"CredId\"}]}">> },
-                {#state{version = latest,
-                        type = cred_data,
-                        id = <<"CRED1">>,
-                        session_pid = pid1,
-                        method = get
-                       },<<"{\"password\":\"secret\"}">> },
-                {#state{version = latest,
-                        type = cred_data,
-                        id = <<"CRED1">>,
-                        session_pid = pid2,
-                        method = get
-                       },<<"{}">> }
-               ],
+%%     Requests = [
+%%                 {#state{version = latest,
+%%                         type = service,
+%%                         id = undefined,
+%%                         session_pid = pid1,
+%%                         method = get
+%%                        }, <<"{\"service_list\":[{}]}">> },
+%%                 {#state{version = latest,
+%%                         type = service,
+%%                         id = undefined,
+%%                         session_pid = pid2,
+%%                         method = get
+%%                        }, <<"{\"service_list\":[]}">> },
+%%                 {#state{version = latest,
+%%                         type = oidcp,
+%%                         id = undefined,
+%%                         session_pid = undefined,
+%%                         method = get
+%%                        },<<"{\"openid_provider_list\":[{\"id\":\"ID1\",\"issuer\":\"https://test.tts\"}]}">>
+%%                 },
+%%                 {#state{version = latest,
+%%                         type = credential,
+%%                         id = undefined,
+%%                         session_pid = pid1,
+%%                         method = get
+%%                        },<<"{\"credential_list\":[{\"id\":\"CredId\"}]}">> },
+%%                 {#state{version = latest,
+%%                         type = cred_data,
+%%                         id = <<"CRED1">>,
+%%                         session_pid = pid1,
+%%                         method = get
+%%                        },<<"{\"password\":\"secret\"}">> },
+%%                 {#state{version = latest,
+%%                         type = cred_data,
+%%                         id = <<"CRED1">>,
+%%                         session_pid = pid2,
+%%                         method = get
+%%                        },<<"{}">> }
+%%                ],
 
-    Test  = fun({State, ExpResult}, _) ->
-                    io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                    {Result, req, _NewState} = tts_rest:get_json(req, State),
-                    ?assertEqual(ExpResult, Result),
-                    ok
-            end,
-    ok = lists:foldl(Test,ok,Requests),
-    ok = test_util:meck_done(MeckModules),
+%%     Test  = fun({State, ExpResult}, _) ->
+%%                     io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
+%%                     {Result, req, _NewState} = tts_rest:get_json(req, State),
+%%                     ?assertEqual(ExpResult, Result),
+%%                     ok
+%%             end,
+%%     ok = lists:foldl(Test,ok,Requests),
+%%     ok = test_util:meck_done(MeckModules),
 
-    ok.
+%%     ok.
 
-post_json_test() ->
-    MeckModules = [ tts ],
-    CredRequest = fun(_ServiceId, SessionPid, _Params, _IFace) ->
-                        case SessionPid of
-                            pid1 -> {ok, #{}, []};
-                            _ -> {error, internal}
-                        end
-                  end,
-    StoreTempCred = fun(_Cred, SessionPid) ->
-                            case SessionPid of
-                                pid1 -> {ok, <<"CRED1">>};
-                                pid2 -> {ok, <<"CRED2">>}
-                            end
-                    end,
+%% post_json_test() ->
+%%     MeckModules = [ tts ],
+%%     CredRequest = fun(_ServiceId, SessionPid, _Params, _IFace) ->
+%%                         case SessionPid of
+%%                             pid1 -> {ok, #{}, []};
+%%                             _ -> {error, internal}
+%%                         end
+%%                   end,
+%%     StoreTempCred = fun(_Cred, SessionPid) ->
+%%                             case SessionPid of
+%%                                 pid1 -> {ok, <<"CRED1">>};
+%%                                 pid2 -> {ok, <<"CRED2">>}
+%%                             end
+%%                     end,
 
-    ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts, request_credential_for, CredRequest),
-    ok = meck:expect(tts, store_temp_cred, StoreTempCred),
-    ok = meck:expect(tts, logout, fun(_) -> ok end),
+%%     ok = test_util:meck_new(MeckModules),
+%%     ok = meck:expect(tts, request_credential_for, CredRequest),
+%%     ok = meck:expect(tts, store_temp_cred, StoreTempCred),
+%%     ok = meck:expect(tts, logout, fun(_) -> ok end),
 
-    Url = <<"/api/v1/credential_data/CRED1">>,
-    Requests = [
-                {#state{version = 1,
-                        type = credential,
-                        id = undefined,
-                        json = #{service_id => <<"Service1">>},
-                        session_pid = pid1,
-                        method = post
-                       }, {true, Url} },
-                {#state{version = 1,
-                        type = credential,
-                        id = undefined,
-                        json = #{service_id => <<"Service1">>},
-                        session_pid = pid2,
-                        method = post
-                       }, false }
-               ],
+%%     Url = <<"/api/v1/credential_data/CRED1">>,
+%%     Requests = [
+%%                 {#state{version = 1,
+%%                         type = credential,
+%%                         id = undefined,
+%%                         json = #{service_id => <<"Service1">>},
+%%                         session_pid = pid1,
+%%                         method = post
+%%                        }, {true, Url} },
+%%                 {#state{version = 1,
+%%                         type = credential,
+%%                         id = undefined,
+%%                         json = #{service_id => <<"Service1">>},
+%%                         session_pid = pid2,
+%%                         method = post
+%%                        }, false }
+%%                ],
 
-    Test  = fun({State, ExpResult}, _) ->
-                    io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                    {Result, req, _NewState} = tts_rest:post_json(req, State),
-                    ?assertEqual(ExpResult, Result),
-                    ok
-            end,
-    ok = lists:foldl(Test,ok,Requests),
-    ok = test_util:meck_done(MeckModules),
-    ok.
+%%     Test  = fun({State, ExpResult}, _) ->
+%%                     io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
+%%                     {Result, req, _NewState} = tts_rest:post_json(req, State),
+%%                     ?assertEqual(ExpResult, Result),
+%%                     ok
+%%             end,
+%%     ok = lists:foldl(Test,ok,Requests),
+%%     ok = test_util:meck_done(MeckModules),
+%%     ok.
 
-delete_resource_test() ->
-    MeckModules = [tts],
-    Revoke = fun(CredentialId, SessionPid) ->
-                     case {CredentialId, SessionPid} of
-                         {<<"CRED1">>, pid1} ->
-                             {ok, result, []};
-                         _ ->
-                             {error, not_found, []}
-                     end
-             end,
-    ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts, revoke_credential_for, Revoke),
-    ok = meck:expect(tts, logout, fun(_) -> ok end),
+%% delete_resource_test() ->
+%%     MeckModules = [tts],
+%%     Revoke = fun(CredentialId, SessionPid) ->
+%%                      case {CredentialId, SessionPid} of
+%%                          {<<"CRED1">>, pid1} ->
+%%                              {ok, result, []};
+%%                          _ ->
+%%                              {error, not_found, []}
+%%                      end
+%%              end,
+%%     ok = test_util:meck_new(MeckModules),
+%%     ok = meck:expect(tts, revoke_credential_for, Revoke),
+%%     ok = meck:expect(tts, logout, fun(_) -> ok end),
 
-    Requests = [
-                {#state{version = latest,
-                        type = credential,
-                        id = <<"CRED1">>,
-                        session_pid = pid1,
-                        method = delete
-                       }, true },
-                {#state{version = latest,
-                        type = credential,
-                        id = <<"CRED1">>,
-                        session_pid = pid2,
-                        method = delete
-                       }, false }
-               ],
+%%     Requests = [
+%%                 {#state{version = latest,
+%%                         type = credential,
+%%                         id = <<"CRED1">>,
+%%                         session_pid = pid1,
+%%                         method = delete
+%%                        }, true },
+%%                 {#state{version = latest,
+%%                         type = credential,
+%%                         id = <<"CRED1">>,
+%%                         session_pid = pid2,
+%%                         method = delete
+%%                        }, false }
+%%                ],
 
-    Test  = fun({State, ExpResult}, _) ->
-                    io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                    {Result, req, _NewState} = tts_rest:delete_resource(req, State),
-                    ?assertEqual(ExpResult, Result),
-                    ok
-            end,
-    ok = lists:foldl(Test,ok,Requests),
-    ok = test_util:meck_done(MeckModules),
-    ok.
+%%     Test  = fun({State, ExpResult}, _) ->
+%%                     io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
+%%                     {Result, req, _NewState} = tts_rest:delete_resource(req, State),
+%%                     ?assertEqual(ExpResult, Result),
+%%                     ok
+%%             end,
+%%     ok = lists:foldl(Test,ok,Requests),
+%%     ok = test_util:meck_done(MeckModules),
+%%     ok.

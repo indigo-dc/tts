@@ -33,8 +33,6 @@ init([]) ->
              sessions_supervisor(),
              credential_supervisor(),
              credential_worker(),
-             idh_supervisor(),
-             user_cache(),
              sqlite_worker(),
              temp_cred_sup(),
              temp_cred(),
@@ -70,16 +68,6 @@ config_worker() ->
 sqlite_worker() ->
     #{ id => sqlite,
        start => {tts_data_sqlite, start_link, []}
-     }.
-idh_supervisor() ->
-    #{ id => idh_supervisor,
-       start => {tts_idh_sup, start_link, []},
-       type => supervisor
-     }.
-
-user_cache() ->
-    #{ id => user_cache,
-       start => {tts_user_cache, start_link, []}
      }.
 
 temp_cred() ->

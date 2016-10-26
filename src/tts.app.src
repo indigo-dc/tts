@@ -1,6 +1,6 @@
 {application, tts, [
 	{description, ""},
-	{vsn, "0.4.0"},
+	{vsn, "semver"},
 	{modules, []},
 	{registered, [tts_sup]},
 	{applications, [
@@ -13,7 +13,6 @@
         econfig,
         jsx,
         esqlite,
-        erlydtl,
         base64url,
         oidcc,
         lager,

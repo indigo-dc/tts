@@ -59,19 +59,22 @@ login_with_access_token(_AccessToken, _Issuer) ->
 
 do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = tts_session_mgr:new_session(),
+    SessionId = tts_session:get_id(SessPid),
     try
         {Subject, Token} = case Subject0 of
                                undefined ->
+                                   %% logged in with access token
                                    get_subject_update_token(Issuer, Token0);
                                _ ->
+                                   %% logged in via auth code flow
                                    {Subject0, Token0}
                            end,
         update_session(Issuer, Subject, Token, SessPid)
     catch Error:Reason ->
             logout(SessPid),
             StackTrace = erlang:get_stacktrace(),
-            lager:error("login failed due to ~p:~p at ~p", [Error, Reason,
-                                                            StackTrace]),
+            lager:error("SESS[~p] login failed due to ~p:~p at ~p",
+                        [SessionId, Error, Reason, StackTrace]),
             {error, internal}
     end.
 
@@ -80,12 +83,12 @@ logout(Session) ->
     tts_session:close(Session).
 
 does_credential_exist(Id, Session) ->
-    {ok, #{site := #{uid :=UserId}}} =  tts_session:get_user_info(Session),
+    {ok, UserId} =  tts_session:get_userid(Session),
     tts_credential:exists(UserId, Id).
 
 does_temp_cred_exist(Id, Session) ->
-    {ok, UserInfo} =  tts_session:get_user_info(Session),
-    tts_temp_cred:exists(Id, UserInfo).
+    {ok, UserId} =  tts_session:get_userid(Session),
+    tts_temp_cred:exists(Id, UserId).
 
 
 
@@ -105,32 +108,31 @@ get_openid_provider_list() ->
 
 
 get_service_list_for(Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    #{ site := #{uid := UserId}} = UserInfo,
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, ServiceList} = tts_service:get_list(UserId),
     {ok, ServiceList}.
 
 get_credential_list_for(Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    #{ site := #{uid := UserId}} = UserInfo,
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, CredentialList} = tts_credential:get_list(UserId),
     {ok, CredentialList}.
 
 
 request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, Token} = tts_session:get_token(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     true = tts_service:is_enabled(ServiceId),
-    case
-        tts_credential:request(ServiceId, UserInfo, Interface, Token, Params) of
+    case tts_credential:request(ServiceId, UserId, UserInfo, Interface, Token,
+                                Params) of
         {ok, Credential, Log} ->
-            [#{name := id, value:=CredId}|_] = Credential,
-            lager:info("~p: requested credential ~p",
-                       [SessionId, CredId]),
+            #{id := CredId} = Credential,
+            lager:info("SESS[~p] got credential ~p for ~p",
+                       [SessionId, CredId, ServiceId]),
             {ok, Credential, Log};
         {error, Reason, Log} ->
-            lager:warning("~p: credential request for ~p failed with ~p",
+            lager:warning("SESS[~p] credential request for ~p failed with ~p",
                           [SessionId, ServiceId, Reason]),
             {error, Reason, Log}
     end.
@@ -138,16 +140,16 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
 
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, Issuer, Subject} = tts_session:get_iss_sub(Session),
+    {ok, UserId} = tts_session:get_userid(Session),
     {ok, SessionId} = tts_session:get_id(Session),
-    case tts_credential:revoke(CredId, UserInfo) of
+    case tts_credential:revoke(CredId, UserId, UserInfo) of
         {ok, Result, Log}  ->
-            lager:info("~p: revoked credential ~p as ~p ~p",
-                       [SessionId, CredId, Issuer, Subject]),
+            lager:info("SESS[~p] revoked credential ~p",
+                       [SessionId, CredId]),
             {ok, Result, Log};
         {error, Error, Log} ->
-            lager:warning("~p: revocation of credential ~p  as ~p ~p
-            failed with ~p", [SessionId, CredId, Issuer, Subject, Error]),
+            lager:warning("SESS[~p] revocation of credential ~p failed with ~p",
+                          [SessionId, CredId, Error]),
             {error, Error, Log}
     end.
 
@@ -163,13 +165,13 @@ get_display_name_for(Session) ->
     {ok, Name}.
 
 store_temp_cred(Credential, Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, Id} = tts_temp_cred:add_cred(Credential, UserInfo),
+    {ok, UserId} = tts_session:get_userid(Session),
+    {ok, Id} = tts_temp_cred:add_cred(Credential, UserId),
     {ok, Id}.
 
 get_temp_cred(Id, Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    tts_temp_cred:get_cred(Id, UserInfo).
+    {ok, UserId} = tts_session:get_userid(Session),
+    tts_temp_cred:get_cred(Id, UserId).
 
 start_full_debug() ->
     %debug these modules
@@ -177,11 +179,8 @@ start_full_debug() ->
                       "tts_rest",
                       "tts_oidc_client",
                       "tts_rest_cred",
-                      "tts_user_cache",
                       "tts_session",
                       "tts_session_mgr",
-                      "tts_idh",
-                      "tts_idh_worker",
                       "tts_service",
                       "tts_credential",
                       "tts_cred_worker"
@@ -205,19 +204,23 @@ stop_debug() ->
 
 
 update_session(Issuer, Subject, Token, SessionPid) ->
-    {ok, UserInfo} = tts_user_cache:get_user_info(Issuer, Subject),
     {ok, SessId} = tts_session:get_id(SessionPid),
+    {ok, SessToken} = tts_session:get_sess_token(SessionPid),
     ok = tts_session:set_token(Token, SessionPid),
-    ok = tts_session:set_user_info(UserInfo, SessionPid),
     ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = tts_session:is_logged_in(SessionPid),
-    lager:debug("login success"),
-    {ok, #{session_id => SessId, session_pid => SessionPid}}.
+    {ok, DisplayName} = tts_session:get_display_name(SessionPid),
+    lager:info("SESS[~p] logged in as ~p [~p at ~p]",
+               [SessId, DisplayName, Subject, Issuer]),
+
+    {ok, #{session_id => SessId, session_token => SessToken,
+           session_pid => SessionPid}}.
 
 get_subject_update_token(Issuer, AccessToken)  ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
     {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderPid),
     {ok, #{sub := Subject} = OidcInfo} =
         oidcc:retrieve_user_info(AccessToken, ProviderPid),
+    %% TODO: check access token
     Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
     {Subject, Token}.

@@ -9,39 +9,37 @@ import string
 import sys
 import traceback
 
-def request_info(UserInfo):
-    Credential = info_to_credential(UserInfo)
+def list_params():
+    RequestParams = []
+    ConfParams = []
+    return json.dumps({'conf_params': ConfParams, 'request_params': RequestParams})
+
+def request_info(JObject):
+    Credential = info_to_credential(JObject)
     return json.dumps({'credential': Credential, 'state': 'user_info'})
 
-def info_to_credential(UserInfo):
-    Site = UserInfo['site']
-    Oidc = UserInfo['oidc']
-    SiteInfo = site_to_credential(Site)
-    OidcInfo = oidc_to_credential(Oidc)
-    return SiteInfo + OidcInfo
+def info_to_credential(JObject):
+    Version = JObject['tts_version']
+    UserId = JObject['tts_userid']
+    UserInfo = JObject['user_info']
+    UserId_data = str(UserId) + '=' * (4 - len(sys.argv[1]) % 4)
+    DecodedUserId = str(base64.urlsafe_b64decode(UserId_data))
+    OidcCredential = [
+        {'name':'TTS version', 'type':'text', 'value':Version},
+        {'name':'TTS userid', 'type':'text', 'value':UserId},
+        {'name':'TTS userid (decoded)', 'type':'text', 'value':DecodedUserId}]
 
-def site_to_credential(Site):
-    UserName = Site['uid']
-    Uid = Site['uidNumber']
-    Gid = Site['gidNumber']
-    HomeDir = Site['homeDirectory']
-
-    NameObj = {'name':'Site-Username', 'type':'text', 'value':UserName}
-    UidObj = {'name':'Site-Uid', 'type':'text', 'value':Uid}
-    GidObj = {'name':'Site-Gid', 'type':'text', 'value':Gid}
-    DirObj = {'name':'Site-HomeDirectory', 'type':'text', 'value':HomeDir}
-    SiteCredential = [NameObj, UidObj, GidObj, DirObj]
-    return SiteCredential
-
-def oidc_to_credential(Oidc):
-    OidcCredential = []
-    for Key in Oidc:
-        KeyName = oidc_key_to_name(Key) 
+    for Key in UserInfo:
+        KeyName = oidc_key_to_name(Key)
         Type = oidc_key_to_type(Key)
-        Name = "Oidc-%s"%KeyName
-        Value = Oidc[Key]
+        Name = "%s"%KeyName
+        Value = UserInfo[Key]
         NewObj = [{'name':Name, 'type':Type, 'value':Value  }]
         OidcCredential = OidcCredential + NewObj
+
+    Json = json.dumps(JObject, sort_keys=True, indent=4, separators=(',',': '))
+    WholeJsonObject = [{'name':'json object', 'type':'textarea', 'value':Json}]
+    OidcCredential = OidcCredential + WholeJsonObject
     return OidcCredential
 
 def oidc_key_to_name(Key):
@@ -55,13 +53,15 @@ def oidc_key_to_name(Key):
         return "Groups"
     if Key == "email":
         return "E-Mail"
+    if Key == "gender":
+        return "Gender"
     return Key
-    
+
 
 def oidc_key_to_type(Key):
     if Key == "groups":
         return "textarea"
-    return "text" 
+    return "text"
 
 def revoke_info():
     return json.dumps({'result': 'ok'})
@@ -73,14 +73,15 @@ def main():
             json_data = str(sys.argv[1]) + '=' * (4 - len(sys.argv[1]) % 4)
             jobject = json.loads(str(base64.urlsafe_b64decode(json_data)))
             action = jobject['action']
-            user_info = jobject['user_info']
-
-            if action == "request":
-                print request_info(user_info)
-            elif action == "revoke":
-                print revoke_info()
+            if action == "get_params":
+                print list_params()
             else:
-                print json.dumps({"error": "unknown_action", "details": action})
+                if action == "request":
+                    print request_info(jobject)
+                elif action == "revoke":
+                    print revoke_info()
+                else:
+                    print json.dumps({"error": "unknown_action", "details": action})
         else:
             print json.dumps({"error": "no_parameter"})
     except Exception, E:

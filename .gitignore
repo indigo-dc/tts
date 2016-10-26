@@ -20,5 +20,13 @@ test/ct.cover.spec
 tts.db
 distdir/
 package
+elm-stuff/
+ui/tts_ui.js
+ui/tts_ui_elm.js
+TAGS
 *~
 *#
+.#*
+ttsc
+pkg 
+github.com

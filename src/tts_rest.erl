@@ -42,13 +42,13 @@ dispatch_mapping(InBasePath) ->
                    _ ->
                        InBasePath
                end,
-    << BasePath/binary, <<"/[:version]/:type/[:id]">>/binary >>.
+    << BasePath/binary, <<"/:version/:type/[:id]">>/binary >>.
 
 %%
 %% REST implementation
 %%
 
--define(LATEST_VERSION, 1).
+-define(LATEST_VERSION, 2).
 
 %
 % list of API methods:
@@ -70,7 +70,8 @@ init(_, _Req, _Opts) ->
           token = undefined,
           issuer = undefined,
           json = undefined,
-          session_pid = undefined
+          session_pid = undefined,
+          cookie_based = false
          }).
 
 rest_init(Req, _Opts) ->
@@ -86,26 +87,36 @@ allow_missing_post(Req, State) ->
     {false, Req, State}.
 
 malformed_request(Req, State) ->
-    {InVersion, Req2} = cowboy_req:binding(version, Req, latest),
-    {InType, Req3} = cowboy_req:binding(type, Req2),
-    {InId, Req4} = cowboy_req:binding(id, Req3, undefined),
-    {InToken, Req5} = cowboy_req:header(<<"authorization">>, Req4),
-    {InIssuer, Req6} = cowboy_req:header(<<"x-openid-connect-issuer">>,
-                                         Req5),
-    {Res, ContentType, Req7} = cowboy_req:parse_header(<<"content-type">>,
-                                                       Req6),
-    {Method, Req8} = cowboy_req:method(Req7),
-    {ok, InBody, Req9} = cowboy_req:body(Req8),
+    CookieName = tts_http_util:cookie_name(),
+    {CookieSessionToken, Req2} = cowboy_req:cookie(CookieName, Req),
+    CookieSession = tts_session_mgr:get_session(CookieSessionToken),
+    {InVersion, Req3} = cowboy_req:binding(version, Req2, no_version),
+    {InType, Req4} = cowboy_req:binding(type, Req3),
+    {InId, Req5} = cowboy_req:binding(id, Req4, undefined),
+    {InToken, Req6} = cowboy_req:header(<<"authorization">>, Req5),
+    {InIssuer, Req7} = cowboy_req:header(<<"x-openid-connect-issuer">>,
+                                         Req6),
+    {Res, ContentType, Req8} = cowboy_req:parse_header(<<"content-type">>,
+                                                       Req7),
+    {Method, Req9} = cowboy_req:method(Req8),
+    {ok, InBody, Req10} = cowboy_req:body(Req9),
 
     {Result, NewState} = is_malformed(Method, {Res, ContentType}, InVersion,
                                       InType , InId, InBody, InToken,
-                                      InIssuer , State),
-    {Result, Req9, NewState}.
+                                      InIssuer, CookieSession , State),
+    {Result, Req10, NewState}.
 
 
 is_authorized(Req, #state{type=oidcp} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer} = State)
+is_authorized(Req, #state{type=info} = State) ->
+    {true, Req, State};
+is_authorized(Req, #state{type=logout} = State) ->
+    {true, Req, State};
+is_authorized(Req, #state{session_pid=Pid} = State) when is_pid(Pid) ->
+    {true, Req, State};
+is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer,
+                          session_pid=undefined} = State)
   when Type==service; Type==credential; Type==cred_data ->
     case tts:login_with_access_token(Token, Issuer) of
         {ok, #{session_pid := SessionPid}} ->
@@ -146,41 +157,88 @@ delete_resource(Req, #state{type=credential,
                  {ok, _, _} -> true;
                  _ -> false
              end,
-    ok = tts:logout(Session),
+    ok = end_session_if_rest(State),
     {Result, Req, State#state{session_pid=undefined}}.
 
 
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
-                     session_pid=Session } = State) ->
+                     session_pid=Session} = State) ->
     Result = perform_get(Type, Id, Session, Version),
-    ok = tts:logout(Session),
-    {Result, Req, State#state{session_pid=undefined}}.
+    ok = end_session_if_rest(State),
+    {ok, Req2} = update_cookie_if_used(Req, State),
+    {Result, Req2, State#state{session_pid=undefined}}.
 
 
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
-                      session_pid=Session, json=Json} = State) ->
-    Result = perform_post(Type, Id, Json, Session, Version),
-    ok = tts:logout(Session),
-    {Result, Req, State#state{session_pid=undefined}}.
+                      session_pid=Session, json=Json,
+                      cookie_based=CookieBased} = State) ->
+    Result = perform_post(Type, Id, Json, Session, CookieBased, Version),
+    ok = end_session_if_rest(State),
+    {ok, Req2} = update_cookie_if_used(Req, State),
+    {Result, Req2, State#state{session_pid=undefined}}.
 
-perform_get(service, undefined, Session, _Version) ->
+perform_get(service, undefined, Session, 1) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
-    return_json_service_list(ServiceList);
-perform_get(oidcp, undefined, _, _Version) ->
+    return_json_service_list(ServiceList, [id, type, host, port]);
+perform_get(service, undefined, Session, _) ->
+    {ok, ServiceList} = tts:get_service_list_for(Session),
+    return_json_service_list(ServiceList, [id, type, host, port, description,
+                                           enabled, cred_count, cred_limit,
+                                           limit_reached, params] );
+perform_get(oidcp, _, _, 1) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);
-perform_get(credential, undefined, Session, _Version) ->
+perform_get(oidcp, _, _, _) ->
+    {ok, OIDCList} = tts:get_openid_provider_list(),
+    jsx:encode(#{openid_provider_list => OIDCList});
+perform_get(info, undefined, Session, _) ->
+    {LoggedIn, DName}  = case is_pid(Session) of
+                             false -> {false, <<"">>};
+                             true -> {ok, Name} =
+                                         tts_session:get_display_name(Session),
+                                     {tts_session:is_logged_in(Session), Name}
+                         end,
+    {ok, Version} = application:get_key(tts, vsn),
+    Info = #{version => list_to_binary(Version),
+             redirect_path => ?CONFIG(ep_oidc),
+             logged_in => LoggedIn,
+             display_name => DName
+            },
+    jsx:encode(Info);
+perform_get(logout, undefined, undefined, _) ->
+    jsx:encode(#{result => ok});
+perform_get(logout, undefined, Session, _) ->
+    ok = perform_logout(Session),
+    jsx:encode(#{result => ok});
+perform_get(access_token, undefined, Session, _) ->
+    {ok, AccessToken} = tts:get_access_token_for(Session),
+    jsx:encode(#{access_token => AccessToken});
+perform_get(credential, undefined, Session, 1) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
     return_json_credential_list(CredList);
-perform_get(cred_data, Id, Session, _Version) ->
+perform_get(credential, undefined, Session, _) ->
+    {ok, CredList} = tts:get_credential_list_for(Session),
+    Keys = [cred_id, ctime, interface, service_id],
+    return_json_credential_list(CredList, Keys);
+perform_get(cred_data, Id, Session, 1) ->
     case tts:get_temp_cred(Id, Session) of
         {ok, Cred} -> jsx:encode(Cred);
         _ -> jsx:encode(#{})
+    end;
+perform_get(cred_data, Id, Session, _Version) ->
+    case tts:get_temp_cred(Id, Session) of
+        {ok, Cred} -> jsx:encode(#{credential => Cred});
+        _ -> jsx:encode(#{credential => []})
     end.
 
-perform_post(credential, undefined, #{service_id:=ServiceId}, Session, Ver) ->
-    IFace = <<"REST interface">>,
-    case  tts:request_credential_for(ServiceId, Session, [], IFace) of
+perform_post(credential, undefined, #{service_id:=ServiceId} = Data, Session,
+             CookieBased, Ver) ->
+    IFace =  case CookieBased of
+                 false -> <<"REST interface">>;
+                 true ->  <<"Web App">>
+             end,
+    Params = maps:get(params, Data, #{}),
+    case  tts:request_credential_for(ServiceId, Session, Params, IFace) of
         {ok, Credential, _Log} ->
             {ok, Id} = tts:store_temp_cred(Credential, Session),
             Url = id_to_url(Id, Ver),
@@ -189,9 +247,8 @@ perform_post(credential, undefined, #{service_id:=ServiceId}, Session, Ver) ->
             false
     end.
 
-return_json_service_list(Services) ->
+return_json_service_list(Services, Keys) ->
     Extract = fun(Map, List) ->
-                      Keys = [id, type, host, port],
                       [ maps:with(Keys, Map) | List]
               end,
     List = lists:reverse(lists:foldl(Extract, [], Services)),
@@ -209,37 +266,43 @@ return_json_oidc_list(Oidc) ->
     jsx:encode(#{openid_provider_list => List}).
 
 return_json_credential_list(Credentials) ->
-    Id = fun(CredId, List) ->
+    Id = fun(#{cred_id := CredId}, List) ->
                  [#{ id => CredId} | List]
          end,
     List = lists:reverse(lists:foldl(Id, [], Credentials)),
     jsx:encode(#{credential_list => List}).
 
+return_json_credential_list(Credentials, Keys) ->
+    Id = fun(Cred, List) ->
+                 [maps:with(Keys, Cred) | List]
+         end,
+    List = lists:reverse(lists:foldl(Id, [], Credentials)),
+    jsx:encode(#{credential_list => List}).
 
 is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
-             InIssuer, State) ->
+             InIssuer, InCookieSession, State) ->
     Version = verify_version(InVersion),
     Type = verify_type(InType),
     Id = verify_id(InId),
     Token = verify_token(InToken),
     Issuer = verify_issuer(InIssuer),
+    CookieSession = verify_session(InCookieSession),
     Method = verify_method(InMethod),
     ContentType = verify_content_type(InContentType),
     Body = verify_body(InBody),
     case is_bad_version(Version) of
         true -> {true, State#state{method=Method, version=Version, type=Type,
                                    id=Id, token=Token, issuer=Issuer,
-                                   json=Body}};
+                                   session_pid=CookieSession, json=Body}};
         false -> Result = is_malformed(Method, ContentType, Type, Id, Body),
                  {Result, State#state{method=Method, version=Version, type=Type,
-                                      id=Id, token=Token, json=Body,
-                                      issuer=Issuer}}
+                                      id=Id, token=Token, issuer=Issuer,
+                                      session_pid=CookieSession, json=Body,
+                                      cookie_based = is_pid(CookieSession) }}
     end.
 
-verify_version(latest) ->
-    ?LATEST_VERSION;
 verify_version(<<"latest">>) ->
-    verify_version(latest);
+    ?LATEST_VERSION;
 verify_version(<< V:1/binary, Version/binary >>) when V==<<"v">>; V==<<"V">> ->
      safe_binary_to_integer(Version);
 verify_version(_) ->
@@ -255,6 +318,8 @@ verify_token(Token) when is_atom(Token) ->
 
 verify_content_type({ok, {<<"application">>, <<"json">>, _}}) ->
     json;
+verify_content_type({ok, undefined}) ->
+    undefined;
 verify_content_type({undefined, _}) ->
     undefined;
 verify_content_type(_) ->
@@ -276,6 +341,13 @@ verify_issuer(Issuer) when is_binary(Issuer) ->
     end;
 verify_issuer(_Issuer)  ->
     bad_issuer.
+
+
+verify_session({ok, Pid}) when is_pid(Pid) ->
+    Pid;
+verify_session(_) ->
+    undefined.
+
 
 verify_method(<<"GET">>) ->
     get;
@@ -306,9 +378,12 @@ safe_binary_to_integer(Version) ->
 
 
 -define(TYPE_MAPPING, [
-                       {<<"service">>, service},
                        {<<"oidcp">>, oidcp},
+                       {<<"info">>, info},
+                       {<<"logout">>, logout},
+                       {<<"service">>, service},
                        {<<"credential">>, credential},
+                       {<<"access_token">>, access_token},
                        {<<"credential_data">>, cred_data }
                       ]).
 
@@ -335,14 +410,20 @@ verify_id(Id) ->
 
 is_malformed(get, _, oidcp, undefined, undefined) ->
     false;
+is_malformed(get, _, info, undefined, undefined) ->
+    false;
+is_malformed(get, _, logout, undefined, undefined) ->
+    false;
 is_malformed(get, _, service, undefined, undefined) ->
     false;
 is_malformed(get, _, credential, undefined, undefined) ->
     false;
+is_malformed(get, _, access_token, undefined, undefined) ->
+    false;
 is_malformed(get, _, cred_data, Id, undefined) ->
     not is_binary(Id);
-is_malformed(post, json, credential, undefined, #{service_id:=_Id}) ->
-    false;
+is_malformed(post, json, credential, undefined, #{service_id:=Id}) ->
+    not is_binary(Id);
 is_malformed(delete, _, credential, Id, undefined) ->
     not is_binary(Id);
 is_malformed(_, _, _, _, _) ->
@@ -352,3 +433,21 @@ is_bad_version(Version) when is_integer(Version) ->
    (Version =< 0) or (Version > ?LATEST_VERSION);
 is_bad_version(_) ->
     true.
+
+end_session_if_rest(#state{session_pid = Session, cookie_based = false}) ->
+    perform_logout(Session);
+end_session_if_rest(_) ->
+    ok.
+
+update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
+    tts_http_util:perform_cookie_action(clear, 0, deleted, Req);
+update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
+    {ok, Max} = tts_session:get_max_age(Session),
+    {ok, Token} = tts_session:get_sess_token(Session),
+    tts_http_util:perform_cookie_action(update, Max, Token, Req);
+update_cookie_if_used(Req, #state{cookie_based = _}) ->
+    {ok, Req}.
+
+
+perform_logout(Session) ->
+    tts:logout(Session).

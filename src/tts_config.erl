@@ -152,7 +152,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 stop_services() ->
     ok = tts_session_mgr:close_all_sessions(),
-    ok = tts_user_cache:clear_cache(),
     ok.
 
 clear_config() ->
@@ -168,7 +167,6 @@ read_configs() ->
     ok = update_status().
 
 trigger_services() ->
-    ok = tts_idh:reconfigure(),
     ok = tts_data_sqlite:reconfigure(),
     ok = start_cowboy().
 
@@ -222,13 +220,8 @@ update_status() ->
           {"SqliteFile", sqlite_db, file, "./tts.db"},
           {"LogFile", log_file, binary, "tts.log"},
           {"SessionTimeout", session_timeout, seconds, 600},
-          {"CacheTimeout", cache_timeout, seconds, 900},
-          {"CacheCheckInterval", cache_check_interval, seconds, 300},
-          {"CacheMaxEntries", cache_max_entries, integer, 50000},
           {"ServiceConfigPath", service_config_path, directory, "./services"},
-          {"OidcConfigPath", oidc_config_path, directory, "./oidc"},
-          {"IDHScript", idh_script, file, "./idh.py"},
-          {"IDHMaxWorker", idh_max_worker, integer, 5}
+          {"OidcConfigPath", oidc_config_path, directory, "./oidc"}
         ]).
 
 
@@ -301,7 +294,8 @@ parse_and_apply_services([ConfigFile|Tail])  ->
     ok = econfig:register_config(service, [ConfigFile]),
     ServiceConfig = econfig:get_value(service, ""),
     ConfigMap = maps:from_list(ServiceConfig),
-    tts_service:add(ConfigMap),
+    {ok, Id} = tts_service:add(ConfigMap),
+    tts_service:update_params(Id),
     ok = econfig:unregister_config(service),
     parse_and_apply_services(Tail).
 
@@ -409,7 +403,9 @@ start_cowboy(false) ->
     Dispatch = cowboy_router:compile([{'_', [
                                              {"/static/[...]", cowboy_static,
                                               {priv_dir, tts, "http_static"} },
-                                             {"/", tts_http_prep, []}
+                                             {"/", cowboy_static,
+                                              {priv_file, tts,
+                                               "http_static/index.html"}}
                                             ]}]),
     _ = cowboy:start_http( http_handler
                            , 100
@@ -429,7 +425,10 @@ start_cowboy(_) ->
                                           {"/static/[...]", cowboy_static,
                                            {priv_dir, tts, "http_static"}},
                                           {EpApi, tts_rest, []},
-                                          {EpMain, tts_http_prep, []},
+                                          %% {EpMain, tts_http_prep, []},
+                                          {EpMain, cowboy_static,
+                                           {priv_file, tts,
+                                            "http_static/index.html"}},
                                           {EpOidc, oidcc_http_handler, []}
                                          ]}]),
 
