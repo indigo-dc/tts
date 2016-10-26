@@ -164,7 +164,7 @@ malformed_request_test() ->
                      header => [{<<"content-type">>,{ok, {<<"application">>,
                                                            <<"json">>,[]}}}],
                      method => <<"POST">>,
-                     body => <<"{\"service_id\":234}">>
+                     body => <<"{\"service_id\":\"234\"}">>
                    }, false },
                 { #{ bindings => [{version, <<"latest">>},
                                   {type, <<"credential">>},
