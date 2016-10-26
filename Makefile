@@ -2,7 +2,7 @@ REPO = tts
 REBAR = $(shell pwd)/rebar3
 
 
-.PHONY: check all cln clean eunit ct elvis compile ui tests sample_config cookie rel tar run package
+.PHONY: check all cln clean eunit ct elvis compile ui tests sample_config cookie rel tar run package clean_package
 
 all: compile
 
@@ -18,8 +18,6 @@ check:
 clean: check
 	$(REBAR) do clean -a
 	rm -rf _build/default/plugins
-	rm -rf package
-	rm -rf distdir
 
 eunit: check
 	$(REBAR) do eunit,cover -v
@@ -56,5 +54,8 @@ run: rel
 install_deps:
 	$(REBAR) install_deps
 
+clean_package:
+	rm -rf package
+	rm -rf distdir
 
 include package.mk
