@@ -199,8 +199,9 @@ perform_get(info, undefined, Session, _) ->
                                      {tts_session:is_logged_in(Session), Name}
                          end,
     {ok, Version} = application:get_key(tts, vsn),
+    Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
     Info = #{version => list_to_binary(Version),
-             redirect_path => ?CONFIG(ep_oidc),
+             redirect_path => list_to_binary(Redirect),
              logged_in => LoggedIn,
              display_name => DName
             },
