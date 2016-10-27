@@ -1,0 +1,113 @@
+%% @doc the description of the OpenId Connect provider
+{mapping, "openid.$id.description", "tts.provider_list", [
+          {datatype, string},
+          {commented, "Google, the well known search giant"},
+          {include_default, "google"}
+          ]}.
+
+%% @doc the client id of TTS at the OpenId Connect provider
+{mapping, "openid.$id.client_id", "tts.provider_list.a", [
+          {datatype, string},
+          {commented, "65375832888-m99kcr0vu8qq95h588b1rhi52ei234qo.apps.googleusercontent.com"},
+          {include_default, "google"}
+          ]}.
+
+%% @doc the client secret of TTS at the OpenId Connect provider
+{mapping, "openid.$id.client_secret", "tts.provider_list.b", [
+          {datatype, string},
+          {commented, "MEfMXcaQtckJPBctTrAuSQkJ"},
+          {include_default, "google"}
+          ]}.
+
+%% @doc the configuration endpoint of the OpenId Connect provider
+{mapping, "openid.$id.config_endpoint", "tts.provider_list.c", [
+          {datatype, string},
+          {commented, "https://accounts.google.com/.well-known/openid-configuration"},
+          {include_default, "google"}
+          ]}.
+
+
+%% @doc the scopes to request the OpenId Connect provider
+{mapping, "openid.$id.request_scopes", "tts.provider_list.d", [
+          {datatype, string},
+          {commented, "openid"},
+          {include_default, "google"}
+          ]}.
+
+
+{translation, "tts.provider_list",
+    fun(Conf) ->
+            DescList = lists:filter(
+                         fun({K, _V}) ->
+                                 Tokens = string:tokens("openid.$id.description", "."),
+                                 cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                         end, Conf),
+            CIdList = lists:filter(
+                        fun({K, _V}) ->
+                                Tokens = string:tokens("openid.$id.client_id", "."),
+                                cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                        end, Conf),
+            SecretList = lists:filter(
+                           fun({K, _V}) ->
+                                   Tokens = string:tokens("openid.$id.client_secret", "."),
+                                   cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                           end, Conf),
+            ConfigList = lists:filter(
+                           fun({K, _V}) ->
+                                   Tokens = string:tokens("openid.$id.config_endpoint", "."),
+                                   cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                           end, Conf),
+            ScopeList = lists:filter(
+                          fun({K, _V}) ->
+                                  Tokens = string:tokens("openid.$id.request_scopes", "."),
+                                  cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                          end, Conf),
+
+            Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
+            CIds = [ {Id, CId} || {[_, Id, _], CId} <- CIdList ],
+            Secrets = [ {Id, Sec} || {[_, Id, _], Sec} <- SecretList ],
+            Configs = [ {Id, Conf} || {[_, Id, _], Conf} <- ConfigList ],
+            Scopes = [ {Id, Scpe} || {[_, Id, _], Scpe} <- ScopeList ],
+
+            CreateSetting =
+                fun({Id, Desc}, Result) ->
+                        ClientId = case lists:keyfind(Id, 1, CIds) of
+                                       {Id, CId} -> list_to_binary(CId);
+                                       _ -> undefined
+                                   end,
+                        Secret = case lists:keyfind(Id, 1, Secrets) of
+                                     {Id, Sec} -> list_to_binary(Sec);
+                                     _ -> undefined
+                                 end,
+                        Config = case lists:keyfind(Id, 1, Configs) of
+                                     {Id, Cnfg} -> list_to_binary(Cnfg);
+                                     _ -> undefined
+                                 end,
+                        Scope = case lists:keyfind(Id, 1, Scopes) of
+                                    {Id, Scpe} ->
+                                        ScpeBin  = list_to_binary(Scpe),
+                                        binary:split(ScpeBin,
+                                                     [<<",">>],
+                                                     [global,
+                                                      trim_all]);
+                                    _ -> undefined
+                                end,
+                        case (ClientId == undefined) or (Secret == undefined) or
+                            (Config == undefined) or (Scope == undefined) or
+                            (Desc == undefined) of
+                            true ->
+                                Msg = io_lib:format("all parameter of an OpenId Connect Provider MUST be specified: Id: ~p",[Id]),
+                                cuttlefish:invalid(Msg);
+                            false ->
+                                ok
+                        end,
+                        Setting = #{ id => list_to_binary(Id),
+                                     description => list_to_binary(Desc),
+                                     client_id => ClientId,
+                                     client_secret => Secret,
+                                     config_endpoint => Config,
+                                     scopes => Scope },
+                        [ Setting | Result]
+                end,
+            lists:foldl(CreateSetting, [], Descs)
+    end}.

@@ -1,6 +1,6 @@
 {application, tts, [
 	{description, ""},
-	{vsn, "semver"},
+	{vsn, "1.0.0-devel"},
 	{modules, []},
 	{registered, [tts_sup]},
 	{applications, [

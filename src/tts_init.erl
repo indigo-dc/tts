@@ -55,6 +55,7 @@ handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 handle_cast(add_oidc, State) ->
+    add_openid_provider(),
     gen_server:cast(self(), add_services),
     {noreply, State};
 handle_cast(add_services, State) ->
@@ -80,6 +81,26 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+
+add_openid_provider() ->
+    LocalEndpoint = local_endpoint(),
+    ProviderList = ?CONFIG(provider_list, []),
+    ok = add_openid_provider(ProviderList, LocalEndpoint),
+    ok.
+
+add_openid_provider([#{id := Id, description := Desc, client_id := ClientId,
+                       client_secret := Secret, scopes := RequestScopes,
+                       config_endpoint := ConfigEndpoint}|T], LocalEndpoint) ->
+    {ok, _InternalId, _Pid} =
+        oidcc:add_openid_provider(Id, Id, Desc, ClientId, Secret,
+                                  ConfigEndpoint, LocalEndpoint, RequestScopes),
+    add_openid_provider(T, LocalEndpoint);
+add_openid_provider([], _) ->
+    ok.
+
+
+
 
 
 start_web_interface() ->
@@ -130,3 +151,29 @@ start_web_interface() ->
 relative_path(Append) ->
     Base = ?CONFIG(ep_main),
     binary:list_to_bin(io_lib:format("~s~s", [Base, Append])).
+
+local_endpoint() ->
+    HostName = binary:list_to_bin(?CONFIG(hostname)),
+    EpReturn = <<"/oidc">>,
+    Prot = local_protocol(),
+    Port = local_port(),
+    << Prot/binary, HostName/binary, Port/binary, EpReturn/binary >>.
+
+
+local_port() ->
+    return_port(?CONFIG(port), ?CONFIG(ssl)).
+return_port(443, true) ->
+    <<"">>;
+return_port(80, false) ->
+    <<"">>;
+return_port(Port, _) ->
+    PortBin = binary:list_to_bin(io_lib:format("~p", [Port])),
+    << <<":">>/binary, PortBin/binary>>.
+
+
+local_protocol() ->
+    return_http(?CONFIG(ssl)).
+return_http(false) ->
+    <<"http://">>;
+return_http(_) ->
+    <<"https://">>.
