@@ -1,0 +1,83 @@
+%% @doc the description of the service
+{mapping, "service.$id.description", "tts.service_list", [
+          {datatype, string}
+          ]}.
+
+%% @doc the command to execute, the so called 'plugin'
+{mapping, "service.$id.cmd", "tts.service_list.a", [
+          {datatype, string}
+          ]}.
+
+%% @doc the credential limit for this service
+{mapping, "service.$id.credential_limit", "tts.service_list.c", [
+          {datatype, [{atom, infinite}, integer]}
+          ]}.
+
+%% @doc the way tts connects to the place where to start the plugin
+%% @see service.$id.cmd
+{mapping, "service.$id.connection.type", "tts.service_list.b", [
+          {datatype, {enum, [local]}}
+          ]}.
+
+
+
+{translation, "tts.service_list",
+ fun(Conf) ->
+         TypeFilter =
+             fun(Type) ->
+                     Filter =
+                         fun({K, _V}) ->
+                                 Tokens = string:tokens(Type, "."),
+                                 cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                         end,
+                     lists:filter(Filter, Conf)
+             end,
+
+         DescList = TypeFilter("service.$id.description"),
+         CmdList = TypeFilter("service.$id.cmd"),
+         CredLimitList = TypeFilter("service.$id.credential_limit"),
+         ConnTypeList = TypeFilter("service.$id.connection.type"),
+
+
+         Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
+         Cmds = [ {Id, Cmd} || {[_, Id, _], Cmd} <- CmdList ],
+         CredLimits = [ {Id, Limit} || {[_, Id, _], Limit} <- CredLimitList ],
+         ConnTypes = [ {Id, Type} || {[_, Id, _, _], Type} <- ConnTypeList ],
+
+         CreateSetting =
+             fun({Id, Desc}, Result) ->
+                     Cmd = case lists:keyfind(Id, 1, Cmds) of
+                               {Id, C} -> list_to_binary(C);
+                               _ -> undefined
+                           end,
+                     CredLimit = case lists:keyfind(Id, 1, CredLimits) of
+                                     {Id, Limit}
+                                       when is_integer(Limit), Limit > 0
+                                            -> Limit;
+                                     {Id, Atom}
+                                       when is_atom(Atom)
+                                            -> Atom;
+                                     _ -> undefined
+                                 end,
+                     ConnType = case lists:keyfind(Id, 1, ConnTypes) of
+                                    {Id, Type} -> Type;
+                                    _ -> undefined
+                                end,
+
+                     case (Cmd == undefined) or (CredLimit == undefined) or
+                         (ConnType == undefined) of
+                         true ->
+                             Msg = io_lib:format("not all mandatory parameter of the service ~p are given",[Id]),
+                             cuttlefish:invalid(Msg);
+                         false ->
+                             ok
+                     end,
+                     Setting = #{ id => list_to_binary(Id),
+                                  description => list_to_binary(Desc),
+                                  cmd => Cmd,
+                                  credential_limit => CredLimit,
+                                  connection_type => ConnType },
+                     [ Setting | Result]
+             end,
+         lists:foldl(CreateSetting, [], Descs)
+    end}.

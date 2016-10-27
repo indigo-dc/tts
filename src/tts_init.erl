@@ -48,17 +48,22 @@ stop(Pid) ->
 %% gen_server.
 
 init([]) ->
-    gen_server:cast(self(), add_oidc),
+    gen_server:cast(self(), start_database),
     {ok, #state{}, 1}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast(start_database, State) ->
+    start_database(),
+    gen_server:cast(self(), add_oidc),
+    {noreply, State};
 handle_cast(add_oidc, State) ->
     add_openid_provider(),
     gen_server:cast(self(), add_services),
     {noreply, State};
 handle_cast(add_services, State) ->
+    add_services(),
     gen_server:cast(self(), start_http),
     {noreply, State};
 handle_cast(start_http, State) ->
@@ -82,6 +87,10 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
+start_database() ->
+    ok = tts_data_sqlite:reconfigure(),
+    ok.
+
 
 add_openid_provider() ->
     LocalEndpoint = local_endpoint(),
@@ -100,6 +109,16 @@ add_openid_provider([], _) ->
     ok.
 
 
+add_services() ->
+    ServiceList = ?CONFIG(service_list),
+    ok = add_services(ServiceList),
+    ok.
+
+add_services([H | T]) ->
+    io:format("adding ~p~n",[H]),
+    add_services(T);
+add_services([]) ->
+    ok.
 
 
 
