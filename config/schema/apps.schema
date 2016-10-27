@@ -1,0 +1,5 @@
+
+{mapping, "log_dir", "lager.log_root", [
+          {default, "{{runner_log_dir}}"},
+          hidden
+          ]}.

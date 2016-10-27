@@ -2,7 +2,7 @@ REPO = tts
 REBAR = $(shell pwd)/rebar3
 
 
-.PHONY: check all cln clean eunit ct elvis compile ui tests sample_config cookie rel tar run package clean_package
+.PHONY: check all cln clean eunit ct elvis compile ui tests cookie rel tar run package clean_package
 
 all: compile
 
@@ -34,9 +34,6 @@ elvis: check
 
 compile: check
 	$(REBAR) compile
-
-sample_config:
-	./utils/install_sample_config
 
 cookie:
 	./utils/gen_random_cookie

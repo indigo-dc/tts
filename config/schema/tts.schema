@@ -1,40 +1,102 @@
 
 
-
+%% @doc the hostname to use for redirects etc
 {mapping, "hostname", "tts.hostname", [
           {default, "localhost"}
           ]}.
 
-{mapping, "ssl", "tts.ssl", [
-          {default, false},
-          {commented, true},
-          {datatype, {enum, [true, false]}}
-          ]}.
 
+%% @doc The port at which traffic seams to enter
+%% the TTS. This can be different from the port
+%% TTS actually listens on @see listen_port .
 {mapping, "port", "tts.port", [
           {commented, 8080},
           {default, 8080},
           {datatype,  [integer, {atom, default}]}
           ]}.
 
+{translation, "tts.port",
+    fun(Conf) ->
+        Port = cuttlefish:conf_get("port", Conf),
+        Ssl = cuttlefish:conf_get("ssl", Conf),
+        case {Port, Ssl} of
+             { default, false } -> 80;
+             { default, true } -> 443;
+             { Prt, _} when is_integer(Prt), Prt >= 1, Prt =< 65535 -> Prt;
+             _ -> cuttlefish:invalid("invalid tcp port, the port range is [1, 65535]")
+        end
+    end}.
+
+
+
+%% @doc the port to actually listen on. together with
+%% port this can be used to pretend to be listening on
+%% e.g. 443, although the TTS actually listens on 8443
+%% the default setting is to have it the same as port
 {mapping, "listen_port", "tts.listen_port", [
-          {commented, 8080},
-          {default, 8080},
-          {datatype,  [integer, {atom, default}]}
+          {default, port},
+          {commented, port},
+          {datatype,  [{atom, port}, integer]}
+          ]}.
+
+{translation, "tts.listen_port",
+    fun(Conf) ->
+        Port = cuttlefish:conf_get("port", Conf),
+        Listen = cuttlefish:conf_get("listen_port", Conf),
+        case { Listen, Port } of
+             { port, Prt } -> Prt;
+             { Lstn, _} when is_integer(Lstn), Lstn >= 1, Lstn =< 65535 -> Lstn;
+             _ -> cuttlefish:invalid("invalid tcp port, the port range is [1, 65535]")
+        end
+    end}.
+
+
+%% @doc Enable/Disable SSL support, please
+%% enable it before using TTS in production
+{mapping, "ssl", "tts.ssl", [
+          {default, false},
+          {commented, true},
+          {datatype, {enum, [true, false]}}
+          ]}.
+
+%% @doc The CA cert file to use for ssl
+{mapping, "ca_cert_file", "tts.ca_cert_file", [
+          {default, "{{platform_etc_dir}}/ca.cert"},
+          {commented, "{{platform_etc_dir}}/ca.cert"},
+          hidden,
+          {datatype, file}
+          ]}.
+
+%% @doc The cert file of the server, for ssl
+{mapping, "cert_file", "tts.cert_file", [
+          {default, "{{platform_etc_dir}}/tts.cert"},
+          {commented, "{{platform_etc_dir}}/tts.cert"},
+          {datatype, file}
+          ]}.
+
+%% @doc The private key file of the server, for ssl
+{mapping, "key_file", "tts.key_file", [
+          {default, "{{platform_etc_dir}}/tts.key"},
+          {commented, "{{platform_etc_dir}}/tts.key"},
+          {datatype, file}
+          ]}.
+
+%% @doc The duration of a session when using a web browser
+{mapping, "session_timeout", "tts.session_timeout", [
+          {default, "15m"},
+          {commented, "15m"},
+          {datatype, {duration, ms}}
+          ]}.
+
+%% @doc The path to the sqlite database file
+{mapping, "sqlite_file", "tts.sqlite_db", [
+          {default, "{{platform_data_dir}}/tts.db"},
+          {commented, "{{platform_data_dir}}/tts.db"},
+          {datatype, file}
           ]}.
 
 {mapping, "main_path", "tts.ep_main", [
           {default, "/"},
-          hidden
-          ]}.
-
-{mapping, "oidc_path", "tts.ep_oidc", [
-          {default, "/oidc"},
-          hidden
-          ]}.
-
-{mapping, "api_path", "tts.ep_api", [
-          {default, "/api"},
           hidden
           ]}.
 
