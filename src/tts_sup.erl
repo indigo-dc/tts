@@ -36,7 +36,7 @@ init([]) ->
              sqlite_worker(),
              temp_cred_sup(),
              temp_cred(),
-             config_worker()
+             init_worker()
             ],
     Flags = #{},
     {ok, {Flags, Procs}}.
@@ -59,9 +59,9 @@ credential_supervisor() ->
        type => supervisor
      }.
 
-config_worker() ->
-    #{ id => config,
-       start => {tts_config, start_link, []},
+init_worker() ->
+    #{ id => init,
+       start => {tts_init, start_link, []},
        restart => transient
      }.
 

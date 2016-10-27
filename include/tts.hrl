@@ -1,4 +1,3 @@
--define(CONFIG(K), tts_config:get_(K)).
--define(CONFIG(K,D), tts_config:get_(K,D)).
--define(DEBUG_MODE, tts_config:debug_mode()).
--define(CONFIG_LOADED, tts_config:is_loaded()).
+-define(CONFIG(K,D), application:get_env(tts, K,D)).
+-define(CONFIG(K), ?CONFIG(K, undefined) ).
+-define(DEBUG_MODE, ?CONFIG(debug_mode, false)).
