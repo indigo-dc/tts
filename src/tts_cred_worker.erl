@@ -23,8 +23,8 @@
 -export([start_link/0]).
 -export([start/0]).
 -export([stop/1]).
--export([request/5]).
--export([revoke/5]).
+-export([request/4]).
+-export([revoke/4]).
 -export([get_params/2]).
 
 %% gen_server.
@@ -40,7 +40,6 @@
           client = undefined,
           service_id = undefined,
           user_info = undefined,
-          user_id = undefined,
           params = undefined,
           cred_state = undefined,
           connection = undefined,
@@ -65,19 +64,19 @@ start() ->
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
--spec request(ServiceId :: binary(), UserId :: binary(), UserInfo :: map(),
+-spec request(ServiceId :: binary(), UserInfo :: map(),
               Params::any(), pid()) -> {ok, map(), list()} |
                                        {error, any(), list()} | {error, atom()}.
-request(ServiceId, UserId, UserInfo, Params, Pid) ->
-    gen_server:call(Pid, {request_credential, ServiceId, UserId, UserInfo,
-                          Params}, infinity).
+request(ServiceId, UserInfo, Params, Pid) ->
+    gen_server:call(Pid, {request_credential, ServiceId, UserInfo, Params},
+                    infinity).
 
--spec revoke(ServiceId :: binary(), UserId :: binary(), UserInfo :: map(),
+-spec revoke(ServiceId :: binary(), UserInfo :: map(),
              CredState::any(), pid()) -> {ok, map(), list()} |
                                          {error, any(), list()}|{error, atom()}.
-revoke(ServiceId, UserId, UserInfo, CredState, Pid) ->
-    gen_server:call(Pid, {revoke_credential, ServiceId, UserId, UserInfo,
-                          CredState}, infinity).
+revoke(ServiceId, UserInfo, CredState, Pid) ->
+    gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo, CredState},
+                    infinity).
 
 -spec get_params(ServiceId ::any(), Pid::pid()) -> {ok, map()} |
                                                    {error, atom(), list()} |
@@ -91,22 +90,20 @@ get_params(ServiceId, Pid) ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({request_credential, ServiceId, UserId, UserInfo, Params}, From,
+handle_call({request_credential, ServiceId, UserInfo, Params}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = request,
                             client = From,
                             service_id = ServiceId,
-                            user_id = UserId,
                             user_info = UserInfo,
                             params = Params
                           },
     gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
-handle_call({revoke_credential, ServiceId, UserId, UserInfo, CredState}, From,
+handle_call({revoke_credential, ServiceId, UserInfo, CredState}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = revoke,
                             client = From,
-                            user_id = UserId,
                             service_id = ServiceId,
                             user_info = UserInfo,
                             cred_state = CredState
@@ -158,19 +155,20 @@ prepare_action(State) ->
            user_info = UserInfo
           } = State,
     {ok, ServiceInfo} = tts_service:get_info(ServiceId),
-    Connection = connect_to_service(ServiceInfo),
+    {ok, ConnInfo} = get_connection_info(ServiceInfo),
     {ok, Cmd} = get_cmd(ServiceInfo),
+    Connection = connect_to_service(ConnInfo),
     create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
                                          Connection, State).
 
 
 
-connect_to_service(#{con_type := local}) ->
+connect_to_service(#{type := local}) ->
     {ok, local};
-connect_to_service(#{con_type := ssh , con_host := Host } = Info ) ->
-    Port = maps:get(con_port, Info, 22),
-    User = maps:get(con_user, Info, "root"),
-    AcceptHosts = maps:get(con_ssh_auto_accept, Info, false),
+connect_to_service(#{type := ssh , host := Host } = Info ) ->
+    {ok, Port} = maps:get(port, Info),
+    {ok, User} = maps:get(user, Info),
+    AcceptHosts = false,
     Options0 = [
                 {id_string, "TokenTranslationService"},
                 {user, User},
@@ -178,9 +176,9 @@ connect_to_service(#{con_type := ssh , con_host := Host } = Info ) ->
                 {silently_accept_hosts, AcceptHosts}
                ],
     OptionsMapping = [
-                      {con_ssh_user_dir, user_dir},
-                      {con_pass, password},
-                      {con_ssh_key_pass, rsa_pass_phrase}
+                      {ssh_dir, user_dir},
+                      {passwd, password},
+                      {ssh_key_pass, rsa_pass_phrase}
                      ],
     AddOption = fun({MapKey, OptionKey}, {Inf, Options}) ->
                         case maps:get(MapKey, Inf, undefined) of
@@ -196,22 +194,27 @@ get_cmd(#{cmd := Cmd}) ->
 get_cmd(_) ->
     {error, no_cmd}.
 
+get_connection_info(#{connection := ConnInfo}) ->
+    {ok, ConnInfo};
+get_connection_info(_) ->
+    {error, no_connection_info}.
 
-create_command_list_and_update_state(Cmd, UserInfo,
-                                     #{con_type := ConType} = ServiceInfo,
+
+create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
                                      {ok, Connection}, State)
   when is_binary(Cmd) ->
     #state{
        action = Action,
        params = Params,
-       user_id = UserId,
+       user_info = UserInfo,
        cred_state = CredState
       } = State,
     ConfParams = maps:get(plugin_conf, ServiceInfo, #{}),
+    ConnInfo = maps:get(connection, ServiceInfo, #{}),
+    ConnType = maps:get(type, ConnInfo, local),
     {ok, Version} = application:get_key(tts, vsn),
     ScriptParam0 = #{
       tts_version => list_to_binary(Version),
-      tts_userid => UserId,
       action => Action,
       params => Params,
       conf_params => ConfParams,
@@ -222,14 +225,16 @@ create_command_list_and_update_state(Cmd, UserInfo,
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,
-                     connection = Connection, con_type = ConType}}.
+                     connection = Connection, con_type = ConnType}}.
 
 
-add_user_info_if_present(ScriptParam, #{} = UserInfo) ->
-    Update = #{user_info => UserInfo},
-    maps:merge(ScriptParam, Update);
-add_user_info_if_present(ScriptParam, _UserInfo) ->
-    ScriptParam.
+add_user_info_if_present(ScriptParam, undefined) ->
+    ScriptParam;
+add_user_info_if_present(ScriptParam, UserInfo) ->
+    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, PluginUserInfo} = tts_userinfo:return(plugin_info, UserInfo),
+    Update = #{tts_userid => UserId, user_info => PluginUserInfo},
+    maps:merge(ScriptParam, Update).
 
 
 
