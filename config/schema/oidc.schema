@@ -96,7 +96,7 @@
                             (Config == undefined) or (Scope == undefined) or
                             (Desc == undefined) of
                             true ->
-                                Msg = io_lib:format("all parameter of an OpenId Connect Provider MUST be specified: Id: ~p",[Id]),
+                                Msg = io_lib:format("all parameter of an OpenId Connect Provider MUST be specified: Name: ~p",[Id]),
                                 cuttlefish:invalid(Msg);
                             false ->
                                 ok

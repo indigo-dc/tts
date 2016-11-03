@@ -73,7 +73,7 @@ do_login(Issuer, Subject0, Token0) ->
     catch Error:Reason ->
             logout(SessPid),
             StackTrace = erlang:get_stacktrace(),
-            lager:error("SESS[~p] login failed due to ~p:~p at ~p",
+            lager:error("SESS~p login failed due to ~p:~p at ~p",
                         [SessionId, Error, Reason, StackTrace]),
             {error, internal}
     end.
@@ -108,31 +108,30 @@ get_openid_provider_list() ->
 
 
 get_service_list_for(Session) ->
-    {ok, UserId} = tts_session:get_userid(Session),
-    {ok, ServiceList} = tts_service:get_list(UserId),
+    {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, ServiceList} = tts_service:get_list(UserInfo),
     {ok, ServiceList}.
 
 get_credential_list_for(Session) ->
-    {ok, UserId} = tts_session:get_userid(Session),
-    {ok, CredentialList} = tts_credential:get_list(UserId),
+    {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, CredentialList} = tts_credential:get_list(UserInfo),
     {ok, CredentialList}.
 
 
 request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, UserId} = tts_session:get_userid(Session),
     {ok, Token} = tts_session:get_token(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     true = tts_service:is_enabled(ServiceId),
-    case tts_credential:request(ServiceId, UserId, UserInfo, Interface, Token,
+    case tts_credential:request(ServiceId, UserInfo, Interface, Token,
                                 Params) of
         {ok, Credential, Log} ->
             #{id := CredId} = Credential,
-            lager:info("SESS[~p] got credential ~p for ~p",
+            lager:info("SESS~p got credential ~p for ~p",
                        [SessionId, CredId, ServiceId]),
             {ok, Credential, Log};
         {error, Reason, Log} ->
-            lager:warning("SESS[~p] credential request for ~p failed with ~p",
+            lager:warning("SESS~p credential request for ~p failed with ~p",
                           [SessionId, ServiceId, Reason]),
             {error, Reason, Log}
     end.
@@ -140,15 +139,14 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
 
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, UserId} = tts_session:get_userid(Session),
     {ok, SessionId} = tts_session:get_id(Session),
-    case tts_credential:revoke(CredId, UserId, UserInfo) of
+    case tts_credential:revoke(CredId, UserInfo) of
         {ok, Result, Log}  ->
-            lager:info("SESS[~p] revoked credential ~p",
+            lager:info("SESS~p revoked credential ~p",
                        [SessionId, CredId]),
             {ok, Result, Log};
         {error, Error, Log} ->
-            lager:warning("SESS[~p] revocation of credential ~p failed with ~p",
+            lager:warning("SESS~p revocation of credential ~p failed with ~p",
                           [SessionId, CredId, Error]),
             {error, Error, Log}
     end.
@@ -210,7 +208,7 @@ update_session(Issuer, Subject, Token, SessionPid) ->
     ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = tts_session:is_logged_in(SessionPid),
     {ok, DisplayName} = tts_session:get_display_name(SessionPid),
-    lager:info("SESS[~p] logged in as ~p [~p at ~p]",
+    lager:info("SESS~p logged in as ~p [~p at ~p]",
                [SessId, DisplayName, Subject, Issuer]),
 
     {ok, #{session_id => SessId, session_token => SessToken,

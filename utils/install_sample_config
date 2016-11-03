@@ -1,6 +1,7 @@
 #!/bin/bash
 DATA_DIR=~/.config/tts
 BACKUPDIR=~/.config/tts_`date +%Y%m%d_%H%M%S`
+CONF_FILE=_build/default/rel/tts/etc/tts.conf
 
 if [ -d "$DATA_DIR" ]; then
     echo "storing backup of current config in $BACKUPDIR"
@@ -8,59 +9,9 @@ if [ -d "$DATA_DIR" ]; then
 fi
 
 echo -n "copy configuration "
-export platform_data_dir=$DATA_DIR
-export platform_etc_dir=$DATA_DIR
-export idh_script="scripts/idh-single-user.py"
-export cache_entries="CacheMaxEntries = 0"
-export oidc_info="\
-# WARNING: these settings only allow http://localhost:8080\
-# NOT MENT FOR PRODUCTION!"
-export oidc_google_id="65375832888-m99kcr0vu8qq95h588b1rhi52ei234qo.apps.googleusercontent.com"
-export oidc_google_secret="MEfMXcaQtckJPBctTrAuSQkJ"
-export oidc_iam_id="e70e7190-f19a-44be-8f6c-d64cad3771b9"
-export oidc_iam_secret="AN5pY379_Z_1jgiiAzmQFB4lYMsBYJOAQrCoTtf2stPA6dMghW5KAoKob4zCDCg_yKBEHe8zKP2KuiWxV34zWzw"
-export main_additional_entries="DebugMode = false"
-export plugin_ssh_override_user="False"
-
-CONF_DIRS="./
-oidc/
-services/"
-SCRIPT_DIRS="scripts/
-plugins/"
-
-for d in $CONF_DIRS
-do
-    OutDir=`realpath -m $DATA_DIR/$d`
-    mkdir -p $OutDir
-    # echo "*** $OutDir"
-    for f in ./tts_config/$d*
-    do
-        echo -n "."
-        FileName=`basename $f`
-        InFile=`realpath $f`
-        OutFile=$OutDir/$FileName
-        if [ -f $InFile ]; then
-            # echo "   $InFile -> $OutFile"
-            cat $InFile | ./utils/mo > $OutFile
-        fi
-    done
-done
-for d in $SCRIPT_DIRS
-do
-    OutDir=`realpath -m $DATA_DIR/$d`
-    mkdir -p $OutDir
-    # echo "*** $OutDir"
-    for f in ./tts_config/$d*
-    do
-        echo -n "."
-        FileName=`basename $f`
-        InFile=`realpath $f`
-        OutFile=$OutDir/$FileName
-        if [ -f $InFile ]; then
-            # echo "   $InFile -> $OutFile"
-            cat $InFile | ./utils/mo > $OutFile
-            chmod u+x $OutFile
-        fi
-    done
-done
+echo -n "."
+mkdir -p $DATA_DIR
+echo -n "."
+cp $CONF_FILE $DATA_DIR
+echo -n "."
 echo " done"

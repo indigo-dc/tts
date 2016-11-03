@@ -13,3 +13,4 @@ compile: check
 
 install: compile
 	cp tts_ui.js ../priv/http_static/js/
+	cp tts_ui.js ../_build/default/lib/tts/priv/http_static/js/

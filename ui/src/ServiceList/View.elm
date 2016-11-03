@@ -28,8 +28,6 @@ view model =
                     [ thead []
                         [ tr []
                             [ th [] [ text "Id" ]
-                            , th [] [ text "Type" ]
-                            , th [] [ text "Host" ]
                             , th [] [ text "Description" ]
                             , th [] [ text "#Credentials" ]
                             , th [] [ text "Action" ]

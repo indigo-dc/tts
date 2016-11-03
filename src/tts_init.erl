@@ -48,17 +48,22 @@ stop(Pid) ->
 %% gen_server.
 
 init([]) ->
-    gen_server:cast(self(), add_oidc),
+    gen_server:cast(self(), start_database),
     {ok, #state{}, 1}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast(start_database, State) ->
+    start_database(),
+    gen_server:cast(self(), add_oidc),
+    {noreply, State};
 handle_cast(add_oidc, State) ->
     add_openid_provider(),
     gen_server:cast(self(), add_services),
     {noreply, State};
 handle_cast(add_services, State) ->
+    add_services(),
     gen_server:cast(self(), start_http),
     {noreply, State};
 handle_cast(start_http, State) ->
@@ -83,6 +88,12 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
+
+start_database() ->
+    ok = tts_data_sqlite:reconfigure(),
+    ok.
+
+
 add_openid_provider() ->
     LocalEndpoint = local_endpoint(),
     ProviderList = ?CONFIG(provider_list, []),
@@ -100,22 +111,34 @@ add_openid_provider([], _) ->
     ok.
 
 
+add_services() ->
+    ServiceList = ?CONFIG(service_list),
+    ok = add_services(ServiceList),
+    ok.
+
+add_services([ConfigMap | T]) ->
+    {ok, Id} = tts_service:add(ConfigMap),
+    tts_service:update_params(Id),
+    add_services(T);
+add_services(undefined) ->
+    ok;
+add_services([]) ->
+    ok.
 
 
 
 start_web_interface() ->
     oidcc_client:register(tts_oidc_client),
     EpMain = ?CONFIG(ep_main),
-    EpOidc = relative_path("oidc"),
-    EpApiBase = relative_path("api"),
-    EpStatic = relative_path("static/[...]"),
+    EpOidc = tts_http_util:relative_path("oidc"),
+    EpApiBase = tts_http_util:relative_path("api"),
+    EpStatic = tts_http_util:relative_path("static/[...]"),
     EpApi = tts_rest:dispatch_mapping(EpApiBase),
     Dispatch = cowboy_router:compile( [{'_',
                                          [
                                           {EpStatic, cowboy_static,
                                            {priv_dir, tts, "http_static"}},
                                           {EpApi, tts_rest, []},
-                                          %% {EpMain, tts_http_prep, []},
                                           {EpMain, cowboy_static,
                                            {priv_file, tts,
                                             "http_static/index.html"}},
@@ -148,9 +171,6 @@ start_web_interface() ->
     end,
     ok.
 
-relative_path(Append) ->
-    Base = ?CONFIG(ep_main),
-    binary:list_to_bin(io_lib:format("~s~s", [Base, Append])).
 
 local_endpoint() ->
     HostName = binary:list_to_bin(?CONFIG(hostname)),

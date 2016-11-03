@@ -47,10 +47,17 @@ endif
 
 
 run: rel
+	if [ -f ~/.config/tts/tts.conf ] ; then \
+		cp ~/.config/tts/tts.conf _build/default/rel/tts/etc/tts.conf ; \
+	fi ;
 	./_build/default/rel/tts/bin/tts console
 
 install_deps:
 	$(REBAR) install_deps
+
+sample_config: rel
+	./utils/install_sample_config
+
 
 clean_package:
 	rm -rf package

@@ -14,9 +14,6 @@ decodeService =
         |> required "id" string
         |> required "description" string
         |> required "enabled" bool
-        |> required "host" string
-        |> required "port" string
-        |> required "type" string
         |> required "cred_count" int
         |> required "cred_limit" int
         |> required "limit_reached" bool

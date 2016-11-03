@@ -25,8 +25,6 @@ view service =
     in
         tr []
             [ td [] [ text service.id ]
-            , td [] [ text service.type' ]
-            , td [] [ text service.host ]
             , td [] [ text service.description ]
             , td [] [ text credText ]
             , td []

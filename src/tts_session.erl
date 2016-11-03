@@ -20,7 +20,7 @@
 
 
 %% API.
--export([start_link/2]).
+-export([start_link/1]).
 -export([close/1]).
 
 -export([get_id/1]).
@@ -54,9 +54,9 @@
 
 %% API.
 
--spec start_link(Id :: binary(), Token :: binary()) -> {ok, pid()}.
-start_link(Id, Token) ->
-    gen_server:start_link(?MODULE, [Id, Token], []).
+-spec start_link(Token :: binary()) -> {ok, pid()}.
+start_link(Token) ->
+    gen_server:start_link(?MODULE, [Token], []).
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
@@ -126,68 +126,59 @@ is_same_ip(IP, Pid) ->
 -record(state, {
           id = unkonwn,
           sess_token = undefined,
-          iss = undefined,
-          sub = undefined,
           user_agent = undefined,
           ip = undefined,
           token = none,
-          oidc_info = #{},
+          user_info = undefined,
           max_age = 10
          }).
 
 
-init([Id, Token]) ->
-    lager:info("SESS[~p] starting", [Id]),
+init([Token]) ->
+    Id = self(),
+    lager:info("SESS~p starting", [Id]),
     MaxAge = ?CONFIG(session_timeout, 10000),
-    {ok, #state{id = Id, sess_token=Token, max_age=MaxAge}}.
+    {ok, UserInfo} = tts_userinfo:new(),
+    {ok, #state{id = Id, sess_token=Token, max_age=MaxAge, user_info=UserInfo}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
     {reply, {ok, Id}, State, MA};
 handle_call(get_sess_token, _From, #state{sess_token=Token,
                                           max_age=MA}=State) ->
     {reply, {ok, Token}, State, MA};
-handle_call(get_userid, _From, #state{max_age=MA}=State) ->
-    {reply, userid(State), State, MA};
+handle_call(get_userid, _From, #state{max_age=MA, user_info=UserInfo}=State) ->
+    Result = tts_userinfo:return(id, UserInfo),
+    {reply, Result, State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
     {reply, ok, State#state{max_age=MA}, MA};
-handle_call(get_iss_sub, _From,
-            #state{max_age=MA, iss=Issuer, sub=Subject}=State) ->
-    {reply, {ok, Issuer, Subject}, State, MA};
-handle_call({set_iss_sub, Issuer, Subject}, _From, #state{max_age=MA}=State) ->
-    {reply, ok, State#state{iss=Issuer, sub=Subject}, MA};
-handle_call({set_token, Token0}, _From, #state{max_age=MA}=State) ->
-    UserInfo0 = parse_known_fields((maps:get(user_info, Token0, #{}))),
-    IdToken = maps:get(id, Token0, #{}),
-    NewState = case IdToken of
-                   #{claims := #{iss := Issuer, sub := Subject } } ->
-                       State#state{iss=Issuer, sub=Subject};
-                   _ -> State
-               end,
-    RemoveClaims = [aud, exp, nbf, iat, jti, azp, kid, aud, auth_time, at_hash,
-                    c_hash],
-    Claims = maps:without(RemoveClaims, maps:get(claims, IdToken, #{})),
-    UserInfo = maps:merge(UserInfo0, Claims),
+handle_call(get_iss_sub, _From, #state{max_age=MA, user_info=Info}=State) ->
+    Result = tts_userinfo:return(issuer_subject, Info),
+    {reply, Result, State, MA};
+handle_call({set_iss_sub, Issuer, Subject}, _From,
+            #state{max_age=MA, user_info=Info}=State) ->
+    {ok, NewInfo} = tts_userinfo:update_iss_sub(Issuer, Subject, Info),
+    {reply, ok, State#state{user_info=NewInfo}, MA};
+handle_call({set_token, Token}, _From,
+            #state{user_info=Info, max_age=MA}=State) ->
+    IdInfo = maps:get(user_info, Token, #{}),
+    IdToken = maps:get(id, Token, #{}),
+    {ok, Info1} = tts_userinfo:update_id_token(IdToken, Info),
+    {ok, Info2} = tts_userinfo:update_id_info(IdInfo, Info1),
     TokenKeys = [access, id, refresh],
-    Token = maps:with(TokenKeys, Token0),
-    {reply, ok, NewState#state{token=Token, oidc_info=UserInfo}, MA};
+    TokenMap = maps:with(TokenKeys, Token),
+    {reply, ok, State#state{token=TokenMap, user_info=Info2}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
-%% handle_call({set_user_info, UserInfo}, _From, #state{max_age=MA} = State) ->
-%%     {reply, ok, State#state{user_info=UserInfo}, MA};
-handle_call(get_user_info, _From,
-            #state{max_age=MA, oidc_info=Info0, sub=Sub, iss=Iss} =State) ->
-    Update = #{iss => Iss, sub => Sub},
-    Info = maps:merge(Info0, Update),
+handle_call(get_user_info, _From, #state{max_age=MA, user_info=Info} =State) ->
     {reply, {ok, Info}, State, MA};
-handle_call(get_display_name, _From, #state{max_age=MA}=State) ->
-    {reply, {ok, display_name(State)}, State, MA};
-handle_call(is_logged_in, _From, #state{iss=Iss, sub=Sub, max_age=MA}=State)
-  when is_binary(Iss), is_binary(Sub)->
-    {reply, true, State, MA};
-handle_call(is_logged_in, _From, #state{max_age=MA}=State) ->
-    {reply, false, State, MA};
+handle_call(get_display_name, _Frm, #state{max_age=MA, user_info=Info}=State) ->
+    Result = tts_userinfo:return(display_name, Info),
+    {reply, Result, State, MA};
+handle_call(is_logged_in, _From, #state{user_info=Info, max_age=MA}=State) ->
+    Result = tts_userinfo:return(logged_in, Info),
+    {reply, Result, State, MA};
 handle_call({is_user_agent, UserAgent}, _From,
             #state{user_agent=undefined, max_age=MA}=State) ->
     {reply, true, State#state{user_agent=UserAgent}, MA};
@@ -208,50 +199,22 @@ handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 handle_cast(close, #state{id=ID} = State) ->
-    lager:debug("SESS[~p] stopping", [ID]),
+    lager:debug("SESS~p stopping", [ID]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_info(timeout, #state{id=ID, sess_token=Token} = State) ->
-    lager:info("SESS[~p] timeout, asking for termination", [ID]),
+    lager:info("SESS~p timeout, asking for termination", [ID]),
     tts_session_mgr:session_wants_to_close(Token),
     {noreply, State, 5000};
 handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(_Reason, #state{id=ID, sess_token=Token}) ->
-    lager:info("SESS[~p] terminating", [ID]),
+    lager:info("SESS~p terminating", [ID]),
     tts_session_mgr:session_terminating(Token),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
-
-
-userid(#state{iss=Issuer, sub=Subject})
-  when is_binary(Issuer), is_binary(Subject) ->
-    Id = base64url:encode(jsx:encode(#{issuer => Issuer, subject => Subject})),
-    {ok, Id};
-userid(_) ->
-    {error, not_set}.
-
-display_name(#state{sub=Subject, iss=Issuer, oidc_info=OidcInfo}) ->
-    case maps:get(name, OidcInfo, undefined) of
-        undefined -> << Subject/binary, <<"@">>/binary, Issuer/binary >>;
-        Other -> Other
-    end.
-
-parse_known_fields(Map) ->
-    List = maps:to_list(Map),
-    parse_known_fields(List, []).
-
-parse_known_fields([], List) ->
-    maps:from_list(lists:reverse(List));
-parse_known_fields([ {groups, GroupData} | T], List)
-  when is_binary(GroupData) ->
-    Groups = binary:split(GroupData, [<<",">>], [global, trim_all]),
-    parse_known_fields(T, [{groups, Groups} | List]);
-parse_known_fields([H | T], List) ->
-    parse_known_fields(T, [H | List]).

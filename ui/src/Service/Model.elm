@@ -5,9 +5,6 @@ type alias Model =
     { id : String
     , description : String
     , enabled : Bool
-    , host : String
-    , port' : String
-    , type' : String
     , credCount : Int
     , credLimit : Int
     , limitReached : Bool

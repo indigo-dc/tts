@@ -388,16 +388,16 @@ safe_binary_to_integer(Version) ->
                        {<<"credential_data">>, cred_data }
                       ]).
 
-id_to_url(Id, CurrentVersion) ->
-    Base = ?CONFIG(ep_api),
-    Version = list_to_binary(io_lib:format("v~p", [CurrentVersion])),
+id_to_url(Id, ApiVersion) ->
+    ApiBase = tts_http_util:relative_path("api"),
+    Version = list_to_binary(io_lib:format("v~p", [ApiVersion])),
     PathElements =[Version, <<"credential_data">>, Id],
     Concat = fun(Element, Path) ->
                      Sep = <<"/">>,
                      << Path/binary, Sep/binary, Element/binary >>
              end,
     Path = lists:foldl(Concat, <<>>, PathElements),
-    << Base/binary, Path/binary>>.
+    << ApiBase/binary, Path/binary>>.
 
 
 verify_type(Type) ->
