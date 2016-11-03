@@ -9,16 +9,54 @@
           ]}.
 
 %% @doc the credential limit for this service
-{mapping, "service.$id.credential_limit", "tts.service_list.c", [
+{mapping, "service.$id.credential_limit", "tts.service_list.b", [
           {datatype, [{atom, infinite}, integer]}
           ]}.
 
-%% @doc the way tts connects to the place where to start the plugin
-%% @see service.$id.cmd
-{mapping, "service.$id.connection.type", "tts.service_list.b", [
-          {datatype, {enum, [local]}}
+
+%% @doc the credential limit for this service
+{mapping, "service.$id.allow_same_state", "tts.service_list.c", [
+          {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
+%% @doc the way tts connects to the place where to start the plugin
+%% this can be either local or ssh
+%% @see service.$id.cmd
+{mapping, "service.$id.connection.type", "tts.service_list.d", [
+          {datatype, {enum, [local, ssh]}}
+          ]}.
+
+%% @doc the username to use for the connection
+{mapping, "service.$id.connection.user", "tts.service_list.e", [
+          {datatype, string}
+          ]}.
+
+%% @doc the password to use for the connection
+{mapping, "service.$id.connection.password", "tts.service_list.f", [
+          {datatype, string}
+          ]}.
+
+%% @doc the host to connect to
+{mapping, "service.$id.connection.host", "tts.service_list.g", [
+          {datatype, string}
+          ]}.
+
+%% @doc the port to connect to
+{mapping, "service.$id.connection.port", "tts.service_list.h", [
+          {datatype, integer}
+          ]}.
+
+
+%% @doc the sshDir to use when connecting
+{mapping, "service.$id.connection.ssh_dir", "tts.service_list.i", [
+          {datatype, string}
+          ]}.
+
+
+%% @doc the password for the ssh private key
+{mapping, "service.$id.connection.ssh_key_pass", "tts.service_list.j", [
+          {datatype, string}
+          ]}.
 
 
 {translation, "tts.service_list",
@@ -36,18 +74,33 @@
          DescList = TypeFilter("service.$id.description"),
          CmdList = TypeFilter("service.$id.cmd"),
          CredLimitList = TypeFilter("service.$id.credential_limit"),
+         SameStateList = TypeFilter("service.$id.allow_same_state"),
          ConnTypeList = TypeFilter("service.$id.connection.type"),
+         ConnUserList = TypeFilter("service.$id.connection.user"),
+         ConnPasswdList = TypeFilter("service.$id.connection.password"),
+         ConnHostList = TypeFilter("service.$id.connection.host"),
+         ConnPortList = TypeFilter("service.$id.connection.port"),
+         ConnSshDirList = TypeFilter("service.$id.connection.ssh_dir"),
+         ConnSshKeyPassList = TypeFilter("service.$id.connection.ssh_key_pass"),
 
 
          Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
          Cmds = [ {Id, Cmd} || {[_, Id, _], Cmd} <- CmdList ],
-         CredLimits = [ {Id, Limit} || {[_, Id, _], Limit} <- CredLimitList ],
-         ConnTypes = [ {Id, Type} || {[_, Id, _, _], Type} <- ConnTypeList ],
+         CredLimits = [ {Id, Limit} || {[_, Id, _], Limit} <- CredLimitList],
+         SameStates = [ {Id, Allow} || {[_, Id, _], Allow} <- SameStateList],
+         ConnTypes = [ {Id, Type} || {[_, Id, _, _], Type} <- ConnTypeList],
+         ConnUsers = [ {Id, User} || {[_, Id, _, _], User} <- ConnUserList],
+         ConnPasswds = [ {Id, Pass} || {[_, Id, _, _], Pass} <- ConnPasswdList],
+         ConnHosts = [ {Id, Host} || {[_, Id, _, _], Host} <- ConnHostList],
+         ConnPorts = [ {Id, Port} || {[_, Id, _, _], Port} <- ConnPortList],
+         ConnDirs = [ {Id, Dir} || {[_, Id, _, _], Dir} <- ConnSshDirList],
+         ConnKeyPasses = [ {Id, Pass} ||
+                             {[_, Id, _, _], Pass} <- ConnSshKeyPassList],
 
          CreateSetting =
              fun({Id, Desc}, Result) ->
                      Cmd = case lists:keyfind(Id, 1, Cmds) of
-                               {Id, C} -> list_to_binary(C);
+                               {Id, C} -> C;
                                _ -> undefined
                            end,
                      CredLimit = case lists:keyfind(Id, 1, CredLimits) of
@@ -59,24 +112,74 @@
                                             -> Atom;
                                      _ -> undefined
                                  end,
+                     SameState = case lists:keyfind(Id, 1, SameStates) of
+                                     {Id, Allow}
+                                            -> Allow;
+                                     _ -> false
+                                 end,
                      ConnType = case lists:keyfind(Id, 1, ConnTypes) of
                                     {Id, Type} -> Type;
                                     _ -> undefined
                                 end,
 
+                     ConnUser = case lists:keyfind(Id, 1, ConnUsers) of
+                                    {Id, User} -> User;
+                                    _ -> undefined
+                                end,
+                     ConnPasswd = case lists:keyfind(Id, 1, ConnPasswds) of
+                                    {Id, Pass} -> Pass;
+                                    _ -> undefined
+                                end,
+                     ConnHost = case lists:keyfind(Id, 1, ConnHosts) of
+                                    {Id, Host} -> Host;
+                                    _ -> undefined
+                                end,
+                     ConnPort = case lists:keyfind(Id, 1, ConnPorts) of
+                                    {Id, Port}
+                                      when is_integer(Port), Port > 0 , Port < 65536 ->
+                                         Port;
+                                    {Id, Port} when is_integer(Port) ->
+                                        BadPortMsg = io_lib:format("the given port number (~p) for service ~p is out of range",[Port, Id]),
+                                        cuttlefish:invalid(BadPortMsg);
+                                    _ -> 22
+                                end,
+                     ConnSshDir = case lists:keyfind(Id, 1, ConnDirs) of
+                                    {Id, Dir} -> list_to_binary(Dir);
+                                    _ -> undefined
+                                end,
+                     ConnSshKeyPass = case lists:keyfind(Id, 1, ConnKeyPasses) of
+                                    {Id, Passwd} -> Passwd;
+                                    _ -> undefined
+                                end,
+
                      case (Cmd == undefined) or (CredLimit == undefined) or
-                         (ConnType == undefined) of
+                         (ConnType == undefined) or
+                         ( (ConnType == ssh) and ( (ConnHost == undefined)
+                                                   or ( ConnPort == undefined)
+                                                   or ( ConnUser == undefined) )
+                         )
+                     of
                          true ->
-                             Msg = io_lib:format("not all mandatory parameter of the service ~p are given",[Id]),
-                             cuttlefish:invalid(Msg);
+                             MissingParamMsg = io_lib:format("not all mandatory parameter of the service ~p are given",[Id]),
+                             cuttlefish:invalid(MissingParamMsg);
                          false ->
                              ok
                      end,
                      Setting = #{ id => list_to_binary(Id),
                                   description => list_to_binary(Desc),
-                                  cmd => Cmd,
-                                  credential_limit => CredLimit,
-                                  connection_type => ConnType },
+                                  cmd => list_to_binary(Cmd),
+                                  cred_limit => CredLimit,
+                                  allow_same_state => SameState,
+                                  connection => #{
+                                    type => ConnType,
+                                    user => ConnUser,
+                                    passwd => ConnPasswd,
+                                    host => ConnHost,
+                                    port => ConnPort,
+                                    ssh_dir => ConnSshDir,
+                                    ssh_key_pass => ConnSshKeyPass
+                                   }
+                                  },
                      [ Setting | Result]
              end,
          lists:foldl(CreateSetting, [], Descs)

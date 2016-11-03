@@ -95,10 +95,36 @@
           {datatype, file}
           ]}.
 
+%% @doc The base path at the server
+%% e.g. https://server.my.domain/tts would main_path be 'tts'
 {mapping, "main_path", "tts.ep_main", [
+          {datatype, string},
           {default, "/"},
           hidden
           ]}.
+
+{translation, "tts.ep_main",
+ fun(Conf) ->
+         Path = cuttlefish:conf_get("main_path", Conf),
+         BinPath = list_to_binary(Path),
+         case binary:last(BinPath) of
+             $/ -> BinPath;
+             _ ->
+                 Slash = <<"/">>,
+                 << BinPath/binary, Slash/binary>>
+         end
+ end}.
+%% {mapping, "redirection.enabled", "tts.redirection_enabled", [
+%%           {datatype, {enum, [true, false]}},
+%%           {default, false},
+%%           {commented, false}
+%%           ]}.
+
+%% {mapping, "redirection.listen_port", "tts.redirection_port", [
+%%           {datatype, integer},
+%%           {default, 8000},
+%%           {commented, 8000},
+%%           ]}.
 
 {mapping, "debug_mode", "tts.debug_mode", [
           hidden,
