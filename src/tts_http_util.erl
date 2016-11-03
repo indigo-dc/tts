@@ -3,7 +3,8 @@
 -export([
          perform_cookie_action/4,
          create_cookie_opts/1,
-         cookie_name/0
+         cookie_name/0,
+         relative_path/1
         ]).
 
 -define(COOKIE, <<"tts_session">>).
@@ -29,6 +30,11 @@ create_cookie_opts(MaxAge) ->
         _ ->
             BasicOpts
     end.
+
+relative_path(Append) ->
+    AppendBin = list_to_binary(Append),
+    Base = ?CONFIG(ep_main),
+    << Base/binary, AppendBin/binary >>.
 
 cookie_name() ->
     ?COOKIE.
