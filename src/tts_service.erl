@@ -28,25 +28,23 @@
 -export([is_enabled/1]).
 -export([allows_same_state/1]).
 -export([get_credential_limit/1]).
--export([group_plugin_configs/1]).
+%% -export([group_plugin_configs/1]).
 
 get_list() ->
      tts_data:service_get_list().
 
-get_list(#{site := #{uid := UserId}})  ->
-    get_list(UserId);
-get_list(#{uid := UserId})  ->
-    get_list(UserId);
-get_list(UserId) ->
+get_list(UserInfo) ->
     %TODO: implement a whitelist per service
     {ok, ServiceList} = tts_data:service_get_list(),
     UpdateLimit = fun(Service, List) ->
                       #{ id := ServiceId
                        } = Service,
                       Limit = maps:get(cred_limit, Service, 0),
-                      {ok, Count} = tts_credential:get_count(UserId, ServiceId),
+                      {ok, Count} = tts_credential:get_count(UserInfo,
+                                                             ServiceId),
                       LimitReached = (Count >= Limit),
                       Update = #{ limit_reached => LimitReached,
+                                  cred_limit => Limit,
                                   cred_count => Count
                                 },
                       [ maps:merge(Service, Update) | List]
@@ -95,9 +93,6 @@ set_enabled_to(Value, Id) ->
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     tts_data:service_add(ServiceId, maps:put(enabled, false, ServiceInfo)),
     {ok, ServiceId};
-add(ServiceMap) when is_map(ServiceMap) ->
-    ServiceInfo = map_to_atom_keys(ServiceMap),
-    add(ServiceInfo);
 add(_ServiceMap)  ->
     {error, invalid_config}.
 
@@ -114,113 +109,3 @@ update_params(Id) ->
             end;
         _ -> {error, not_found}
     end.
-
-
--include("tts.hrl").
--include_lib("public_key/include/public_key.hrl").
-
-map_to_atom_keys(ServiceMap) ->
-    List = maps:to_list(ServiceMap),
-    Map0 = maps:put(plugin_conf, [], map_to_atom_keys(List, #{})),
-    group_plugin_configs(Map0).
-
-map_to_atom_keys([], Map) ->
-    Map;
-map_to_atom_keys([{Key, Value}|T], Map) ->
-    AKey = to_atom(Key),
-    {ok, VerifiedValue} = verify_value(AKey, Value),
-    NewMap = maps:put(AKey, VerifiedValue, Map),
-    map_to_atom_keys(T, NewMap).
-
--define(KEYMAPPING, [
-                    {<<"Id">>, id},
-                    {<<"Type">>, type},
-                    {<<"Host">>, host},
-                    {<<"Port">>, port},
-                    {<<"Description">>, description},
-                    {<<"CredentialLimit">>, cred_limit},
-
-                    {<<"ConnectionType">>, con_type},
-                    {<<"ConnectionUser">>, con_user},
-                    {<<"ConnectionPassword">>, con_pass},
-                    {<<"ConnectionHost">>, con_host},
-                    {<<"ConnectionPort">>, con_port},
-                    {<<"ConnectionSshDir">>, con_ssh_user_dir},
-                    {<<"ConnectionSshKeyPass">>, con_ssh_key_pass},
-                    {<<"ConnectionSshAutoAcceptHosts">>, con_ssh_auto_accept},
-
-                    {<<"AllowSameState">>, allow_same_state},
-
-                    {<<"Cmd">>, cmd},
-
-
-                    {<<"ssh">>, ssh},
-                    {<<"local">>, local},
-                    {<<"none">>, local},
-
-                    {<<"undefined">>, undefined},
-                    {<<"true">>, true}
-                   ]).
-
-to_atom(Value) when is_list(Value) ->
-    to_atom(list_to_binary(Value));
-to_atom(Value) when is_binary(Value)->
-    to_atom(Value, Value).
-
-to_atom(Value, Default) when is_list(Value) ->
-    to_atom(list_to_binary(Value), Default);
-to_atom(BinaryKey, Default) ->
-    case lists:keyfind(BinaryKey, 1, ?KEYMAPPING) of
-        false ->
-            Default;
-        {_, AtomKey} ->
-            AtomKey
-    end.
-
-verify_value(con_ssh_user_dir, SshDir) ->
-    AbsSshDir = tts_file_util:to_abs(SshDir, ?CONFIG(service_config_path)),
-    {ok, AbsSshDir};
-verify_value(con_user, User) ->
-    {ok, User};
-verify_value(con_host, Host) ->
-    {ok, Host};
-verify_value(con_pass, Pass) ->
-    {ok, Pass};
-verify_value(con_port, Port) ->
-    {ok, list_to_integer(Port)};
-verify_value(con_ssh_key_pass, Pass) ->
-    {ok, Pass};
-verify_value(cred_limit, Limit) ->
-    {ok, list_to_integer(Limit)};
-
-verify_value(con_ssh_auto_accept, Value) ->
-    {ok, to_atom(Value, false)};
-verify_value(con_type, Value) ->
-    {ok, to_atom(Value, undefined)};
-verify_value(allow_same_state, Value) ->
-    {ok, to_atom(Value, false)};
-verify_value(cmd, Cmd) ->
-    {ok, tts_file_util:to_abs(to_bin(Cmd))};
-% default is to convert to binary
-verify_value(AKey, Value) when is_list(Value) ->
-    verify_value(AKey, list_to_binary(Value));
-verify_value(_AKey, Value) ->
-    {ok, Value}.
-
-to_bin(Val) when is_list(Val) ->
-    list_to_binary(Val);
-to_bin(Val) when is_binary(Val) ->
-    Val.
-
-group_plugin_configs(Map) ->
-    group_plugin_configs(maps:to_list(Map), #{}).
-
-group_plugin_configs([], Map) ->
-    Map;
-group_plugin_configs([ {<< Prefix:7/binary, Key/binary >>, Value} | T],
-                        Map) when Prefix == <<"Plugin.">> ->
-    PluginConf = maps:get(plugin_conf, Map),
-    NewPluginConf = [ {Key, Value} | PluginConf ],
-    group_plugin_configs( T, maps:put( plugin_conf, NewPluginConf, Map));
-group_plugin_configs([{K, V} | T], Map) ->
-    group_plugin_configs(T, maps:put(K, V, Map)).
