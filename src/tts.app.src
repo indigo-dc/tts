@@ -1,12 +1,11 @@
 {application, tts, [
 	{description, ""},
-	{vsn, "1.0.0-devel"},
+	{vsn, "semver"},
 	{modules, []},
 	{registered, [tts_sup]},
 	{applications, [
         kernel,
         stdlib,
-        sasl,
         cowboy,
         crypto,
         ssh,
