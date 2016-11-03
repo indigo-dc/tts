@@ -37,8 +37,6 @@
 -export([code_change/3]).
 
 -record(state, {
-          next_session_num = 1,
-          restart_num = undefined
          }).
 
 %% API.
@@ -75,14 +73,13 @@ close_all_sessions() ->
 %% gen_server.
 
 init([]) ->
-    RestartTrigger = application:get_env(tts, session_min_restart_id, 8000),
-    {ok, #state{restart_num=RestartTrigger}}.
+    {ok, #state{}}.
 
-handle_call(new_session, _From, #state{next_session_num = Id} = State) ->
+handle_call(new_session, _From, State) ->
     Token = get_unique_token(),
-    Pid = start_session(Id, Token),
+    Pid = start_session(Token),
     ok = set_session_for_token(Token, Pid),
-    {reply, {ok, Pid}, State#state{next_session_num = Id+1}};
+    {reply, {ok, Pid}, State};
 handle_call({delete_session, ID}, _From, State) ->
     {ok, Pid} = lookup_session_pid(ID),
     delete_session(ID),
@@ -90,8 +87,7 @@ handle_call({delete_session, ID}, _From, State) ->
     {reply, ok, State};
 handle_call({purge_session, ID}, _From, State) ->
     delete_session(ID),
-    NewState = reset_session_num(State),
-    {reply, ok, NewState};
+    {reply, ok, State};
 handle_call(close_all_sessions, _From, State) ->
     SessionList = get_all_sessions(),
     delete_sessions(SessionList),
@@ -128,8 +124,8 @@ get_unique_token() ->
     Token = tts_utils:random_string(64),
     repeat_id_gen_if_needed(add_new_session_entry(Token)).
 
-start_session(Id, Token) ->
-    {ok, Pid} = tts_session_sup:new_session(Id, Token),
+start_session(Token) ->
+    {ok, Pid} = tts_session_sup:new_session(Token),
     Pid.
 
 repeat_id_gen_if_needed({ok, Token}) ->
@@ -165,14 +161,3 @@ delete_session(undefined) ->
 delete_session(ID) ->
     tts_data:sessions_delete(ID),
     ok.
-
-reset_session_num(#state{next_session_num = Num, restart_num=Trigger}=State)
-  when Num >= Trigger ->
-    case tts_data:sessions_count() of
-        0 ->
-            State#state{next_session_num = 1};
-        _ ->
-            State
-    end;
-reset_session_num(State) ->
-    State.
