@@ -16,50 +16,50 @@ garbage_test() ->
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
-get_list_test() ->
-    ServiceId = <<"ssh1">>,
-    OtherId = <<"ssh2">>,
-    UserId = <<"joe">>,
-    CredentialId = <<"cred1">>,
-    OtherCred = <<"cred2">>,
-    MeckModules = [tts_data_sqlite],
-    GetFun = fun(User) ->
-                     User = UserId,
-                     {ok, [#{service_id => ServiceId}]}
-             end,
-    GetCredFun = fun(CredId) ->
-                         case CredId of
-                             <<"cred1">> ->
-                                 {ok, #{user_id => <<"joe">>}};
-                             _ ->
-                                 {ok, #{user_id => no_one}}
-                         end
-                 end,
-    GetCountFun = fun(User, Service) ->
-                         case {User, Service} of
-                             {<<"joe">>, <<"ssh1">>} ->
-                                 {ok, 1};
-                             _ ->
-                                 {ok, 0}
-                         end
-                 end,
-    ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts_data_sqlite, credential_get_list, GetFun),
-    ok = meck:expect(tts_data_sqlite, credential_get, GetCredFun),
-    ok = meck:expect(tts_data_sqlite, credential_get_count, GetCountFun),
+%% get_list_test() ->
+%%     ServiceId = <<"ssh1">>,
+%%     OtherId = <<"ssh2">>,
+%%     UserId = <<"joe">>,
+%%     CredentialId = <<"cred1">>,
+%%     OtherCred = <<"cred2">>,
+%%     MeckModules = [tts_data_sqlite],
+%%     GetFun = fun(User) ->
+%%                      User = UserId,
+%%                      {ok, [#{service_id => ServiceId}]}
+%%              end,
+%%     GetCredFun = fun(CredId) ->
+%%                          case CredId of
+%%                              <<"cred1">> ->
+%%                                  {ok, #{user_id => <<"joe">>}};
+%%                              _ ->
+%%                                  {ok, #{user_id => no_one}}
+%%                          end
+%%                  end,
+%%     GetCountFun = fun(User, Service) ->
+%%                          case {User, Service} of
+%%                              {<<"joe">>, <<"ssh1">>} ->
+%%                                  {ok, 1};
+%%                              _ ->
+%%                                  {ok, 0}
+%%                          end
+%%                  end,
+%%     ok = test_util:meck_new(MeckModules),
+%%     ok = meck:expect(tts_data_sqlite, credential_get_list, GetFun),
+%%     ok = meck:expect(tts_data_sqlite, credential_get, GetCredFun),
+%%     ok = meck:expect(tts_data_sqlite, credential_get_count, GetCountFun),
 
 
-    {ok, Pid} = tts_credential:start_link(),
-    ?assertEqual({ok, [#{service_id => ServiceId}]},
-                 tts_credential:get_list(UserId)),
-    ?assertEqual({ok, 1}, tts_credential:get_count(UserId, ServiceId)),
-    ?assertEqual({ok, 0}, tts_credential:get_count(UserId, OtherId)),
-    ?assertEqual(true, tts_credential:exists(UserId, CredentialId)),
-    ?assertEqual(false, tts_credential:exists(UserId, OtherCred)),
-    ok = tts_credential:stop(),
-    ok = test_util:wait_for_process_to_die(Pid,100),
-    ok = test_util:meck_done(MeckModules),
-    ok.
+%%     {ok, Pid} = tts_credential:start_link(),
+%%     ?assertEqual({ok, [#{service_id => ServiceId}]},
+%%                  tts_credential:get_list(UserId)),
+%%     ?assertEqual({ok, 1}, tts_credential:get_count(UserId, ServiceId)),
+%%     ?assertEqual({ok, 0}, tts_credential:get_count(UserId, OtherId)),
+%%     ?assertEqual(true, tts_credential:exists(UserId, CredentialId)),
+%%     ?assertEqual(false, tts_credential:exists(UserId, OtherCred)),
+%%     ok = tts_credential:stop(),
+%%     ok = test_util:wait_for_process_to_die(Pid,100),
+%%     ok = test_util:meck_done(MeckModules),
+%%     ok.
 
 %% request_test() ->
 %%     Service1 = <<"ssh1">>,
