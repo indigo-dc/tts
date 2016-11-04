@@ -114,17 +114,20 @@
                  << BinPath/binary, Slash/binary>>
          end
  end}.
-%% {mapping, "redirection.enabled", "tts.redirection_enabled", [
-%%           {datatype, {enum, [true, false]}},
-%%           {default, false},
-%%           {commented, false}
-%%           ]}.
 
-%% {mapping, "redirection.listen_port", "tts.redirection_port", [
-%%           {datatype, integer},
-%%           {default, 8000},
-%%           {commented, 8000},
-%%           ]}.
+%% @doc set to true to enable redirection
+{mapping, "redirection.enable", "tts.redirection_enable", [
+          {datatype, {enum, [true, false]}},
+          {default, false},
+          {commented, false}
+          ]}.
+
+%% @doc the port number to listen at for traffic to redirect
+{mapping, "redirection.listen_port", "tts.redirection_port", [
+          {datatype, integer},
+          {default, 8080},
+          {commented, 8080}
+          ]}.
 
 {mapping, "debug_mode", "tts.debug_mode", [
           hidden,

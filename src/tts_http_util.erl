@@ -4,7 +4,8 @@
          perform_cookie_action/4,
          create_cookie_opts/1,
          cookie_name/0,
-         relative_path/1
+         relative_path/1,
+         whole_url/1
         ]).
 
 -define(COOKIE, <<"tts_session">>).
@@ -36,5 +37,32 @@ relative_path(Append) ->
     Base = ?CONFIG(ep_main),
     << Base/binary, AppendBin/binary >>.
 
+whole_url(Path) when is_binary(Path)->
+    HostName = binary:list_to_bin(?CONFIG(hostname)),
+    Prot = local_protocol(),
+    Port = local_port(),
+    << Prot/binary, HostName/binary, Port/binary, Path/binary >>;
+whole_url(Path) when is_list(Path) ->
+    whole_url(list_to_binary(Path)).
+
+
 cookie_name() ->
     ?COOKIE.
+
+local_port() ->
+    return_port(?CONFIG(port), ?CONFIG(ssl)).
+return_port(443, true) ->
+    <<"">>;
+return_port(80, false) ->
+    <<"">>;
+return_port(Port, _) ->
+    PortBin = binary:list_to_bin(io_lib:format("~p", [Port])),
+    << <<":">>/binary, PortBin/binary>>.
+
+
+local_protocol() ->
+    return_http(?CONFIG(ssl)).
+return_http(false) ->
+    <<"http://">>;
+return_http(_) ->
+    <<"https://">>.

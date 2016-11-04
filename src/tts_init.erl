@@ -147,15 +147,8 @@ start_web_interface() ->
 
     SSL = ?CONFIG(ssl),
     ListenPort = ?CONFIG(listen_port),
-
     case SSL of
-        false ->
-            {ok, _} = cowboy:start_http( http_handler
-                                         , 100
-                                         , [ {port, ListenPort} ]
-                                         , [{env, [{dispatch, Dispatch}]}]
-                                       );
-        _ ->
+        true ->
             %% CaCertFile = ?CONFIG(ca_cert_file),
             CertFile = ?CONFIG(cert_file),
             KeyFile = ?CONFIG(key_file),
@@ -167,33 +160,32 @@ start_web_interface() ->
                                               {keyfile, KeyFile}
                                             ]
                                           , [{env, [{dispatch, Dispatch}]}]
-                                        )
+                                        );
+        false ->
+            {ok, _} = cowboy:start_http( http_handler
+                                         , 100
+                                         , [ {port, ListenPort} ]
+                                         , [{env, [{dispatch, Dispatch}]}]
+                                       )
     end,
+    Redirect = ?CONFIG(redirection_enable),
+    RedirectPort = ?CONFIG(redirection_port),
+    RedirDispatch = cowboy_router:compile([{'_',
+                                                [
+                                                 {"/[...]", tts_redirection, []}
+                                                 ]}]),
+    case Redirect of
+        true ->
+            {ok, _} = cowboy:start_http( redirect_handler
+                                          , 100
+                                          , [ {port, RedirectPort}]
+                                          , [{env, [{dispatch, RedirDispatch}]}]
+                                        );
+        _ -> ok
+    end,
+
     ok.
 
 
 local_endpoint() ->
-    HostName = binary:list_to_bin(?CONFIG(hostname)),
-    EpReturn = <<"/oidc">>,
-    Prot = local_protocol(),
-    Port = local_port(),
-    << Prot/binary, HostName/binary, Port/binary, EpReturn/binary >>.
-
-
-local_port() ->
-    return_port(?CONFIG(port), ?CONFIG(ssl)).
-return_port(443, true) ->
-    <<"">>;
-return_port(80, false) ->
-    <<"">>;
-return_port(Port, _) ->
-    PortBin = binary:list_to_bin(io_lib:format("~p", [Port])),
-    << <<":">>/binary, PortBin/binary>>.
-
-
-local_protocol() ->
-    return_http(?CONFIG(ssl)).
-return_http(false) ->
-    <<"http://">>;
-return_http(_) ->
-    <<"https://">>.
+    tts_http_util:whole_url(tts_http_util:relative_path("oidc")).
