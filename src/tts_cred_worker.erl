@@ -111,7 +111,7 @@ handle_call({revoke_credential, ServiceId, UserInfo, CredState}, From,
     gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
 handle_call({get_params, ServiceId}, From, #state{client = undefined}=State) ->
-    NewState = State#state{ action = get_params,
+    NewState = State#state{ action = parameter,
                             client = From,
                             service_id = ServiceId
                           },

@@ -23,9 +23,8 @@
 -export([add/1]).
 -export([update_params/1]).
 
--export([disable/1]).
--export([enable/1]).
 -export([is_enabled/1]).
+-export([is_allowed/2]).
 -export([allows_same_state/1]).
 -export([get_credential_limit/1]).
 %% -export([group_plugin_configs/1]).
@@ -34,7 +33,7 @@ get_list() ->
      tts_data:service_get_list().
 
 get_list(UserInfo) ->
-    %TODO: implement a whitelist per service
+    %TODO: implement a whitelist/blacklist per service
     {ok, ServiceList} = tts_data:service_get_list(),
     UpdateLimit = fun(Service, List) ->
                       #{ id := ServiceId
@@ -76,18 +75,9 @@ allows_same_state(ServiceId) ->
         _ -> false
     end.
 
-enable(Id) ->
-    set_enabled_to(true, Id).
-
-disable(Id) ->
-    set_enabled_to(false, Id).
-
-set_enabled_to(Value, Id) ->
-    case tts_data:service_get(Id) of
-        {ok, {_Id, Info}} ->
-            tts_data:service_update(Id, maps:put(enabled, Value, Info));
-        Other -> Other
-    end.
+is_allowed(_UserInfo, _ServiceId) ->
+    %% TODO: implement a white/blacklist
+    true.
 
 
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
@@ -98,14 +88,30 @@ add(_ServiceMap)  ->
 
 
 update_params(Id) ->
-    case tts_data:service_get(Id) of
-        {ok, {Id, Info}} ->
-            case tts_credential:get_params(Id) of
-                {ok, ConfParams, RequestParams} ->
-                    Update = #{enabled => true, params => RequestParams,
-                               conf_params => ConfParams},
-                    tts_data:service_update(Id, maps:merge(Info, Update));
-                _ -> {error, update}
-            end;
-        _ -> {error, not_found}
-    end.
+    Service = tts_data:service_get(Id),
+    get_and_validate_parameter(Service).
+
+get_and_validate_parameter({ok, Id, Info}) ->
+    Result = tts_credential:get_params(Id),
+    validate_params_and_update_db(Id, Info, Result);
+get_and_validate_parameter(_) ->
+    {error, not_found}.
+
+
+validate_params_and_update_db(Id, Info, {ok, ConfParams, RequestParams}) ->
+    Update = #{enabled => true, params => RequestParams,
+               conf_params => ConfParams},
+    NewInfo = maps:merge(Info, Update),
+    IsValid = validate_parameter(RequestParams, ConfParams),
+    update_service(IsValid, Id, NewInfo);
+validate_params_and_update_db(_, _, _) ->
+    {error, bad_config}.
+
+validate_parameter(_, _) ->
+    %% TODO: implement a logic for config validation
+    true.
+
+update_service(true, Id, NewInfo) when is_map(NewInfo) ->
+    tts_data:service_update(Id, NewInfo);
+update_service(_, _, _) ->
+    {error, update}.

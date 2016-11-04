@@ -70,15 +70,18 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
     {ok, Count} = get_credential_count(UserId, ServiceId),
     Enabled = tts_service:is_enabled(ServiceId),
-    case {Enabled, Count < Limit } of
-        {true, true} ->
+    Allowed = tts_service:is_allowed(UserInfo, ServiceId),
+    case { Allowed, Enabled, Count < Limit } of
+        {true, true, true} ->
             {ok, Pid} = tts_cred_sup:new_worker(),
             Result = tts_cred_worker:request(ServiceId, UserInfo, Params, Pid),
             handle_request_result(Result, ServiceId, UserInfo,
                                   Interface, Token);
-        {false, _} ->
+        {false, _, _} ->
+            {error, user_not_allowed, []};
+        {true, false, _} ->
             {error, service_disabled, []};
-        {true, false} ->
+        {true, true, false} ->
             {error, limit_reached, []}
     end.
 

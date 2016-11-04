@@ -14,41 +14,37 @@ The parameter coming from the TTS is a base64 encoded json object.
 The decoded json object has the following format:
 ```
 {
-"action":"request",
-"cred_state":"undefined",
-"params":[],
-"user_info":{
-	"oidc":{
-		"email":"alice.wonderland@indigo-dc.eu",
-		"iss":"https://iam.indigo-dc.eu",
-		"locale":"wl",
-		"name":"Alice Wonderland",
-		"sub":"123456789",
-		"email_verified":true,
-		"family_name":"Wonderland",
-		"gender":"female",
-		"given_name":"Alice",
-		},
-	"site":{
-		"gidNumber":1000,
-		"homeDirectory":"/home/alice",
-		"uid":"alice",
-		"uidNumber":1000,
-		"userIds":{"https://iam.indigo-dc.eu":"123456789"}
-		},
-	}
+    "action": "request",
+    "conf_params": {},
+    "params": {},
+    "cred_state": "undefined",
+    "tts_userid": "<the generated unique userid used in TTS>",
+    "tts_version": "<the tts version>",
+    "user_info": {
+        "family_name": "Mueller",
+        "gender": "male",
+        "given_name": "Joe",
+        "iss": "https://accounts.google.com",
+        "name": "Joe Mueller",
+        "profile": "https://plus.google.com/1234",
+        "sub": "1234"
+    }
 }
 ```
 The items of the object are:
 
 | Key        | Description                                                                                         |
 |------------|-----------------------------------------------------------------------------------------------------|
-| action     | Which action to perform, this can be either 'request' or 'revoke'                                     |
+| action     | Which action to perform, this can be either 'request', 'revoke' or 'parameter'                                    |
+| conf_params| These are parameter that are set in the configuration                                     |
+| params |  These are parameter entered at the request                                     |
 | cred_state | This is only passed when revoking, it is the credential state returned when creating the credential |
-| user_info  | The user info contains two distinctive information about the user: oidc and site (see below)          |
-| oidc       | The information about the user coming from the OpenId Connect provider, e.g. IAM                     |
-| site       | The information about the user coming from the IDH script                                            |
+| tts_userid | This is the dynamically generated unique id used within TTS for the current user. It is also a base64 encoded json object containing issuer and subject |
+| tts_version | The version of the TTS, this is passed so a plugin can handle api changes |
+| user_info  | The user info contains informations gathers about the user using OpenId Connect          |
 
+#### Listing The Supported Parameter
+% TODO
 #### Performing a Request
 When the `action` is set to `request`, it means that the user or a service on the
 users behalf wants to create a credential.
@@ -58,17 +54,28 @@ a json object on stdout.
 The expected format of the json object is:
 ```
 {
-	"error":"some bad thing happend",
+	"result":"ok",
 	"credential": [{"name":"some name", "type":"text", "value":"secret"}],
 	"state":"state description"
 }
 ```
+or in case of an error
+```
+{
+	"result":"error",
+    "user_msg","Sorry, you are not allowed to use this service",
+    "log_msg","user joe tried to access service and has been denied"
+}
+```
+
 
 | Key        | Description                                                                                    |
 |------------|------------------------------------------------------------------------------------------------|
+| result | The result of the request, currently 'ok' and 'error' are supported |
 | credential | A list of objects, each representing one part of the credentials. This will be shown to the user |
 | state      | A state to keep track of the credential; it MUST NOT contain sensitive information              |
-| error      | If this is present, the TTS expects that something bad happens and ignores the other two        |
+| user_msg  | If the result is an error, this message will be shown to the user        |
+| log_msg  | If the result is an error, this message will be logged        |
 
 
 The entries in the credential object (part of the list in 'credential' above) are:
@@ -83,22 +90,29 @@ The entries in the credential object (part of the list in 'credential' above) ar
 
 
 #### Performing a Revoke
-When the `action` is set to `revoke`, the credential identified by the `state` should be invalidated 
-or removed, depending on the type of service. In the SSH plugin, e.g., the created ssh-key is  
+When the `action` is set to `revoke`, the credential identified by the `state` should be invalidated
+or removed, depending on the type of service. In the SSH plugin, e.g., the created ssh-key is
 removed from the authorized keys.
 When performing a request, the TTS expects the stdout to be a json object. In case of a revoke, it may contain
 one of the two elements:
 ```
 {
-	"error":"some bad thing happend",
-	"result":"description"
+	"result":"ok"
 }
 ```
-
+or in case of an error
+```
+{
+	"result":"error",
+    "user_msg","Sorry, could not revoke the certificate",
+    "log_msg","internal error when executing command ...."
+}
+```
 | Key    | Description                                                             |
 |--------|-------------------------------------------------------------------------|
-| result | a description of the result, at the moment it is ignored                |
-| error  | if the error is present, the TTS expects an error and ignores the result |
+| result | either 'ok' or 'error', representing the result of the plugin           |
+| user_msg  | If the result is an error, this message will be shown to the user        |
+| log_msg  | If the result is an error, this message will be logged        |
 
 
 Therefore, if only the result key is present in the object, the TTS assumes that
