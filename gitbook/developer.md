@@ -45,6 +45,7 @@ The items of the object are:
 
 #### Listing The Supported Parameter
 % TODO
+
 #### Performing a Request
 When the `action` is set to `request`, it means that the user or a service on the
 users behalf wants to create a credential.
