@@ -267,8 +267,7 @@ create_result(#{exit_status := 0, std_out := []}, Log) ->
     {error, no_json, lists:reverse(Log)};
 create_result(#{exit_status := 0, std_out := [Json|_]}, Log) ->
     case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
-        {ok, Map, <<>>} -> {ok, Map, lists:reverse(Log)};
-        {ok, _Map, _} -> {error, partially_bad_json, lists:reverse(Log)};
+        {ok, Map, _} -> {ok, Map, lists:reverse(Log)};
         {error, _} -> {error, bad_json_result, lists:reverse(Log)}
     end;
 create_result(#{exit_status := _}, Log) ->

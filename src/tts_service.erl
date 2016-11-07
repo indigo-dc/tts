@@ -91,7 +91,7 @@ update_params(Id) ->
     Service = tts_data:service_get(Id),
     get_and_validate_parameter(Service).
 
-get_and_validate_parameter({ok, Id, Info}) ->
+get_and_validate_parameter({ok, {Id, Info}}) ->
     Result = tts_credential:get_params(Id),
     validate_params_and_update_db(Id, Info, Result);
 get_and_validate_parameter(_) ->
