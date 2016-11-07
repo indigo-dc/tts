@@ -97,7 +97,7 @@ rest_communication(_Config) ->
     {ok, ServiceId} = validate_service_list(list_to_binary(ServiceList)),
     {ok, []} = perform_rest_request("lscred localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
     {ok, CredentialData} = perform_rest_request("request localhost:8080 "++ServiceId++" MockToken https://iam-test.indigo-datacloud.eu/"),
-    Credential = jsx:decode(list_to_binary(CredentialData), [return_maps, {labels, attempt_atom}]),
+    Credential = jsone:decode(list_to_binary(CredentialData), [{object_format, map}, {keys, attempt_atom}]),
     {ok, CredId} = validate_credential(Credential),
     {ok, CredList} = perform_rest_request("lscred localhost:8080 MockToken https://iam-test.indigo-datacloud.eu/"),
     true = validate_credential_list(list_to_binary(CredList), list_to_binary(CredId)),
@@ -129,7 +129,7 @@ validate_credential([_H | T]) ->
     validate_credential(T).
 
 validate_credential_list(Data, Id) ->
-    Map = jsx:decode(Data, [return_maps, {labels, attempt_atom}]),
+    Map = jsone:decode(Data, [{object_format, map}, {keys, attempt_atom}]),
     case maps:get(cred_id,Map) of
         Id -> true;
         _ -> false

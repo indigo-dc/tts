@@ -190,7 +190,7 @@ perform_get(oidcp, _, _, 1) ->
     return_json_oidc_list(OIDCList);
 perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
-    jsx:encode(#{openid_provider_list => OIDCList});
+    jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
     {LoggedIn, DName}  = case is_pid(Session) of
                              false -> {false, <<"">>};
@@ -205,15 +205,15 @@ perform_get(info, undefined, Session, _) ->
              logged_in => LoggedIn,
              display_name => DName
             },
-    jsx:encode(Info);
+    jsone:encode(Info);
 perform_get(logout, undefined, undefined, _) ->
-    jsx:encode(#{result => ok});
+    jsone:encode(#{result => ok});
 perform_get(logout, undefined, Session, _) ->
     ok = perform_logout(Session),
-    jsx:encode(#{result => ok});
+    jsone:encode(#{result => ok});
 perform_get(access_token, undefined, Session, _) ->
     {ok, AccessToken} = tts:get_access_token_for(Session),
-    jsx:encode(#{access_token => AccessToken});
+    jsone:encode(#{access_token => AccessToken});
 perform_get(credential, undefined, Session, 1) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
     return_json_credential_list(CredList);
@@ -223,13 +223,13 @@ perform_get(credential, undefined, Session, _) ->
     return_json_credential_list(CredList, Keys);
 perform_get(cred_data, Id, Session, 1) ->
     case tts:get_temp_cred(Id, Session) of
-        {ok, Cred} -> jsx:encode(Cred);
-        _ -> jsx:encode(#{})
+        {ok, Cred} -> jsone:encode(Cred);
+        _ -> jsone:encode(#{})
     end;
 perform_get(cred_data, Id, Session, _Version) ->
     case tts:get_temp_cred(Id, Session) of
-        {ok, Cred} -> jsx:encode(#{credential => Cred});
-        _ -> jsx:encode(#{credential => []})
+        {ok, Cred} -> jsone:encode(#{credential => Cred});
+        _ -> jsone:encode(#{credential => []})
     end.
 
 perform_post(credential, undefined, #{service_id:=ServiceId} = Data, Session,
@@ -253,7 +253,7 @@ return_json_service_list(Services, Keys) ->
                       [ maps:with(Keys, Map) | List]
               end,
     List = lists:reverse(lists:foldl(Extract, [], Services)),
-    jsx:encode(#{service_list => List}).
+    jsone:encode(#{service_list => List}).
 
 return_json_oidc_list(Oidc) ->
     Id = fun(OidcInfo, List) ->
@@ -264,21 +264,21 @@ return_json_oidc_list(Oidc) ->
                  end
          end,
     List = lists:reverse(lists:foldl(Id, [], Oidc)),
-    jsx:encode(#{openid_provider_list => List}).
+    jsone:encode(#{openid_provider_list => List}).
 
 return_json_credential_list(Credentials) ->
     Id = fun(#{cred_id := CredId}, List) ->
                  [#{ id => CredId} | List]
          end,
     List = lists:reverse(lists:foldl(Id, [], Credentials)),
-    jsx:encode(#{credential_list => List}).
+    jsone:encode(#{credential_list => List}).
 
 return_json_credential_list(Credentials, Keys) ->
     Id = fun(Cred, List) ->
                  [maps:with(Keys, Cred) | List]
          end,
     List = lists:reverse(lists:foldl(Id, [], Credentials)),
-    jsx:encode(#{credential_list => List}).
+    jsone:encode(#{credential_list => List}).
 
 is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
              InIssuer, InCookieSession, State) ->
@@ -360,10 +360,10 @@ verify_method(<<"DELETE">>) ->
 verify_body([]) ->
     undefined;
 verify_body(Data) ->
-    case jsx:is_json(Data) of
-        true ->
-            jsx:decode(Data, [{labels, attempt_atom}, return_maps]);
-        false ->
+    case jsone:try_decode(Data, [{object_format, map}, {keys, attempt_atom}]) of
+        {ok, Json, <<>>} ->
+            Json;
+        _ ->
             undefined
     end.
 
