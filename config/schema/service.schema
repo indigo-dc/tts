@@ -58,6 +58,10 @@
           {datatype, string}
           ]}.
 
+%% @doc the plugin configuration parameter
+{mapping, "service.$id.plugin.$key", "tts.service_list.k", [
+          {datatype, string}
+          ]}.
 
 {translation, "tts.service_list",
  fun(Conf) ->
@@ -82,6 +86,7 @@
          ConnPortList = TypeFilter("service.$id.connection.port"),
          ConnSshDirList = TypeFilter("service.$id.connection.ssh_dir"),
          ConnSshKeyPassList = TypeFilter("service.$id.connection.ssh_key_pass"),
+         PluginConfList = TypeFilter("service.$id.plugin.$key"),
 
 
          Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
@@ -96,6 +101,8 @@
          ConnDirs = [ {Id, Dir} || {[_, Id, _, _], Dir} <- ConnSshDirList],
          ConnKeyPasses = [ {Id, Pass} ||
                              {[_, Id, _, _], Pass} <- ConnSshKeyPassList],
+         PluginConfs = [ {Id, Key, Val} ||
+                           {[_, Id, _, Key], Val} <- PluginConfList],
 
          CreateSetting =
              fun({Id, Desc}, Result) ->
@@ -151,6 +158,16 @@
                                     {Id, Passwd} -> Passwd;
                                     _ -> undefined
                                 end,
+                     FilterById = fun({A, K, V}, List) ->
+                                          case A == Id of
+                                              true ->
+                                                  [{K, V} | List];
+                                              false ->
+                                                  List
+                                          end
+                                  end,
+                     PluginConf = maps:from_list(lists:foldl(FilterById, [],
+                                                             PluginConfs)),
 
                      case (Cmd == undefined) or (CredLimit == undefined) or
                          (ConnType == undefined) or
@@ -170,6 +187,7 @@
                                   cmd => list_to_binary(Cmd),
                                   cred_limit => CredLimit,
                                   allow_same_state => SameState,
+                                  plugin_conf => PluginConf,
                                   connection => #{
                                     type => ConnType,
                                     user => ConnUser,

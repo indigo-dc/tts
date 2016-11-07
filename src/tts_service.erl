@@ -114,4 +114,4 @@ validate_parameter(_, _) ->
 update_service(true, Id, NewInfo) when is_map(NewInfo) ->
     tts_data:service_update(Id, NewInfo);
 update_service(_, _, _) ->
-    {error, update}.
+    {error, invalid_config}.
