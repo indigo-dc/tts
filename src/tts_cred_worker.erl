@@ -221,7 +221,7 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
       cred_state => CredState
       },
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo),
-    EncodedJson = base64url:encode(jsx:encode(ScriptParam)),
+    EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,
@@ -266,10 +266,10 @@ execute_command_or_send_result([Cmd|T], ConType, Connection, undefined, _Log
 create_result(#{exit_status := 0, std_out := []}, Log) ->
     {error, no_json, lists:reverse(Log)};
 create_result(#{exit_status := 0, std_out := [Json|_]}, Log) ->
-    case jsx:is_json(Json) of
-        true -> {ok, jsx:decode(Json, [return_maps, {labels, attempt_atom}])
-                 , lists:reverse(Log)};
-        false -> {error, bad_json_result, lists:reverse(Log)}
+    case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
+        {ok, Map, <<>>} -> {ok, Map, lists:reverse(Log)};
+        {ok, _Map, _} -> {error, partially_bad_json, lists:reverse(Log)};
+        {error, _} -> {error, bad_json_result, lists:reverse(Log)}
     end;
 create_result(#{exit_status := _}, Log) ->
     {error, script_failed, lists:reverse(Log) };

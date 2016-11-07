@@ -171,7 +171,3 @@ create_lookup_result([]) ->
     {error, not_found};
 create_lookup_result(_) ->
     {error, too_many}.
-
-
-epoch() ->
-    os:system_time().

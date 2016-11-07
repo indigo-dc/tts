@@ -56,7 +56,7 @@ garbage_test() ->
 %%                               %% stderr
 %%                               Pid ! {ssh_cm, ssh, {data, ssh_channel, 1, <<"oops ...">>}},
 %%                               %% no more data going to be sent
-%%                               Json = jsx:encode(JsonMap),
+%%                               Json = jsone:encode(JsonMap),
 %%                               Pid ! {ssh_cm, ssh, {data, ssh_channel, 0, Json}},
 %%                               %%
 %%                               Pid ! {ssh_cm, ssh, {eof, ssh_channel}},

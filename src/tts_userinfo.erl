@@ -65,7 +65,8 @@ return( logged_in, Info) ->
 
 userid(#user_info{issuer=Issuer, subject=Subject})
   when is_binary(Issuer), is_binary(Subject) ->
-    Id = base64url:encode(jsx:encode(#{issuer => Issuer, subject => Subject})),
+    Id = base64url:encode(jsone:encode(#{issuer => Issuer,
+                                         subject => Subject})),
     {ok, Id};
 userid(_) ->
     {error, not_set}.
