@@ -142,7 +142,7 @@ start_web_interface() ->
                                           {EpMain, cowboy_static,
                                            {priv_file, tts,
                                             "http_static/index.html"}},
-                                          {EpOidc, oidcc_http_handler, []}
+                                          {EpOidc, oidcc_cowboy, []}
                                          ]}]),
 
     SSL = ?CONFIG(ssl),

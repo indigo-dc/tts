@@ -10,10 +10,11 @@
         crypto,
         ssh,
         econfig,
-        jsx,
+        jsone,
         esqlite,
         base64url,
         oidcc,
+        oidcc_cowboy,
         lager,
         eper
                    ]},
