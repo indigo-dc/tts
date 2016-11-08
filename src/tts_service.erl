@@ -104,8 +104,8 @@ validate_params_and_update_db(Id, Info, {ok, ConfParams, RequestParams}) ->
     Info0 = maps:merge(Info, Ensure),
     {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
     {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
-    IsValid = ValidConfParam and ValidCallParam,
     Info3 = list_skipped_parameter_and_delete_config(Info2),
+    IsValid = ValidConfParam and ValidCallParam,
     Update = #{enabled => IsValid},
     NewInfo = maps:merge(Info3, Update),
     update_service(Id, NewInfo);
@@ -162,8 +162,12 @@ update_conf_parameter(Name, _, _Type, #{id := Id} = Info) ->
 validate_call_parameter_sets(Params, Info) ->
     validate_call_parameter_sets(Params, Info, true).
 
-validate_call_parameter_sets([], Info, Result) ->
-    {Result, Info};
+validate_call_parameter_sets([], #{params := Params} =Info, Result) ->
+    ValidInfo = case Params of
+                    [] -> maps:put(params, [[]], Info);
+                    _ -> Info
+                end,
+    {Result, ValidInfo};
 validate_call_parameter_sets([ H | T ], Info, Current)
   when is_list(H) ->
     {Result, NewInfo} = validate_call_parameter_set(H, Info),
@@ -184,7 +188,7 @@ validate_call_parameter_set([#{description:=Desc, name:=Name, key:=Key,
                                type:=Type }=Param | T],
                             #{id := Id} = Info, ParamSet, Current)
   when is_binary(Key), is_binary(Desc), is_binary(Name) ->
-    EMsg = "service ~p: bad request parameter ~p: bad type ~p (from plugin)",
+    EMsg = "service ~p: parameter ~p: bad type ~p (from plugin)",
     WMsg = "service ~p: parameter ~p: bad mandatory value ~p, using false",
     Mdtory = maps:get(mandatory, Param, false),
     Mandatory =
@@ -220,7 +224,7 @@ list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
                                            id := Id
                                           }
                                          = Info) ->
-    WMsg = "service ~p: skipping unsupported config ~p = ~p from configuration",
+    WMsg = "service ~p: skipping unknown parameter ~p = ~p from configuration",
     Keys = maps:keys(RawConf),
     Warn =
         fun(Key, _) ->

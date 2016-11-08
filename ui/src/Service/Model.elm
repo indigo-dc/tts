@@ -8,8 +8,12 @@ type alias Model =
     , credCount : Int
     , credLimit : Int
     , limitReached : Bool
-    , parameter : List Param
+    , parameter_sets : List Set
     }
+
+
+type alias Set =
+    List Param
 
 
 type alias Param =
@@ -20,18 +24,51 @@ type alias Param =
     }
 
 
-onlyAdvanced : Model -> Bool
-onlyAdvanced service =
+hasBasic : Model -> Bool
+hasBasic service =
+    basicAllowed service.parameter_sets
+
+
+basicAllowed : List Set -> Bool
+basicAllowed sets =
     let
-        countMandatory param count =
+        noMandatory param current =
             case param.mandatory of
                 True ->
-                    count + 1
+                    False
 
                 False ->
-                    count
+                    current
 
-        numMandatory =
-            List.foldl countMandatory 0 service.parameter
+        hasNoMandatoryFields set current =
+            case List.foldl noMandatory True set of
+                True ->
+                    True
+
+                False ->
+                    current
     in
-        numMandatory > 0
+        List.foldl hasNoMandatoryFields False sets
+
+
+hasAdvanced : Model -> Bool
+hasAdvanced service =
+    let
+        hasNonEmptyList set current =
+            case List.isEmpty set of
+                True ->
+                    current
+
+                False ->
+                    True
+    in
+        List.foldl hasNonEmptyList False service.parameter_sets
+
+
+nonEmptySets : List Set -> List Set
+nonEmptySets sets =
+    let
+        nonEmpty set =
+            not (List.isEmpty set)
+    in
+        List.filter nonEmpty sets

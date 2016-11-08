@@ -17,7 +17,7 @@ decodeService =
         |> required "cred_count" int
         |> required "cred_limit" int
         |> required "limit_reached" bool
-        |> optional "params" (list decodeParam) []
+        |> optional "params" (list (list decodeParam)) [ [] ]
 
 
 decodeParam : Decoder Service.Param
