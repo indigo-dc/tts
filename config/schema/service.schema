@@ -75,34 +75,38 @@
                      lists:filter(Filter, Conf)
              end,
 
-         DescList = TypeFilter("service.$id.description"),
-         CmdList = TypeFilter("service.$id.cmd"),
-         CredLimitList = TypeFilter("service.$id.credential_limit"),
-         SameStateList = TypeFilter("service.$id.allow_same_state"),
-         ConnTypeList = TypeFilter("service.$id.connection.type"),
-         ConnUserList = TypeFilter("service.$id.connection.user"),
-         ConnPasswdList = TypeFilter("service.$id.connection.password"),
-         ConnHostList = TypeFilter("service.$id.connection.host"),
-         ConnPortList = TypeFilter("service.$id.connection.port"),
-         ConnSshDirList = TypeFilter("service.$id.connection.ssh_dir"),
-         ConnSshKeyPassList = TypeFilter("service.$id.connection.ssh_key_pass"),
-         PluginConfList = TypeFilter("service.$id.plugin.$key"),
+         IdValueList =
+             fun(List, Type) ->
+                     case Type of
+                         three ->
+                             [ {Id, V}  || {[_, Id, _], V} <- List ];
+                         four ->
+                             [ {Id, V}  || {[_, Id, _, _], V} <- List ];
+                         plugin ->
+                             [ {Id, K, V} || {[_, Id, _, K], V} <- List]
+                     end
+
+             end,
 
 
-         Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
-         Cmds = [ {Id, Cmd} || {[_, Id, _], Cmd} <- CmdList ],
-         CredLimits = [ {Id, Limit} || {[_, Id, _], Limit} <- CredLimitList],
-         SameStates = [ {Id, Allow} || {[_, Id, _], Allow} <- SameStateList],
-         ConnTypes = [ {Id, Type} || {[_, Id, _, _], Type} <- ConnTypeList],
-         ConnUsers = [ {Id, User} || {[_, Id, _, _], User} <- ConnUserList],
-         ConnPasswds = [ {Id, Pass} || {[_, Id, _, _], Pass} <- ConnPasswdList],
-         ConnHosts = [ {Id, Host} || {[_, Id, _, _], Host} <- ConnHostList],
-         ConnPorts = [ {Id, Port} || {[_, Id, _, _], Port} <- ConnPortList],
-         ConnDirs = [ {Id, Dir} || {[_, Id, _, _], Dir} <- ConnSshDirList],
-         ConnKeyPasses = [ {Id, Pass} ||
-                             {[_, Id, _, _], Pass} <- ConnSshKeyPassList],
-         PluginConfs = [ {Id, Key, Val} ||
-                           {[_, Id, _, Key], Val} <- PluginConfList],
+         TypeIdValue =
+             fun(Key, Type) ->
+                     List = TypeFilter(Key),
+                     IdValueList(List, Type)
+             end,
+
+         Descs = TypeIdValue("service.$id.description", three),
+         Cmds = TypeIdValue("service.$id.cmd", three),
+         CredLimits = TypeIdValue("service.$id.credential_limit", three),
+         SameStates = TypeIdValue("service.$id.allow_same_state", three),
+         ConnTypes = TypeIdValue("service.$id.connection.type", four),
+         ConnUsers = TypeIdValue("service.$id.connection.user", four),
+         ConnPasswds = TypeIdValue("service.$id.connection.password", four),
+         ConnHosts = TypeIdValue("service.$id.connection.host", four),
+         ConnPorts = TypeIdValue("service.$id.connection.port", four),
+         ConnDirs = TypeIdValue("service.$id.connection.ssh_dir", four),
+         ConnKeyPasses = TypeIdValue("service.$id.connection.ssh_key_pass", four),
+         PluginConfs = TypeIdValue("service.$id.plugin.$key", plugin),
 
          CreateSetting =
              fun({Id, Desc}, Result) ->
@@ -161,7 +165,9 @@
                      FilterById = fun({A, K, V}, List) ->
                                           case A == Id of
                                               true ->
-                                                  [{K, V} | List];
+                                                  Key = list_to_binary(K),
+                                                  Val = list_to_binary(V),
+                                                  [{Key, Val} | List];
                                               false ->
                                                   List
                                           end
@@ -187,7 +193,7 @@
                                   cmd => list_to_binary(Cmd),
                                   cred_limit => CredLimit,
                                   allow_same_state => SameState,
-                                  plugin_conf => PluginConf,
+                                  plugin_conf_config => PluginConf,
                                   connection => #{
                                     type => ConnType,
                                     user => ConnUser,

@@ -213,13 +213,19 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
     ConnType = maps:get(type, ConnInfo, local),
     {ok, Version} = application:get_key(tts, vsn),
-    ScriptParam0 = #{
-      tts_version => list_to_binary(Version),
-      action => Action,
-      params => Params,
-      conf_params => ConfParams,
-      cred_state => CredState
-      },
+    ParamUpdate =
+        case Action == parameter of
+            false ->
+                #{conf_params => ConfParams,
+                  params => Params};
+            _ -> #{}
+        end,
+    ScriptParam0 = maps:merge(
+                     #{
+                        tts_version => list_to_binary(Version),
+                        action => Action,
+                        cred_state => CredState
+                      }, ParamUpdate),
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
