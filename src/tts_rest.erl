@@ -195,8 +195,10 @@ perform_get(info, undefined, Session, _) ->
     {LoggedIn, DName, Error}  =
         case is_pid(Session) of
             false -> {false, <<"">>, <<"">>};
-            true -> {ok, Name} =
-                        tts_session:get_display_name(Session),
+            true -> Name = case tts_session:get_display_name(Session) of
+                               {ok, N} -> N;
+                               _ -> <<"">>
+                           end,
                     {ok, Err} = tts_session:get_error(Session),
                     {tts_session:is_logged_in(Session), Name, Err}
         end,
