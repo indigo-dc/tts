@@ -1,18 +1,18 @@
--module(tts_credential_test).
+-module(tts_plugin_test).
 -include_lib("eunit/include/eunit.hrl").
 
 start_stop_test() ->
-    {ok, Pid} = tts_credential:start_link(),
-    ok = tts_credential:stop(),
+    {ok, Pid} = tts_plugin:start_link(),
+    ok = tts_plugin:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
 garbage_test() ->
-    {ok, Pid} = tts_credential:start_link(),
+    {ok, Pid} = tts_plugin:start_link(),
     ignored = gen_server:call(Pid,unsupported_call),
     ok = gen_server:cast(Pid,unsupported_cast),
     Pid ! unsupported_msg,
-    ok = tts_credential:stop(),
+    ok = tts_plugin:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
@@ -49,14 +49,14 @@ garbage_test() ->
 %%     ok = meck:expect(tts_data_sqlite, credential_get_count, GetCountFun),
 
 
-%%     {ok, Pid} = tts_credential:start_link(),
+%%     {ok, Pid} = tts_plugin:start_link(),
 %%     ?assertEqual({ok, [#{service_id => ServiceId}]},
-%%                  tts_credential:get_list(UserId)),
-%%     ?assertEqual({ok, 1}, tts_credential:get_count(UserId, ServiceId)),
-%%     ?assertEqual({ok, 0}, tts_credential:get_count(UserId, OtherId)),
-%%     ?assertEqual(true, tts_credential:exists(UserId, CredentialId)),
-%%     ?assertEqual(false, tts_credential:exists(UserId, OtherCred)),
-%%     ok = tts_credential:stop(),
+%%                  tts_plugin:get_list(UserId)),
+%%     ?assertEqual({ok, 1}, tts_plugin:get_count(UserId, ServiceId)),
+%%     ?assertEqual({ok, 0}, tts_plugin:get_count(UserId, OtherId)),
+%%     ?assertEqual(true, tts_plugin:exists(UserId, CredentialId)),
+%%     ?assertEqual(false, tts_plugin:exists(UserId, OtherCred)),
+%%     ok = tts_plugin:stop(),
 %%     ok = test_util:wait_for_process_to_die(Pid,100),
 %%     ok = test_util:meck_done(MeckModules),
 %%     ok.
@@ -82,7 +82,7 @@ garbage_test() ->
 %%     Cred3 = #{name => "secret file", type => <<"textarea">>, value => #{id => <<"secret">>}},
 %%     Cred4 = #{name => "secret file", type => <<"textfile">>, value => <<"secret">>},
 %%     Cred5 = #{name => "secret file", type => <<"textfile">>, value => <<"secretlines">>},
-%%     MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker, tts_service],
+%%     MeckModules = [tts_data_sqlite, tts_plugin_sup, tts_cred_worker, tts_service],
 %%     Token = #{},
 %%     Params = [],
 %%     MyPid = self(),
@@ -130,7 +130,7 @@ garbage_test() ->
 %%     ok = meck:expect(tts_data_sqlite, credential_add, AddFun),
 %%     ok = meck:expect(tts_data_sqlite, credential_get_count, fun(_, _)
 %%                                                                -> {ok, 0} end),
-%%     ok = meck:expect(tts_cred_sup, new_worker, fun() -> {ok, MyPid} end),
+%%     ok = meck:expect(tts_plugin_sup, new_worker, fun() -> {ok, MyPid} end),
 %%     ok = meck:expect(tts_cred_worker, request, RequestFun),
 %%     ok = meck:expect(tts_service, is_enabled, fun(_) -> true end),
 %%     ok = meck:expect(tts_service, get_credential_limit, fun(_)
@@ -138,38 +138,38 @@ garbage_test() ->
 %%     ok = meck:expect(tts_service, allows_same_state, AllowSame),
 
 
-%%     {ok, Pid} = tts_credential:start_link(),
-%%     {ok, [_, Cred1], []} = tts_credential:request(Service1, UserInfo1,
+%%     {ok, Pid} = tts_plugin:start_link(),
+%%     {ok, [_, Cred1], []} = tts_plugin:request(Service1, UserInfo1,
 %%                                                  Interface, Token, Params),
 
-%%     {ok, [_, Cred2], []} = tts_credential:request(Service2, UserInfo1,
+%%     {ok, [_, Cred2], []} = tts_plugin:request(Service2, UserInfo1,
 %%                                                  Interface, Token, Params),
 
-%%     {ok, [_, _Cred3], []} = tts_credential:request(Service3, UserInfo1,
+%%     {ok, [_, _Cred3], []} = tts_plugin:request(Service3, UserInfo1,
 %%                                                  Interface, Token, Params),
 
-%%     {ok, [_, Cred4], []} = tts_credential:request(Service4, UserInfo1,
+%%     {ok, [_, Cred4], []} = tts_plugin:request(Service4, UserInfo1,
 %%                                                  Interface, Token, Params),
 
-%%     {ok, [_, Cred5], []} = tts_credential:request(Service5, UserInfo1,
+%%     {ok, [_, Cred5], []} = tts_plugin:request(Service5, UserInfo1,
 %%                                                  Interface, Token, Params),
 
-%%     {error, {script, <<>>}, []} = tts_credential:request(Service1, UserInfo2,
+%%     {error, {script, <<>>}, []} = tts_plugin:request(Service1, UserInfo2,
 %%                                                          Interface, Token,
 %%                                                          Params),
-%%     {error, {missing_state, Service1},  []} = tts_credential:request(Service1,
+%%     {error, {missing_state, Service1},  []} = tts_plugin:request(Service1,
 %%                                                                       UserInfo3,
 %%                                                                       Interface,
 %%                                                                       Token,
 %%                                                                       Params),
-%%     {error, {internal, just_because}, []} = tts_credential:request(Service1,
+%%     {error, {internal, just_because}, []} = tts_plugin:request(Service1,
 %%                                                                    UserInfo4,
 %%                                                                    Interface,
 %%                                                                    Token,
 %%                                                                    Params),
 
 
-%%     ok = tts_credential:stop(),
+%%     ok = tts_plugin:stop(),
 %%     ok = test_util:wait_for_process_to_die(Pid,100),
 %%     ok = test_util:meck_done(MeckModules),
 %%     ok.
@@ -192,7 +192,7 @@ garbage_test() ->
 
 %%     CredState = <<"some_cred">>,
 %%     RevokeResult = <<"some info">>,
-%%     MeckModules = [tts_data_sqlite, tts_cred_sup, tts_cred_worker],
+%%     MeckModules = [tts_data_sqlite, tts_plugin_sup, tts_cred_worker],
 %%     MyPid = self(),
 %%     Cred = #{ service_id => ServiceId, cred_state => CredState},
 %%     GetFun = fun(CredentialId) ->
@@ -229,16 +229,16 @@ garbage_test() ->
 %%     ok = test_util:meck_new(MeckModules),
 %%     ok = meck:expect(tts_data_sqlite, credential_remove, DelFun),
 %%     ok = meck:expect(tts_data_sqlite, credential_get, GetFun),
-%%     ok = meck:expect(tts_cred_sup, new_worker, fun() -> {ok, MyPid} end),
+%%     ok = meck:expect(tts_plugin_sup, new_worker, fun() -> {ok, MyPid} end),
 %%     ok = meck:expect(tts_cred_worker, revoke, RevokeFun),
 
-%%     {ok, Pid} = tts_credential:start_link(),
-%%     {ok, RevokeResult, []} = tts_credential:revoke(CredId1, UserInfo1),
-%%     {error, {script, <<>>}, []} = tts_credential:revoke(CredId2, UserInfo2),
-%%     {error, {internal, just_because}, []} = tts_credential:revoke(CredId3, UserInfo3),
-%%     {error, not_found, []} =  tts_credential:revoke(CredId4, UserInfo4),
-%%     {error, bad_user, []} = tts_credential:revoke(CredId5, UserInfo4),
-%%     ok = tts_credential:stop(),
+%%     {ok, Pid} = tts_plugin:start_link(),
+%%     {ok, RevokeResult, []} = tts_plugin:revoke(CredId1, UserInfo1),
+%%     {error, {script, <<>>}, []} = tts_plugin:revoke(CredId2, UserInfo2),
+%%     {error, {internal, just_because}, []} = tts_plugin:revoke(CredId3, UserInfo3),
+%%     {error, not_found, []} =  tts_plugin:revoke(CredId4, UserInfo4),
+%%     {error, bad_user, []} = tts_plugin:revoke(CredId5, UserInfo4),
+%%     ok = tts_plugin:stop(),
 %%     ok = test_util:wait_for_process_to_die(Pid,100),
 %%     ok = test_util:meck_done(MeckModules),
 %%     ok.

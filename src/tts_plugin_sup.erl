@@ -1,4 +1,4 @@
--module(tts_cred_sup).
+-module(tts_plugin_sup).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -32,7 +32,7 @@ start_link() ->
 init([]) ->
     CredWorker = #{
       id => cred_worker,
-      start => {tts_cred_worker, start_link, []},
+      start => {tts_plugin_runner, start_link, []},
       restart => transient
      },
     Procs = [CredWorker],

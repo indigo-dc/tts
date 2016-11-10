@@ -1,4 +1,4 @@
--module(tts_cred_worker).
+-module(tts_plugin_runner).
 %%
 %% Copyright 2016 SCC/KIT
 %%
