@@ -241,7 +241,8 @@ view model =
                     , small [] [ text model.serverVersion ]
                     ]
                 , div [ class "alert alert-danger", hidden hideError ]
-                    [ strong [] [ text "Login Error" ]
+                    [ strong [] [ text "Login Error!" ]
+                    , text " "
                     , text model.error
                     ]
                 , mainContent model
