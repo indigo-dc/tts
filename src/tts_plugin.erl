@@ -74,7 +74,8 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
     case { Allowed, Enabled, Count < Limit } of
         {true, true, true} ->
             {ok, Pid} = tts_plugin_sup:new_worker(),
-            Result = tts_plugin_runner:request(ServiceId, UserInfo, Params, Pid),
+            Result = tts_plugin_runner:request(ServiceId, UserInfo,
+                                               Params, Pid),
             handle_request_result(Result, ServiceId, UserInfo,
                                   Interface, Token);
         {false, _, _} ->
@@ -96,7 +97,8 @@ revoke(CredentialId, UserInfo) ->
                cred_id := CredId
              } = Cred,
             {ok, Pid} = tts_plugin_sup:new_worker(),
-            Result=tts_plugin_runner:revoke(ServiceId, UserInfo, CredState, Pid),
+            Result=tts_plugin_runner:revoke(ServiceId, UserInfo,
+                                            CredState, Pid),
             handle_revoke_result(Result, UserInfo, CredId);
         {error, Reason} -> {error, Reason, []}
     end.
