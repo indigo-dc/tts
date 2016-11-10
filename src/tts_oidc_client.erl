@@ -9,32 +9,43 @@
 
 login_succeeded(TokenMap) ->
     case tts:login_with_oidcc(TokenMap) of
-        {ok, #{session_token := Token, session_pid := SessPid}} ->
-            {ok, MaxAge} = tts_session:get_max_age(SessPid),
-            Opts = tts_http_util:create_cookie_opts(MaxAge),
-            CookieName = tts_http_util:cookie_name(),
-            {ok, [{redirect, ?CONFIG(ep_main)},
-                  {cookie, CookieName, Token, Opts}]};
-        {error, _} ->
-            %% TODO:
-            %% show an error on the login page
-            {ok, [{redirect, ?CONFIG(ep_main)}]}
+        {ok, #{session_pid := SessPid}} ->
+            redirect_set_cookie(SessPid);
+        {error, Reason} ->
+            lager:warning("login failed internal: ~p", [Reason]),
+            ErrMsg = bin_error_msg(login, undefind),
+            redirect_error(ErrMsg)
     end.
 
-login_failed(Reason, Description) ->
-    %% TODO:
-    %% start a session to keep track of the error
-    lager:warning("login failed: ~p - ~p", [Reason, Description]),
-    {ok, [{redirect, ?CONFIG(ep_main)}]}.
+login_failed(Reason, Details) ->
+    lager:warning("login failed: ~p - ~p", [Reason, Details]),
+    ErrMsg = bin_error_msg(Reason, Details),
+    redirect_error(ErrMsg).
 
+redirect_error(ErrorMsg) ->
+    {ok, SessPid} = tts:session_with_error(ErrorMsg),
+    redirect_set_cookie(SessPid).
 
+redirect_set_cookie(SessPid) ->
+    {ok, SessToken} = tts_session:get_sess_token(SessPid),
+    {ok, MaxAge} = tts_session:get_max_age(SessPid),
+    Opts = tts_http_util:create_cookie_opts(MaxAge),
+    CookieName = tts_http_util:cookie_name(),
+    {ok, [{redirect, ?CONFIG(ep_main)},
+          {cookie, CookieName, SessToken, Opts}]}.
+
+bin_error_msg(Reason, Details) ->
+    list_to_binary(error_msg(Reason, Details)).
+
+error_msg(login, _) ->
+    "sorry, an internal error occured, please try again";
 error_msg(internal, {token_invalid, _}) ->
-    io_lib:format("the returned token was invalid, the error has been logged");
+    "the returned token was invalid, the error has been logged";
 error_msg(internal, {bad_user_agent, _}) ->
-    io_lib:format("you are not who you was before, incident has been logged");
+    "you are not who you was before, incident has been logged";
 error_msg(internal, {bad_peer_ip, _}) ->
-    io_lib:format("stealing cookies is a crime, you have been logged");
+    "stealing cookies is a crime, you have been logged";
 error_msg(internal, {bad_cookie, _}) ->
-    io_lib:format("sorry, something went wrong, please try again");
+    "sorry, been unable to recognize you, please try again.";
 error_msg(_, _) ->
-    io_lib:format("sorry, something went wrong, please try again").
+    "sorry, something went wrong, please try again".

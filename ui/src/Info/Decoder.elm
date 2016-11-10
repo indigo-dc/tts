@@ -15,3 +15,4 @@ decodeInfo =
         |> Json.Decode.Pipeline.required "redirect_path" (Json.Decode.string)
         |> Json.Decode.Pipeline.required "logged_in" (Json.Decode.bool)
         |> Json.Decode.Pipeline.required "display_name" (Json.Decode.string)
+        |> Json.Decode.Pipeline.required "error" (Json.Decode.string)

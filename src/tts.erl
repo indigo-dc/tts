@@ -21,6 +21,7 @@
          login_with_oidcc/1,
          login_with_access_token/2,
          logout/1,
+         session_with_error/1,
 
          does_credential_exist/2,
          does_temp_cred_exist/2,
@@ -56,6 +57,13 @@ login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
     do_login(Issuer, undefined, AccessToken);
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
+
+session_with_error(Msg) ->
+    {ok, SessPid} = tts_session_mgr:new_session(),
+    ok = tts_session:set_error(Msg, SessPid),
+    false = tts_session:is_logged_in(SessPid),
+    {ok, SessPid}.
+
 
 do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = tts_session_mgr:new_session(),

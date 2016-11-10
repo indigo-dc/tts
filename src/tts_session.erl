@@ -33,6 +33,9 @@
 -export([set_token/2]).
 -export([get_token/1]).
 
+-export([set_error/2]).
+-export([get_error/1]).
+
 -export([get_user_info/1]).
 -export([get_display_name/1]).
 
@@ -94,6 +97,14 @@ get_token(Pid) ->
 set_token(Token, Pid) ->
     gen_server:call(Pid, {set_token, Token}).
 
+-spec get_error(Pid :: pid()) -> {ok, Token::map()}.
+get_error(Pid) ->
+    gen_server:call(Pid, get_error).
+
+-spec set_error(Error :: binary(), Pid :: pid()) -> ok.
+set_error(Error, Pid) ->
+    gen_server:call(Pid, {set_error, Error}).
+
 -spec get_user_info(Pid :: pid()) -> {ok, UserInfo::map()}.
 get_user_info(Pid) ->
     gen_server:call(Pid, get_user_info).
@@ -129,6 +140,7 @@ is_same_ip(IP, Pid) ->
           user_agent = undefined,
           ip = undefined,
           token = none,
+          error = <<"">>,
           user_info = undefined,
           max_age = 10
          }).
@@ -171,6 +183,10 @@ handle_call({set_token, Token}, _From,
     {reply, ok, State#state{token=TokenMap, user_info=Info2}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
+handle_call({set_error, Error}, _From, #state{max_age=MA}=State) ->
+    {reply, ok, State#state{error=Error}, MA};
+handle_call(get_error, _From, #state{max_age=MA, error=Error}=State) ->
+    {reply, {ok, Error}, State, MA};
 handle_call(get_user_info, _From, #state{max_age=MA, user_info=Info} =State) ->
     {reply, {ok, Info}, State, MA};
 handle_call(get_display_name, _Frm, #state{max_age=MA, user_info=Info}=State) ->
