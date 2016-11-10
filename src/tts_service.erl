@@ -98,10 +98,15 @@ get_and_validate_parameter(_) ->
     {error, not_found}.
 
 
-validate_params_and_update_db(Id, Info, {ok, ConfParams, RequestParams}) ->
+validate_params_and_update_db(Id, Info,
+                              {ok, ConfParams, RequestParams, Version}) ->
      Ensure = #{plugin_conf => #{},
-               params => []},
+               params => [],
+                plugin_version => Version
+               },
     Info0 = maps:merge(Info, Ensure),
+    lager:info("service '~s': plugin version ~s", [binary_to_list(Id),
+                                                   binary_to_list(Version)]),
     {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
     {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
     Info3 = list_skipped_parameter_and_delete_config(Info2),
@@ -109,7 +114,9 @@ validate_params_and_update_db(Id, Info, {ok, ConfParams, RequestParams}) ->
     Update = #{enabled => IsValid},
     NewInfo = maps:merge(Info3, Update),
     update_service(Id, NewInfo);
-validate_params_and_update_db(_, _, _) ->
+validate_params_and_update_db(Id, _, _) ->
+    lager:error("service '~s': bad parameter response (from plugin)",
+                [binary_to_list(Id)]),
     {error, bad_config}.
 
 validate_conf_parameter(Params, Info) ->

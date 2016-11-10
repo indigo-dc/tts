@@ -162,12 +162,15 @@ return_error_with_debug(Error, _Log, false) ->
     {error, Error, []}.
 
 handle_params_result({ok, #{conf_params := ConfParams,
-                            request_params := RequestParams}, _Log}) ->
-    {ok, ConfParams, RequestParams};
-handle_params_result({ok, #{conf_params := ConfParams}, _Log}) ->
-    {ok, ConfParams, []};
-handle_params_result({ok, #{request_params := RequestParams}, _Log}) ->
-    {ok, [], RequestParams};
+                            request_params := RequestParams,
+                           version := Version}, _Log}) ->
+    {ok, ConfParams, RequestParams, Version};
+handle_params_result({ok, #{conf_params := ConfParams,
+                            version := Version}, _Log}) ->
+    {ok, ConfParams, [], Version};
+handle_params_result({ok, #{request_params := RequestParams,
+                            version := Version}, _Log}) ->
+    {ok, [], RequestParams, Version};
 handle_params_result(_) ->
     {error, bad_result}.
 
