@@ -1,22 +1,23 @@
 {application, tts, [
-	{description, ""},
-	{vsn, "semver"},
-	{modules, []},
-	{registered, [tts_sup]},
-	{applications, [
-        kernel,
-        stdlib,
-        cowboy,
-        crypto,
-        ssh,
-        econfig,
-        jsone,
-        esqlite,
-        base64url,
-        oidcc,
-        oidcc_cowboy,
-        lager,
-        eper
-                   ]},
-	{mod, {tts_app, []}}
-]}.
+                    {description, ""},
+                    {vsn, "semver"},
+                    {modules, []},
+                    {registered, [tts_sup]},
+                    {applications, [
+                                    kernel,
+                                    stdlib,
+                                    cowboy,
+                                    crypto,
+                                    ssh,
+                                    econfig,
+                                    jsone,
+                                    esqlite,
+                                    base64url,
+                                    oidcc,
+                                    oidcc_cowboy,
+                                    lager,
+                                    uuid,
+                                    eper
+                                   ]},
+                    {mod, {tts_app, []}}
+                   ]}.
