@@ -15,10 +15,10 @@
   0},
  {<<"oidcc">>,
   {git,"https://github.com/indigo-dc/oidcc",
-       {ref,"7db0a02259421c5350138d94ce643bc0a595045a"}},
+       {ref,"515f3f363d4ce9eb379e6dd26312e661cc3e92e3"}},
   1},
  {<<"oidcc_cowboy">>,
   {git,"https://github.com/indigo-dc/oidcc_cowboy.git",
-       {ref,"52c0733d9434f4aecba732d98258bc8ef6081c68"}},
+       {ref,"2c14b4f39d63ee485a30eb2490a9f7044b8e3be3"}},
   0},
  {<<"ranch">>,{pkg,<<"ranch">>,<<"1.2.1">>},1}].

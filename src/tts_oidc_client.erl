@@ -21,8 +21,8 @@ login_succeeded(TokenMap) ->
             {ok, [{redirect, ?CONFIG(ep_main)}]}
     end.
 
-login_failed(_Reason, _Description) ->
+login_failed(Reason, Description) ->
     %% TODO:
-    %% show an error on the login page
-    lager:debug("login failed"),
+    %% show an error page with redirect to login
+    lager:warning("login failed: ~p - ~p",[Reason, Description]),
     {ok, [{redirect, ?CONFIG(ep_main)}]}.
