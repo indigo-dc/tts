@@ -132,20 +132,20 @@ code_change(_OldVsn, State, _Extra) ->
 
 credential_add(UserId, ServiceId, Interface, CredState, SameStateOk, Con) ->
     ok = esqlite3:exec("begin;", Con),
-    {Unique, CredId}=credential_state_unique(UserId, ServiceId, CredState, Con),
-    Result = case (Unique) of
+    {Unique, CUuid}=credential_state_unique(UserId, ServiceId, CredState, Con),
+    Result = case Unique of
                  true ->
-                     CredentialId = create_random_credential_id(Con),
+                     CredUuid = create_random_uuid(Con),
                      CreationTime = cowboy_clock:rfc1123(),
                      esqlite3:q("INSERT INTO tts_cred
                                 VALUES( ?1,?2,?3,?4,?5,?6);",
-                                [CredentialId, CreationTime, Interface, UserId,
+                                [CredUuid, CreationTime, Interface, UserId,
                                  ServiceId, CredState] , Con),
-                     {ok, CredentialId};
+                     {ok, CredUuid};
                  false ->
                      case SameStateOk of
                          true ->
-                             {ok, CredId};
+                             {ok, CUuid};
                          _ ->
                              {error, not_unique_state}
                      end
@@ -205,13 +205,13 @@ credential_remove(UserId, CredentialId, Con) ->
     ok = esqlite3:exec("commit;", Con),
     ok.
 
-create_random_credential_id(Con) ->
-    CredId = tts_utils:random_string(24),
+create_random_uuid(Con) ->
+    Uuid = list_to_binary(uuid:uuid_to_string(uuid:get_v4(strong))),
     Result = esqlite3:q("SELECT credential_id FROM tts_cred WHERE
-                        credential_id = ?1", [CredId], Con),
+                        credential_id = ?1", [Uuid], Con),
     case Result of
-        [] -> CredId;
-        _ -> create_random_credential_id(Con)
+        [] -> Uuid;
+        _ -> create_random_uuid(Con)
     end.
 
 
