@@ -192,16 +192,19 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
-    {LoggedIn, DName}  = case is_pid(Session) of
-                             false -> {false, <<"">>};
-                             true -> {ok, Name} =
-                                         tts_session:get_display_name(Session),
-                                     {tts_session:is_logged_in(Session), Name}
-                         end,
+    {LoggedIn, DName, Error}  =
+        case is_pid(Session) of
+            false -> {false, <<"">>, <<"">>};
+            true -> {ok, Name} =
+                        tts_session:get_display_name(Session),
+                    {ok, Err} = tts_session:get_error(Session),
+                    {tts_session:is_logged_in(Session), Name, Err}
+        end,
     {ok, Version} = application:get_key(tts, vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
     Info = #{version => list_to_binary(Version),
              redirect_path => list_to_binary(Redirect),
+             error => Error,
              logged_in => LoggedIn,
              display_name => DName
             },

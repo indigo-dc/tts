@@ -8,9 +8,9 @@ import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
 import CredentialList.Model as CredentialList exposing (Model, initModel)
 import Debug exposing (log)
 import Dict exposing (Dict, empty, insert)
-import Html exposing (Html, div, h1, text, small)
+import Html exposing (Html, div, h1, text, small, strong)
 import Html.App exposing (program)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, hidden)
 import Http exposing (get, post, send, defaultSettings, Error)
 import Info.Decoder as Info exposing (decodeInfo)
 import Json.Encode as Json exposing (encode)
@@ -60,6 +60,7 @@ type alias Model =
     , credential : Maybe Secret.Model
     , accessToken : AccessToken.Model
     , loggedIn : Bool
+    , error : String
     , displayName : String
     , current_service : Maybe Service.Model
     , current_param : Maybe (Dict String Json.Value)
@@ -83,6 +84,7 @@ update msg model =
                     | serverVersion = info.version
                     , redirectPath = info.redirectPath
                     , loggedIn = info.loggedIn
+                    , error = info.error
                     , displayName = info.displayName
                     , activePage = nextPage
                   }
@@ -222,16 +224,29 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ div [ class "container" ]
-            [ h1 []
-                [ text "Token Translation Service"
-                , text " "
-                , small [] [ text model.serverVersion ]
+    let
+        hideError =
+            case model.error of
+                "" ->
+                    True
+
+                _ ->
+                    False
+    in
+        div []
+            [ div [ class "container" ]
+                [ h1 []
+                    [ text "Token Translation Service"
+                    , text " "
+                    , small [] [ text model.serverVersion ]
+                    ]
+                , div [ class "alert alert-danger", hidden hideError ]
+                    [ strong [] [ text "Login Error" ]
+                    , text model.error
+                    ]
+                , mainContent model
                 ]
-            , mainContent model
             ]
-        ]
 
 
 mainContent : Model -> Html Msg
@@ -307,6 +322,7 @@ initModel baseUrl restVersion =
       , credentialList = CredentialList.initModel
       , activePage = Login
       , loggedIn = False
+      , error = ""
       , displayName = "unknown"
       , current_service = Nothing
       , current_param = Nothing

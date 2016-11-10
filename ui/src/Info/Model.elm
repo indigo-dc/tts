@@ -6,4 +6,5 @@ type alias Model =
     , redirectPath : String
     , loggedIn : Bool
     , displayName : String
+    , error : String
     }
