@@ -21,4 +21,6 @@
   {git,"https://github.com/indigo-dc/oidcc_cowboy.git",
        {ref,"2c14b4f39d63ee485a30eb2490a9f7044b8e3be3"}},
   0},
- {<<"ranch">>,{pkg,<<"ranch">>,<<"1.2.1">>},1}].
+ {<<"quickrand">>,{pkg,<<"quickrand">>,<<"1.5.4">>},1},
+ {<<"ranch">>,{pkg,<<"ranch">>,<<"1.2.1">>},1},
+ {<<"uuid">>,{pkg,<<"uuid_erl">>,<<"1.5.4">>},0}].
