@@ -1,18 +1,18 @@
--module(tts_cred_worker_test).
+-module(tts_plugin_runner_test).
 -include_lib("eunit/include/eunit.hrl").
 
 start_stop_test() ->
-    {ok, Pid} = tts_cred_worker:start_link(),
-    ok = tts_cred_worker:stop(Pid),
+    {ok, Pid} = tts_plugin_runner:start_link(),
+    ok = tts_plugin_runner:stop(Pid),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
 garbage_test() ->
-    {ok, Pid} = tts_cred_worker:start_link(),
+    {ok, Pid} = tts_plugin_runner:start_link(),
     ignored = gen_server:call(Pid, unsupported_call),
     ok = gen_server:cast(Pid, unsupported_cast),
     Pid ! unsupported_msg,
-    ok = tts_cred_worker:stop(Pid),
+    ok = tts_plugin_runner:stop(Pid),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
@@ -106,14 +106,14 @@ garbage_test() ->
 %%     ok = meck:expect(ssh_connection,exec,ExecFun),
 
 
-%%     {ok, Pid} = tts_cred_worker:start(),
+%%     {ok, Pid} = tts_plugin_runner:start(),
 %%     SshPid ! {pid, Pid},
 
 %%     {ok, #{credential:=Credential, state:=CredState},
-%%      _} = tts_cred_worker:request(ServiceId, UserInfo,Params,Pid),
+%%      _} = tts_plugin_runner:request(ServiceId, UserInfo,Params,Pid),
 
 
-%%     ok = tts_cred_worker:stop(Pid),
+%%     ok = tts_plugin_runner:stop(Pid),
 %%     ok = test_util:wait_for_process_to_die(Pid,100),
 %%     ok = test_util:meck_done(MeckModules),
 %%     ok.
@@ -145,13 +145,13 @@ garbage_test() ->
 %%     ok = test_util:meck_new(MeckModules),
 %%     ok = meck:expect(tts_service,get_info,InfoFun),
 
-%%     {ok, Pid} = tts_cred_worker:start(),
+%%     {ok, Pid} = tts_plugin_runner:start(),
 
 %%     {error, bad_json_result
-%%      , _} = tts_cred_worker:request(ServiceId, UserInfo,Params,Pid),
+%%      , _} = tts_plugin_runner:request(ServiceId, UserInfo,Params,Pid),
 
 
-%%     ok = tts_cred_worker:stop(Pid),
+%%     ok = tts_plugin_runner:stop(Pid),
 %%     ok = test_util:wait_for_process_to_die(Pid,100),
 %%     ok = test_util:meck_done(MeckModules),
 %%     ok.
@@ -175,12 +175,12 @@ garbage_test() ->
 %%     ok = test_util:meck_new(MeckModules),
 %%     ok = meck:expect(tts_service,get_info,InfoFun),
 
-%%     {ok, Pid} = tts_cred_worker:start(),
+%%     {ok, Pid} = tts_plugin_runner:start(),
 
-%%     {error, {internal, _}} = tts_cred_worker:request(ServiceId, UserInfo,Params,Pid),
+%%     {error, {internal, _}} = tts_plugin_runner:request(ServiceId, UserInfo,Params,Pid),
 
 
-%%     ok = tts_cred_worker:stop(Pid),
+%%     ok = tts_plugin_runner:stop(Pid),
 %%     ok = test_util:wait_for_process_to_die(Pid,1000),
 %%     ok = test_util:meck_done(MeckModules),
 %%     ok.
