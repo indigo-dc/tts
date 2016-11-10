@@ -39,7 +39,7 @@ get_list(UserInfo) ->
                       #{ id := ServiceId
                        } = Service,
                       Limit = maps:get(cred_limit, Service, 0),
-                      {ok, Count} = tts_credential:get_count(UserInfo,
+                      {ok, Count} = tts_plugin:get_count(UserInfo,
                                                              ServiceId),
                       LimitReached = (Count >= Limit),
                       Update = #{ limit_reached => LimitReached,
@@ -92,7 +92,7 @@ update_params(Id) ->
     get_and_validate_parameter(Service).
 
 get_and_validate_parameter({ok, {Id, Info}}) ->
-    Result = tts_credential:get_params(Id),
+    Result = tts_plugin:get_params(Id),
     validate_params_and_update_db(Id, Info, Result);
 get_and_validate_parameter(_) ->
     {error, not_found}.

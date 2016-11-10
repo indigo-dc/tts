@@ -1,4 +1,4 @@
--module(tts_credential).
+-module(tts_plugin).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -22,7 +22,7 @@
 -export([start_link/0]).
 -export([stop/0]).
 -export([
-         get_list/1,
+         get_cred_list/1,
          get_count/2,
          exists/2,
          request/5,
@@ -47,7 +47,7 @@ stop() ->
     gen_server:cast(?MODULE, stop).
 
 %% -spec get_list(binary()) -> {ok, [tts:cred()]}.
-get_list(UserInfo) ->
+get_cred_list(UserInfo) ->
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
     get_credential_list(UserId).
 
@@ -73,8 +73,8 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
     Allowed = tts_service:is_allowed(UserInfo, ServiceId),
     case { Allowed, Enabled, Count < Limit } of
         {true, true, true} ->
-            {ok, Pid} = tts_cred_sup:new_worker(),
-            Result = tts_cred_worker:request(ServiceId, UserInfo, Params, Pid),
+            {ok, Pid} = tts_plugin_sup:new_worker(),
+            Result = tts_plugin_runner:request(ServiceId, UserInfo, Params, Pid),
             handle_request_result(Result, ServiceId, UserInfo,
                                   Interface, Token);
         {false, _, _} ->
@@ -95,16 +95,16 @@ revoke(CredentialId, UserInfo) ->
                cred_state := CredState,
                cred_id := CredId
              } = Cred,
-            {ok, Pid} = tts_cred_sup:new_worker(),
-            Result=tts_cred_worker:revoke(ServiceId, UserInfo, CredState, Pid),
+            {ok, Pid} = tts_plugin_sup:new_worker(),
+            Result=tts_plugin_runner:revoke(ServiceId, UserInfo, CredState, Pid),
             handle_revoke_result(Result, UserInfo, CredId);
         {error, Reason} -> {error, Reason, []}
     end.
 
 
 get_params(ServiceId) ->
-    {ok, Pid} = tts_cred_sup:new_worker(),
-    Result = tts_cred_worker:get_params(ServiceId, Pid),
+    {ok, Pid} = tts_plugin_sup:new_worker(),
+    Result = tts_plugin_runner:get_params(ServiceId, Pid),
     handle_params_result(Result).
 
 

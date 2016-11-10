@@ -92,7 +92,7 @@ logout(Session) ->
 
 does_credential_exist(Id, Session) ->
     {ok, UserId} =  tts_session:get_userid(Session),
-    tts_credential:exists(UserId, Id).
+    tts_plugin:exists(UserId, Id).
 
 does_temp_cred_exist(Id, Session) ->
     {ok, UserId} =  tts_session:get_userid(Session),
@@ -122,7 +122,7 @@ get_service_list_for(Session) ->
 
 get_credential_list_for(Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, CredentialList} = tts_credential:get_list(UserInfo),
+    {ok, CredentialList} = tts_plugin:get_cred_list(UserInfo),
     {ok, CredentialList}.
 
 
@@ -131,7 +131,7 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, Token} = tts_session:get_token(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     true = tts_service:is_enabled(ServiceId),
-    case tts_credential:request(ServiceId, UserInfo, Interface, Token,
+    case tts_plugin:request(ServiceId, UserInfo, Interface, Token,
                                 Params) of
         {ok, Credential, Log} ->
             #{id := CredId} = Credential,
@@ -148,7 +148,7 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     {ok, SessionId} = tts_session:get_id(Session),
-    case tts_credential:revoke(CredId, UserInfo) of
+    case tts_plugin:revoke(CredId, UserInfo) of
         {ok, Result, Log}  ->
             lager:info("SESS~p revoked credential ~p",
                        [SessionId, CredId]),
@@ -188,8 +188,8 @@ start_full_debug() ->
                       "tts_session",
                       "tts_session_mgr",
                       "tts_service",
-                      "tts_credential",
-                      "tts_cred_worker"
+                      "tts_plugin",
+                      "tts_plugin_runner"
                     ],
     start_debug(ListOfModules).
 

@@ -37,18 +37,13 @@
 
 -define(TTS_SESSIONS, tts_sessions).
 -define(TTS_OIDCP, tts_oidcp).
--define(TTS_USER, tts_user).
--define(TTS_USER_MAPPING, tts_user_mapping).
 -define(TTS_SERVICE, tts_service).
--define(TTS_CRED_USER, tts_cred_user).
 
 -define(TTS_TABLES, [
-                    ?TTS_SESSIONS
+                     ?TTS_SESSIONS
                     , ?TTS_OIDCP
-                    , ?TTS_USER_MAPPING
-                    , ?TTS_USER
                     , ?TTS_SERVICE
-                   ]).
+                    ]).
 
 init() ->
     create_tables().

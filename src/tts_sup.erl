@@ -31,8 +31,8 @@ restart_config() ->
 init([]) ->
     Procs = [
              sessions_supervisor(),
-             credential_supervisor(),
-             credential_worker(),
+             plugin_supervisor(),
+             plugin_worker(),
              sqlite_worker(),
              temp_cred_sup(),
              temp_cred(),
@@ -48,14 +48,14 @@ sessions_supervisor() ->
        type => supervisor
      }.
 
-credential_worker() ->
-    #{ id => credential,
-       start => {tts_credential, start_link, []}
+plugin_worker() ->
+    #{ id => plugin,
+       start => {tts_plugin, start_link, []}
      }.
 
-credential_supervisor() ->
-    #{ id => credential_sup,
-       start => {tts_cred_sup, start_link, []},
+plugin_supervisor() ->
+    #{ id => plugin_sup,
+       start => {tts_plugin_sup, start_link, []},
        type => supervisor
      }.
 
