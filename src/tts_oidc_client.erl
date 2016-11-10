@@ -21,8 +21,20 @@ login_succeeded(TokenMap) ->
             {ok, [{redirect, ?CONFIG(ep_main)}]}
     end.
 
-login_failed(_Reason, _Description) ->
+login_failed(Reason, Description) ->
     %% TODO:
-    %% show an error on the login page
-    lager:debug("login failed"),
+    %% start a session to keep track of the error
+    lager:warning("login failed: ~p - ~p", [Reason, Description]),
     {ok, [{redirect, ?CONFIG(ep_main)}]}.
+
+
+error_msg(internal, {token_invalid, _}) ->
+    io_lib:format("the returned token was invalid, the error has been logged");
+error_msg(internal, {bad_user_agent, _}) ->
+    io_lib:format("you are not who you was before, incident has been logged");
+error_msg(internal, {bad_peer_ip, _}) ->
+    io_lib:format("stealing cookies is a crime, you have been logged");
+error_msg(internal, {bad_cookie, _}) ->
+    io_lib:format("sorry, something went wrong, please try again");
+error_msg(_, _) ->
+    io_lib:format("sorry, something went wrong, please try again").

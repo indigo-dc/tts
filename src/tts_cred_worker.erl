@@ -111,7 +111,7 @@ handle_call({revoke_credential, ServiceId, UserInfo, CredState}, From,
     gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
 handle_call({get_params, ServiceId}, From, #state{client = undefined}=State) ->
-    NewState = State#state{ action = get_params,
+    NewState = State#state{ action = parameter,
                             client = From,
                             service_id = ServiceId
                           },
@@ -213,13 +213,19 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
     ConnType = maps:get(type, ConnInfo, local),
     {ok, Version} = application:get_key(tts, vsn),
-    ScriptParam0 = #{
-      tts_version => list_to_binary(Version),
-      action => Action,
-      params => Params,
-      conf_params => ConfParams,
-      cred_state => CredState
-      },
+    ParamUpdate =
+        case Action == parameter of
+            false ->
+                #{conf_params => ConfParams,
+                  params => Params};
+            _ -> #{}
+        end,
+    ScriptParam0 = maps:merge(
+                     #{
+                        tts_version => list_to_binary(Version),
+                        action => Action,
+                        cred_state => CredState
+                      }, ParamUpdate),
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
@@ -267,8 +273,7 @@ create_result(#{exit_status := 0, std_out := []}, Log) ->
     {error, no_json, lists:reverse(Log)};
 create_result(#{exit_status := 0, std_out := [Json|_]}, Log) ->
     case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
-        {ok, Map, <<>>} -> {ok, Map, lists:reverse(Log)};
-        {ok, _Map, _} -> {error, partially_bad_json, lists:reverse(Log)};
+        {ok, Map, _} -> {ok, Map, lists:reverse(Log)};
         {error, _} -> {error, bad_json_result, lists:reverse(Log)}
     end;
 create_result(#{exit_status := _}, Log) ->

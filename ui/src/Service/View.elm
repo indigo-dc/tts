@@ -5,7 +5,7 @@ import Html exposing (Html, h4, p, text, table, tbody, button, option, tr, td, f
 import Html.Attributes exposing (class, method, value, disabled, name, type', action, placeholder)
 import Html.Events exposing (onClick, onInput)
 import Messages exposing (Msg)
-import Service.Model as Service exposing (Model, Param, onlyAdvanced)
+import Service.Model as Service exposing (Model, Set, Param, hasBasic, hasAdvanced, nonEmptySets)
 
 
 view : Service.Model -> Html Msg
@@ -18,10 +18,10 @@ view service =
             service.limitReached || (not service.enabled)
 
         requestDisabled =
-            serviceDisabled || Service.onlyAdvanced service
+            serviceDisabled || not (Service.hasBasic service)
 
         advancedDisabled =
-            serviceDisabled || ((List.length service.parameter) == 0)
+            serviceDisabled || not (Service.hasAdvanced service)
     in
         tr []
             [ td [] [ text service.id ]
@@ -64,14 +64,7 @@ advancedView srvc =
                                 (h4 [ class "modal-title" ] [ text "Parameter" ])
                         , body =
                             Just
-                                (div []
-                                    [ p [] [ text "please fill in at least all mandatory parameter" ]
-                                    , table [ class "table table-striped" ]
-                                        [ tbody []
-                                            (List.map viewParam service.parameter)
-                                        ]
-                                    ]
-                                )
+                                (viewParamSet 0 service.parameter_sets)
                         , footer =
                             Just
                                 (div [ class "btn-group" ]
@@ -90,6 +83,29 @@ advancedView srvc =
                         }
     in
         Dialog.view config
+
+
+viewParamSet : Int -> List Service.Set -> Html Msg
+viewParamSet pos allSets =
+    let
+        sets =
+            Service.nonEmptySets allSets
+
+        set =
+            case List.head sets of
+                Nothing ->
+                    []
+
+                Just s ->
+                    s
+    in
+        div []
+            [ p [] [ text "please fill in at least all mandatory parameter" ]
+            , table [ class "table table-striped" ]
+                [ tbody []
+                    (List.map viewParam set)
+                ]
+            ]
 
 
 viewParam : Service.Param -> Html Msg
