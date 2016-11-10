@@ -101,7 +101,9 @@ get_and_validate_parameter(_) ->
 validate_params_and_update_db(Id, Info,
                               {ok, ConfParams, RequestParams, Version}) ->
      Ensure = #{plugin_conf => #{},
-               params => []},
+               params => [],
+                plugin_version => Version
+               },
     Info0 = maps:merge(Info, Ensure),
     lager:info("service '~s': plugin version ~s", [binary_to_list(Id),
                                                    binary_to_list(Version)]),
