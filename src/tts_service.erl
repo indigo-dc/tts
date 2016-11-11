@@ -27,6 +27,7 @@
 -export([is_allowed/2]).
 -export([allows_same_state/1]).
 -export([get_credential_limit/1]).
+-export([get_queue/1]).
 %% -export([group_plugin_configs/1]).
 
 get_list() ->
@@ -61,6 +62,20 @@ get_credential_limit(ServiceId) ->
     case tts_data:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, maps:get(cred_limit, Info, 0)};
         _ -> {ok, 0}
+    end.
+
+get_queue(ServiceId) ->
+    case tts_data:service_get(ServiceId) of
+        {ok, {ServiceId, Info}} ->
+            %% QueueName = maps:get(runner_queue, Info),
+            QueueName = ServiceId,
+            case maps:get(parallel_runner, Info) of
+                infinite ->
+                    {ok, undefined};
+                Num when is_number(Num) ->
+                    {ok, QueueName}
+            end;
+        _ -> {ok, undefined}
     end.
 
 is_enabled(ServiceId) ->

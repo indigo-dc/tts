@@ -23,8 +23,8 @@
 -export([start_link/0]).
 -export([start/0]).
 -export([stop/1]).
--export([request/4]).
--export([revoke/4]).
+-export([request/5]).
+-export([revoke/5]).
 -export([get_params/2]).
 
 %% gen_server.
@@ -41,6 +41,8 @@
           service_id = undefined,
           user_info = undefined,
           params = undefined,
+          queue = undefined,
+          job_id = undefined,
           cred_state = undefined,
           connection = undefined,
           con_type = undefined,
@@ -65,18 +67,18 @@ stop(Pid) ->
     gen_server:cast(Pid, stop).
 
 -spec request(ServiceId :: binary(), UserInfo :: map(),
-              Params::any(), pid()) -> {ok, map(), list()} |
+              Params::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
                                        {error, any(), list()} | {error, atom()}.
-request(ServiceId, UserInfo, Params, Pid) ->
-    gen_server:call(Pid, {request_credential, ServiceId, UserInfo, Params},
-                    infinity).
+request(ServiceId, UserInfo, Params, Queue, Pid) ->
+    gen_server:call(Pid, {request_credential, ServiceId, UserInfo,
+                          Params, Queue}, infinity).
 
 -spec revoke(ServiceId :: binary(), UserInfo :: map(),
-             CredState::any(), pid()) -> {ok, map(), list()} |
+             CredState::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
                                          {error, any(), list()}|{error, atom()}.
-revoke(ServiceId, UserInfo, CredState, Pid) ->
-    gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo, CredState},
-                    infinity).
+revoke(ServiceId, UserInfo, CredState, Queue, Pid) ->
+    gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo,
+                          CredState, Queue}, infinity).
 
 -spec get_params(ServiceId ::any(), Pid::pid()) -> {ok, map()} |
                                                    {error, atom(), list()} |
@@ -90,25 +92,27 @@ get_params(ServiceId, Pid) ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({request_credential, ServiceId, UserInfo, Params}, From,
+handle_call({request_credential, ServiceId, UserInfo, Params, Queue}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = request,
                             client = From,
                             service_id = ServiceId,
                             user_info = UserInfo,
-                            params = Params
+                            params = Params,
+                            queue = Queue
                           },
-    gen_server:cast(self(), perform_action),
+    gen_server:cast(self(), request_slot),
     {noreply, NewState, 200};
-handle_call({revoke_credential, ServiceId, UserInfo, CredState}, From,
+handle_call({revoke_credential, ServiceId, UserInfo, CredState, Queue}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = revoke,
                             client = From,
                             service_id = ServiceId,
                             user_info = UserInfo,
-                            cred_state = CredState
+                            cred_state = CredState,
+                            queue = Queue
                           },
-    gen_server:cast(self(), perform_action),
+    gen_server:cast(self(), request_slot),
     {noreply, NewState, 200};
 handle_call({get_params, ServiceId}, From, #state{client = undefined}=State) ->
     NewState = State#state{ action = parameter,
@@ -120,6 +124,22 @@ handle_call({get_params, ServiceId}, From, #state{client = undefined}=State) ->
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+
+
+
+
+handle_cast(request_slot, #state{queue = undefined}=State) ->
+    gen_server:cast(self(), perform_action),
+    {noreply, State};
+handle_cast(request_slot, #state{queue = Queue}=State) ->
+    case jobs:ask(Queue) of
+        {ok, JobId} ->
+            gen_server:cast(self(), perform_action),
+            {noreply, State#state{job_id=JobId}};
+        {error, rejected} ->
+            {ok, NewState} = send_reply({error, rejected}, State),
+            {stop, normal, NewState}
+    end;
 handle_cast(perform_action, State) ->
     {ok, NewState} = prepare_action(State),
     trigger_next_command(),
