@@ -105,18 +105,17 @@ validate_params_and_update_db(Id, Info,
                 plugin_version => Version
                },
     Info0 = maps:merge(Info, Ensure),
-    lager:info("service '~s': plugin version ~s", [binary_to_list(Id),
-                                                   binary_to_list(Version)]),
+    lager:info("service ~p: plugin version ~p", [Id, Version]),
     {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
     {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
     Info3 = list_skipped_parameter_and_delete_config(Info2),
     IsValid = ValidConfParam and ValidCallParam,
     Update = #{enabled => IsValid},
     NewInfo = maps:merge(Info3, Update),
+    start_runner_queue_if_needed(NewInfo),
     update_service(Id, NewInfo);
 validate_params_and_update_db(Id, _, _) ->
-    lager:error("service '~s': bad parameter response (from plugin)",
-                [binary_to_list(Id)]),
+    lager:error("service ~p: bad parameter response (from plugin)", [Id]),
     {error, bad_config}.
 
 validate_conf_parameter(Params, Info) ->
@@ -131,8 +130,7 @@ validate_conf_parameter([#{name := Name,
     {Res, NewInfo} = update_conf_parameter(Name, Default, AtomType, Info),
     validate_conf_parameter(T, NewInfo, Res and Current);
 validate_conf_parameter(_, #{id := Id, cmd := Cmd} = Info, _) ->
-    lager:error("service '~s': bad parameter for plugin ~s",
-                [binary_to_list(Id), binary_to_list(Cmd)]),
+    lager:error("service ~p: bad parameter for plugin ~p", [Id, Cmd]),
     {false, Info}.
 
 
@@ -245,6 +243,21 @@ list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
     lists:foldl(Warn, ok, Keys),
     maps:remove(plugin_conf_config, Info).
 
+
+start_runner_queue_if_needed(#{enabled := true,
+                               parallel_runner := NumRunner,
+                               id := Id
+                              })
+  when is_number(NumRunner) ->
+    ok = jobs:add_queue(Id, [{regulators, [
+                                           {counter, [{limit, NumRunner}]}
+                                          ]},
+                             {type, fifo}
+                            ]),
+    Msg = "service ~p: queue started with max ~p parallel runners",
+    lager:info(Msg, [Id, NumRunner]);
+start_runner_queue_if_needed(_) ->
+    ok.
 
 
 
