@@ -13,16 +13,21 @@
           {datatype, [{atom, infinite}, integer]}
           ]}.
 
+%% @doc the max count of parallel running plugins for this service
+{mapping, "service.$id.parallel_runner", "tts.service_list.c", [
+          {datatype, [{atom, infinite}, integer]}
+          ]}.
 
-%% @doc the credential limit for this service
-{mapping, "service.$id.allow_same_state", "tts.service_list.c", [
+%% @doc wether the plugin is allowed to return the same state
+%% more than once
+{mapping, "service.$id.allow_same_state", "tts.service_list.d", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
 %% @doc the way tts connects to the place where to start the plugin
 %% this can be either local or ssh
 %% @see service.$id.cmd
-{mapping, "service.$id.connection.type", "tts.service_list.d", [
+{mapping, "service.$id.connection.type", "tts.service_list.e", [
           {datatype, {enum, [local, ssh]}}
           ]}.
 
@@ -32,34 +37,34 @@
           ]}.
 
 %% @doc the password to use for the connection
-{mapping, "service.$id.connection.password", "tts.service_list.f", [
+{mapping, "service.$id.connection.password", "tts.service_list.g", [
           {datatype, string}
           ]}.
 
 %% @doc the host to connect to
-{mapping, "service.$id.connection.host", "tts.service_list.g", [
+{mapping, "service.$id.connection.host", "tts.service_list.h", [
           {datatype, string}
           ]}.
 
 %% @doc the port to connect to
-{mapping, "service.$id.connection.port", "tts.service_list.h", [
+{mapping, "service.$id.connection.port", "tts.service_list.i", [
           {datatype, integer}
           ]}.
 
 
 %% @doc the sshDir to use when connecting
-{mapping, "service.$id.connection.ssh_dir", "tts.service_list.i", [
+{mapping, "service.$id.connection.ssh_dir", "tts.service_list.j", [
           {datatype, string}
           ]}.
 
 
 %% @doc the password for the ssh private key
-{mapping, "service.$id.connection.ssh_key_pass", "tts.service_list.j", [
+{mapping, "service.$id.connection.ssh_key_pass", "tts.service_list.k", [
           {datatype, string}
           ]}.
 
 %% @doc the plugin configuration parameter
-{mapping, "service.$id.plugin.$key", "tts.service_list.k", [
+{mapping, "service.$id.plugin.$key", "tts.service_list.l", [
           {datatype, string}
           ]}.
 
@@ -98,6 +103,7 @@
          Descs = TypeIdValue("service.$id.description", three),
          Cmds = TypeIdValue("service.$id.cmd", three),
          CredLimits = TypeIdValue("service.$id.credential_limit", three),
+         Runners = TypeIdValue("service.$id.parallel_runner", three),
          SameStates = TypeIdValue("service.$id.allow_same_state", three),
          ConnTypes = TypeIdValue("service.$id.connection.type", four),
          ConnUsers = TypeIdValue("service.$id.connection.user", four),
@@ -122,6 +128,17 @@
                                        when is_atom(Atom)
                                             -> Atom;
                                      _ -> undefined
+                                 end,
+                     ParaRunner = case lists:keyfind(Id, 1, Runners) of
+                                     {Id, NumRun}
+                                       when is_integer(NumRun), NumRun > 0
+                                            -> NumRun;
+                                     {Id, infinite}
+                                            -> infinite;
+                                     {Id, BadRun} ->
+                                        BadRunnerMsg= io_lib:format("the number of parallel runners (~p) for service ~p is out of range",[BadRun, Id]),
+                                          cuttlefish:invalid(BadRunnerMsg);
+                                      _ -> 1
                                  end,
                      SameState = case lists:keyfind(Id, 1, SameStates) of
                                      {Id, Allow}
@@ -194,6 +211,7 @@
                                   cred_limit => CredLimit,
                                   allow_same_state => SameState,
                                   plugin_conf_config => PluginConf,
+                                  parallel_runner => ParaRunner,
                                   connection => #{
                                     type => ConnType,
                                     user => ConnUser,

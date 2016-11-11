@@ -17,6 +17,7 @@
                                     oidcc_cowboy,
                                     lager,
                                     uuid,
+                                    jobs,
                                     eper
                                    ]},
                     {mod, {tts_app, []}}

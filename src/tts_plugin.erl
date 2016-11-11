@@ -67,6 +67,7 @@ exists(UserId, CredId) ->
 %%               list()) -> {ok, map(), list()} | {error, any(), list()}.
 request(ServiceId, UserInfo, Interface, Token, Params) ->
     {ok, Limit} = tts_service:get_credential_limit(ServiceId),
+    {ok, QueueName} = tts_service:get_queue(ServiceId),
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
     {ok, Count} = get_credential_count(UserId, ServiceId),
     Enabled = tts_service:is_enabled(ServiceId),
@@ -75,7 +76,7 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
         {true, true, true} ->
             {ok, Pid} = tts_plugin_sup:new_worker(),
             Result = tts_plugin_runner:request(ServiceId, UserInfo,
-                                               Params, Pid),
+                                               Params, QueueName, Pid),
             handle_request_result(Result, ServiceId, UserInfo,
                                   Interface, Token);
         {false, _, _} ->
@@ -96,9 +97,10 @@ revoke(CredentialId, UserInfo) ->
                cred_state := CredState,
                cred_id := CredId
              } = Cred,
+            {ok, QueueName} = tts_service:get_queue(ServiceId),
             {ok, Pid} = tts_plugin_sup:new_worker(),
             Result=tts_plugin_runner:revoke(ServiceId, UserInfo,
-                                            CredState, Pid),
+                                            CredState, QueueName, Pid),
             handle_revoke_result(Result, UserInfo, CredId);
         {error, Reason} -> {error, Reason, []}
     end.
@@ -134,7 +136,7 @@ handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Interface,
     return_error_with_debug({internal, Error}, Log);
 handle_request_result({error, Error}, _ServiceId, _UserInfo, _Interface,
                       _Token) ->
-    return_error_with_debug(Error, []).
+    return_error_with_debug({internal, Error}, []).
 
 handle_revoke_result({ok, #{error := Error}, Log}, _UserInfo, _CredId) ->
     return_error_with_debug({script, Error}, Log);
@@ -143,7 +145,9 @@ handle_revoke_result({ok, #{result := Result}, Log}, UserInfo, CredId) ->
     ok = remove_credential(UserId, CredId),
     return_result_with_debug(Result, Log);
 handle_revoke_result({error, Error, Log}, _UserInfo, _CredId) ->
-    return_error_with_debug({internal, Error}, Log).
+    return_error_with_debug({internal, Error}, Log);
+handle_revoke_result({error, Error}, _UserInfo, _CredId) ->
+    return_error_with_debug({internal, Error}, []).
 
 return_result_with_debug(Result, Log) ->
     return_result_with_debug(Result, Log, ?DEBUG_MODE).
