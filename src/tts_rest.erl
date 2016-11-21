@@ -154,7 +154,7 @@ resource_exists(Req, State) ->
 delete_resource(Req, #state{type=credential,
                             id=CredentialId, session_pid=Session}=State) ->
     Result = case tts:revoke_credential_for(CredentialId, Session) of
-                 {ok, _, _} -> true;
+                 ok -> true;
                  _ -> false
              end,
     ok = end_session_if_rest(State),
@@ -245,7 +245,7 @@ perform_post(credential, undefined, #{service_id:=ServiceId} = Data, Session,
              end,
     Params = maps:get(params, Data, #{}),
     case  tts:request_credential_for(ServiceId, Session, Params, IFace) of
-        {ok, Credential, _Log} ->
+        {ok, Credential} ->
             {ok, Id} = tts:store_temp_cred(Credential, Session),
             Url = id_to_url(Id, Ver),
             {true, Url};

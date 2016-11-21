@@ -47,5 +47,7 @@ error_msg(internal, {bad_peer_ip, _}) ->
     "stealing cookies is a crime, you have been logged";
 error_msg(internal, {bad_cookie, _}) ->
     "sorry, been unable to recognize you, please try again.";
+error_msg(session_not_found, _) ->
+    "sorry, your session expired during the login process, please try again.";
 error_msg(_, _) ->
     "sorry, something went wrong, please try again".
