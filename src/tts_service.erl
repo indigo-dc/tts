@@ -114,7 +114,9 @@ get_and_validate_parameter(_) ->
 
 
 validate_params_and_update_db(Id, Info,
-                              {ok, ConfParams, RequestParams, Version}) ->
+                              {ok, #{conf_params := ConfParams,
+                                     request_params := RequestParams,
+                                     version := Version}}) ->
      Ensure = #{plugin_conf => #{},
                params => [],
                 plugin_version => Version
@@ -129,8 +131,14 @@ validate_params_and_update_db(Id, Info,
     NewInfo = maps:merge(Info3, Update),
     start_runner_queue_if_needed(NewInfo),
     update_service(Id, NewInfo);
-validate_params_and_update_db(Id, _, _) ->
-    lager:error("service ~p: bad parameter response (from plugin)", [Id]),
+validate_params_and_update_db(Id, _, {error, Result}) ->
+    case maps:get(log_msg, Result, undefined) of
+        undefined ->
+            lager:error("service ~p: bad parameter response (from plugin)",
+                        [Id]);
+        Msg ->
+            lager:error("service ~p: ~s", [Id, Msg])
+    end,
     {error, bad_config}.
 
 validate_conf_parameter(Params, Info) ->

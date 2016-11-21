@@ -77,8 +77,12 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
             {ok, Pid} = tts_plugin_sup:new_worker(),
             Result = tts_plugin_runner:request(ServiceId, UserInfo,
                                                Params, QueueName, Pid),
-            handle_request_result(Result, ServiceId, UserInfo,
-                                  Interface, Token);
+            handle_result(Result, #{ action => request,
+                                     service_id => ServiceId,
+                                     user_info => UserInfo,
+                                     interface => Interface,
+                                     token => Token
+                                   });
         {false, _, _} ->
             {error, user_not_allowed, []};
         {true, false, _} ->
@@ -101,7 +105,11 @@ revoke(CredentialId, UserInfo) ->
             {ok, Pid} = tts_plugin_sup:new_worker(),
             Result=tts_plugin_runner:revoke(ServiceId, UserInfo,
                                             CredState, QueueName, Pid),
-            handle_revoke_result(Result, UserInfo, CredId);
+            handle_result(Result, #{ action => revoke,
+                                     service_id => ServiceId,
+                                     user_info => UserInfo,
+                                     cred_id => CredId
+                                   });
         {error, Reason} -> {error, Reason, []}
     end.
 
@@ -109,75 +117,119 @@ revoke(CredentialId, UserInfo) ->
 get_params(ServiceId) ->
     {ok, Pid} = tts_plugin_sup:new_worker(),
     Result = tts_plugin_runner:get_params(ServiceId, Pid),
-    handle_params_result(Result).
+    handle_result(Result, #{ action => parameter,
+                             service_id => ServiceId
+                             }).
 
 
+handle_result({ok, #{result := Result}=Map, Log}, Info) ->
+    AResult = result_to_atom(Result),
+    handle_result(AResult, Map, Log, Info);
+handle_result({ok, _Map, _Log}, #{service_id := ServiceId} ) ->
+    LogMsg = io_lib:format("plugin missing 'result': service ~p", [ServiceId]),
+    UMsg = "the plugin had an error, please contact the administrator",
+    return(error, #{user_msg => UMsg, log_msg => LogMsg});
+handle_result({error, Map, Log}, Info) ->
+    LogMsg = io_lib:format("plugin error: ~p ~p ~p", [Map, Info, Log]),
+    UMsg = "the plugin had an error, please contact the administrator",
+    return(error, #{user_msg => UMsg, log_msg=>LogMsg}).
 
-handle_request_result({ok, #{error := Error}, Log}, _ServiceId, _UserInfo,
-                      _Interface, _Token) ->
-    return_error_with_debug({script, Error}, Log);
-handle_request_result({ok, #{credential := Cred0, state := CredState}, Log}
-                      , ServiceId, UserInfo, Interface, _Token) ->
+
+%% REQUEST handling
+handle_result(ok, #{credential := Cred0, state := CredState}, _Log,
+              #{action := request} = Info) ->
+    %% a valid credential response
+    UserInfo = maps:get(user_info, Info),
+    Interface = maps:get(interface, Info),
+    ServiceId = maps:get(service_id, Info),
     Cred = validate_credential_values(Cred0),
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
     case sync_store_credential(UserId, ServiceId, Interface, CredState) of
         {ok, CredId} ->
-            return_result_with_debug(#{id => CredId, entries => Cred}, Log);
+            return(result, #{id => CredId, entries => Cred});
         Error ->
-            return_error_with_debug({storing, Error}, Log)
+            return(error, {storing, Error})
     end;
-handle_request_result({ok, #{credential := _Cred}, Log} , ServiceId, UserInfo,
-                      _Interface, _Token) ->
+handle_result(ok, Map, Log, #{action := request}) ->
+    %% a bad credential response
+    LogMsg = io_lib:format("bad response to a request: ~p [~p]", [Map, Log]),
+    UMsg = "the plugin returned a bad result, please contact the administrator",
+    return(error, #{user_msg => UMsg, log_msg => LogMsg});
+handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := request} ) ->
+    %% a valid error response
+    LogMsg = maps:get(log_msg, Map, <<"">>),
+    return(error, #{user_msg => UMsg, log_msg => LogMsg});
+handle_result(error, Map, _Log, #{ action := request})->
+    %% a bad error response
+    LogMsg = io_lib:format("bad error response: ~p", [Map]),
+    UMsg = "the plugin returned a bad result, please contact the administrator",
+    return(error, #{user_msg => UMsg, log_msg => LogMsg});
+
+
+%% REVOKE handling
+handle_result(ok, _, _Log, #{action := revoke} = Info) ->
+    %% a valid credential response
+    UserInfo = maps:get(user_info, Info),
+    CredId = maps:get(cred_id, Info),
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
-    lager:critical("missing state in service ~p for ~p", [ServiceId, UserId]),
-    return_error_with_debug({missing_state, ServiceId}, Log);
-handle_request_result({error, Error, Log}, _ServiceId, _UserInfo, _Interface,
-                      _Token) ->
-    return_error_with_debug({internal, Error}, Log);
-handle_request_result({error, Error}, _ServiceId, _UserInfo, _Interface,
-                      _Token) ->
-    return_error_with_debug({internal, Error}, []).
+    case remove_credential(UserId, CredId)  of
+        ok ->
+            return(result, #{});
+        Error ->
+            return(error, {deleting, Error})
+    end;
+handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := revoke} ) ->
+    %% a valid error response
+    LogMsg = maps:get(log_msg, Map, <<"">>),
+    return(error, #{user_msg => UMsg, log_msg => LogMsg});
+handle_result(error, Map, Log, #{ action := revoke})->
+    %% a bad error response
+    LogMsg = io_lib:format("bad error response: ~p [~p]", [Map, Log]),
+    UMsg = "the plugin returned a bad result, please contact the administrator",
+    return(error, #{user_msg => UMsg, log_msg => LogMsg});
 
-handle_revoke_result({ok, #{error := Error}, Log}, _UserInfo, _CredId) ->
-    return_error_with_debug({script, Error}, Log);
-handle_revoke_result({ok, #{result := Result}, Log}, UserInfo, CredId) ->
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
-    ok = remove_credential(UserId, CredId),
-    return_result_with_debug(Result, Log);
-handle_revoke_result({error, Error, Log}, _UserInfo, _CredId) ->
-    return_error_with_debug({internal, Error}, Log);
-handle_revoke_result({error, Error}, _UserInfo, _CredId) ->
-    return_error_with_debug({internal, Error}, []).
+%% PARAMETER handling
+handle_result(ok,
+              #{conf_params := _, request_params := _, version := _} = Result,
+              _Log, #{ action := parameter } ) ->
+    %% valid parameter response
+    return(result, maps:with([conf_params, request_params, version], Result));
+handle_result(ok, Result, Log, #{ action := parameter } ) ->
+    %% invalid parameter response
+    LogMsg = io_lib:format("bad parameter response: ~p [~p]", [Result, Log]),
+    UMsg = "the plugin returned a bad result, please contact the administrator",
+    return(error, #{log_msg => LogMsg, user_msg => UMsg});
+handle_result(error, Result, Log, #{ action := parameter } ) ->
+    %% invalid parameter response
+    LogMsg = io_lib:format("bad parameter response: ~p [~p]", [Result, Log]),
+    UMsg = "the plugin returned a bad result, please contact the administrator",
+    return(error, #{log_msg => LogMsg, user_msg => UMsg});
 
-return_result_with_debug(Result, Log) ->
-    return_result_with_debug(Result, Log, ?DEBUG_MODE).
 
-return_result_with_debug(Result, Log, true) ->
-    {ok, Result, Log};
-return_result_with_debug(Result, _Log, false) ->
-    {ok, Result, []}.
+%% EVERYTHING ELSE => ERROR
+handle_result(Result, Map, _Log, Info) ->
+    Action = maps:get(action, Info),
+    ServiceId = maps:get(service_id, Info),
+    LogMsg = io_lib:format("plugin for service ~p bad response: ~p - ~p [~p]",
+                           [ServiceId, Action, Result, Map]),
+    UMsg = "the plugin returned a bad result, please contact the administrator",
+    return(error, #{user_msg => UMsg, log_msg => LogMsg}).
 
-return_error_with_debug(Error, Log) ->
-    return_error_with_debug(Error, Log, ?DEBUG_MODE).
 
-return_error_with_debug(Error, Log, true) ->
-    {error, Error, Log};
-return_error_with_debug(Error, _Log, false) ->
-    {error, Error, []}.
 
-handle_params_result({ok, #{conf_params := ConfParams,
-                            request_params := RequestParams,
-                           version := Version}, _Log}) ->
-    {ok, ConfParams, RequestParams, Version};
-handle_params_result({ok, #{conf_params := ConfParams,
-                            version := Version}, _Log}) ->
-    {ok, ConfParams, [], Version};
-handle_params_result({ok, #{request_params := RequestParams,
-                            version := Version}, _Log}) ->
-    {ok, [], RequestParams, Version};
-handle_params_result(_) ->
-    {error, bad_result}.
 
+return(result, Result) ->
+    {ok, Result};
+return(error, Data) ->
+    {error, Data}.
+
+result_to_atom(Result) ->
+    try binary_to_existing_atom(Result, utf8) of
+        Atom ->
+            Atom
+    catch _:_ ->
+            unknown
+    end.
 
 
 

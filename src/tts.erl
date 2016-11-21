@@ -133,15 +133,21 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
     true = tts_service:is_enabled(ServiceId),
     case tts_plugin:request(ServiceId, UserInfo, Interface, Token,
                                 Params) of
-        {ok, Credential, Log} ->
+        {ok, Credential} ->
             #{id := CredId} = Credential,
             lager:info("SESS~p got credential ~p for ~p",
                        [SessionId, CredId, ServiceId]),
-            {ok, Credential, Log};
-        {error, Reason, Log} ->
-            lager:warning("SESS~p credential request for ~p failed with ~p",
-                          [SessionId, ServiceId, Reason]),
-            {error, Reason, Log}
+            {ok, Credential};
+        {error, Map} ->
+            case maps:get(log_msg, Map, undefined) of
+                undefined ->
+                    ok;
+                LogMsg ->
+                    WMsg = "SESS~p credential request for ~p failed: ~s",
+                    lager:warning(WMsg, [SessionId, ServiceId, LogMsg])
+            end,
+            Reason = maps:get(user_msg, Map),
+            {error, Reason}
     end.
 
 
@@ -149,14 +155,20 @@ revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     case tts_plugin:revoke(CredId, UserInfo) of
-        {ok, Result, Log}  ->
+        {ok, #{}} ->
             lager:info("SESS~p revoked credential ~p",
                        [SessionId, CredId]),
-            {ok, Result, Log};
-        {error, Error, Log} ->
-            lager:warning("SESS~p revocation of credential ~p failed with ~p",
-                          [SessionId, CredId, Error]),
-            {error, Error, Log}
+            ok;
+        {error, Map} ->
+            case maps:get(log_msg, Map, undefined) of
+                undefined ->
+                    ok;
+                LogMsg ->
+                    WMsg = "SESS~p credential revoke for ~p failed: ~s",
+                    lager:warning(WMsg, [SessionId, CredId, LogMsg])
+            end,
+            Reason = maps:get(user_msg, Map),
+            {error, Reason}
     end.
 
 
