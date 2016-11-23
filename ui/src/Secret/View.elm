@@ -2,7 +2,7 @@ module Secret.View exposing (..)
 
 import Dialog
 import Html exposing (Html, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
-import Html.Attributes exposing (class, value, type', readonly, rows, cols, style)
+import Html.Attributes exposing (class, value, type', readonly, rows, cols, style, hidden)
 import Html.Events exposing (onClick)
 import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
@@ -18,34 +18,56 @@ view scrt =
 
                 Just secret ->
                     let
+                        isCredential =
+                            (secret.result == "ok")
+
                         cred =
                             secret.credential
+
+                        error =
+                            secret.error
+
+                        title =
+                            case isCredential of
+                                True ->
+                                    "Your Credential"
+
+                                False ->
+                                    "Error Occured"
+
+                        footer =
+                            case isCredential of
+                                True ->
+                                    "  id: " ++ cred.id
+
+                                False ->
+                                    ""
                     in
                         Just
                             { closeMessage = Just Messages.HideSecret
                             , containerClass = Nothing
                             , dialogSize = Just Dialog.Large
                             , header =
-                                Just
-                                    (h4 [ class "modal-title" ]
-                                        [ text "Your Credential"
-                                        ]
-                                    )
+                                Just (h4 [ class "modal-title" ] [ text title ])
                             , body =
                                 Just
                                     (div []
-                                        [ p [] [ text "This information will be gone once you perform any action, the credential is also not stored on the server" ]
-                                        , table [ class "table table-striped" ]
-                                            [ tbody []
-                                                (List.map viewEntry cred.entries)
+                                        [ div [ hidden (not isCredential) ]
+                                            [ p [] [ text "This information will be gone once you perform any action, the credential is also not stored on the server" ]
+                                            , table [ class "table table-striped" ]
+                                                [ tbody []
+                                                    (List.map viewEntry cred.entries)
+                                                ]
                                             ]
+                                        , div [ hidden isCredential ]
+                                            [ p [] [ text error ] ]
                                         ]
                                     )
                             , footer =
                                 Just
                                     (div []
                                         [ div [ style [ ( "float", "left" ), ( "color", "#737373" ) ] ]
-                                            [ small [] [ text ("  id: " ++ cred.id) ] ]
+                                            [ small [] [ text footer ] ]
                                         , div [ style [ ( "float", "right" ) ] ]
                                             [ button
                                                 [ type' "button"

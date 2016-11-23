@@ -2,7 +2,9 @@ module Secret.Model exposing (..)
 
 
 type alias Model =
-    { credential : Credential
+    { result : String
+    , credential : Credential
+    , error : String
     }
 
 
