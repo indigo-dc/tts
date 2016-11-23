@@ -137,8 +137,9 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
             #{id := CredId} = Credential,
             lager:info("SESS~p got credential ~p for ~p",
                        [SessionId, CredId, ServiceId]),
-            {ok, Credential};
-        {error, Map} ->
+            {ok, #{result => ok, credential => Credential}};
+        {error, Map}
+          when is_map(Map)->
             case maps:get(log_msg, Map, undefined) of
                 undefined ->
                     ok;
@@ -146,8 +147,23 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
                     WMsg = "SESS~p credential request for ~p failed: ~s",
                     lager:warning(WMsg, [SessionId, ServiceId, LogMsg])
             end,
-            Reason = maps:get(user_msg, Map),
-            {error, Reason}
+            UserMsg = maps:get(user_msg, Map),
+            BadCred = #{result => error, user_msg => UserMsg},
+            {error, BadCred};
+        {error, Reason} ->
+            Msg = case Reason of
+                      limit_reached ->
+                          <<"the credential limit has been reached">>;
+                      user_not_allowed ->
+                          <<"you are not allowed to use this service">>;
+                      service_disabled ->
+                          <<"the service you tried to use is disabled">>;
+                      _ ->
+                          <<"unknown error occured, please contact the admin">>
+                  end,
+            WMsg = "SESS~p credential request for ~p failed: ~p",
+            lager:warning(WMsg, [SessionId, ServiceId, Reason]),
+            {error, #{result => error, user_msg => Msg}}
     end.
 
 
