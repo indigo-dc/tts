@@ -264,6 +264,6 @@ get_user_msg(#{user_msg := Msg}) when is_list(Msg) ->
 get_user_msg(#{user_msg := Msg}) when is_binary(Msg) ->
     Msg;
 get_user_msg(#{user_msg := Msg}) ->
-    list_to_binary(io_lib:format("~p",[Msg]));
+    list_to_binary(io_lib:format("~p", [Msg]));
 get_user_msg(_) ->
     <<>>.
