@@ -11,7 +11,9 @@ import Secret.Model as Secret exposing (Model, Credential, Entry)
 decodeSecret : Decoder Secret.Model
 decodeSecret =
     decode Secret.Model
-        |> required "credential" decodeCredential
+        |> required "result" string
+        |> optional "credential" decodeCredential { id = "", entries = [] }
+        |> optional "user_msg" string ""
 
 
 decodeCredential : Decoder Secret.Credential

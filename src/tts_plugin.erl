@@ -84,11 +84,11 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
                                      token => Token
                                    });
         {false, _, _} ->
-            {error, user_not_allowed, []};
+            {error, user_not_allowed};
         {true, false, _} ->
-            {error, service_disabled, []};
+            {error, service_disabled};
         {true, true, false} ->
-            {error, limit_reached, []}
+            {error, limit_reached}
     end.
 
 %% -spec revoke(binary(), binary(), map()) ->

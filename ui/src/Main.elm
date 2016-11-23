@@ -8,9 +8,9 @@ import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
 import CredentialList.Model as CredentialList exposing (Model, initModel)
 import Debug exposing (log)
 import Dict exposing (Dict, empty, insert)
-import Html exposing (Html, div, h1, text, small, strong)
+import Html exposing (Html, a, div, h1, text, small, strong)
 import Html.App exposing (program)
-import Html.Attributes exposing (class, hidden)
+import Html.Attributes exposing (class, hidden, style, href)
 import Http exposing (get, post, send, defaultSettings, Error)
 import Info.Decoder as Info exposing (decodeInfo)
 import Json.Encode as Json exposing (encode)
@@ -236,16 +236,33 @@ view model =
         div []
             [ div [ class "container" ]
                 [ h1 []
-                    [ text "Token Translation Service"
-                    , text " "
-                    , small [] [ text model.serverVersion ]
-                    ]
+                    [ text "Token Translation Service" ]
                 , div [ class "alert alert-danger", hidden hideError ]
                     [ strong [] [ text "Login Error!" ]
                     , text " "
                     , text model.error
                     ]
                 , mainContent model
+                ]
+            , div [ class "footer" ]
+                [ div [ style [ ( "text-align", "left" ) ] ]
+                    [ small [ style [ ( "color", "#808080" ) ] ]
+                        [ text "This work was partially funded within the "
+                        , a [ href "https://www.indigo-datacloud.eu" ]
+                            [ text "INDIGO DataCloud Project" ]
+                        , text " (European Union’s Horizon 2020 research and innovation programme under grant agreement RIA 653549)"
+                        ]
+                    ]
+                , div
+                    [ style
+                        [ ( "position", "absolute" )
+                        , ( "top", "2px" )
+                        , ( "right", "5px" )
+                        ]
+                    ]
+                    [ small [ style [ ( "color", "#b3b3b3" ) ] ]
+                        [ text model.serverVersion ]
+                    ]
                 ]
             ]
 

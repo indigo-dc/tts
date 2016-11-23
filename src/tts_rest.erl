@@ -228,13 +228,16 @@ perform_get(credential, undefined, Session, _) ->
     return_json_credential_list(CredList, Keys);
 perform_get(cred_data, Id, Session, 1) ->
     case tts:get_temp_cred(Id, Session) of
-        {ok, Cred} -> jsone:encode(Cred);
+        {ok, #{result := ok, credential := Cred}} -> jsone:encode(Cred);
+        {ok, #{result := error}} -> jsone:encode(#{});
         _ -> jsone:encode(#{})
     end;
 perform_get(cred_data, Id, Session, _Version) ->
     case tts:get_temp_cred(Id, Session) of
-        {ok, Cred} -> jsone:encode(#{credential => Cred});
-        _ -> jsone:encode(#{credential => []})
+        {ok, Cred} -> jsone:encode(Cred);
+        _ ->
+            Msg = <<"Sorry, the requested data was not found">>,
+            jsone:encode(#{result => error, user_msg => Msg})
     end.
 
 perform_post(credential, undefined, #{service_id:=ServiceId} = Data, Session,
@@ -245,8 +248,8 @@ perform_post(credential, undefined, #{service_id:=ServiceId} = Data, Session,
              end,
     Params = maps:get(params, Data, #{}),
     case  tts:request_credential_for(ServiceId, Session, Params, IFace) of
-        {ok, Credential} ->
-            {ok, Id} = tts:store_temp_cred(Credential, Session),
+        {_, CredData} ->
+            {ok, Id} = tts:store_temp_cred(CredData, Session),
             Url = id_to_url(Id, Ver),
             {true, Url};
         _ ->

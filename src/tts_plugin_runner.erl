@@ -294,7 +294,7 @@ create_result(#{exit_status := 0, std_out := []}, Log) ->
 create_result(#{exit_status := 0, std_out := [Json|_]}, Log) ->
     case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
         {ok, Map, _} -> {ok, Map, lists:reverse(Log)};
-        {error, _} -> {error, bad_json_result, lists:reverse(Log)}
+        {error, _} -> {error, bad_json_result, Log}
     end;
 create_result(#{exit_status := _}, Log) ->
     {error, script_failed, lists:reverse(Log) };
