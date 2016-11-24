@@ -41,7 +41,7 @@ view context =
             ]
             [ text "show access token" ]
         , AccessToken.view context.accessToken
-        , Secret.view context.secret_progressing context.secret
+        , Secret.view context.progressing_title context.secret
         , Service.advancedView context.service
         , br [] []
         , br [] []

@@ -8,21 +8,21 @@ import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
 
 
-view : Bool -> Maybe Secret.Model -> Html Msg
-view progressing scrt =
+view : Maybe String -> Maybe Secret.Model -> Html Msg
+view progress_title scrt =
     let
         config =
-            case ( scrt, progressing ) of
-                ( Nothing, False ) ->
+            case ( scrt, progress_title ) of
+                ( Nothing, Nothing ) ->
                     Nothing
 
-                ( Nothing, True ) ->
+                ( Nothing, Just title ) ->
                     Just
                         { closeMessage = Nothing
                         , containerClass = Nothing
                         , dialogSize = Just Dialog.Large
                         , header =
-                            Just (h4 [ class "modal-title" ] [ text "Requesting Credential" ])
+                            Just (h4 [ class "modal-title" ] [ text title ])
                         , body =
                             Just
                                 (div [ class "cssload-container" ]
