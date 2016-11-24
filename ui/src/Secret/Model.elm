@@ -14,6 +14,11 @@ type alias Credential =
     }
 
 
+empty_credential : Credential
+empty_credential =
+    { id = "", entries = [] }
+
+
 type alias Entry =
     { name : String
     , type' : String

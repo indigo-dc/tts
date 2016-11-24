@@ -20,7 +20,7 @@ import Pages.User.View as User exposing (view)
 import ProviderList.Decoder as ProviderList exposing (decodeProviderList)
 import ProviderList.Model as ProviderList exposing (Model, initModel)
 import Secret.Decoder exposing (decodeSecret)
-import Secret.Model as Secret exposing (Model)
+import Secret.Model as Secret exposing (Model, empty_credential)
 import Service.Model as Service exposing (Model)
 import ServiceList.Decoder as ServiceList exposing (decodeServiceList)
 import ServiceList.Model as ServiceList exposing (Model, initModel)
@@ -64,6 +64,7 @@ type alias Model =
     , displayName : String
     , current_service : Maybe Service.Model
     , current_param : Maybe (Dict String Json.Value)
+    , request_progressing : Bool
     }
 
 
@@ -131,8 +132,13 @@ update msg model =
         Messages.ServiceListFailed reason ->
             ( model, logout model.url model.restVersion )
 
-        Messages.RequestFailed reason ->
-            ( model, Cmd.none )
+        Messages.RequestFailed credential ->
+            ( { model
+                | request_progressing = False
+                , credential = Just credential
+              }
+            , Cmd.none
+            )
 
         Messages.RevokeFailed reason ->
             ( model, Cmd.none )
@@ -150,6 +156,7 @@ update msg model =
             ( { model
                 | current_service = Nothing
                 , current_param = Nothing
+                , request_progressing = True
               }
             , request model.url model.restVersion serviceId model.current_param
             )
@@ -197,6 +204,7 @@ update msg model =
         Messages.Requested credential ->
             ( { model
                 | credential = Just credential
+                , request_progressing = False
               }
             , retrieveServiceList model.url model.restVersion
             )
@@ -236,7 +244,7 @@ view model =
         div []
             [ div [ class "container" ]
                 [ h1 []
-                    [ text "Token Translation Service" ]
+                    [ text "INDIGO Token Translation Service" ]
                 , div [ class "alert alert-danger", hidden hideError ]
                     [ strong [] [ text "Login Error!" ]
                     , text " "
@@ -245,7 +253,7 @@ view model =
                 , mainContent model
                 ]
             , div [ class "footer" ]
-                [ div [ style [ ( "text-align", "left" ) ] ]
+                [ div [ style [ ( "text-align", "center" ) ] ]
                     [ small [ style [ ( "color", "#808080" ) ] ]
                         [ text "This work was partially funded within the "
                         , a [ href "https://www.indigo-datacloud.eu" ]
@@ -256,7 +264,7 @@ view model =
                 , div
                     [ style
                         [ ( "position", "absolute" )
-                        , ( "top", "2px" )
+                        , ( "top", "35px" )
                         , ( "right", "5px" )
                         ]
                     ]
@@ -287,6 +295,7 @@ mainContent model =
                     , displayName = model.displayName
                     , accessToken = model.accessToken
                     , secret = model.credential
+                    , secret_progressing = model.request_progressing
                     , service = model.current_service
                     }
             in
@@ -344,6 +353,7 @@ initModel baseUrl restVersion =
       , displayName = "unknown"
       , current_service = Nothing
       , current_param = Nothing
+      , request_progressing = False
       }
     , retrieveInfo baseUrl restVersion
     )
@@ -464,18 +474,22 @@ retrieveAccessToken baseUrl restVersion =
             baseUrl ++ "/api/" ++ restVersion ++ "/access_token/"
 
         fail error =
-            case error of
-                Http.Timeout ->
-                    Messages.AccessTokenFailed "Timeout"
+            let
+                error_msg =
+                    case error of
+                        Http.Timeout ->
+                            "Timeout"
 
-                Http.NetworkError ->
-                    Messages.AccessTokenFailed "Network error"
+                        Http.NetworkError ->
+                            "Network error"
 
-                Http.UnexpectedPayload load ->
-                    Messages.AccessTokenFailed ("UnexpectedPayload: " ++ load)
+                        Http.UnexpectedPayload load ->
+                            ("UnexpectedPayload: " ++ load)
 
-                Http.BadResponse status body ->
-                    Messages.AccessTokenFailed ("bad response: " ++ body)
+                        Http.BadResponse status body ->
+                            ("bad response: " ++ body)
+            in
+                Messages.AccessTokenFailed error_msg
 
         success accessToken =
             Messages.AccessToken accessToken
@@ -540,18 +554,26 @@ request baseUrl restVersion serviceId dict =
             }
 
         fail error =
-            case error of
-                Http.Timeout ->
-                    Messages.RequestFailed "Timeout"
+            let
+                error_msg =
+                    case error of
+                        Http.Timeout ->
+                            "Timeout"
 
-                Http.NetworkError ->
-                    Messages.RequestFailed "Network error"
+                        Http.NetworkError ->
+                            "Network error"
 
-                Http.UnexpectedPayload load ->
-                    Messages.RequestFailed ("UnexpectedPayload: " ++ load)
+                        Http.UnexpectedPayload load ->
+                            ("UnexpectedPayload: " ++ load)
 
-                Http.BadResponse status body ->
-                    Messages.RequestFailed ("bad response: " ++ body)
+                        Http.BadResponse status body ->
+                            ("bad response: " ++ body)
+            in
+                Messages.RequestFailed
+                    { result = "error"
+                    , credential = Secret.empty_credential
+                    , error = error_msg
+                    }
 
         success credential =
             Messages.Requested credential
