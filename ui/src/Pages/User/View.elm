@@ -22,6 +22,7 @@ type alias ViewContext =
     , credentialList : CredentialList.Model
     , accessToken : AccessToken.Model
     , secret : Maybe Secret.Model
+    , secret_progressing : Bool
     , service : Maybe Service.Model
     }
 
@@ -39,7 +40,7 @@ view context =
             ]
             [ text "show access token" ]
         , AccessToken.view context.accessToken
-        , Secret.view context.secret
+        , Secret.view context.secret_progressing context.secret
         , Service.advancedView context.service
         , br [] []
         , br [] []

@@ -19,7 +19,7 @@ type Msg
     | ProviderListFailed String
     | ServiceListFailed String
     | CredentialListFailed String
-    | RequestFailed String
+    | RequestFailed Secret.Model
     | LoggedOut
     | LogoutFailed String
     | Request String

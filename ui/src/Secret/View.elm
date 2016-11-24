@@ -8,13 +8,34 @@ import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
 
 
-view : Maybe Secret.Model -> Html Msg
-view scrt =
+view : Bool -> Maybe Secret.Model -> Html Msg
+view progressing scrt =
     let
         config =
             case scrt of
                 Nothing ->
-                    Nothing
+                    case progressing of
+                        False ->
+                            Nothing
+
+                        True ->
+                            Just
+                                { closeMessage = Nothing
+                                , containerClass = Nothing
+                                , dialogSize = Just Dialog.Large
+                                , header =
+                                    Just (h4 [ class "modal-title" ] [ text "Requesting Credential" ])
+                                , body =
+                                    Just
+                                        (div [ class "cssload-container" ]
+                                            [ div [ class "cssload-lt" ] []
+                                            , div [ class "cssload-rt" ] []
+                                            , div [ class "cssload-lb" ] []
+                                            , div [ class "cssload-rb" ] []
+                                            ]
+                                        )
+                                , footer = Nothing
+                                }
 
                 Just secret ->
                     let
@@ -33,7 +54,7 @@ view scrt =
                                     "Your Credential"
 
                                 False ->
-                                    "Error Occured"
+                                    "An Error Occured"
 
                         footer =
                             case isCredential of
