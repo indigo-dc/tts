@@ -23,6 +23,7 @@ type alias ViewContext =
     , accessToken : AccessToken.Model
     , secret : Maybe Secret.Model
     , secret_progressing : Bool
+    , progressing_title : Maybe String
     , service : Maybe Service.Model
     }
 

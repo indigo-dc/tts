@@ -65,6 +65,7 @@ type alias Model =
     , current_service : Maybe Service.Model
     , current_param : Maybe (Dict String Json.Value)
     , request_progressing : Bool
+    , progressing_title : Maybe String
     }
 
 
@@ -135,13 +136,19 @@ update msg model =
         Messages.RequestFailed credential ->
             ( { model
                 | request_progressing = False
+                , progressing_title = Nothing
                 , credential = Just credential
               }
             , Cmd.none
             )
 
         Messages.RevokeFailed reason ->
-            ( model, Cmd.none )
+            ( { model
+                | request_progressing = False
+                , progressing_title = Nothing
+              }
+            , Cmd.none
+            )
 
         Messages.CredentialListFailed reason ->
             ( model, Cmd.none )
@@ -157,6 +164,7 @@ update msg model =
                 | current_service = Nothing
                 , current_param = Nothing
                 , request_progressing = True
+                , progressing_title = Just "Requesting Credential ..."
               }
             , request model.url model.restVersion serviceId model.current_param
             )
@@ -196,7 +204,12 @@ update msg model =
             )
 
         Messages.Revoke credId ->
-            ( model, revoke model.url model.restVersion credId )
+            ( { model
+                | request_progressing = True
+                , progressing_title = Just "Revoking Credential ..."
+              }
+            , revoke model.url model.restVersion credId
+            )
 
         Messages.RetrieveAccessToken ->
             ( model, retrieveAccessToken model.url model.restVersion )
@@ -205,6 +218,7 @@ update msg model =
             ( { model
                 | credential = Just credential
                 , request_progressing = False
+                , progressing_title = Nothing
               }
             , retrieveServiceList model.url model.restVersion
             )
@@ -222,7 +236,12 @@ update msg model =
             ( { model | credential = Nothing }, Cmd.none )
 
         Messages.Revoked ->
-            ( model, retrieveServiceList model.url model.restVersion )
+            ( { model
+                | request_progressing = False
+                , progressing_title = Nothing
+              }
+            , retrieveServiceList model.url model.restVersion
+            )
 
 
 subscriptions : Model -> Sub Msg
@@ -296,6 +315,7 @@ mainContent model =
                     , accessToken = model.accessToken
                     , secret = model.credential
                     , secret_progressing = model.request_progressing
+                    , progressing_title = model.progressing_title
                     , service = model.current_service
                     }
             in
@@ -354,6 +374,7 @@ initModel baseUrl restVersion =
       , current_service = Nothing
       , current_param = Nothing
       , request_progressing = False
+      , progressing_title = Nothing
       }
     , retrieveInfo baseUrl restVersion
     )

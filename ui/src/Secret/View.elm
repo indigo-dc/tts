@@ -12,32 +12,30 @@ view : Bool -> Maybe Secret.Model -> Html Msg
 view progressing scrt =
     let
         config =
-            case scrt of
-                Nothing ->
-                    case progressing of
-                        False ->
-                            Nothing
+            case ( scrt, progressing ) of
+                ( Nothing, False ) ->
+                    Nothing
 
-                        True ->
+                ( Nothing, True ) ->
+                    Just
+                        { closeMessage = Nothing
+                        , containerClass = Nothing
+                        , dialogSize = Just Dialog.Large
+                        , header =
+                            Just (h4 [ class "modal-title" ] [ text "Requesting Credential" ])
+                        , body =
                             Just
-                                { closeMessage = Nothing
-                                , containerClass = Nothing
-                                , dialogSize = Just Dialog.Large
-                                , header =
-                                    Just (h4 [ class "modal-title" ] [ text "Requesting Credential" ])
-                                , body =
-                                    Just
-                                        (div [ class "cssload-container" ]
-                                            [ div [ class "cssload-lt" ] []
-                                            , div [ class "cssload-rt" ] []
-                                            , div [ class "cssload-lb" ] []
-                                            , div [ class "cssload-rb" ] []
-                                            ]
-                                        )
-                                , footer = Nothing
-                                }
+                                (div [ class "cssload-container" ]
+                                    [ div [ class "cssload-lt" ] []
+                                    , div [ class "cssload-rt" ] []
+                                    , div [ class "cssload-lb" ] []
+                                    , div [ class "cssload-rb" ] []
+                                    ]
+                                )
+                        , footer = Nothing
+                        }
 
-                Just secret ->
+                ( Just secret, progressing ) ->
                     let
                         isCredential =
                             (secret.result == "ok")
