@@ -8,36 +8,34 @@ import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
 
 
-view : Bool -> Maybe Secret.Model -> Html Msg
-view progressing scrt =
+view : Maybe String -> Maybe Secret.Model -> Html Msg
+view progress_title scrt =
     let
         config =
-            case scrt of
-                Nothing ->
-                    case progressing of
-                        False ->
-                            Nothing
+            case ( scrt, progress_title ) of
+                ( Nothing, Nothing ) ->
+                    Nothing
 
-                        True ->
+                ( Nothing, Just title ) ->
+                    Just
+                        { closeMessage = Nothing
+                        , containerClass = Nothing
+                        , dialogSize = Just Dialog.Large
+                        , header =
+                            Just (h4 [ class "modal-title" ] [ text title ])
+                        , body =
                             Just
-                                { closeMessage = Nothing
-                                , containerClass = Nothing
-                                , dialogSize = Just Dialog.Large
-                                , header =
-                                    Just (h4 [ class "modal-title" ] [ text "Requesting Credential" ])
-                                , body =
-                                    Just
-                                        (div [ class "cssload-container" ]
-                                            [ div [ class "cssload-lt" ] []
-                                            , div [ class "cssload-rt" ] []
-                                            , div [ class "cssload-lb" ] []
-                                            , div [ class "cssload-rb" ] []
-                                            ]
-                                        )
-                                , footer = Nothing
-                                }
+                                (div [ class "cssload-container" ]
+                                    [ div [ class "cssload-lt" ] []
+                                    , div [ class "cssload-rt" ] []
+                                    , div [ class "cssload-lb" ] []
+                                    , div [ class "cssload-rb" ] []
+                                    ]
+                                )
+                        , footer = Nothing
+                        }
 
-                Just secret ->
+                ( Just secret, progressing ) ->
                     let
                         isCredential =
                             (secret.result == "ok")
