@@ -451,9 +451,14 @@ end_session_if_rest(_) ->
 update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
     tts_http_util:perform_cookie_action(clear, 0, deleted, Req);
 update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
-    {ok, Max} = tts_session:get_max_age(Session),
-    {ok, Token} = tts_session:get_sess_token(Session),
-    tts_http_util:perform_cookie_action(update, Max, Token, Req);
+    case tts_session:is_logged_in(Session) of
+        true ->
+            {ok, Max} = tts_session:get_max_age(Session),
+            {ok, Token} = tts_session:get_sess_token(Session),
+            tts_http_util:perform_cookie_action(update, Max, Token, Req);
+        _ ->
+            tts_http_util:perform_cookie_action(clear, 0, deleted, Req)
+    end;
 update_cookie_if_used(Req, #state{cookie_based = _}) ->
     {ok, Req}.
 
