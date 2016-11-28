@@ -176,11 +176,13 @@ handle_call({set_token, Token}, _From,
             #state{user_info=Info, max_age=MA}=State) ->
     IdInfo = maps:get(user_info, Token, #{}),
     IdToken = maps:get(id, Token, #{}),
+    AccessToken = maps:get(access, Token, #{}),
     {ok, Info1} = tts_userinfo:update_id_token(IdToken, Info),
     {ok, Info2} = tts_userinfo:update_id_info(IdInfo, Info1),
+    {ok, Info3} = tts_userinfo:update_access_token(AccessToken, Info2),
     TokenKeys = [access, id, refresh],
     TokenMap = maps:with(TokenKeys, Token),
-    {reply, ok, State#state{token=TokenMap, user_info=Info2}, MA};
+    {reply, ok, State#state{token=TokenMap, user_info=Info3}, MA};
 handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
     {reply, {ok, Token}, State, MA};
 handle_call({set_error, Error}, _From, #state{max_age=MA}=State) ->
