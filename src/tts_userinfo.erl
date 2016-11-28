@@ -4,6 +4,7 @@
          new/0,
          update_iss_sub/3,
          update_id_token/2,
+         update_access_token/2,
          update_id_info/2,
          return/2
         ]).
@@ -12,7 +13,8 @@
           issuer = undefined,
           subject = undefined,
           id_token = #{},
-          id_info = #{}
+          id_info = #{},
+          access_token = #{}
          }).
 
 new() ->
@@ -31,6 +33,21 @@ update_id_token(IdToken, #user_info{issuer=Issuer, subject=Subject}=Info) ->
             {ok, Info#user_info{id_token=IdToken}};
         {undefined, undefined} ->
             {ok, Info#user_info{id_token=IdToken, issuer=Iss, subject=Sub}};
+        _ ->
+            {error, not_match}
+    end.
+
+update_access_token(#{token := Token} = AccessToken,
+                    #user_info{id_token = IdToken}=Info) ->
+    Claims = maps:get(claims, IdToken, #{}),
+    Hash = maps:get(at_hash, Claims, undefined),
+    << BinHash:16/binary, _Rest/binary>> = crypto:hash(sha256, Token),
+    AtHash =  base64url:encode(BinHash),
+    case Hash of
+        undefined ->
+            {ok, Info#user_info{access_token=AccessToken}};
+         AtHash ->
+            {ok, Info#user_info{access_token=AccessToken}};
         _ ->
             {error, not_match}
     end.
@@ -56,6 +73,8 @@ return( issuer, #user_info{issuer=Issuer}) ->
     {ok, Issuer};
 return( id, Info) ->
     userid(Info);
+return( access_token, Info) ->
+    access_token(Info);
 return( display_name, Info) ->
     display_name(Info);
 return( logged_in, Info) ->
@@ -85,6 +104,12 @@ logged_in(#user_info{subject=Subject, issuer=Issuer})
     true;
 logged_in(_) ->
     false.
+
+access_token(#user_info{access_token=#{token := AccessToken}}) ->
+    {ok, AccessToken};
+access_token(_) ->
+    {error, not_set}.
+
 
 parse_known_fields(Map) ->
     List = maps:to_list(Map),

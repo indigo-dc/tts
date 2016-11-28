@@ -231,6 +231,7 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
       } = State,
     ConfParams = maps:get(plugin_conf, ServiceInfo, #{}),
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
+    AddAccessToken = maps:get(pass_access_token, ServiceInfo, false),
     ConnType = maps:get(type, ConnInfo, local),
     {ok, Version} = application:get_key(tts, vsn),
     ParamUpdate =
@@ -246,17 +247,22 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
                         action => Action,
                         cred_state => CredState
                       }, ParamUpdate),
-    ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo),
+    ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo,
+                                           AddAccessToken),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,
                      connection = Connection, con_type = ConnType}}.
 
-
-add_user_info_if_present(ScriptParam, undefined) ->
+add_user_info_if_present(ScriptParam, undefined, _) ->
     ScriptParam;
-add_user_info_if_present(ScriptParam, UserInfo) ->
+add_user_info_if_present(ScriptParam, UserInfo, true) ->
+    {ok, AccessToken} = tts_userinfo:return(access_token, UserInfo),
+    Update = #{access_token => AccessToken},
+    NewParams = maps:merge(ScriptParam, Update),
+    add_user_info_if_present(NewParams, UserInfo, false);
+add_user_info_if_present(ScriptParam, UserInfo, _) ->
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
     {ok, PluginUserInfo} = tts_userinfo:return(plugin_info, UserInfo),
     Update = #{tts_userid => UserId, user_info => PluginUserInfo},
