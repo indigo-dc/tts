@@ -23,6 +23,7 @@
 -export([add/1]).
 -export([update_params/1]).
 
+-export([exists/1]).
 -export([is_enabled/1]).
 -export([is_allowed/2]).
 -export([allows_same_state/1]).
@@ -63,6 +64,16 @@ get_credential_limit(ServiceId) ->
         {ok, {_Id, Info}} -> {ok, maps:get(cred_limit, Info, 0)};
         _ -> {ok, 0}
     end.
+
+
+exists(ServiceId) ->
+    case tts_data:service_get(ServiceId) of
+        {ok, _} ->
+            true;
+        _ ->
+            false
+     end.
+
 
 get_queue(ServiceId) ->
     case tts_data:service_get(ServiceId) of

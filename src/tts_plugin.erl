@@ -95,23 +95,48 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
 %%     {ok, tts:cred(), list()} | {error, any(), list()}.
 revoke(CredentialId, UserInfo) ->
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
-    case get_credential(UserId, CredentialId) of
-        {ok, Cred} ->
-            #{ service_id := ServiceId,
-               cred_state := CredState,
-               cred_id := CredId
-             } = Cred,
-            {ok, QueueName} = tts_service:get_queue(ServiceId),
-            {ok, Pid} = tts_plugin_sup:new_worker(),
-            Result=tts_plugin_runner:revoke(ServiceId, UserInfo,
-                                            CredState, QueueName, Pid),
-            handle_result(Result, #{ action => revoke,
-                                     service_id => ServiceId,
-                                     user_info => UserInfo,
-                                     cred_id => CredId
-                                   });
-        {error, Reason} -> {error, Reason, []}
+    CredentialInfo = get_credential(UserId, CredentialId),
+    revoke_credential(CredentialInfo, UserInfo).
+
+
+revoke_credential({ok, #{ service_id := ServiceId, cred_state := _CredState,
+                          cred_id := _CredId } = Credential}, UserInfo) ->
+    ServiceExists = tts_service:exists(ServiceId),
+    revoke_or_drop(ServiceExists, Credential, UserInfo);
+revoke_credential({error, Reason}, _UserInfo) ->
+    {error, Reason}.
+
+
+revoke_or_drop(true, CredInfo, UserInfo ) ->
+    #{service_id := ServiceId,
+      cred_state := CredState,
+      cred_id := CredId
+     } = CredInfo,
+    {ok, QueueName} = tts_service:get_queue(ServiceId),
+    {ok, Pid} = tts_plugin_sup:new_worker(),
+    Result=tts_plugin_runner:revoke(ServiceId, UserInfo,
+                                    CredState, QueueName, Pid),
+    handle_result(Result, #{ action => revoke,
+                             service_id => ServiceId,
+                             user_info => UserInfo,
+                             cred_id => CredId
+                           });
+revoke_or_drop(false, #{service_id := ServiceId,
+                        cred_id := CredId}, UserInfo  ) ->
+    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    DropEnabled = application:get_env(tts, allow_dropping_credentials),
+    UMsg = "the service does not exist, please contact the administrator",
+    case DropEnabled of
+        {ok, true} ->
+            lager:warning("service ~p: dropping revocation request for ~p",
+                          [ServiceId, CredId]),
+            remove_credential(UserId, CredId);
+        _ ->
+            Msg = "service ~p does not exist, revocation impossible",
+            LogMsg = io_lib:format(Msg, [ServiceId]),
+            return(error, #{user_msg => UMsg, log_msg => LogMsg})
     end.
+
 
 
 get_params(ServiceId) ->
@@ -172,12 +197,7 @@ handle_result(ok, _, _Log, #{action := revoke} = Info) ->
     UserInfo = maps:get(user_info, Info),
     CredId = maps:get(cred_id, Info),
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
-    case remove_credential(UserId, CredId)  of
-        ok ->
-            return(result, #{});
-        Error ->
-            return(error, {deleting, Error})
-    end;
+    remove_credential(UserId, CredId);
 handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := revoke} ) ->
     %% a valid error response
     LogMsg = maps:get(log_msg, Map, <<"">>),
@@ -293,7 +313,12 @@ store_credential(UserId, ServiceId, Interface, CredentialState) ->
                                    CredentialState, SameStateAllowed).
 
 remove_credential(UserId, CredentialId) ->
-    tts_data_sqlite:credential_remove(UserId, CredentialId).
+    case tts_data_sqlite:credential_remove(UserId, CredentialId) of
+        ok ->
+            return(result, #{});
+        Error ->
+            return(error, {deleting, Error})
+    end.
 
 
 validate_credential_values(Credential) ->

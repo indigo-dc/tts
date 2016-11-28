@@ -129,6 +129,14 @@
           {commented, 8080}
           ]}.
 
+%% @doc if a service id is not configured by default the user is
+%% unable to revoke credentials of that service, by setting this to true
+%% all credentials of unconfigured services can be revoked
+{mapping, "allow_dropping_credentials", "tts.allow_dropping_credentials", [
+          {datatype ,    {enum ,  [true, false]}},
+          {default, false}
+          ]}.
+
 {mapping, "debug_mode", "tts.debug_mode", [
           hidden,
           {datatype ,    {enum ,  [true, false]}},
