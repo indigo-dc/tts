@@ -153,12 +153,17 @@ resource_exists(Req, State) ->
 
 delete_resource(Req, #state{type=credential,
                             id=CredentialId, session_pid=Session}=State) ->
-    Result = case tts:revoke_credential_for(CredentialId, Session) of
-                 ok -> true;
-                 _ -> false
-             end,
+    {Result, Req2}  =
+        case tts:revoke_credential_for(CredentialId, Session) of
+            ok ->
+                {true, Req};
+            {error, Msg} ->
+                Body = jsone:encode(#{result => error, user_msg => Msg}),
+                Req1 = cowboy_req:set_resp_body(Body, Req),
+                {false, Req1}
+        end,
     ok = end_session_if_rest(State),
-    {Result, Req, State#state{session_pid=undefined}}.
+    {Result, Req2, State#state{session_pid=undefined}}.
 
 
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
@@ -172,9 +177,10 @@ get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
                       session_pid=Session, json=Json,
                       cookie_based=CookieBased} = State) ->
-    Result = perform_post(Type, Id, Json, Session, CookieBased, Version),
+    {Req1, Result} = perform_post(Req, Type, Id, Json, Session, CookieBased,
+                                  Version),
     ok = end_session_if_rest(State),
-    {ok, Req2} = update_cookie_if_used(Req, State),
+    {ok, Req2} = update_cookie_if_used(Req1, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
 perform_get(service, undefined, Session, 1) ->
@@ -240,20 +246,28 @@ perform_get(cred_data, Id, Session, _Version) ->
             jsone:encode(#{result => error, user_msg => Msg})
     end.
 
-perform_post(credential, undefined, #{service_id:=ServiceId} = Data, Session,
-             CookieBased, Ver) ->
+perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
+             Session, CookieBased, Ver) ->
     IFace =  case CookieBased of
                  false -> <<"REST interface">>;
                  true ->  <<"Web App">>
              end,
     Params = maps:get(params, Data, #{}),
     case  tts:request_credential_for(ServiceId, Session, Params, IFace) of
-        {_, CredData} ->
+        {ok, CredData} ->
             {ok, Id} = tts:store_temp_cred(CredData, Session),
             Url = id_to_url(Id, Ver),
-            {true, Url};
-        _ ->
-            false
+            {Req, {true, Url}};
+        {error, ErrorInfo} ->
+            Body = jsone:encode(ErrorInfo),
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {Req1, false};
+        _Other ->
+            UserMsg = "An internal error occured, please contact the admin.",
+            Body = jsone:encode(#{result => error, user_msg => UserMsg}),
+
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {Req1, false}
     end.
 
 return_json_service_list(Services, Keys) ->
