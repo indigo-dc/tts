@@ -124,24 +124,34 @@ get_and_validate_parameter(_) ->
     {error, not_found}.
 
 
-validate_params_and_update_db(Id, Info,
-                              {ok, #{conf_params := ConfParams,
-                                     request_params := RequestParams,
-                                     version := Version}}) ->
-     Ensure = #{plugin_conf => #{},
-               params => [],
-                plugin_version => Version
-               },
-    Info0 = maps:merge(Info, Ensure),
-    lager:info("service ~p: plugin version ~p", [Id, Version]),
-    {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
-    {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
-    Info3 = list_skipped_parameter_and_delete_config(Info2),
-    IsValid = ValidConfParam and ValidCallParam,
-    Update = #{enabled => IsValid},
-    NewInfo = maps:merge(Info3, Update),
-    start_runner_queue_if_needed(NewInfo),
-    update_service(Id, NewInfo);
+validate_params_and_update_db(Id, Info, {ok, ParamMap}) ->
+    NeededKeys = [conf_params, request_params, version],
+    MissingKeys = NeededKeys -- maps:keys(ParamMap),
+    case MissingKeys of
+        [] ->
+            #{conf_params := ConfParams,
+              request_params := RequestParams,
+              version := Version} = ParamMap,
+            Ensure = #{plugin_conf => #{},
+                       params => [],
+                       plugin_version => Version
+                      },
+            Info0 = maps:merge(Info, Ensure),
+            lager:info("service ~p: plugin version ~p", [Id, Version]),
+            {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
+            {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams,
+                                                                 Info1),
+            Info3 = list_skipped_parameter_and_delete_config(Info2),
+            IsValid = ValidConfParam and ValidCallParam,
+            Update = #{enabled => IsValid},
+            NewInfo = maps:merge(Info3, Update),
+            start_runner_queue_if_needed(NewInfo),
+            update_service(Id, NewInfo);
+        _ ->
+            lager:error("service ~p: missing keys in parameter response: ~p",
+                        [Id, MissingKeys]),
+            {error, bad_config}
+    end;
 validate_params_and_update_db(Id, _, {error, Result}) ->
     case maps:get(log_msg, Result, undefined) of
         undefined ->
