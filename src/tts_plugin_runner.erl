@@ -163,6 +163,7 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(Reason, State) ->
+    lager:debug("runner ~p: terminating", [self()]),
     {ok, _NewState} = send_reply({error, {internal, Reason}}, State),
     ok.
 
@@ -184,6 +185,7 @@ prepare_action(State) ->
 
 
 connect_to_service(#{type := local}) ->
+    lager:debug("runner ~p: using local connection", [self()]),
     {ok, local};
 connect_to_service(#{type := ssh , host := Host } = Info ) ->
     {ok, Port} = maps:get(port, Info),
@@ -207,6 +209,8 @@ connect_to_service(#{type := ssh , host := Host } = Info ) ->
                         end
                 end,
     {_, Options} = lists:foldl(AddOption, {Info, Options0}, OptionsMapping),
+    lager:debug("runner ~p: connecting to ~p:~p using ssh with options ~p",
+                [self(), Host, Port, Options]),
     ssh:connect(Host, Port, Options, 10000).
 
 get_cmd(#{cmd := Cmd}) ->
@@ -250,7 +254,11 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo,
                                            AddAccessToken),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
+    lager:debug("runner ~p: will execute ~p with parameter ~p",
+                [self(), Cmd, ScriptParam]),
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
+    lager:debug("runner ~p: the command line is (parameter in base64url): ~p",
+                [self(), CmdLine]),
     CmdList = [CmdLine],
     {ok, State#state{cmd_list=CmdList,
                      connection = Connection, con_type = ConnType}}.
@@ -285,9 +293,11 @@ execute_single_command_or_exit(State) ->
 
 execute_command_or_send_result([], ConType, Connection, undefined, Log
                                , State) ->
+    lager:debug("runner ~p: execution done, closing connection", [self()]),
     close_connection(Connection, ConType),
     [LastLog|_] = Log,
     Result = create_result(LastLog, Log),
+    lager:debug("runner ~p: sending result ~p", [self(), Result]),
     {ok, NewState} = send_reply(Result, State),
     {stop, normal, NewState};
 execute_command_or_send_result([Cmd|T], ConType, Connection, undefined, _Log
@@ -312,12 +322,15 @@ create_result(_, Log) ->
 
 execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection, infinity),
+    lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     success = ssh_connection:exec(Connection, ChannelId, Cmd, infinity),
     CmdState =  #{channel_id => ChannelId, cmd => Cmd},
     {ok, State#state{ cmd_state = CmdState }};
 execute_command(Cmd, local, _Connection, #state{cmd_log=Log} = State)
   when is_list(Cmd) ->
+    lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     StdOut = list_to_binary(os:cmd(Cmd)),
+    lager:debug("runner ~p: result ~p", [self(), StdOut]),
     trigger_next_command(),
     CmdState = #{std_out => [StdOut], cmd => Cmd, std_err => []},
     NewState = State#state{ cmd_state = #{},
@@ -353,6 +366,7 @@ handle_ssh_message({closed, ChannelId}, ChannelId, State) ->
     #state{ cmd_state = CmdState,
             cmd_log = Log
           } = State,
+    lager:debug("runner ~p: result ~p", [self(), CmdState]),
     trigger_next_command(),
     NewState = State#state{ cmd_state = #{},
                             cmd_log = [ CmdState | Log] },
