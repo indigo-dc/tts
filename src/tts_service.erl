@@ -78,13 +78,12 @@ exists(ServiceId) ->
 get_queue(ServiceId) ->
     case tts_data:service_get(ServiceId) of
         {ok, {ServiceId, Info}} ->
-            %% QueueName = maps:get(runner_queue, Info),
-            QueueName = ServiceId,
+            QueueId = gen_queue_name(ServiceId),
             case maps:get(parallel_runner, Info) of
                 infinite ->
                     {ok, undefined};
                 Num when is_number(Num) ->
-                    {ok, QueueName}
+                    {ok, QueueId}
             end;
         _ -> {ok, undefined}
     end.
@@ -323,13 +322,14 @@ start_runner_queue_if_needed(#{enabled := true,
                                id := Id
                               })
   when is_number(NumRunner) ->
-    ok = jobs:add_queue(Id, [{regulators, [
+    QueueId = gen_queue_name(Id),
+    ok = jobs:add_queue(QueueId, [{regulators, [
                                            {counter, [{limit, NumRunner}]}
                                           ]},
                              {type, fifo}
                             ]),
-    Msg = "service ~p: queue started with max ~p parallel runners",
-    lager:info(Msg, [Id, NumRunner]);
+    Msg = "service ~p: queue ~p started with max ~p parallel runners",
+    lager:info(Msg, [Id, QueueId, NumRunner]);
 start_runner_queue_if_needed(_) ->
     ok.
 
@@ -389,3 +389,9 @@ to_valid_type(Type, ValidTypes) ->
         _ ->
             unknown
     end.
+
+gen_queue_name(Id) when is_binary(Id) ->
+    Dash = <<"-">>,
+    Module = atom_to_binary(?MODULE, utf8),
+    QueueName = << Module/binary, Dash/binary, Id/binary >>,
+    binary_to_atom(QueueName, utf8).
