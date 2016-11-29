@@ -242,12 +242,31 @@ validate_call_parameter_set([], #{params := Params} = Info, ParamSet, Result)->
     NewParams = [ParamSet | Params ],
     NewInfo = maps:put(params, NewParams, Info),
     {Result, NewInfo};
-validate_call_parameter_set([#{description:=Desc, name:=Name, key:=Key,
-                               type:=Type }=Param | T],
-                            #{id := Id} = Info, ParamSet, Current)
-  when is_binary(Key), is_binary(Desc), is_binary(Name) ->
+validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Current)
+  when is_map(Param) ->
+    RequiredKeys = [description, name, key, type],
+    MissingKeys = RequiredKeys -- maps:keys(Param),
+    case MissingKeys of
+        [] ->
+            {Result, NewParamSet}=validate_call_parameter(Param, Id, ParamSet),
+            validate_call_parameter_set(T, Info, NewParamSet,
+                                        Current and Result);
+        _ ->
+            EMsg = "service ~p: request parameter ~p is missing keys ~p",
+            lager:error(EMsg, [Id, Param, MissingKeys]),
+            validate_call_parameter_set(T, Info, ParamSet, false)
+    end;
+validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet, _Current) ->
+    EMsg = "service ~p: bad request parameter ~p (from plugin)",
+    lager:error(EMsg, [Id, H]),
+    validate_call_parameter_set(T, Info, ParamSet, false).
+
+
+validate_call_parameter(#{ key := Key, name := Name, description := Desc,
+                           type:= Type} = Param, Id, ParamSet)
+  when is_binary(Key), is_binary(Name), is_binary(Desc) ->
     EMsg = "service ~p: parameter ~p: bad type ~p (from plugin)",
-    WMsg = "service ~p: parameter ~p: bad mandatory value ~p, using false",
+    WMsg = "service ~p: parameter ~p:bad mandatory value ~p, using false",
     Mdtory = maps:get(mandatory, Param, false),
     Mandatory =
         case convert_to_type(Mdtory, boolean) of
@@ -270,11 +289,13 @@ validate_call_parameter_set([#{description:=Desc, name:=Name, key:=Key,
                            mandatory => Mandatory
                          } | ParamSet]}
         end,
-    validate_call_parameter_set(T, Info, NewParamSet, Current and Result);
-validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet, _Current) ->
-    EMsg = "service ~p: bad request parameter ~p (from plugin)",
-    lager:error(EMsg, [Id, H]),
-    validate_call_parameter_set(T, Info, ParamSet, false).
+    {Result, NewParamSet };
+validate_call_parameter(Param, Id, ParamSet) ->
+    EMsg = "service ~p: bad request parameter values ~p (not strings)",
+    lager:error(EMsg, [Id, Param]),
+    {false, ParamSet}.
+
+
 
 
 list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
