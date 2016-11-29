@@ -137,12 +137,6 @@
           {default, false}
           ]}.
 
-{mapping, "debug_mode", "tts.debug_mode", [
-          hidden,
-          {datatype ,    {enum ,  [true, false]}},
-          {default, false}
-          ]}.
-
 {mapping, "erlang.smp", "vm_args.-smp", [
         {default , enable},
         {datatype ,    {enum ,    [enable , auto , disable]}},

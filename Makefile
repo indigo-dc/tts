@@ -2,7 +2,7 @@ REPO = tts
 REBAR = $(shell pwd)/rebar3
 
 
-.PHONY: check all cln clean eunit ct elvis compile ui tests cookie rel tar run package clean_package
+.PHONY: check all cln clean eunit ct elvis compile ui tests rel tar run package clean_package
 
 all: compile
 
@@ -35,10 +35,7 @@ elvis: check
 compile: check
 	$(REBAR) compile
 
-cookie:
-	./utils/gen_random_cookie
-
-rel: cookie check
+rel: check
 	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
 	cat $(OVERLAY_VARS) >> ./config/vars_gen.config
