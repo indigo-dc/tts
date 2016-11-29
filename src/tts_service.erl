@@ -124,24 +124,34 @@ get_and_validate_parameter(_) ->
     {error, not_found}.
 
 
-validate_params_and_update_db(Id, Info,
-                              {ok, #{conf_params := ConfParams,
-                                     request_params := RequestParams,
-                                     version := Version}}) ->
-     Ensure = #{plugin_conf => #{},
-               params => [],
-                plugin_version => Version
-               },
-    Info0 = maps:merge(Info, Ensure),
-    lager:info("service ~p: plugin version ~p", [Id, Version]),
-    {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
-    {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
-    Info3 = list_skipped_parameter_and_delete_config(Info2),
-    IsValid = ValidConfParam and ValidCallParam,
-    Update = #{enabled => IsValid},
-    NewInfo = maps:merge(Info3, Update),
-    start_runner_queue_if_needed(NewInfo),
-    update_service(Id, NewInfo);
+validate_params_and_update_db(Id, Info, {ok, ParamMap}) ->
+    NeededKeys = [conf_params, request_params, version],
+    MissingKeys = NeededKeys -- maps:keys(ParamMap),
+    case MissingKeys of
+        [] ->
+            #{conf_params := ConfParams,
+              request_params := RequestParams,
+              version := Version} = ParamMap,
+            Ensure = #{plugin_conf => #{},
+                       params => [],
+                       plugin_version => Version
+                      },
+            Info0 = maps:merge(Info, Ensure),
+            lager:info("service ~p: plugin version ~p", [Id, Version]),
+            {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
+            {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams,
+                                                                 Info1),
+            Info3 = list_skipped_parameter_and_delete_config(Info2),
+            IsValid = ValidConfParam and ValidCallParam,
+            Update = #{enabled => IsValid},
+            NewInfo = maps:merge(Info3, Update),
+            start_runner_queue_if_needed(NewInfo),
+            update_service(Id, NewInfo);
+        _ ->
+            lager:error("service ~p: missing keys in parameter response: ~p",
+                        [Id, MissingKeys]),
+            {error, bad_config}
+    end;
 validate_params_and_update_db(Id, _, {error, Result}) ->
     case maps:get(log_msg, Result, undefined) of
         undefined ->
@@ -156,21 +166,30 @@ validate_conf_parameter(Params, Info) ->
     validate_conf_parameter(Params, Info, true).
 validate_conf_parameter([], Info, Result) ->
     {Result, Info};
-validate_conf_parameter([#{name := Name,
-                           default := Def,
-                           type := Type} | T ], Info, Current) ->
-    AtomType = to_conf_type(Type),
-    Default = convert_to_type(Def, AtomType),
-    {Res, NewInfo} = update_conf_parameter(Name, Default, AtomType, Info),
-    validate_conf_parameter(T, NewInfo, Res and Current);
+validate_conf_parameter([ Entry | T ], #{ id:= Id, cmd:= Cmd} =Info, Current) ->
+    RequiredKeys = [name, default, type],
+    MissingKeys =  RequiredKeys -- maps:keys(Entry),
+    case MissingKeys of
+        [] ->
+            #{name := Name, default := Def, type := Type} = Entry,
+            AtomType = to_conf_type(Type),
+            Default = convert_to_type(Def, AtomType),
+            {Res, NewInfo} = update_conf_parameter(Name, Default,
+                                                   AtomType, Info),
+            validate_conf_parameter(T, NewInfo, Res and Current);
+        _ ->
+            lager:error("service ~p: conf parameter missing keys ~p [~p]",
+                        [Id, MissingKeys, Cmd]),
+            {false, Info}
+    end;
 validate_conf_parameter(_, #{id := Id, cmd := Cmd} = Info, _) ->
-    lager:error("service ~p: bad parameter for plugin ~p", [Id, Cmd]),
+    lager:error("service ~p: bad conf parameter for plugin ~p", [Id, Cmd]),
     {false, Info}.
 
 
 update_conf_parameter(Name, _Default, unknown, #{id := Id} = Info) ->
-    lager:error("service ~p: unsupported datatype at setting ~p (from plugin)",
-                [Id, Name]),
+    Msg = "service ~p: unsupported datatype at conf parameter ~p (from plugin)",
+    lager:error(Msg, [Id, Name]),
     {false, Info};
 update_conf_parameter(Name, {ok, Default}, Type,
                       #{id := Id, plugin_conf_config:=RawConf,
@@ -194,7 +213,7 @@ update_conf_parameter(Name, {ok, Default}, Type,
     NewConf = maps:put(Name, Value, Conf),
     {true, maps:put(plugin_conf, NewConf, Info)};
 update_conf_parameter(Name, _, _Type, #{id := Id} = Info) ->
-    lager:error("service ~p: bad default at setting ~p (from plugin)",
+    lager:error("service ~p: bad default at conf parameter ~p (from plugin)",
                 [Id, Name]),
     {false, Info}.
 
@@ -223,12 +242,31 @@ validate_call_parameter_set([], #{params := Params} = Info, ParamSet, Result)->
     NewParams = [ParamSet | Params ],
     NewInfo = maps:put(params, NewParams, Info),
     {Result, NewInfo};
-validate_call_parameter_set([#{description:=Desc, name:=Name, key:=Key,
-                               type:=Type }=Param | T],
-                            #{id := Id} = Info, ParamSet, Current)
-  when is_binary(Key), is_binary(Desc), is_binary(Name) ->
+validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Current)
+  when is_map(Param) ->
+    RequiredKeys = [description, name, key, type],
+    MissingKeys = RequiredKeys -- maps:keys(Param),
+    case MissingKeys of
+        [] ->
+            {Result, NewParamSet}=validate_call_parameter(Param, Id, ParamSet),
+            validate_call_parameter_set(T, Info, NewParamSet,
+                                        Current and Result);
+        _ ->
+            EMsg = "service ~p: request parameter ~p is missing keys ~p",
+            lager:error(EMsg, [Id, Param, MissingKeys]),
+            validate_call_parameter_set(T, Info, ParamSet, false)
+    end;
+validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet, _Current) ->
+    EMsg = "service ~p: bad request parameter ~p (from plugin)",
+    lager:error(EMsg, [Id, H]),
+    validate_call_parameter_set(T, Info, ParamSet, false).
+
+
+validate_call_parameter(#{ key := Key, name := Name, description := Desc,
+                           type:= Type} = Param, Id, ParamSet)
+  when is_binary(Key), is_binary(Name), is_binary(Desc) ->
     EMsg = "service ~p: parameter ~p: bad type ~p (from plugin)",
-    WMsg = "service ~p: parameter ~p: bad mandatory value ~p, using false",
+    WMsg = "service ~p: parameter ~p:bad mandatory value ~p, using false",
     Mdtory = maps:get(mandatory, Param, false),
     Mandatory =
         case convert_to_type(Mdtory, boolean) of
@@ -251,11 +289,13 @@ validate_call_parameter_set([#{description:=Desc, name:=Name, key:=Key,
                            mandatory => Mandatory
                          } | ParamSet]}
         end,
-    validate_call_parameter_set(T, Info, NewParamSet, Current and Result);
-validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet, _Current) ->
-    EMsg = "service ~p: bad request parameter ~p (from plugin)",
-    lager:error(EMsg, [Id, H]),
-    validate_call_parameter_set(T, Info, ParamSet, false).
+    {Result, NewParamSet };
+validate_call_parameter(Param, Id, ParamSet) ->
+    EMsg = "service ~p: bad request parameter values ~p (not strings)",
+    lager:error(EMsg, [Id, Param]),
+    {false, ParamSet}.
+
+
 
 
 list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
