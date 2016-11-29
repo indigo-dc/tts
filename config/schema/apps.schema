@@ -1,5 +1,99 @@
 
+
+%% lager settings
+%% {lager, [
+%%     {log_root, "{{runner_log_dir}}"},
+%%     {handlers, [
+%%                {lager_console_backend, info},
+%%                {lager_file_backend, [{file, "error.log"}, {level, error}]},
+%%                {lager_file_backend, [{file, "info.log"}, {level, info}]}
+%%                ]}
+%%     ]}
 {mapping, "log_dir", "lager.log_root", [
           {default, "{{runner_log_dir}}"},
           hidden
           ]}.
+
+{mapping, "debug_mode", "lager.handlers", [
+          hidden,
+          {datatype ,    {enum ,  [true, false]}},
+          {default, false}
+          ]}.
+
+{translation, "lager.handlers",
+ fun(Conf) ->
+         DebugMode = cuttlefish:conf_get("debug_mode", Conf),
+         Default =
+             [
+              {lager_file_backend, [{file, "error.log"}, {level, error}]},
+              {lager_file_backend, [{file, "info.log"}, {level, info}]}
+             ],
+
+         HostName = cuttlefish:conf_get("hostname", Conf),
+         DebugModeAllowed = (HostName == "localhost"),
+         case DebugMode of
+             true ->
+                 case DebugModeAllowed of
+                     true ->
+                         [ {lager_console_backend, debug},
+                           {lager_file_backend, [{file, "debug.log"},
+                                                 {level, debug}]}
+                         ] ++ Default ;
+                     _ ->
+                         Msg = "debug mode is only allowed at localhost",
+                         cuttlefish:invalid(Msg)
+                     end;
+             _ ->
+                [{lager_console_backend, info} | Default]
+         end
+ end}.
+
+
+%% OIDCC settings
+%% {oidcc, [
+%%     {retrieve_userinfo, true},
+%%     {use_cookie, true},
+%%     {check_user_agent, true},
+%%     {check_peer_ip, true}
+%%     ] },
+{mapping, "oidc.retrieve_userinfo", "oidcc.retrieve_userinfo",
+ [
+  {datatype ,    {enum ,  [true, false]}},
+  {default, true},
+  hidden
+ ]
+}.
+
+{mapping, "oidc.use_cookie", "oidcc.use_cookie",
+ [
+  {datatype ,    {enum ,  [true, false]}},
+  {default, true},
+  hidden
+ ]
+}.
+
+{mapping, "oidc.check_user_agent", "oidcc.check_user_agent",
+ [
+  {datatype ,    {enum ,  [true, false]}},
+  {default, true},
+  hidden
+ ]
+}.
+
+{mapping, "oidc.check_peer_ip", "oidcc.check_peer_ip",
+ [
+  {datatype ,    {enum ,  [true, false]}},
+  {default, true},
+  hidden
+ ]
+}.
+
+%% Kernel
+%% {kernel,[{start_timer,true}]}
+{mapping, "start_timer", "kernel.start_timer",
+ [
+  {datatype ,    {enum ,  [true, false]}},
+  {default, true},
+  hidden
+ ]
+}.
