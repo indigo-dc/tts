@@ -166,21 +166,30 @@ validate_conf_parameter(Params, Info) ->
     validate_conf_parameter(Params, Info, true).
 validate_conf_parameter([], Info, Result) ->
     {Result, Info};
-validate_conf_parameter([#{name := Name,
-                           default := Def,
-                           type := Type} | T ], Info, Current) ->
-    AtomType = to_conf_type(Type),
-    Default = convert_to_type(Def, AtomType),
-    {Res, NewInfo} = update_conf_parameter(Name, Default, AtomType, Info),
-    validate_conf_parameter(T, NewInfo, Res and Current);
+validate_conf_parameter([ Entry | T ], #{ id:= Id, cmd:= Cmd} =Info, Current) ->
+    RequiredKeys = [name, default, type],
+    MissingKeys =  RequiredKeys -- maps:keys(Entry),
+    case MissingKeys of
+        [] ->
+            #{name := Name, default := Def, type := Type} = Entry,
+            AtomType = to_conf_type(Type),
+            Default = convert_to_type(Def, AtomType),
+            {Res, NewInfo} = update_conf_parameter(Name, Default,
+                                                   AtomType, Info),
+            validate_conf_parameter(T, NewInfo, Res and Current);
+        _ ->
+            lager:error("service ~p: conf parameter missing keys ~p [~p]",
+                        [Id, MissingKeys, Cmd]),
+            {false, Info}
+    end;
 validate_conf_parameter(_, #{id := Id, cmd := Cmd} = Info, _) ->
-    lager:error("service ~p: bad parameter for plugin ~p", [Id, Cmd]),
+    lager:error("service ~p: bad conf parameter for plugin ~p", [Id, Cmd]),
     {false, Info}.
 
 
 update_conf_parameter(Name, _Default, unknown, #{id := Id} = Info) ->
-    lager:error("service ~p: unsupported datatype at setting ~p (from plugin)",
-                [Id, Name]),
+    Msg = "service ~p: unsupported datatype at conf parameter ~p (from plugin)",
+    lager:error(Msg, [Id, Name]),
     {false, Info};
 update_conf_parameter(Name, {ok, Default}, Type,
                       #{id := Id, plugin_conf_config:=RawConf,
@@ -204,7 +213,7 @@ update_conf_parameter(Name, {ok, Default}, Type,
     NewConf = maps:put(Name, Value, Conf),
     {true, maps:put(plugin_conf, NewConf, Info)};
 update_conf_parameter(Name, _, _Type, #{id := Id} = Info) ->
-    lager:error("service ~p: bad default at setting ~p (from plugin)",
+    lager:error("service ~p: bad default at conf parameter ~p (from plugin)",
                 [Id, Name]),
     {false, Info}.
 
