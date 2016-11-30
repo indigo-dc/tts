@@ -5,7 +5,7 @@ import AccessToken.View as AccessToken exposing (view)
 import CredentialList.Model as CredentialList exposing (Model)
 import CredentialList.View as CredentialList exposing (view)
 import Html exposing (Html, div, text, form, select, option, button, span, br, input)
-import Html.Attributes exposing (disabled, action, class, method, id, name, value, type')
+import Html.Attributes exposing (disabled, action, class, method, id, name, value, type_)
 import Html.Events exposing (onClick)
 import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model)
@@ -35,7 +35,7 @@ view context =
         , br [] []
         , button
             [ id "ac_token"
-            , type' "button"
+            , type_ "button"
             , class "btn btn-default"
             , onClick Messages.RetrieveAccessToken
             ]

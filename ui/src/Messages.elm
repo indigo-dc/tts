@@ -2,6 +2,7 @@ module Messages exposing (..)
 
 import AccessToken.Model as AccessToken exposing (Model)
 import CredentialList.Model as CredentialList exposing (Model)
+import Http
 import Info.Model as Info exposing (Model)
 import ProviderList.Model as ProviderList exposing (Model)
 import Secret.Model as Secret exposing (Model)
@@ -10,29 +11,21 @@ import ServiceList.Model as ServiceList exposing (Model)
 
 
 type Msg
-    = Info Info.Model
-    | InfoFailed String
-    | ProviderList ProviderList.Model
-    | ServiceList ServiceList.Model
-    | Credential Secret.Model
-    | CredentialList CredentialList.Model
-    | ProviderListFailed String
-    | ServiceListFailed String
-    | CredentialListFailed String
-    | RequestFailed Secret.Model
-    | LoggedOut
-    | LogoutFailed String
+    = Info (Result Http.Error Info.Model)
+    | ProviderList (Result Http.Error ProviderList.Model)
+    | ServiceList (Result Http.Error ServiceList.Model)
+      -- | Credential (Result Http.Error Secret.Model)
+    | CredentialList (Result Http.Error CredentialList.Model)
+    | Requested (Result Http.Error Secret.Model)
+    | AccessToken (Result Http.Error AccessToken.Model)
+    | LoggedOut (Result Http.Error String)
     | Request String
     | AdvancedRequest Service.Model
-    | Requested Secret.Model
     | Revoke String
-    | Revoked
+    | Revoked (Result Http.Error Secret.Model)
     | HideAccessToken
     | HideSecret
     | RetrieveAccessToken
-    | AccessTokenFailed String
-    | AccessToken AccessToken.Model
-    | RevokeFailed String
     | AdvancedCancel
     | AdvancedChange String String
     | Logout
