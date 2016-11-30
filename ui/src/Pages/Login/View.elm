@@ -1,7 +1,7 @@
 module Pages.Login.View exposing (..)
 
 import Html exposing (Html, div, text, form, select, option, button, span)
-import Html.Attributes exposing (hidden, disabled, action, class, method, id, name, value, type')
+import Html.Attributes exposing (hidden, disabled, action, class, method, id, name, value, type_)
 import ProviderList.Model as ProviderList exposing (Model)
 import ProviderList.View as ProviderList exposing (view)
 
@@ -31,7 +31,7 @@ view context =
                                 (ProviderList.view context.providerList)
                             , span [ class "input-group-btn" ]
                                 [ button
-                                    [ type' "submit"
+                                    [ type_ "submit"
                                     , class "btn btn-primary"
                                     , disabled (not (ProviderList.hasReadyEntries context.providerList))
                                     ]

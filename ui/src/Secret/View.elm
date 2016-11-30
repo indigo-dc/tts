@@ -2,7 +2,7 @@ module Secret.View exposing (..)
 
 import Dialog
 import Html exposing (Html, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
-import Html.Attributes exposing (class, value, type', readonly, rows, cols, style, hidden)
+import Html.Attributes exposing (class, value, type_, readonly, rows, cols, style, hidden)
 import Html.Events exposing (onClick)
 import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
@@ -20,7 +20,7 @@ view progress_title scrt =
                     Just
                         { closeMessage = Nothing
                         , containerClass = Nothing
-                        , dialogSize = Just Dialog.Large
+                        , dialogSize = Dialog.Large
                         , header =
                             Just (h4 [ class "modal-title" ] [ text title ])
                         , body =
@@ -65,7 +65,7 @@ view progress_title scrt =
                         Just
                             { closeMessage = Just Messages.HideSecret
                             , containerClass = Nothing
-                            , dialogSize = Just Dialog.Large
+                            , dialogSize = Dialog.Large
                             , header =
                                 Just (h4 [ class "modal-title" ] [ text title ])
                             , body =
@@ -89,7 +89,7 @@ view progress_title scrt =
                                             [ small [] [ text footer ] ]
                                         , div [ style [ ( "float", "right" ) ] ]
                                             [ button
-                                                [ type' "button"
+                                                [ type_ "button"
                                                 , class "btn btn-default"
                                                 , onClick Messages.HideSecret
                                                 ]
@@ -107,16 +107,16 @@ viewEntry entry =
     let
         column =
             td []
-                [ if entry.type' == "text" then
-                    input [ type' "text", value entry.value, class "form-control", readonly True ] []
-                  else if entry.type' == "textfile" then
+                [ if entry.type_ == "text" then
+                    input [ type_ "text", value entry.value, class "form-control", readonly True ] []
+                  else if entry.type_ == "textfile" then
                     textarea [ class "form-control", readonly True, rows entry.rows, cols entry.cols ]
                         [ text entry.value
                         ]
-                  else if entry.type' == "textarea" then
+                  else if entry.type_ == "textarea" then
                     textarea [ class "form-control", readonly True ] [ text entry.value ]
                   else
-                    input [ type' "text", value entry.value, class "form-control", readonly True ] []
+                    input [ type_ "text", value entry.value, class "form-control", readonly True ] []
                 ]
     in
         tr []

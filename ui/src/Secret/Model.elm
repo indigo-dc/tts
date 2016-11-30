@@ -21,7 +21,7 @@ empty_credential =
 
 type alias Entry =
     { name : String
-    , type' : String
+    , type_ : String
     , value : String
     , rows : Int
     , cols : Int

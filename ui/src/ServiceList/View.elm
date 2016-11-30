@@ -1,7 +1,7 @@
 module ServiceList.View exposing (..)
 
 import Html exposing (Html, div, h2, text, form, select, option, button, span, tr, th, table, thead, tbody)
-import Html.Attributes exposing (class, method, value, disabled, name, type', action)
+import Html.Attributes exposing (class, method, value, disabled, name, action)
 import Messages exposing (Msg)
 import Service.View as Service exposing (view)
 import ServiceList.Model as ServiceList exposing (Model)

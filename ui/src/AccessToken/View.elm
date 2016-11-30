@@ -17,7 +17,7 @@ view at =
                 Just
                     { closeMessage = Just Messages.HideAccessToken
                     , containerClass = Nothing
-                    , dialogSize = Just Dialog.Large
+                    , dialogSize = Dialog.Large
                     , header = Just (text "Your Access Token")
                     , body =
                         Just

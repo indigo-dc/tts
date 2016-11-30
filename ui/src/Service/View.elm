@@ -2,7 +2,7 @@ module Service.View exposing (..)
 
 import Dialog as Dialog exposing (view)
 import Html exposing (Html, h4, p, text, table, tbody, button, option, tr, td, form, input, div, textarea)
-import Html.Attributes exposing (class, method, value, disabled, name, type', action, placeholder)
+import Html.Attributes exposing (class, method, value, disabled, name, type_, action, placeholder)
 import Html.Events exposing (onClick, onInput)
 import Messages exposing (Msg)
 import Service.Model as Service exposing (Model, Set, Param, hasBasic, hasAdvanced, nonEmptySets)
@@ -58,7 +58,7 @@ advancedView srvc =
                     Just
                         { closeMessage = Just Messages.AdvancedCancel
                         , containerClass = Nothing
-                        , dialogSize = Just Dialog.Large
+                        , dialogSize = Dialog.Large
                         , header =
                             Just
                                 (h4 [ class "modal-title" ] [ text "Parameter" ])
@@ -119,12 +119,12 @@ viewParam param =
 
         column =
             td []
-                [ if param.type' == "text" then
-                    input [ type' "text", class "form-control" ] []
-                  else if param.type' == "textarea" then
+                [ if param.type_ == "text" then
+                    input [ type_ "text", class "form-control" ] []
+                  else if param.type_ == "textarea" then
                     textarea [ class "form-control", placeholder param.description, onInput (Messages.AdvancedChange param.name) ] []
                   else
-                    input [ type' "text", placeholder param.description, class "form-control" ] []
+                    input [ type_ "text", placeholder param.description, class "form-control" ] []
                 ]
     in
         tr []

@@ -19,7 +19,7 @@ type alias Set =
 type alias Param =
     { name : String
     , description : String
-    , type' : String
+    , type_ : String
     , mandatory : Bool
     }
 
