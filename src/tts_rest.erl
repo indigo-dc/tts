@@ -156,7 +156,9 @@ delete_resource(Req, #state{type=credential,
     {Result, Req2}  =
         case tts:revoke_credential_for(CredentialId, Session) of
             ok ->
-                {true, Req};
+                Body = jsone:encode(#{result => ok}),
+                Req1 = cowboy_req:set_resp_body(Body, Req),
+                {true, Req1};
             {error, Msg} ->
                 Body = jsone:encode(#{result => error, user_msg => Msg}),
                 Req1 = cowboy_req:set_resp_body(Body, Req),
