@@ -155,13 +155,6 @@ update msg model =
             , retrieveServiceList model.url model.restVersion
             )
 
-        Messages.AdvancedRequest service ->
-            ( { model
-                | current_service = Just service
-              }
-            , Cmd.none
-            )
-
         Messages.Requested (Err (Http.BadStatus info)) ->
             let
                 result =
@@ -194,19 +187,33 @@ update msg model =
                                     , request_progressing = False
                                     , progressing_title = Nothing
                                   }
-                                , Cmd.none
+                                , retrieveServiceList model.url model.restVersion
                                 )
             in
                 result
 
-        Messages.Requested (Err _) ->
-            ( { model
-                | credential = Nothing
-                , request_progressing = False
-                , progressing_title = Nothing
-              }
-            , retrieveServiceList model.url model.restVersion
-            )
+        Messages.Requested (Err info) ->
+            let
+                bla =
+                    Debug.log "reques failed" info
+
+                err_msg =
+                    "an internal error occured, see the console for more details"
+
+                error_cred =
+                    Just
+                        { result = "error"
+                        , credential = Secret.empty_credential
+                        , error = err_msg
+                        }
+            in
+                ( { model
+                    | credential = error_cred
+                    , request_progressing = False
+                    , progressing_title = Nothing
+                  }
+                , retrieveServiceList model.url model.restVersion
+                )
 
         Messages.Revoke credId ->
             ( { model
@@ -224,17 +231,72 @@ update msg model =
             , retrieveServiceList model.url model.restVersion
             )
 
+        Messages.Revoked (Err (Http.BadStatus info)) ->
+            let
+                result =
+                    case info.status.code of
+                        401 ->
+                            initModel model.url model.restVersion
+
+                        _ ->
+                            let
+                                err_code =
+                                    toString info.status.code
+
+                                err_msg =
+                                    "bad response [" ++ err_code ++ "]: " ++ info.body
+
+                                error_cred =
+                                    case decodeString decodeSecret info.body of
+                                        Ok cred ->
+                                            Just cred
+
+                                        Err _ ->
+                                            Just
+                                                { result = "error"
+                                                , credential = Secret.empty_credential
+                                                , error = err_msg
+                                                }
+                            in
+                                ( { model
+                                    | credential = error_cred
+                                    , request_progressing = False
+                                    , progressing_title = Nothing
+                                  }
+                                , retrieveServiceList model.url model.restVersion
+                                )
+            in
+                result
+
         Messages.Revoked (Err info) ->
             let
                 bla =
                     Debug.log "revoke failed" info
+
+                err_msg =
+                    "an internal error occured, see the console for more details"
+
+                error_cred =
+                    Just
+                        { result = "error"
+                        , credential = Secret.empty_credential
+                        , error = err_msg
+                        }
             in
                 ( { model
-                    | request_progressing = False
+                    | credential = error_cred
+                    , request_progressing = False
                     , progressing_title = Nothing
                   }
                 , retrieveServiceList model.url model.restVersion
                 )
+
+        Messages.AdvancedRequest service ->
+            ( { model
+                | current_service = Just service
+              }
+            , Cmd.none
+            )
 
         Messages.AdvancedChange name value ->
             let
