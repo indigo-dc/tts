@@ -24,53 +24,58 @@
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
+%% @doc the time after which the TTS will stop waiting for a response
+%% from the plugin
+{mapping, "service.$id.plugin_timeout", "tts.service_list.e", [
+          {datatype, [{duration, ms}, {atom, infinity}] }
+          ]}.
 %% @doc if enabled the plugin will get the access token, use this
 %% option with caution! default is 'false'
-{mapping, "service.$id.pass_access_token", "tts.service_list.e", [
+{mapping, "service.$id.pass_access_token", "tts.service_list.f", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
 %% @doc the way tts connects to the place where to start the plugin
 %% this can be either local or ssh
 %% @see service.$id.cmd
-{mapping, "service.$id.connection.type", "tts.service_list.f", [
+{mapping, "service.$id.connection.type", "tts.service_list.g", [
           {datatype, {enum, [local, ssh]}}
           ]}.
 
 %% @doc the username to use for the connection
-{mapping, "service.$id.connection.user", "tts.service_list.g", [
+{mapping, "service.$id.connection.user", "tts.service_list.h", [
           {datatype, string}
           ]}.
 
 %% @doc the password to use for the connection
-{mapping, "service.$id.connection.password", "tts.service_list.h", [
+{mapping, "service.$id.connection.password", "tts.service_list.i", [
           {datatype, string}
           ]}.
 
 %% @doc the host to connect to
-{mapping, "service.$id.connection.host", "tts.service_list.i", [
+{mapping, "service.$id.connection.host", "tts.service_list.j", [
           {datatype, string}
           ]}.
 
 %% @doc the port to connect to
-{mapping, "service.$id.connection.port", "tts.service_list.j", [
+{mapping, "service.$id.connection.port", "tts.service_list.k", [
           {datatype, integer}
           ]}.
 
 
 %% @doc the sshDir to use when connecting
-{mapping, "service.$id.connection.ssh_dir", "tts.service_list.k", [
+{mapping, "service.$id.connection.ssh_dir", "tts.service_list.l", [
           {datatype, string}
           ]}.
 
 
 %% @doc the password for the ssh private key
-{mapping, "service.$id.connection.ssh_key_pass", "tts.service_list.l", [
+{mapping, "service.$id.connection.ssh_key_pass", "tts.service_list.m", [
           {datatype, string}
           ]}.
 
 %% @doc the plugin configuration parameter
-{mapping, "service.$id.plugin.$key", "tts.service_list.m", [
+{mapping, "service.$id.plugin.$key", "tts.service_list.n", [
           {datatype, string}
           ]}.
 
@@ -111,6 +116,7 @@
          CredLimits = TypeIdValue("service.$id.credential_limit", three),
          Runners = TypeIdValue("service.$id.parallel_runner", three),
          SameStates = TypeIdValue("service.$id.allow_same_state", three),
+         Timeouts = TypeIdValue("service.$id.plugin_timeout", three),
          PassAccTokens = TypeIdValue("service.$id.pass_access_token", three),
          ConnTypes = TypeIdValue("service.$id.connection.type", four),
          ConnUsers = TypeIdValue("service.$id.connection.user", four),
@@ -151,6 +157,11 @@
                                      {Id, Allow}
                                             -> Allow;
                                      _ -> false
+                                 end,
+                     PluginTimeout = case lists:keyfind(Id, 1, Timeouts) of
+                                     {Id, Timeout}
+                                            -> Timeout;
+                                     _ -> infinity
                                  end,
                      PassAccToken = case lists:keyfind(Id, 1, PassAccTokens) of
                                      {Id, PassAccessToken}
@@ -225,6 +236,7 @@
                                   plugin_conf_config => PluginConf,
                                   parallel_runner => ParaRunner,
                                   pass_access_token => PassAccToken,
+                                  plugin_timeout => PluginTimeout,
                                   connection => #{
                                     type => ConnType,
                                     user => ConnUser,

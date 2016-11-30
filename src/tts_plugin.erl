@@ -243,6 +243,9 @@ return(result, Result) ->
 return(error, Data) ->
     {error, Data}.
 
+result_to_atom(Result)
+  when is_atom(Result) ->
+    Result;
 result_to_atom(Result) ->
     try binary_to_existing_atom(Result, utf8) of
         Atom ->
