@@ -38,7 +38,7 @@
 -record(state, {
           action = undefined,
           client = undefined,
-          service_id = undefined,
+          service_info = undefined,
           user_info = undefined,
           params = undefined,
           queue = undefined,
@@ -70,21 +70,49 @@ stop(Pid) ->
               Params::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
                                        {error, any(), list()} | {error, atom()}.
 request(ServiceId, UserInfo, Params, Queue, Pid) ->
-    gen_server:call(Pid, {request_credential, ServiceId, UserInfo,
-                          Params, Queue}, infinity).
+    try
+        {ok, ServiceInfo} = tts_service:get_info(ServiceId),
+        Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
+        gen_server:call(Pid, {request_credential, ServiceInfo, UserInfo, Params,
+                              Queue}, Timeout)
+    catch
+        exit:{timeout, _} ->
+            UMsg = "the plugin timed out, please inform the administrator",
+            LMsg = "request timed out",
+            {ok, #{result => error, user_msg => UMsg, log_msg => LMsg}, []}
+    end.
+
 
 -spec revoke(ServiceId :: binary(), UserInfo :: map(),
              CredState::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
                                          {error, any(), list()}|{error, atom()}.
 revoke(ServiceId, UserInfo, CredState, Queue, Pid) ->
-    gen_server:call(Pid, {revoke_credential, ServiceId, UserInfo,
-                          CredState, Queue}, infinity).
+    try
+        {ok, ServiceInfo} = tts_service:get_info(ServiceId),
+        Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
+        gen_server:call(Pid, {revoke_credential, ServiceInfo, UserInfo,
+                              CredState, Queue}, Timeout)
+    catch
+        exit:{timeout, _} ->
+            UMsg = "the plugin timed out, please inform the administrator",
+            LMsg = "revoke timed out",
+            {ok, #{result => error, user_msg => UMsg, log_msg => LMsg}, []}
+    end.
 
 -spec get_params(ServiceId ::any(), Pid::pid()) -> {ok, map()} |
                                                    {error, atom(), list()} |
                                                    {error, atom()}.
 get_params(ServiceId, Pid) ->
-    gen_server:call(Pid, {get_params, ServiceId}, infinity).
+    try
+        {ok, ServiceInfo} = tts_service:get_info(ServiceId),
+        Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
+        gen_server:call(Pid, {get_params, ServiceInfo}, Timeout)
+    catch
+        exit:{timeout, _} ->
+            UMsg = "the plugin timed out, please inform the administrator",
+            LMsg = "params timed out",
+            {ok, #{result => error, user_msg => UMsg, log_msg => LMsg}, []}
+    end.
 
 
 %% gen_server.
@@ -92,32 +120,32 @@ get_params(ServiceId, Pid) ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({request_credential, ServiceId, UserInfo, Params, Queue}, From,
+handle_call({request_credential, ServiceInfo, UserInfo, Params, Queue}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = request,
                             client = From,
-                            service_id = ServiceId,
+                            service_info = ServiceInfo,
                             user_info = UserInfo,
                             params = Params,
                             queue = Queue
                           },
     gen_server:cast(self(), request_slot),
     {noreply, NewState, 200};
-handle_call({revoke_credential, ServiceId, UserInfo, CredState, Queue}, From,
+handle_call({revoke_credential, ServiceInfo, UserInfo, CredState, Queue}, From,
             #state{client = undefined} = State) ->
     NewState = State#state{ action = revoke,
                             client = From,
-                            service_id = ServiceId,
+                            service_info = ServiceInfo,
                             user_info = UserInfo,
                             cred_state = CredState,
                             queue = Queue
                           },
     gen_server:cast(self(), request_slot),
     {noreply, NewState, 200};
-handle_call({get_params, ServiceId}, From, #state{client = undefined}=State) ->
+handle_call({get_params, ServiceInfo}, From, #state{client = undefined}=State)->
     NewState = State#state{ action = parameter,
                             client = From,
-                            service_id = ServiceId
+                            service_info = ServiceInfo
                           },
     gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
@@ -172,10 +200,9 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 prepare_action(State) ->
-    #state{service_id = ServiceId,
+    #state{service_info = ServiceInfo,
            user_info = UserInfo
           } = State,
-    {ok, ServiceInfo} = tts_service:get_info(ServiceId),
     {ok, ConnInfo} = get_connection_info(ServiceInfo),
     {ok, Cmd} = get_cmd(ServiceInfo),
     Connection = connect_to_service(ConnInfo),
