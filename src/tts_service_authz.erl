@@ -4,13 +4,20 @@
 -export([validate_config/2]).
 
 
-is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0}) ->
-    {ok, Issuer} = tts_userinfo:return(issuer, UserInfo),
+is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
+    {ok, Issuer, Subject} = tts_userinfo:return(issuer_subject, UserInfo),
+    lager:debug("checking authorization of ~p ~p at service ~p [~p]",
+                [Issuer, Subject, ServiceId, A]),
+
+    Slash = <<"/">>,
+
     FilterByIssuer = fun({Iss, _, _, _}) ->
-                             Iss == Issuer
+                             IssSlash = << Iss/binary, Slash/binary >>,
+                             (Iss == Issuer) or (IssSlash == Issuer)
                      end,
     Allow = lists:filter(FilterByIssuer, Allow0),
     Forbid = lists:filter(FilterByIssuer, Forbid0),
+    lager:debug("running through allow ~p and forbid ~p", [Allow, Forbid]),
     Allowed = apply_rules(ServiceId, UserInfo, Allow, false),
     Forbidden = apply_rules(ServiceId, UserInfo, Forbid, true),
     Allowed and (not Forbidden).
@@ -28,7 +35,10 @@ apply_rules(ServiceId, UserInfo, Rules, Default) ->
 apply_rule(_ServiceId, {_Iss, Key, Op, Value}, UserInfo, Default) ->
     case tts_userinfo:return({key, Key}, UserInfo) of
         {ok, KeyValue} ->
-            perform_operation(Op, KeyValue, Value, Default);
+            Res = perform_operation(Op, KeyValue, Value, Default),
+            lager:debug("performed ~p(~p, ~p) -> ~p",
+                        [Op, KeyValue, Value, Res]),
+            Res;
         _ ->
             Default
     end;
@@ -37,38 +47,31 @@ apply_rule(ServiceId, Rule, _UserInfo, Default) ->
                    [ServiceId, Rule, Default]),
     Default.
 
-perform_operation(any = Op, KeyValue, Value, _) ->
-    Res = true,
-    lager:debug("performing ~p(~p, ~p) -> ~p",[Op, KeyValue, Value, Res]),
-    Res;
-perform_operation(equals = Op, KeyValue, Value, _) ->
-    Res = (KeyValue == Value),
-    lager:debug("performing ~p(~p, ~p) -> ~p",[Op, KeyValue, Value, Res]),
-    Res;
-perform_operation(contains = Op, KeyValue, Value, _)
+perform_operation(any, _, Value, _) ->
+    Value;
+perform_operation(equals, KeyValue, Value, _) ->
+    (KeyValue == Value);
+perform_operation(is_member_of, KeyValue, Value, _)
+  when is_list(Value) ->
+    lists:member(KeyValue, Value);
+perform_operation(contains, KeyValue, Value, _)
   when is_list(KeyValue), is_binary(Value) ->
-    Res = lists:member(Value, KeyValue),
-    lager:debug("performing ~p(~p, ~p) -> ~p",[Op, KeyValue, Value, Res]),
-    Res;
-perform_operation(contains = Op, KeyValue, Value, _)
+    lists:member(Value, KeyValue);
+perform_operation(contains, KeyValue, Value, _)
   when is_binary(KeyValue), is_binary(Value) ->
-    Res = case binary:match(KeyValue, [Value]) of
-              {_, _} ->
-                  true;
-              _ ->
-                  false
-          end,
-    lager:debug("performing ~p(~p, ~p) -> ~p",[Op, KeyValue, Value, Res]),
-    Res;
-perform_operation(regexp = Op, KeyValue, Value, _) ->
-    Res = case re:run(KeyValue, Value, []) of
-              {match, _} ->
-                  true;
-              _ ->
-                  false
-          end,
-    lager:debug("performing ~p(~p, ~p) -> ~p",[Op, KeyValue, Value, Res]),
-    Res;
+    case binary:match(KeyValue, [Value]) of
+        {_, _} ->
+            true;
+        _ ->
+            false
+    end;
+perform_operation(regexp, KeyValue, Value, _) ->
+    case re:run(KeyValue, Value, []) of
+        {match, _} ->
+            true;
+        _ ->
+            false
+    end;
 perform_operation(Op, KeyValue, Value, Default) ->
     lager:critical("unknwon operation/value combination: ~p(~p, ~p), using ~p",
                    [Op, KeyValue, Value, Default]),
@@ -100,6 +103,7 @@ validate([{ProviderId, OidcKey, Operation, Value} | T], ProviderList, Result) ->
 -define(OPERATIONS,
         [
          {<<"contains">>, contains},
+         {<<"is_member_of">>, is_member_of},
          {<<"equals">>, equals},
          {<<"regexp">>, regexp},
          {<<"any">>, any}
@@ -119,22 +123,20 @@ maybe_add_to_result({true, Issuer}, {true, AtomOp}, OidcKey, Value0, Result) ->
         {ok, Value} ->
             [ {Issuer, OidcKey, AtomOp, Value} | Result ] ;
         {error, Reason} ->
-            Msg = "skipping rule ~p ~p ~p for issuer ~p (~p)",
-            lager:warning(Msg, [OidcKey, AtomOp, Value0, Issuer, Reason]),
-            Result
+            add_failed(Reason, OidcKey, AtomOp, Value0, Issuer, Result)
     end;
 maybe_add_to_result({false, Id}, {_, Op}, Key, Val, Result) ->
-    Msg = "skipping rule ~p ~p ~p for provider id ~p (provider not found)",
-    lager:warning(Msg, [Key, Op, Val, Id]),
-    Result;
+    add_failed("provider not found", Key, Op, Val, Id, Result);
 maybe_add_to_result({true, Id}, {false, Op}, Key, Val, Result) ->
-    Msg = "skipping rule ~p ~p ~p for issuer ~p (unknown operation)",
-    lager:warning(Msg, [Key, Op, Val, Id]),
-    Result;
+    add_failed("unknown operation", Key, Op, Val, Id, Result);
 maybe_add_to_result(Id, Op, Key, Val, Result) ->
-    Msg = "skipping rule ~p ~p ~p for provider ~p (unknown error)",
-    lager:warning(Msg, [Key, Op, Val, Id]),
+    add_failed("unknown error", Key, Op, Val, Id, Result).
+
+add_failed(Reason, Key, Op, Val, Id, Result) ->
+    Msg = "skipping rule ~p ~p ~p for provider ~p (~s) -> ~p",
+    lager:warning(Msg, [Key, Op, Val, Id, Reason, Result]),
     Result.
+
 
 does_provider_exist(ProviderId, ProviderList) ->
     case lists:keyfind(ProviderId, 1, ProviderList) of
@@ -146,14 +148,18 @@ does_provider_exist(ProviderId, ProviderList) ->
     end.
 
 
+convert_value_if_needed(any, <<"true">>) ->
+    {ok, true};
 convert_value_if_needed(any, _) ->
-    {ok, undefined};
+    {ok, false};
+convert_value_if_needed(is_member_of, Csv) ->
+    {ok, binary:split(Csv, [<<",">>], [global])};
 convert_value_if_needed(regexp, Value) ->
     case re:compile(Value) of
         {ok, MP} ->
             {ok, MP};
         {error, Reason} ->
-            Msg = io_lib:format("compilation of regexp failed: ~p",[Reason]),
+            Msg = io_lib:format("compilation of regexp failed: ~p", [Reason]),
             {error, Msg}
     end;
 convert_value_if_needed(_, Value) ->
