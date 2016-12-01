@@ -54,8 +54,7 @@ update_access_token(#{token := Token} = AccessToken,
             {error, not_match}
     end.
 
-update_id_info(IdInfo0, #user_info{subject=Subject}=Info) ->
-    IdInfo = parse_known_fields(IdInfo0),
+update_id_info(IdInfo, #user_info{subject=Subject}=Info) ->
     Sub = maps:get(sub, IdInfo),
     case Sub of
         Subject ->
@@ -120,20 +119,6 @@ access_token(#user_info{access_token=#{token := AccessToken}}) ->
     {ok, AccessToken};
 access_token(_) ->
     {error, not_set}.
-
-
-parse_known_fields(Map) ->
-    List = maps:to_list(Map),
-    parse_known_fields(List, []).
-
-parse_known_fields([], List) ->
-    maps:from_list(lists:reverse(List));
-parse_known_fields([ {groups, GroupData} | T], List)
-  when is_binary(GroupData) ->
-    Groups = binary:split(GroupData, [<<",">>], [global, trim_all]),
-    parse_known_fields(T, [{groups, Groups} | List]);
-parse_known_fields([H | T], List) ->
-    parse_known_fields(T, [H | List]).
 
 
 update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken} = UserInfo) ->
