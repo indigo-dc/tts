@@ -29,16 +29,15 @@
 -export([allows_same_state/1]).
 -export([get_credential_limit/1]).
 -export([get_queue/1]).
-%% -export([group_plugin_configs/1]).
 
 get_list() ->
      tts_data:service_get_list().
 
 get_list(UserInfo) ->
-    %TODO: implement a whitelist/blacklist per service
     {ok, ServiceList} = tts_data:service_get_list(),
     UpdateLimit = fun(Service, List) ->
-                      #{ id := ServiceId
+                      #{ id := ServiceId,
+                         authz := AuthzConf
                        } = Service,
                       Limit = maps:get(cred_limit, Service, 0),
                       {ok, Count} = tts_plugin:get_count(UserInfo,
@@ -48,7 +47,12 @@ get_list(UserInfo) ->
                                   cred_limit => Limit,
                                   cred_count => Count
                                 },
-                      [ maps:merge(Service, Update) | List]
+                          case is_allowed(ServiceId, UserInfo, AuthzConf) of
+                              true ->
+                                  [ maps:merge(Service, Update) | List];
+                              _ ->
+                                  List
+                          end
                   end,
     {ok, lists:reverse(lists:foldl(UpdateLimit, [], ServiceList))}.
 
@@ -100,13 +104,23 @@ allows_same_state(ServiceId) ->
         _ -> false
     end.
 
-is_allowed(_UserInfo, _ServiceId) ->
-    %% TODO: implement a white/blacklist
-    true.
+is_allowed(UserInfo, ServiceId) ->
+    case get_info(ServiceId) of
+        {ok, #{authz := AuthzConf} } ->
+            is_allowed(ServiceId, UserInfo, AuthzConf);
+        _ ->
+            false
+    end.
+
+is_allowed(ServiceId, UserInfo, AuthzConf) ->
+    tts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
 
 
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
-    tts_data:service_add(ServiceId, maps:put(enabled, false, ServiceInfo)),
+    AuthzConf0 = maps:get(authz, ServiceInfo, #{allow => [], forbid => []}),
+    {ok, AuthzConf} = tts_service_authz:validate_config(ServiceId, AuthzConf0),
+    Update = #{enabled => false, authz => AuthzConf},
+    tts_data:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
     {ok, ServiceId};
 add(_ServiceMap)  ->
     {error, invalid_config}.

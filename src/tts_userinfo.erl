@@ -14,7 +14,8 @@
           subject = undefined,
           id_token = #{},
           id_info = #{},
-          access_token = #{}
+          access_token = #{},
+          plugin_info = #{}
          }).
 
 new() ->
@@ -30,9 +31,10 @@ update_id_token(IdToken, #user_info{issuer=Issuer, subject=Subject}=Info) ->
     Sub = maps:get(sub, Claims),
     case {Issuer, Subject} of
         {Iss, Sub} ->
-            {ok, Info#user_info{id_token=IdToken}};
+            {ok, update_plugin_info(Info#user_info{id_token=IdToken})};
         {undefined, undefined} ->
-            {ok, Info#user_info{id_token=IdToken, issuer=Iss, subject=Sub}};
+            {ok, update_plugin_info(Info#user_info{id_token=IdToken, issuer=Iss,
+                                                   subject=Sub})};
         _ ->
             {error, not_match}
     end.
@@ -57,17 +59,26 @@ update_id_info(IdInfo0, #user_info{subject=Subject}=Info) ->
     Sub = maps:get(sub, IdInfo),
     case Sub of
         Subject ->
-            {ok, Info#user_info{id_info=IdInfo}};
+            {ok, update_plugin_info(Info#user_info{id_info=IdInfo})};
         _ ->
             {error, not_match}
     end.
-return(plugin_info, Info) ->
-    plugin_info(Info);
+
+return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
+    Key = maybe_to_atom(Key0),
+    case maps:is_key(Key, PluginInfo) of
+        true ->
+            {ok, maps:get(Key, PluginInfo)};
+        false ->
+            {error, not_found}
+    end;
+return(plugin_info, #user_info{plugin_info=PluginInfo}) ->
+    {ok, PluginInfo};
 return(issuer_subject, Info) ->
     {ok, Issuer} = return(issuer, Info),
     {ok, Subject} = return(subject, Info),
     {ok, Issuer, Subject};
-return( subject, #user_info{subject =Subject}) ->
+return( subject, #user_info{subject=Subject}) ->
     {ok, Subject};
 return( issuer, #user_info{issuer=Issuer}) ->
     {ok, Issuer};
@@ -124,9 +135,17 @@ parse_known_fields([ {groups, GroupData} | T], List)
 parse_known_fields([H | T], List) ->
     parse_known_fields(T, [H | List]).
 
-plugin_info(#user_info{id_info=IdInfo, id_token=IdToken}) ->
+
+update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken} = UserInfo) ->
     RemoveClaims = [aud, exp, nbf, iat, jti, azp, kid, aud, auth_time, at_hash,
                     c_hash],
     ReducedClaims = maps:without(RemoveClaims, maps:get(claims, IdToken, #{})),
-    InfoMap = maps:merge(IdInfo, ReducedClaims),
-    {ok, InfoMap}.
+    PluginInfo = maps:merge(IdInfo, ReducedClaims),
+    UserInfo#user_info{plugin_info=PluginInfo}.
+
+maybe_to_atom(Bin) ->
+    try
+        binary_to_existing_atom(Bin, utf8)
+    catch _:_ ->
+            Bin
+    end.
