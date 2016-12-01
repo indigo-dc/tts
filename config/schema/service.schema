@@ -79,6 +79,18 @@
           {datatype, string}
           ]}.
 
+
+%% @doc the authorization configuration for the service
+{mapping, "service.$id.authz.allow.$provider.$oidckey.$operation", "tts.service_list.y", [
+          {datatype, string}
+          ]}.
+
+%% @doc the authorization configuration for the service
+{mapping, "service.$id.authz.forbid.$provider.$oidckey.$operation", "tts.service_list.y", [
+          {datatype, string}
+          ]}.
+
+
 {translation, "tts.service_list",
  fun(Conf) ->
          TypeFilter =
@@ -99,7 +111,10 @@
                          four ->
                              [ {Id, V}  || {[_, Id, _, _], V} <- List ];
                          plugin ->
-                             [ {Id, K, V} || {[_, Id, _, K], V} <- List]
+                             [ {Id, K, V} || {[_, Id, _, K], V} <- List];
+                         authz ->
+                             [ {Id, P, K, O, V} ||
+                                 {[_, Id, _, _, P, K, O], V} <- List]
                      end
 
              end,
@@ -126,6 +141,9 @@
          ConnDirs = TypeIdValue("service.$id.connection.ssh_dir", four),
          ConnKeyPasses = TypeIdValue("service.$id.connection.ssh_key_pass", four),
          PluginConfs = TypeIdValue("service.$id.plugin.$key", plugin),
+
+         AuthzAllows = TypeIdValue("service.$id.authz.allow.$provider.$oidckey.$operation", authz),
+         AuthzForbids = TypeIdValue("service.$id.authz.forbid.$provider.$oidckey.$operation", authz),
 
          CreateSetting =
              fun({Id, Desc}, Result) ->
@@ -215,6 +233,23 @@
                      PluginConf = maps:from_list(lists:foldl(FilterById, [],
                                                              PluginConfs)),
 
+                     AuthzFilter = fun({A, P, K, O, V}, List) ->
+                                          case A == Id of
+                                              true ->
+                                                  Prov = list_to_binary(P),
+                                                  Key = list_to_binary(K),
+                                                  Op = list_to_binary(O),
+                                                  Val = list_to_binary(V),
+                                                  [{Prov, Key, Op, Val} | List];
+                                              false ->
+                                                  List
+                                          end
+                                  end,
+
+                     AuthzAllow = lists:foldl(AuthzFilter, [], AuthzAllows),
+                     AuthzForbid = lists:foldl(AuthzFilter, [], AuthzForbids),
+                     AuthzConf = #{ allow => AuthzAllow, forbid => AuthzForbid },
+
                      case (Cmd == undefined) or (CredLimit == undefined) or
                          (ConnType == undefined) or
                          ( (ConnType == ssh) and ( (ConnHost == undefined)
@@ -229,6 +264,7 @@
                              ok
                      end,
                      Setting = #{ id => list_to_binary(Id),
+                                  authz => AuthzConf,
                                   description => list_to_binary(Desc),
                                   cmd => list_to_binary(Cmd),
                                   cred_limit => CredLimit,

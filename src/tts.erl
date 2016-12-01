@@ -41,8 +41,7 @@
          start_full_debug/0,
          start_debug/1,
          start_debug/2,
-         stop_debug/0,
-         set_debug_mode/1
+         stop_debug/0
         ]).
 
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
@@ -220,9 +219,6 @@ start_full_debug() ->
                       "tts_plugin_runner"
                     ],
     start_debug(ListOfModules).
-
-set_debug_mode(OnOff) ->
-    application:set_env(tts, debug_mode, OnOff).
 
 start_debug(ListOfModules) ->
     %debug for an hour or 10000 messages
