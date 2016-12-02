@@ -10,6 +10,7 @@ view provider =
     option (attributes provider) [ text provider.description ]
 
 
+attributes : Provider.Model -> List (Html.Attribute msg)
 attributes provider =
     if provider.ready then
         [ value provider.id ]
