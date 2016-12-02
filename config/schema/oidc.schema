@@ -71,6 +71,14 @@
 
             CreateSetting =
                 fun({Id, Desc}, Result) ->
+                        case Id == "any" of
+                            true ->
+                                BadIdMsg = io_lib:format("OpenId Connect Provider id MUST not be ~p",[Id]),
+                                cuttlefish:invalid(BadIdMsg);
+                            false ->
+                                ok
+                        end,
+
                         ClientId = case lists:keyfind(Id, 1, CIds) of
                                        {Id, CId} -> list_to_binary(CId);
                                        _ -> undefined

@@ -233,13 +233,71 @@
                      PluginConf = maps:from_list(lists:foldl(FilterById, [],
                                                              PluginConfs)),
 
+                     OPERATIONS = [
+                                   {"contains", contains},
+                                   {"is_member_of", is_member_of},
+                                   {"equals", equals},
+                                   {"regexp", regexp},
+                                   {"any", any}
+                                  ],
+                     CheckProvider =
+                         fun(ProviderId) ->
+                                 ProviderKey = ["openid",ProviderId,"client_id"],
+                                 IsAny = (ProviderId == "any"),
+                                 ProvRes = lists:keyfind(ProviderKey, 1, Conf),
+                                 case {IsAny, ProvRes} of
+                                     {true, _} ->
+                                         any;
+                                     {false, {ProviderKey, _}} ->
+                                         list_to_binary(ProviderId);
+                                     {_, false} ->
+                                         BadProvMsg = io_lib:format("Authz Config Error: no configuration for provider '~s' found",[ProviderId]),
+                                         cuttlefish:invalid(BadProvMsg),
+                                         undefined
+                                 end
+                         end,
+
+
+                     MapOperation =
+                         fun(Op) ->
+                                 case lists:keyfind(Op, 1, OPERATIONS) of
+                                     {Op, AtomOP} ->
+                                         AtomOP;
+                                     _ ->
+                                         BadOpMsg = io_lib:format("Authz Config Error: no mapping for operation '~s' found",[Op]),
+                                         cuttlefish:invalid(BadOpMsg),
+                                         undefined
+                                 end
+                         end,
+                     ConvertAuthValue =
+                         fun(Value, Op) ->
+                                 case {Op, Value} of
+                                     {any, "true"} ->
+                                         true;
+                                     {any, _} ->
+                                         false;
+                                     {is_member_of, Csv} ->
+                                         binary:split(list_to_binary(Csv),[<<",">>], [global]);
+                                     {regexp, RegExp} ->
+                                         case re:compile(RegExp) of
+                                             {ok, MP} ->
+                                                 MP;
+                                             {error, Reason} ->
+                                                 BadRegExp = io_lib:format("Authz Config Error: compilation of regexp ~p failed: ~p", [RegExp, Reason]),
+                                                 cuttlefish:invalid(BadRegExp)
+                                         end;
+                                     {_, _} ->
+                                         list_to_binary(Value)
+                                 end
+                         end,
+
                      AuthzFilter = fun({A, P, K, O, V}, List) ->
                                           case A == Id of
                                               true ->
-                                                  Prov = list_to_binary(P),
+                                                  Prov = CheckProvider(P),
                                                   Key = list_to_binary(K),
-                                                  Op = list_to_binary(O),
-                                                  Val = list_to_binary(V),
+                                                  Op = MapOperation(O),
+                                                  Val = ConvertAuthValue(V, Op),
                                                   [{Prov, Key, Op, Val} | List];
                                               false ->
                                                   List
@@ -248,6 +306,8 @@
 
                      AuthzAllow = lists:foldl(AuthzFilter, [], AuthzAllows),
                      AuthzForbid = lists:foldl(AuthzFilter, [], AuthzForbids),
+
+
                      AuthzConf = #{ allow => AuthzAllow, forbid => AuthzForbid },
 
                      case (Cmd == undefined) or (CredLimit == undefined) or

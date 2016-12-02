@@ -14,6 +14,7 @@ is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
     FilterByIssuer = fun({Iss, _, _, _}) ->
                              IssSlash = << Iss/binary, Slash/binary >>,
                              (Iss == Issuer) or (IssSlash == Issuer)
+                                 or (Iss == any)
                      end,
     Allow = lists:filter(FilterByIssuer, Allow0),
     Forbid = lists:filter(FilterByIssuer, Forbid0),
@@ -81,61 +82,47 @@ perform_operation(Op, KeyValue, Value, Default) ->
 
 
 validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0}) ->
-    {ok, ProviderList} = oidcc:get_openid_provider_list(),
-    lager:info("Service ~p: validating authz allow", [ServiceId]),
-    Allow = validate(Allow0, ProviderList, []),
+    lager:info("Service ~p: validating authz", [ServiceId]),
+    {AllowOk, Allow} = validate(Allow0),
     lager:info("Service ~p: validating authz forbid", [ServiceId]),
-    Forbid = validate(Forbid0, ProviderList, []),
-    ValidatedAuthz = #{allow => Allow, forbid => Forbid},
+    {ForbidOk, Forbid} = validate(Forbid0),
+    ValidatedAuthz =
+        case AllowOk and ForbidOk of
+            true ->
+                #{allow => Allow, forbid => Forbid};
+            _ ->
+                lager:critical("Service ~p: *DISABLED* (authz config errors)",
+                               [ServiceId]),
+                #{allow => [], forbid => []}
+        end,
     lager:debug("Service ~p: authz result ~p", [ServiceId, ValidatedAuthz]),
     {ok, ValidatedAuthz}.
+
+validate(List) ->
+    {ok, ProviderList} = oidcc:get_openid_provider_list(),
+    validate(List, ProviderList, {true, []}).
+
 
 validate([], _ProviderList, Result) ->
     Result;
 validate([{ProviderId, OidcKey, Operation, Value} | T], ProviderList, Result) ->
     ProviderExists = does_provider_exist(ProviderId, ProviderList),
-    ConvertedOp = convert_operation(Operation),
-    NewResult = maybe_add_to_result(ProviderExists, ConvertedOp, OidcKey,
-                                 Value, Result),
+    NewResult = maybe_add_to_result(ProviderExists, Operation, OidcKey, Value,
+                                    Result),
     validate( T, ProviderList, NewResult ).
 
 
--define(OPERATIONS,
-        [
-         {<<"contains">>, contains},
-         {<<"is_member_of">>, is_member_of},
-         {<<"equals">>, equals},
-         {<<"regexp">>, regexp},
-         {<<"any">>, any}
-        ]).
-
-convert_operation(Operation) ->
-    case lists:keyfind(Operation, 1, ?OPERATIONS) of
-        {Operation, AtomOp} ->
-            {true, AtomOp};
-        _ ->
-            {false, Operation}
-    end.
-
-
-maybe_add_to_result({true, Issuer}, {true, AtomOp}, OidcKey, Value0, Result) ->
-    case convert_value_if_needed(AtomOp, Value0) of
-        {ok, Value} ->
-            [ {Issuer, OidcKey, AtomOp, Value} | Result ] ;
-        {error, Reason} ->
-            add_failed(Reason, OidcKey, AtomOp, Value0, Issuer, Result)
-    end;
-maybe_add_to_result({false, Id}, {_, Op}, Key, Val, Result) ->
+maybe_add_to_result({true, Issuer}, AtomOp, OidcKey, Value, {Result, List}) ->
+    {Result, [ {Issuer, OidcKey, AtomOp, Value} | List ]} ;
+maybe_add_to_result({false, Id}, Op, Key, Val, Result) ->
     add_failed("provider not found", Key, Op, Val, Id, Result);
-maybe_add_to_result({true, Id}, {false, Op}, Key, Val, Result) ->
-    add_failed("unknown operation", Key, Op, Val, Id, Result);
 maybe_add_to_result(Id, Op, Key, Val, Result) ->
     add_failed("unknown error", Key, Op, Val, Id, Result).
 
-add_failed(Reason, Key, Op, Val, Id, Result) ->
-    Msg = "skipping rule ~p ~p ~p for provider ~p (~s) -> ~p",
+add_failed(Reason, Key, Op, Val, Id, {Result, List}) ->
+    Msg = "bad rule ~p ~p ~p for provider ~p (~s) -> ~p",
     lager:warning(Msg, [Key, Op, Val, Id, Reason, Result]),
-    Result.
+    {false, List}.
 
 
 does_provider_exist(ProviderId, ProviderList) ->
@@ -146,21 +133,3 @@ does_provider_exist(ProviderId, ProviderList) ->
             {ok, #{issuer := Iss}} = oidcc:get_openid_provider_info(ProviderId),
             {true, Iss}
     end.
-
-
-convert_value_if_needed(any, <<"true">>) ->
-    {ok, true};
-convert_value_if_needed(any, _) ->
-    {ok, false};
-convert_value_if_needed(is_member_of, Csv) ->
-    {ok, binary:split(Csv, [<<",">>], [global])};
-convert_value_if_needed(regexp, Value) ->
-    case re:compile(Value) of
-        {ok, MP} ->
-            {ok, MP};
-        {error, Reason} ->
-            Msg = io_lib:format("compilation of regexp failed: ~p", [Reason]),
-            {error, Msg}
-    end;
-convert_value_if_needed(_, Value) ->
-    {ok, Value}.
