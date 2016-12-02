@@ -11,10 +11,12 @@ is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
 
     Slash = <<"/">>,
 
-    FilterByIssuer = fun({Iss, _, _, _}) ->
+    FilterByIssuer = fun({Iss, _, _, _})
+                        when is_binary(Iss)->
                              IssSlash = << Iss/binary, Slash/binary >>,
-                             (Iss == Issuer) or (IssSlash == Issuer)
-                                 or (Iss == any)
+                             (Iss == Issuer) or (IssSlash == Issuer);
+                        ({any, _, _, _}) ->
+                             true
                      end,
     Allow = lists:filter(FilterByIssuer, Allow0),
     Forbid = lists:filter(FilterByIssuer, Forbid0),
@@ -126,10 +128,12 @@ add_failed(Reason, Key, Op, Val, Id, {Result, List}) ->
 
 
 does_provider_exist(ProviderId, ProviderList) ->
-    case lists:keyfind(ProviderId, 1, ProviderList) of
-        false ->
+    case {lists:keyfind(ProviderId, 1, ProviderList), ProviderId == any} of
+        {false, false} ->
             {false, ProviderId};
-        _ ->
+        {false, true} ->
+            {true, any};
+        {_, false} ->
             {ok, #{issuer := Iss}} = oidcc:get_openid_provider_info(ProviderId),
             {true, Iss}
     end.
