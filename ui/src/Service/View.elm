@@ -1,7 +1,7 @@
 module Service.View exposing (..)
 
 import Dialog as Dialog exposing (view)
-import Html exposing (Html, h4, p, text, table, tbody, button, option, tr, td, form, input, div, textarea)
+import Html exposing (Html, small, a, li, ul, h4, br, p, text, table, tbody, button, option, tr, td, form, input, div, textarea)
 import Html.Attributes exposing (class, method, value, disabled, name, type_, action, placeholder)
 import Html.Events exposing (onClick, onInput)
 import Messages exposing (Msg)
@@ -46,6 +46,81 @@ view service =
             ]
 
 
+advancedPagination : Int -> Service.Model -> Html Msg
+advancedPagination pos service =
+    let
+        setCount =
+            List.length (nonEmptySets service.parameter_sets)
+
+        numbers =
+            List.range 1 setCount
+
+        numberToEntry num list =
+            let
+                attr =
+                    if num == pos then
+                        [ class "active" ]
+                    else
+                        []
+            in
+                list ++ [ li attr [ a [] [ text (toString num) ] ] ]
+
+        entries =
+            List.foldl numberToEntry [] numbers
+
+        attrLeft =
+            if pos == 1 then
+                [ class "disabled" ]
+            else
+                []
+
+        left =
+            [ li attrLeft [ a [] [ text "«" ] ] ]
+
+        attrRight =
+            if pos == setCount then
+                [ class "disabled" ]
+            else
+                []
+
+        right =
+            [ li attrRight [ a [] [ text "»" ] ] ]
+
+        pagination =
+            if setCount == 1 then
+                div [] []
+            else
+                ul [ class "pagination" ] (left ++ entries ++ right)
+    in
+        pagination
+
+
+advancedHeader : Int -> Service.Model -> Html Msg
+advancedHeader pos service =
+    let
+        setCount =
+            List.length (nonEmptySets service.parameter_sets)
+
+        headList =
+            if setCount == 1 then
+                [ text "Parameter" ]
+            else
+                [ text "Parameter"
+                , br [] []
+                , small []
+                    [ text "this service has multiple parameter sets, ensure you use the right one"
+                    ]
+                ]
+
+        headPagination =
+            advancedPagination pos service
+    in
+        div []
+            [ h4 [ class "modal-title" ] headList
+            , headPagination
+            ]
+
+
 advancedView : Maybe Service.Model -> Html Msg
 advancedView srvc =
     let
@@ -60,8 +135,7 @@ advancedView srvc =
                         , containerClass = Nothing
                         , dialogSize = Dialog.Large
                         , header =
-                            Just
-                                (h4 [ class "modal-title" ] [ text "Parameter" ])
+                            Just (advancedHeader 1 service)
                         , body =
                             Just
                                 (viewParamSet 0 service.parameter_sets)
