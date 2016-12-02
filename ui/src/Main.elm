@@ -25,7 +25,6 @@ import Service.Model as Service exposing (Model)
 import ServiceList.Decoder as ServiceList exposing (decodeServiceList)
 import ServiceList.Model as ServiceList exposing (Model, initModel)
 import String exposing (dropRight, endsWith)
-import Task exposing (perform)
 
 
 main : Program Flags Model Msg
