@@ -1,11 +1,13 @@
 module Secret.View exposing (..)
 
 import Dialog
-import Html exposing (Html, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
-import Html.Attributes exposing (class, value, type_, readonly, rows, cols, style, hidden)
+import Html exposing (Html, span, a, br, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
+import Html.Attributes exposing (title, href, downloadAs, class, value, type_, readonly, rows, cols, style, hidden)
 import Html.Events exposing (onClick)
+import Http exposing (encodeUri)
 import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
+import String exposing (words, join)
 
 
 view : Maybe String -> Maybe Secret.Model -> Html Msg
@@ -105,19 +107,31 @@ view progress_title scrt =
 viewEntry : Secret.Entry -> Html Msg
 viewEntry entry =
     let
-        column =
-            td []
-                [ if entry.type_ == "text" then
-                    input [ type_ "text", value entry.value, class "form-control", readonly True ] []
-                  else if entry.type_ == "textfile" then
-                    textarea [ class "form-control", readonly True, rows entry.rows, cols entry.cols ]
-                        [ text entry.value
+        name_col =
+            if entry.type_ == "textfile" || entry.type_ == "textarea" then
+                div []
+                    [ text entry.name
+                    , br [] []
+                    , a
+                        [ downloadAs ((join "_" (words entry.name)) ++ ".txt")
+                        , href ("data:text/plain;charset=utf8," ++ (encodeUri entry.value))
+                        , title "Download as File"
                         ]
-                  else if entry.type_ == "textarea" then
-                    textarea [ class "form-control", readonly True ] [ text entry.value ]
-                  else
-                    input [ type_ "text", value entry.value, class "form-control", readonly True ] []
-                ]
+                        [ span [ class "glyphicon glyphicon glyphicon-download-alt" ] [] ]
+                    ]
+            else
+                text entry.name
+
+        value_col =
+            if entry.type_ == "text" then
+                input [ type_ "text", value entry.value, class "form-control", readonly True ] []
+            else if entry.type_ == "textfile" then
+                textarea [ class "form-control", readonly True, rows entry.rows, cols entry.cols ]
+                    [ text entry.value ]
+            else if entry.type_ == "textarea" then
+                textarea [ class "form-control", readonly True ] [ text entry.value ]
+            else
+                input [ type_ "text", value entry.value, class "form-control", readonly True ] []
     in
         tr []
-            [ td [] [ text entry.name ], column ]
+            [ td [] [ name_col ], td [] [ value_col ] ]
