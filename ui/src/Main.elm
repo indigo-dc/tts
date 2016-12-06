@@ -23,7 +23,7 @@ import Secret.Decoder exposing (decodeSecret)
 import Secret.Model as Secret exposing (Model, empty_credential)
 import Service.Model as Service exposing (Model)
 import ServiceList.Decoder as ServiceList exposing (decodeServiceList)
-import ServiceList.Model as ServiceList exposing (Model, initModel)
+import ServiceList.Model as ServiceList exposing (Model, initModel, update_services)
 import String exposing (dropRight, endsWith)
 
 
@@ -94,7 +94,7 @@ update msg model =
 
         Messages.Info (Err info) ->
             let
-                res =
+                bla =
                     Debug.log "info:" info
             in
                 ( model, Cmd.none )
@@ -110,11 +110,15 @@ update msg model =
             ( model, Cmd.none )
 
         Messages.ServiceList (Ok servicelist) ->
-            ( { model
-                | serviceList = servicelist
-              }
-            , retrieveCredentialList model.url model.restVersion
-            )
+            let
+                newServiceList =
+                    ServiceList.update_services servicelist
+            in
+                ( { model
+                    | serviceList = newServiceList
+                  }
+                , retrieveCredentialList model.url model.restVersion
+                )
 
         Messages.ServiceList (Err info) ->
             ( model, Cmd.none )
@@ -312,6 +316,22 @@ update msg model =
             in
                 ( { model
                     | current_param = Just newParams
+                  }
+                , Cmd.none
+                )
+
+        Messages.AdvancedSet pos ->
+            let
+                newService =
+                    case model.current_service of
+                        Nothing ->
+                            Nothing
+
+                        Just service ->
+                            Just (Service.setPos pos service)
+            in
+                ( { model
+                    | current_service = newService
                   }
                 , Cmd.none
                 )

@@ -5,7 +5,7 @@ import Html exposing (Html, small, a, li, ul, h4, br, p, text, table, tbody, but
 import Html.Attributes exposing (class, method, value, disabled, name, type_, action, placeholder)
 import Html.Events exposing (onClick, onInput)
 import Messages exposing (Msg)
-import Service.Model as Service exposing (Model, Set, Param, hasBasic, hasAdvanced, nonEmptySets)
+import Service.Model as Service exposing (Model, Set, Param, hasBasic, hasAdvanced)
 
 
 view : Service.Model -> Html Msg
@@ -46,11 +46,14 @@ view service =
             ]
 
 
-advancedPagination : Int -> Service.Model -> Html Msg
-advancedPagination pos service =
+advancedPagination : Service.Model -> Html Msg
+advancedPagination service =
     let
+        pos =
+            service.current_set + 1
+
         setCount =
-            List.length (nonEmptySets service.parameter_sets)
+            List.length service.non_empty_sets
 
         numbers =
             List.range 1 setCount
@@ -63,7 +66,12 @@ advancedPagination pos service =
                     else
                         []
             in
-                list ++ [ li attr [ a [] [ text (toString num) ] ] ]
+                list
+                    ++ [ li attr
+                            [ a [ onClick (Messages.AdvancedSet (num - 1)) ]
+                                [ text (toString num) ]
+                            ]
+                       ]
 
         entries =
             List.foldl numberToEntry [] numbers
@@ -75,7 +83,7 @@ advancedPagination pos service =
                 []
 
         left =
-            [ li attrLeft [ a [] [ text "«" ] ] ]
+            [ li attrLeft [ a [ onClick (Messages.AdvancedSet (pos - 2)) ] [ text "«" ] ] ]
 
         attrRight =
             if pos == setCount then
@@ -84,10 +92,10 @@ advancedPagination pos service =
                 []
 
         right =
-            [ li attrRight [ a [] [ text "»" ] ] ]
+            [ li attrRight [ a [ onClick (Messages.AdvancedSet pos) ] [ text "»" ] ] ]
 
         pagination =
-            if setCount == 1 then
+            if setCount < 2 then
                 div [] []
             else
                 ul [ class "pagination" ] (left ++ entries ++ right)
@@ -95,25 +103,25 @@ advancedPagination pos service =
         pagination
 
 
-advancedHeader : Int -> Service.Model -> Html Msg
-advancedHeader pos service =
+advancedHeader : Service.Model -> Html Msg
+advancedHeader service =
     let
         setCount =
-            List.length (nonEmptySets service.parameter_sets)
+            List.length service.non_empty_sets
 
         headList =
-            if setCount == 1 then
-                [ text "Parameter" ]
-            else
+            if setCount >= 2 then
                 [ text "Parameter"
                 , br [] []
                 , small []
                     [ text "this service has multiple parameter sets, ensure you use the right one"
                     ]
                 ]
+            else
+                [ text "Parameter" ]
 
         headPagination =
-            advancedPagination pos service
+            advancedPagination service
     in
         div []
             [ h4 [ class "modal-title" ] headList
@@ -135,10 +143,10 @@ advancedView srvc =
                         , containerClass = Nothing
                         , dialogSize = Dialog.Large
                         , header =
-                            Just (advancedHeader 1 service)
+                            Just (advancedHeader service)
                         , body =
                             Just
-                                (viewParamSet 0 service.parameter_sets)
+                                (viewParamSet service)
                         , footer =
                             Just
                                 (div [ class "btn-group" ]
@@ -159,18 +167,29 @@ advancedView srvc =
         Dialog.view config
 
 
-viewParamSet : Int -> List Service.Set -> Html Msg
-viewParamSet pos allSets =
+viewParamSet : Service.Model -> Html Msg
+viewParamSet model =
     let
         sets =
-            Service.nonEmptySets allSets
+            model.non_empty_sets
+
+        pos =
+            model.current_set
+
+        setFilter a ( num, entry ) =
+            case num == pos of
+                True ->
+                    ( num + 1, Just a )
+
+                False ->
+                    ( num + 1, entry )
 
         set =
-            case List.head sets of
-                Nothing ->
+            case List.foldl setFilter ( 0, Nothing ) sets of
+                ( _, Nothing ) ->
                     []
 
-                Just s ->
+                ( _, Just s ) ->
                     s
     in
         div []
