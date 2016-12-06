@@ -236,7 +236,7 @@ validate_call_parameter_sets(Params, Info) ->
 validate_call_parameter_sets([], #{params := Params} =Info, Result) ->
     ValidInfo = case Params of
                     [] -> maps:put(params, [[]], Info);
-                    _ -> Info
+                    _ -> maps:put(params, lists:reverse(Params), Info)
                 end,
     {Result, ValidInfo};
 validate_call_parameter_sets([ H | T ], Info, Current)
