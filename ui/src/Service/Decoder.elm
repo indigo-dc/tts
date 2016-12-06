@@ -4,7 +4,7 @@
 module Service.Decoder exposing (..)
 
 import Json.Decode exposing (Decoder, string, bool, int, list)
-import Json.Decode.Pipeline exposing (decode, required, optional)
+import Json.Decode.Pipeline exposing (decode, required, optional, hardcoded)
 import Service.Model as Service exposing (Model, Param)
 
 
@@ -18,6 +18,10 @@ decodeService =
         |> required "cred_limit" int
         |> required "limit_reached" bool
         |> optional "params" (list (list decodeParam)) [ [] ]
+        |> hardcoded Nothing
+        |> hardcoded Nothing
+        |> hardcoded []
+        |> hardcoded 0
 
 
 decodeParam : Decoder Service.Param

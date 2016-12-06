@@ -5,7 +5,6 @@ module ProviderList.Decoder exposing (..)
 
 import Json.Decode
 import Json.Decode.Pipeline
-import Json.Encode
 import Provider.Decoder as Provider exposing (decodeProvider)
 import ProviderList.Model as ProviderList exposing (Model)
 

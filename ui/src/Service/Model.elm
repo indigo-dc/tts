@@ -1,4 +1,4 @@
-module Service.Model exposing (..)
+module Service.Model exposing (Model, Set, Param, update_model, setPos, hasBasic, hasAdvanced)
 
 
 type alias Model =
@@ -9,6 +9,10 @@ type alias Model =
     , credLimit : Int
     , limitReached : Bool
     , parameter_sets : List Set
+    , has_empty_set : Maybe Bool
+    , has_non_empty_sets : Maybe Bool
+    , non_empty_sets : List Set
+    , current_set : Int
     }
 
 
@@ -24,8 +28,74 @@ type alias Param =
     }
 
 
+setPos : Int -> Model -> Model
+setPos pos model =
+    let
+        maxPos =
+            (List.length model.non_empty_sets) - 1
+
+        newPos =
+            if pos > maxPos then
+                if maxPos - 1 < 0 then
+                    0
+                else
+                    maxPos - 1
+            else if pos < 0 then
+                0
+            else
+                pos
+    in
+        { model
+            | current_set = newPos
+        }
+
+
+update_model : Model -> Model
+update_model model =
+    case model.has_empty_set of
+        Nothing ->
+            let
+                basic =
+                    Just (getBasic model)
+
+                advanced =
+                    nonEmptySets model.parameter_sets
+
+                has_advanced =
+                    Just (not (List.isEmpty advanced))
+            in
+                { model
+                    | has_empty_set = basic
+                    , has_non_empty_sets = has_advanced
+                    , non_empty_sets = advanced
+                }
+
+        _ ->
+            model
+
+
 hasBasic : Model -> Bool
 hasBasic service =
+    case service.has_empty_set of
+        Nothing ->
+            False
+
+        Just bool ->
+            bool
+
+
+hasAdvanced : Model -> Bool
+hasAdvanced service =
+    case service.has_non_empty_sets of
+        Nothing ->
+            False
+
+        Just bool ->
+            bool
+
+
+getBasic : Model -> Bool
+getBasic service =
     basicAllowed service.parameter_sets
 
 
@@ -49,20 +119,6 @@ basicAllowed sets =
                     current
     in
         List.foldl hasNoMandatoryFields False sets
-
-
-hasAdvanced : Model -> Bool
-hasAdvanced service =
-    let
-        hasNonEmptyList set current =
-            case List.isEmpty set of
-                True ->
-                    current
-
-                False ->
-                    True
-    in
-        List.foldl hasNonEmptyList False service.parameter_sets
 
 
 nonEmptySets : List Set -> List Set

@@ -1,11 +1,11 @@
 module Service.View exposing (..)
 
 import Dialog as Dialog exposing (view)
-import Html exposing (Html, h4, p, text, table, tbody, button, option, tr, td, form, input, div, textarea)
+import Html exposing (Html, small, a, li, ul, h4, br, p, text, table, tbody, button, option, tr, td, form, input, div, textarea)
 import Html.Attributes exposing (class, method, value, disabled, name, type_, action, placeholder)
 import Html.Events exposing (onClick, onInput)
 import Messages exposing (Msg)
-import Service.Model as Service exposing (Model, Set, Param, hasBasic, hasAdvanced, nonEmptySets)
+import Service.Model as Service exposing (Model, Set, Param, hasBasic, hasAdvanced)
 
 
 view : Service.Model -> Html Msg
@@ -46,6 +46,89 @@ view service =
             ]
 
 
+advancedPagination : Service.Model -> Html Msg
+advancedPagination service =
+    let
+        pos =
+            service.current_set + 1
+
+        setCount =
+            List.length service.non_empty_sets
+
+        numbers =
+            List.range 1 setCount
+
+        numberToEntry num list =
+            let
+                attr =
+                    if num == pos then
+                        [ class "active" ]
+                    else
+                        []
+            in
+                list
+                    ++ [ li attr
+                            [ a [ onClick (Messages.AdvancedSet (num - 1)) ]
+                                [ text (toString num) ]
+                            ]
+                       ]
+
+        entries =
+            List.foldl numberToEntry [] numbers
+
+        attrLeft =
+            if pos == 1 then
+                [ class "disabled" ]
+            else
+                []
+
+        left =
+            [ li attrLeft [ a [ onClick (Messages.AdvancedSet (pos - 2)) ] [ text "«" ] ] ]
+
+        attrRight =
+            if pos == setCount then
+                [ class "disabled" ]
+            else
+                []
+
+        right =
+            [ li attrRight [ a [ onClick (Messages.AdvancedSet pos) ] [ text "»" ] ] ]
+
+        pagination =
+            if setCount < 2 then
+                div [] []
+            else
+                ul [ class "pagination" ] (left ++ entries ++ right)
+    in
+        pagination
+
+
+advancedHeader : Service.Model -> Html Msg
+advancedHeader service =
+    let
+        setCount =
+            List.length service.non_empty_sets
+
+        headList =
+            if setCount >= 2 then
+                [ text "Parameter"
+                , br [] []
+                , small []
+                    [ text "this service has multiple parameter sets, ensure you use the right one"
+                    ]
+                ]
+            else
+                [ text "Parameter" ]
+
+        headPagination =
+            advancedPagination service
+    in
+        div []
+            [ h4 [ class "modal-title" ] headList
+            , headPagination
+            ]
+
+
 advancedView : Maybe Service.Model -> Html Msg
 advancedView srvc =
     let
@@ -60,11 +143,10 @@ advancedView srvc =
                         , containerClass = Nothing
                         , dialogSize = Dialog.Large
                         , header =
-                            Just
-                                (h4 [ class "modal-title" ] [ text "Parameter" ])
+                            Just (advancedHeader service)
                         , body =
                             Just
-                                (viewParamSet 0 service.parameter_sets)
+                                (viewParamSet service)
                         , footer =
                             Just
                                 (div [ class "btn-group" ]
@@ -85,18 +167,29 @@ advancedView srvc =
         Dialog.view config
 
 
-viewParamSet : Int -> List Service.Set -> Html Msg
-viewParamSet pos allSets =
+viewParamSet : Service.Model -> Html Msg
+viewParamSet model =
     let
         sets =
-            Service.nonEmptySets allSets
+            model.non_empty_sets
+
+        pos =
+            model.current_set
+
+        setFilter a ( num, entry ) =
+            case num == pos of
+                True ->
+                    ( num + 1, Just a )
+
+                False ->
+                    ( num + 1, entry )
 
         set =
-            case List.head sets of
-                Nothing ->
+            case List.foldl setFilter ( 0, Nothing ) sets of
+                ( _, Nothing ) ->
                     []
 
-                Just s ->
+                ( _, Just s ) ->
                     s
     in
         div []

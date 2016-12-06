@@ -111,9 +111,9 @@ viewEntry entry =
             if entry.type_ == "textfile" || entry.type_ == "textarea" then
                 div []
                     [ text entry.name
-                    , br [] []
                     , a
-                        [ downloadAs ((join "_" (words entry.name)) ++ ".txt")
+                        [ class "btn btn-default pull-right"
+                        , downloadAs ((join "_" (words entry.name)) ++ ".txt")
                         , href ("data:text/plain;charset=utf8," ++ (encodeUri entry.value))
                         , title "Download as File"
                         ]

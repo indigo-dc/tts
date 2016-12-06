@@ -21,6 +21,7 @@ type Msg
     | LoggedOut (Result Http.Error String)
     | Request String
     | AdvancedRequest Service.Model
+    | AdvancedSet Int
     | Revoke String
     | Revoked (Result Http.Error Secret.Model)
     | HideAccessToken
