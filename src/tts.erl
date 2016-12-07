@@ -68,15 +68,23 @@ do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = tts_session_mgr:new_session(),
     SessionId = tts_session:get_id(SessPid),
     try
-        {Subject, Token} = case Subject0 of
-                               undefined ->
-                                   %% logged in with access token
-                                   get_subject_update_token(Issuer, Token0);
-                               _ ->
-                                   %% logged in via auth code flow
-                                   {Subject0, Token0}
-                           end,
-        update_session(Issuer, Subject, Token, SessPid)
+        Result = case Subject0 of
+                     undefined ->
+                         %% logged in with access token
+                         get_subject_update_token(Issuer, Token0);
+                     _ ->
+                         %% logged in via auth code flow
+                         {ok, Subject0, Token0}
+                 end,
+        case Result of
+            {ok, Subject, Token} ->
+                update_session(Issuer, Subject, Token, SessPid);
+            {error, ErrReason} ->
+                logout(SessPid),
+                lager:error("SESS~p login failed due to ~p",
+                            [SessionId, ErrReason]),
+                {error, ErrReason}
+        end
     catch Error:Reason ->
             logout(SessPid),
             StackTrace = erlang:get_stacktrace(),
@@ -249,11 +257,28 @@ update_session(Issuer, Subject, Token, SessionPid) ->
 get_subject_update_token(Issuer, AccessToken)  ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
     {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderPid),
-    {ok, #{sub := Subject} = OidcInfo} =
-        oidcc:retrieve_user_info(AccessToken, ProviderPid),
-    %% TODO: check access token
-    Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
-    {Subject, Token}.
+    case
+        oidcc:retrieve_user_info(AccessToken, ProviderPid) of
+
+        {ok, #{sub := Subject} = OidcInfo} ->
+
+            Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
+            {ok, Subject, Token};
+        {error, {bad_status, #{body := Body}}} ->
+            case jsone:try_decode(Body, [{object_format, map},
+                                         {keys, attempt_atom}]) of
+                {ok, #{error := Reason, error_description:=Desc}, _} ->
+                    Msg = io_lib:format("~s: ~s", [binary_to_list(Reason),
+                                                  binary_to_list(Desc)]),
+                    {error, list_to_binary(Msg)};
+                {ok, #{error_description := Reason}, _} ->
+                    {error, Reason};
+                {ok, #{error := Reason}, _} ->
+                    {error, Reason};
+                _ ->
+                    {error,  Body}
+            end
+    end.
 
 get_user_msg(#{user_msg := Msg}) when is_list(Msg) ->
     list_to_binary(Msg);

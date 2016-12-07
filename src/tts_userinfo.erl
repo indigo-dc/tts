@@ -56,8 +56,10 @@ update_access_token(#{token := Token} = AccessToken,
 
 update_id_info(IdInfo, #user_info{subject=Subject}=Info) ->
     Sub = maps:get(sub, IdInfo),
-    case Sub of
-        Subject ->
+    case Subject of
+        Sub ->
+            {ok, update_plugin_info(Info#user_info{id_info=IdInfo})};
+        undefined ->
             {ok, update_plugin_info(Info#user_info{id_info=IdInfo})};
         _ ->
             {error, not_match}

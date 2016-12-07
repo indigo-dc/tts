@@ -174,12 +174,34 @@ handle_call({set_iss_sub, Issuer, Subject}, _From,
     {reply, ok, State#state{user_info=NewInfo}, MA};
 handle_call({set_token, Token}, _From,
             #state{user_info=Info, max_age=MA}=State) ->
-    IdInfo = maps:get(user_info, Token, #{}),
-    IdToken = maps:get(id, Token, #{}),
-    AccessToken = maps:get(access, Token, #{}),
-    {ok, Info1} = tts_userinfo:update_id_token(IdToken, Info),
-    {ok, Info2} = tts_userinfo:update_id_info(IdInfo, Info1),
-    {ok, Info3} = tts_userinfo:update_access_token(AccessToken, Info2),
+    IdInfo = maps:get(user_info, Token, undefined),
+    IdToken = maps:get(id, Token, undefined),
+    AccToken = maps:get(access, Token, undefined),
+
+    Info1 =
+        case IdToken of
+            undefined ->
+                Info;
+            _ ->
+                {ok, Inf1} = tts_userinfo:update_id_token(IdToken, Info),
+                Inf1
+        end,
+    Info2 =
+        case IdInfo of
+            undefined ->
+                Info1;
+            _ ->
+                {ok, Inf2} = tts_userinfo:update_id_info(IdInfo, Info1),
+                Inf2
+        end,
+    Info3 =
+        case AccToken of
+            undefined ->
+                Info2;
+            _ ->
+                {ok, Inf3} = tts_userinfo:update_access_token(AccToken, Info2),
+                Inf3
+        end,
     TokenKeys = [access, id, refresh],
     TokenMap = maps:with(TokenKeys, Token),
     {reply, ok, State#state{token=TokenMap, user_info=Info3}, MA};

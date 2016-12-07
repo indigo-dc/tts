@@ -104,7 +104,16 @@ malformed_request(Req, State) ->
     {Result, NewState} = is_malformed(Method, {Res, ContentType}, InVersion,
                                       InType , InId, InBody, InToken,
                                       InIssuer, CookieSession , State),
-    {Result, Req10, NewState}.
+    Req99 =
+        case Result of
+            true ->
+                Msg = <<"Bad request, please check all parameter">>,
+                Body = jsone:encode(#{result => error, user_msg => Msg}),
+                cowboy_req:set_resp_body(Body, Req10);
+            false ->
+                Req10
+        end,
+    {Result, Req99, NewState}.
 
 
 is_authorized(Req, #state{type=oidcp} = State) ->
@@ -115,21 +124,47 @@ is_authorized(Req, #state{type=logout} = State) ->
     {true, Req, State};
 is_authorized(Req, #state{type=Type, session_pid=Pid} = State)
   when is_pid(Pid) ->
-    ValidType = lists:member(Type, [service, credential, cred_data]),
+    ValidType = lists:member(Type, [oidcp, info, logout, service, credential,
+                                    cred_data, access_token]),
     LoggedIn = tts_session:is_logged_in(Pid),
-    {ValidType and LoggedIn, Req, State};
+    case {ValidType, LoggedIn} of
+        {false, _} ->
+            Msg = list_to_binary(io_lib:format("unsupported path ~p", [Type])),
+            Body = jsone:encode(#{result => error, user_msg => Msg}),
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {{false, <<"authorization">>}, Req1, State};
+        {_, false} ->
+            Msg = <<"seems like the session expired">>,
+            Body = jsone:encode(#{result => error, user_msg => Msg}),
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {{false, <<"authorization">>}, Req1, State};
+        {true, true} ->
+            {true,  Req, State}
+    end;
 is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer,
                           session_pid=undefined} = State)
-  when Type==service; Type==credential; Type==cred_data ->
+  when Type==service; Type==credential; Type==cred_data; Type == oidcp ;
+       Type == info ->
     case tts:login_with_access_token(Token, Issuer) of
         {ok, #{session_pid := SessionPid}} ->
             {true, Req, State#state{session_pid = SessionPid}};
-        {error, _} ->
-            {{false, <<"Authorization">>}, Req, State}
+        {error, internal} ->
+            Msg = <<"Authorization failed, please check the access token">>,
+            Body = jsone:encode(#{result => error, user_msg => Msg}),
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {{false, <<"authorization">>}, Req1, State};
+        {error, Reason} ->
+            Body = jsone:encode(#{result => error, user_msg => Reason}),
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {{false, <<"authorization">>}, Req1, State}
 
     end;
 is_authorized(Req, State) ->
-    {{false, <<"Authorization">>}, Req, State}.
+    Msg = <<"invalid token has been received">>,
+    Body = jsone:encode(#{result => error, user_msg => Msg}),
+    Req1 = cowboy_req:set_resp_body(Body, Req),
+    {{false, <<"authorization">>}, Req1, State}.
+
 
 content_types_provided(Req, State) ->
     {[
@@ -143,7 +178,7 @@ content_types_accepted(Req, State) ->
 
 resource_exists(Req, #state{type=Type, id=undefined} = State)
     when Type == oidcp; Type == info; Type == logout; Type == service;
-         Type == credential ->
+         Type == credential; Type == access_token ->
     {true, Req, State};
 resource_exists(Req, #state{type=credential, id=Id, session_pid=Session}
                 = State) ->
@@ -154,7 +189,10 @@ resource_exists(Req, #state{type=cred_data, id=Id, session_pid=Session}
     Exists = tts:does_temp_cred_exist(Id, Session),
     {Exists, Req, State};
 resource_exists(Req, State) ->
-    {false, Req, State}.
+    Msg = <<"resource not found">>,
+    Body = jsone:encode(#{result => error, user_msg => Msg}),
+    Req1 = cowboy_req:set_resp_body(Body, Req),
+    {false, Req1, State}.
 
 delete_resource(Req, #state{type=credential,
                             id=CredentialId, session_pid=Session}=State) ->
@@ -195,7 +233,7 @@ perform_get(service, undefined, Session, 1) ->
     return_json_service_list(ServiceList, [id, type, host, port]);
 perform_get(service, undefined, Session, _) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
-    return_json_service_list(ServiceList, [id, type, host, port, description,
+    return_json_service_list(ServiceList, [id, description,
                                            enabled, cred_count, cred_limit,
                                            limit_reached, params] );
 perform_get(oidcp, _, _, 1) ->
@@ -232,22 +270,13 @@ perform_get(logout, undefined, Session, _) ->
 perform_get(access_token, undefined, Session, _) ->
     {ok, AccessToken} = tts:get_access_token_for(Session),
     jsone:encode(#{access_token => AccessToken});
-perform_get(credential, undefined, Session, 1) ->
+perform_get(credential, undefined, Session, Version) ->
     {ok, CredList} = tts:get_credential_list_for(Session),
-    return_json_credential_list(CredList);
-perform_get(credential, undefined, Session, _) ->
-    {ok, CredList} = tts:get_credential_list_for(Session),
-    Keys = [cred_id, ctime, interface, service_id],
-    return_json_credential_list(CredList, Keys);
-perform_get(cred_data, Id, Session, 1) ->
+    return_json_credential_list(CredList, Version);
+perform_get(cred_data, Id, Session, Version) ->
     case tts:get_temp_cred(Id, Session) of
-        {ok, #{result := ok, credential := Cred}} -> jsone:encode(Cred);
-        {ok, #{result := error}} -> jsone:encode(#{});
-        _ -> jsone:encode(#{})
-    end;
-perform_get(cred_data, Id, Session, _Version) ->
-    case tts:get_temp_cred(Id, Session) of
-        {ok, Cred} -> jsone:encode(Cred);
+        {ok, Cred} ->
+            return_json_credential(Cred, Version);
         _ ->
             Msg = <<"Sorry, the requested data was not found">>,
             jsone:encode(#{result => error, user_msg => Msg})
@@ -272,14 +301,15 @@ perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
         _Other ->
             UserMsg = "An internal error occured, please contact the admin.",
             Body = jsone:encode(#{result => error, user_msg => UserMsg}),
-
             Req1 = cowboy_req:set_resp_body(Body, Req),
             {Req1, false}
     end.
 
 return_json_service_list(Services, Keys) ->
     Extract = fun(Map, List) ->
-                      [ maps:with(Keys, Map) | List]
+                      Update = #{type => none, host => localhost,
+                                port => <<"1234">>},
+                      [ maps:with(Keys, maps:merge(Update, Map)) | List]
               end,
     List = lists:reverse(lists:foldl(Extract, [], Services)),
     jsone:encode(#{service_list => List}).
@@ -295,18 +325,33 @@ return_json_oidc_list(Oidc) ->
     List = lists:reverse(lists:foldl(Id, [], Oidc)),
     jsone:encode(#{openid_provider_list => List}).
 
-return_json_credential_list(Credentials) ->
-    Id = fun(#{cred_id := CredId}, List) ->
-                 [#{ id => CredId} | List]
-         end,
-    List = lists:reverse(lists:foldl(Id, [], Credentials)),
-    jsone:encode(#{credential_list => List}).
+return_json_credential(Cred, 1) ->
+    #{credential :=
+          #{id := Id,
+            entries := Entries
+           }
+     } = Cred,
+    IdEntry = #{name => id, type => text, value => Id},
+    jsone:encode([ IdEntry | Entries ]);
+return_json_credential(Cred, _) ->
+    jsone:encode(Cred).
 
-return_json_credential_list(Credentials, Keys) ->
-    Id = fun(Cred, List) ->
-                 [maps:with(Keys, Cred) | List]
-         end,
-    List = lists:reverse(lists:foldl(Id, [], Credentials)),
+
+
+
+return_json_credential_list(Credentials, Version)->
+    Keys = [cred_id, ctime, interface, service_id],
+    Adjust =
+        fun(Cred0, List) ->
+                Cred = maps:with(Keys, Cred0),
+                case Version of
+                    1 ->
+                        [ #{ id => maps:put(cred_state, hidden, Cred)} | List];
+                    _ ->
+                        [ Cred | List]
+                end
+        end,
+    List = lists:reverse(lists:foldl(Adjust, [], Credentials)),
     jsone:encode(#{credential_list => List}).
 
 is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
@@ -390,7 +435,7 @@ verify_body([]) ->
     undefined;
 verify_body(Data) ->
     case jsone:try_decode(Data, [{object_format, map}, {keys, attempt_atom}]) of
-        {ok, Json, <<>>} ->
+        {ok, Json, _} ->
             Json;
         _ ->
             undefined
