@@ -40,6 +40,7 @@ rest_init_test() ->
                 end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(cowboy_req, set_resp_header, SetHeader),
+    ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
     Req = req,
     {ok, Req, #state{}} = tts_rest:rest_init(Req, doesnt_matter),
     ok = test_util:meck_done(MeckModules),
@@ -120,6 +121,7 @@ malformed_request_test() ->
     ok = meck:expect(cowboy_req, parse_header, ParseHeader),
     ok = meck:expect(cowboy_req, method, Method),
     ok = meck:expect(cowboy_req, body, Body),
+    ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
     ok = meck:expect(oidcc, get_openid_provider_info, GetProvider),
 
     State = #state{},
@@ -275,24 +277,24 @@ malformed_request_test() ->
 is_authorized_test() ->
     Mapping = [
 
-               {#state{}, {false, <<"Authorization">>}},
-               {#state{type=some_unknown, token=defined}, {false, <<"Authorization">>}},
-               {#state{type=service}, {false, <<"Authorization">>}},
-               {#state{type=service, issuer= <<"issuer">>}, {false, <<"Authorization">>}},
-               {#state{type=service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"Authorization">>}},
-               {#state{type=some_service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"Authorization">>}},
+               {#state{}, {false, <<"authorization">>}},
+               {#state{type=some_unknown, token=defined}, {false, <<"authorization">>}},
+               {#state{type=service}, {false, <<"authorization">>}},
+               {#state{type=service, issuer= <<"issuer">>}, {false, <<"authorization">>}},
+               {#state{type=service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"authorization">>}},
+               {#state{type=some_service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"authorization">>}},
 
                {#state{type=oidcp}, true},
                {#state{type=info}, true},
                {#state{type=logout}, true},
-               {#state{type=service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"Authorization">>}},
-               {#state{type=service, issuer= <<"unknown">>, token= <<"token">>}, {false, <<"Authorization">>}},
-               {#state{type=service, issuer= <<"known">>, token= <<"token">>}, {false, <<"Authorization">>}},
+               {#state{type=service, issuer= <<"issuer">>, token= <<"token">>}, {false, <<"authorization">>}},
+               {#state{type=service, issuer= <<"unknown">>, token= <<"token">>}, {false, <<"authorization">>}},
+               {#state{type=service, issuer= <<"known">>, token= <<"token">>}, {false, <<"authorization">>}},
                {#state{type=service, issuer= <<"known">>, token= <<"good1">>}, true},
                {#state{type=service, issuer= <<"known">>, token= <<"good2">>}, true}
               ],
     Req = req,
-    MeckModules = [tts],
+    MeckModules = [tts, cowboy_req],
 
     Login = fun(Token, _Issuer) ->
                            case Token of
@@ -307,6 +309,7 @@ is_authorized_test() ->
 
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(tts, login_with_access_token, Login),
+    ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
 
     Test = fun({State, ExpResult}, _AccIn) ->
                    io:format("testing with state ~p~n",[State]),
@@ -321,7 +324,7 @@ is_authorized_test() ->
 
 
 resource_exists_test() ->
-    MeckModules = [tts],
+    MeckModules = [tts, cowboy_req],
 
     CredExists = fun(CredId, _Session) ->
                           case CredId of
@@ -340,6 +343,7 @@ resource_exists_test() ->
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(tts, does_credential_exist, CredExists),
     ok = meck:expect(tts, does_temp_cred_exist, CredDataExists),
+    ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
 
     Requests = [
                 %% good requests
