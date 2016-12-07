@@ -113,8 +113,11 @@ is_authorized(Req, #state{type=info} = State) ->
     {true, Req, State};
 is_authorized(Req, #state{type=logout} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{session_pid=Pid} = State) when is_pid(Pid) ->
-    {true, Req, State};
+is_authorized(Req, #state{type=Type, session_pid=Pid} = State)
+  when is_pid(Pid) ->
+    ValidType = lists:member(Type, [service, credential, cred_data]),
+    LoggedIn = tts_session:is_logged_in(Pid),
+    {ValidType and LoggedIn, Req, State};
 is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer,
                           session_pid=undefined} = State)
   when Type==service; Type==credential; Type==cred_data ->
@@ -138,7 +141,9 @@ content_types_accepted(Req, State) ->
       {{<<"application">>, <<"json">>, '*'}, post_json }
      ], Req, State}.
 
-resource_exists(Req, #state{id=undefined} = State) ->
+resource_exists(Req, #state{type=Type, id=undefined} = State)
+    when Type == oidcp; Type == info; Type == logout; Type == service;
+         Type == credential ->
     {true, Req, State};
 resource_exists(Req, #state{type=credential, id=Id, session_pid=Session}
                 = State) ->
@@ -473,6 +478,7 @@ update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
             {ok, Token} = tts_session:get_sess_token(Session),
             tts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
+            perform_logout(Session),
             tts_http_util:perform_cookie_action(clear, 0, deleted, Req)
     end;
 update_cookie_if_used(Req, #state{cookie_based = _}) ->

@@ -34,7 +34,7 @@ get_list() ->
      tts_data:service_get_list().
 
 get_list(UserInfo) ->
-    {ok, ServiceList} = tts_data:service_get_list(),
+    {ok, ServiceList} = get_list(),
     UpdateLimit = fun(Service, List) ->
                       #{ id := ServiceId,
                          authz := AuthzConf
