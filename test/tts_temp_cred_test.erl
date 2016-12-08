@@ -47,3 +47,30 @@ timeout_test() ->
     ok = test_util:wait_for_process_to_die(Pid, 500),
     application:set_env(tts, credential_timeout, 10000),
     ok.
+
+garbage_test() ->
+    Cred = #{},
+    {ok, DataPid} = tts_temp_cred_data:start(Cred),
+    ignored = gen_server:call(DataPid, garbage),
+    ok = gen_server:cast(DataPid, garbage),
+    DataPid ! garbage,
+    still_alive = test_util:wait_for_process_to_die(DataPid,1),
+    ok = tts_temp_cred_data:stop(DataPid),
+    ok = test_util:wait_for_process_to_die(DataPid,300),
+
+
+    {ok, Pid} = tts_temp_cred:start_link(),
+
+
+    ignored = gen_server:call(Pid, garbage),
+    ok = gen_server:cast(Pid, garbage),
+    Pid ! garbage,
+    still_alive = test_util:wait_for_process_to_die(Pid,1),
+    ok = tts_temp_cred:stop(),
+    ok = test_util:wait_for_process_to_die(Pid,300),
+    ok.
+
+code_change_test() ->
+    {ok, state} = tts_temp_cred_data:code_change(old, state, extra),
+    {ok, state} = tts_temp_cred:code_change(old, state, extra),
+    ok.

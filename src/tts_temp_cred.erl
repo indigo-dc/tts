@@ -134,12 +134,7 @@ get_cred_pid(Id, UserId, #state{creds=Creds}) ->
 get_credential(Id, UserId, State) ->
     case get_cred_pid(Id, UserId, State) of
         {ok, Pid} ->
-            case tts_temp_cred_data:get_credential(Pid) of
-                {ok, Credential} ->
-                    {ok, Credential};
-                _ ->
-                    {error, not_found}
-            end;
+            tts_temp_cred_data:get_credential(Pid);
         _ ->
             {error, not_found}
     end.
