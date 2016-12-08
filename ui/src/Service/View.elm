@@ -2,7 +2,7 @@ module Service.View exposing (..)
 
 import Dialog as Dialog exposing (view)
 import Html exposing (Html, small, a, li, ul, h4, br, p, text, table, tbody, button, option, tr, td, form, input, div, textarea)
-import Html.Attributes exposing (class, title, method, value, disabled, name, type_, action, placeholder)
+import Html.Attributes exposing (class, title, method, value, disabled, name, type_, action, placeholder, style)
 import Html.Events exposing (onClick, onInput)
 import Messages exposing (Msg)
 import Service.Model as Service exposing (Model, Set, Param, hasBasic, hasAdvanced)
@@ -24,19 +24,27 @@ view service =
             serviceDisabled || not (Service.hasAdvanced service)
 
         rowattrs =
-            if service.authorized then
+            if service.authorized && serviceDisabled then
                 [ disabled serviceDisabled
-                , title "this service is disabled"
+                , title "Sorry, this service is disabled"
                 ]
+            else if service.authorized then
+                [ disabled serviceDisabled ]
             else
                 [ disabled serviceDisabled
                 , title service.tooltip
                 ]
+
+        color =
+            if serviceDisabled then
+                [ ( "color", "#777" ) ]
+            else
+                []
     in
         tr rowattrs
-            [ td [] [ text service.id ]
-            , td [] [ text service.description ]
-            , td [] [ text credText ]
+            [ td [ style color ] [ text service.id ]
+            , td [ style color ] [ text service.description ]
+            , td [ style color ] [ text credText ]
             , td []
                 [ div [ class "btn-group" ]
                     [ button
