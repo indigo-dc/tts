@@ -390,10 +390,10 @@ view model =
             , div [ class "footer" ]
                 [ div [ style [ ( "text-align", "center" ) ] ]
                     [ small [ style [ ( "color", "#808080" ) ] ]
-                        [ text "This work was partially funded within the "
+                        [ text "This work was partially funded by the "
                         , a [ href "https://www.indigo-datacloud.eu" ]
                             [ text "INDIGO DataCloud Project" ]
-                        , text " (European Union’s Horizon 2020 research and innovation programme under grant agreement RIA 653549)"
+                        , text " under grant agreement RIA 653549"
                         ]
                     ]
                 , div
