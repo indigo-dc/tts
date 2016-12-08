@@ -238,7 +238,7 @@
                                 end,
                      AuthzTooltip = case lists:keyfind(Id, 1, AuthzTooltips) of
                                     {Id, Tooltip} -> list_to_binary(Tooltip);
-                                    _ -> <<"Your authorisation is insufficient for this service. This may be due to missing group membership or due to a too low Level of Assurance (LoA) (Yes we already support that kind of stuff ;D)">>
+                                    _ -> <<"Your authorisation is insufficient for this service. This may be due to missing group membership or due to a too low Level of Assurance (LoA) (Yes, we already support that kind of stuff ;D)">>
                                 end,
                      FilterById = fun({A, K, V}, List) ->
                                           case A == Id of
