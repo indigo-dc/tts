@@ -81,12 +81,22 @@
 
 
 %% @doc the authorization configuration for the service
+{mapping, "service.$id.authz.hide", "tts.service_list.w", [
+          {datatype, [{atom, true}, {atom, false}]}
+          ]}.
+
+%% @doc the authorization configuration for the service
+{mapping, "service.$id.authz.tooltip", "tts.service_list.x", [
+          {datatype, string}
+          ]}.
+
+%% @doc the authorization configuration for the service
 {mapping, "service.$id.authz.allow.$provider.$oidckey.$operation", "tts.service_list.y", [
           {datatype, string}
           ]}.
 
 %% @doc the authorization configuration for the service
-{mapping, "service.$id.authz.forbid.$provider.$oidckey.$operation", "tts.service_list.y", [
+{mapping, "service.$id.authz.forbid.$provider.$oidckey.$operation", "tts.service_list.z", [
           {datatype, string}
           ]}.
 
@@ -142,6 +152,8 @@
          ConnKeyPasses = TypeIdValue("service.$id.connection.ssh_key_pass", four),
          PluginConfs = TypeIdValue("service.$id.plugin.$key", plugin),
 
+         AuthzHides = TypeIdValue("service.$id.authz.hide", four),
+         AuthzTooltips = TypeIdValue("service.$id.authz.tooltip", four),
          AuthzAllows = TypeIdValue("service.$id.authz.allow.$provider.$oidckey.$operation", authz),
          AuthzForbids = TypeIdValue("service.$id.authz.forbid.$provider.$oidckey.$operation", authz),
 
@@ -219,6 +231,14 @@
                      ConnSshKeyPass = case lists:keyfind(Id, 1, ConnKeyPasses) of
                                     {Id, Passwd} -> Passwd;
                                     _ -> undefined
+                                end,
+                     AuthzHide = case lists:keyfind(Id, 1, AuthzHides) of
+                                    {Id, Hide} -> Hide;
+                                    _ -> false
+                                end,
+                     AuthzTooltip = case lists:keyfind(Id, 1, AuthzTooltips) of
+                                    {Id, Tooltip} -> list_to_binary(Tooltip);
+                                    _ -> <<"Your authorisation is insufficient for this service. This may be due to missing group membership or due to a too low Level of Assurance (LoA) (Yes we already support that kind of stuff ;D)">>
                                 end,
                      FilterById = fun({A, K, V}, List) ->
                                           case A == Id of
@@ -308,7 +328,11 @@
                      AuthzForbid = lists:foldl(AuthzFilter, [], AuthzForbids),
 
 
-                     AuthzConf = #{ allow => AuthzAllow, forbid => AuthzForbid },
+                     AuthzConf = #{ allow => AuthzAllow,
+                                    forbid => AuthzForbid,
+                                    hide => AuthzHide,
+                                    tooltip => AuthzTooltip
+                                  },
 
                      case (Cmd == undefined) or (CredLimit == undefined) or
                          (ConnType == undefined) or

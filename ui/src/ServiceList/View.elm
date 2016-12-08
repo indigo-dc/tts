@@ -24,7 +24,7 @@ view model =
         else
             div [ class "panel panel-default" ]
                 [ div [ class "panel-heading" ] [ h2 [] [ text "Services" ] ]
-                , table [ class "table table-striped" ]
+                , table [ class "table table-hover" ]
                     [ thead []
                         [ tr []
                             [ th [] [ text "Id" ]

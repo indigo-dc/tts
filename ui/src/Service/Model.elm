@@ -8,6 +8,8 @@ type alias Model =
     , credCount : Int
     , credLimit : Int
     , limitReached : Bool
+    , authorized : Bool
+    , tooltip : String
     , parameter_sets : List Set
     , has_empty_set : Maybe Bool
     , has_non_empty_sets : Maybe Bool

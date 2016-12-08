@@ -17,6 +17,8 @@ decodeService =
         |> required "cred_count" int
         |> required "cred_limit" int
         |> required "limit_reached" bool
+        |> required "authorized" bool
+        |> required "authz_tooltip" string
         |> optional "params" (list (list decodeParam)) [ [] ]
         |> hardcoded Nothing
         |> hardcoded Nothing

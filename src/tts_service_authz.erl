@@ -83,7 +83,7 @@ perform_operation(Op, KeyValue, Value, Default) ->
 
 
 
-validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0}) ->
+validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0} = Authz0) ->
     lager:info("Service ~p: validating authz", [ServiceId]),
     {AllowOk, Allow} = validate(Allow0),
     lager:info("Service ~p: validating authz forbid", [ServiceId]),
@@ -91,11 +91,11 @@ validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0}) ->
     ValidatedAuthz =
         case AllowOk and ForbidOk of
             true ->
-                #{allow => Allow, forbid => Forbid};
+                maps:merge(Authz0, #{allow => Allow, forbid => Forbid});
             _ ->
                 lager:critical("Service ~p: *DISABLED* (authz config errors)",
                                [ServiceId]),
-                #{allow => [], forbid => []}
+                maps:merge(Authz0, #{allow => [], forbid => []})
         end,
     lager:debug("Service ~p: authz result ~p", [ServiceId, ValidatedAuthz]),
     {ok, ValidatedAuthz}.
