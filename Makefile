@@ -9,7 +9,7 @@ all: compile
 ui:
 	make -C ui
 
-ui_install: ui
+ui_install:
 	make install -C ui
 
 check:
