@@ -35,25 +35,32 @@ get_list() ->
 
 get_list(UserInfo) ->
     {ok, ServiceList} = get_list(),
-    UpdateLimit = fun(Service, List) ->
-                      #{ id := ServiceId,
-                         authz := AuthzConf
-                       } = Service,
-                      Limit = maps:get(cred_limit, Service, 0),
-                      {ok, Count} = tts_plugin:get_count(UserInfo,
-                                                             ServiceId),
-                      LimitReached = (Count >= Limit),
-                      Update = #{ limit_reached => LimitReached,
-                                  cred_limit => Limit,
-                                  cred_count => Count
-                                },
-                          case is_allowed(ServiceId, UserInfo, AuthzConf) of
-                              true ->
-                                  [ maps:merge(Service, Update) | List];
-                              _ ->
-                                  List
-                          end
-                  end,
+    UpdateLimit
+        = fun(Service, List) ->
+                  #{ id := ServiceId,
+                     authz := #{hide := Hide,
+                                tooltip := Tooltip
+                               } = AuthzConf
+                   } = Service,
+                  Limit = maps:get(cred_limit, Service, 0),
+                  {ok, Count} = tts_plugin:get_count(UserInfo,
+                                                     ServiceId),
+                  LimitReached = (Count >= Limit),
+                  Authz = is_allowed(ServiceId, UserInfo, AuthzConf),
+
+                  Update = #{ limit_reached => LimitReached,
+                              cred_limit => Limit,
+                              cred_count => Count,
+                              authorized => Authz,
+                              authz_tooltip => Tooltip
+                            },
+                  case {Authz, Hide} of
+                      {false, true} ->
+                          List;
+                      _ ->
+                          [ maps:merge(Service, Update) | List]
+                  end
+          end,
     {ok, lists:reverse(lists:foldl(UpdateLimit, [], ServiceList))}.
 
 

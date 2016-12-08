@@ -235,7 +235,8 @@ perform_get(service, undefined, Session, _) ->
     {ok, ServiceList} = tts:get_service_list_for(Session),
     return_json_service_list(ServiceList, [id, description,
                                            enabled, cred_count, cred_limit,
-                                           limit_reached, params] );
+                                           limit_reached, params, authorized,
+                                           authz_tooltip] );
 perform_get(oidcp, _, _, 1) ->
     {ok, OIDCList} = tts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);
