@@ -214,9 +214,13 @@ handle_result(ok,
               _Log, #{ action := parameter } ) ->
     %% valid parameter response
     return(result, maps:with([conf_params, request_params, version], Result));
-handle_result(ok, Result, Log, #{ action := parameter } ) ->
+handle_result(ok, Result, _Log, #{ action := parameter } ) ->
     %% invalid parameter response
-    LogMsg = io_lib:format("bad parameter response: ~p [~p]", [Result, Log]),
+    NeededKeys = [conf_params, request_params, version, result],
+    Keys = maps:keys(Result),
+    MissingKeys = lists:subtract(NeededKeys, Keys),
+    LogMsg = io_lib:format("bad parameter response: ~p missing keys ~p",
+                           [Result, MissingKeys]),
     UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{log_msg => LogMsg, user_msg => UMsg});
 handle_result(error, Result, Log, #{ action := parameter } ) ->
