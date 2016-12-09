@@ -23,7 +23,6 @@
 
 -export([
          sessions_get_list/0,
-         sessions_count/0,
          sessions_create_new/1,
          sessions_get_pid/1,
          sessions_update_pid/2,
@@ -61,11 +60,6 @@ sessions_get_list() ->
                            [#{id => Id, pid => Pid} | List]
                    end,
     lists:reverse(lists:foldl(ExtractValue, [], Entries)).
-
--spec sessions_count() -> integer.
-sessions_count() ->
-    get_num_entries(?TTS_SESSIONS).
-
 
 
 -spec sessions_create_new(Token :: binary()) -> ok | {error, Reason :: atom()}.
@@ -124,8 +118,6 @@ return_ok_or_error(false) ->
 
 return_value({ok, {_Key, Value}}) ->
     {ok, Value};
-return_value({ok, {_Key, Value, _ATime, _CTime}}) ->
-    {ok, Value};
 return_value({error, _} = Error) ->
     Error.
 
@@ -156,9 +148,6 @@ delete_table(Name) ->
             ets:delete(Name)
     end.
 
-get_num_entries(Table) ->
-    ets:info(Table, size).
-
 get_all_entries(Table) ->
     GetVal = fun(Entry, List) ->
                      [Entry | List]
@@ -183,6 +172,4 @@ lookup(Table, Key) ->
 create_lookup_result([Element]) ->
     {ok, Element};
 create_lookup_result([]) ->
-    {error, not_found};
-create_lookup_result(_) ->
-    {error, too_many}.
+    {error, not_found}.
