@@ -17,7 +17,9 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -include("tts.hrl").
 
--export([init/0]).
+-export([init/0,
+         destroy/0
+        ]).
 
 -export([
          sessions_get_list/0,
@@ -47,6 +49,9 @@
 
 init() ->
     create_tables().
+
+destroy() ->
+    delete_tables().
 
 % functions for session management
 -spec sessions_get_list() -> [map()].
@@ -135,6 +140,21 @@ create_tables() ->
 create_table(TableName) ->
     ets:new(TableName, [set, public, named_table, {keypos, 1}]).
 
+
+delete_tables() ->
+    DeleteTable = fun(Table) ->
+                          delete_table(Table)
+                  end,
+    lists:map(DeleteTable, ?TTS_TABLES),
+    ok.
+
+delete_table(Name) ->
+    case ets:info(Name) of
+        undefined ->
+            ok;
+        _ ->
+            ets:delete(Name)
+    end.
 
 get_num_entries(Table) ->
     ets:info(Table, size).

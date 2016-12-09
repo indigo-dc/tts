@@ -16,7 +16,7 @@ check:
 	./utils/check_erlang.sh
 
 clean: check
-	$(REBAR) do clean -a
+	$(REBAR) do cover -r, clean -a
 	rm -rf _build/default/plugins
 	rm -rf _build/default/bin
 
