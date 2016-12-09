@@ -17,11 +17,12 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -include("tts.hrl").
 
--export([init/0]).
+-export([init/0,
+         destroy/0
+        ]).
 
 -export([
          sessions_get_list/0,
-         sessions_count/0,
          sessions_create_new/1,
          sessions_get_pid/1,
          sessions_update_pid/2,
@@ -48,6 +49,9 @@
 init() ->
     create_tables().
 
+destroy() ->
+    delete_tables().
+
 % functions for session management
 -spec sessions_get_list() -> [map()].
 sessions_get_list() ->
@@ -56,11 +60,6 @@ sessions_get_list() ->
                            [#{id => Id, pid => Pid} | List]
                    end,
     lists:reverse(lists:foldl(ExtractValue, [], Entries)).
-
--spec sessions_count() -> integer.
-sessions_count() ->
-    get_num_entries(?TTS_SESSIONS).
-
 
 
 -spec sessions_create_new(Token :: binary()) -> ok | {error, Reason :: atom()}.
@@ -119,8 +118,6 @@ return_ok_or_error(false) ->
 
 return_value({ok, {_Key, Value}}) ->
     {ok, Value};
-return_value({ok, {_Key, Value, _ATime, _CTime}}) ->
-    {ok, Value};
 return_value({error, _} = Error) ->
     Error.
 
@@ -136,8 +133,20 @@ create_table(TableName) ->
     ets:new(TableName, [set, public, named_table, {keypos, 1}]).
 
 
-get_num_entries(Table) ->
-    ets:info(Table, size).
+delete_tables() ->
+    DeleteTable = fun(Table) ->
+                          delete_table(Table)
+                  end,
+    lists:map(DeleteTable, ?TTS_TABLES),
+    ok.
+
+delete_table(Name) ->
+    case ets:info(Name) of
+        undefined ->
+            ok;
+        _ ->
+            ets:delete(Name)
+    end.
 
 get_all_entries(Table) ->
     GetVal = fun(Entry, List) ->
@@ -163,6 +172,4 @@ lookup(Table, Key) ->
 create_lookup_result([Element]) ->
     {ok, Element};
 create_lookup_result([]) ->
-    {error, not_found};
-create_lookup_result(_) ->
-    {error, too_many}.
+    {error, not_found}.

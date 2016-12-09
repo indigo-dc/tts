@@ -8,22 +8,30 @@ is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
     {ok, Issuer, Subject} = tts_userinfo:return(issuer_subject, UserInfo),
     lager:debug("checking authorization of ~p ~p at service ~p [~p]",
                 [Issuer, Subject, ServiceId, A]),
+    try
+        {ok, Pid} = oidcc:find_openid_provider(Issuer),
+        {ok, #{id := ProviderId}} = oidcc:get_openid_provider_info(Pid),
 
-    Slash = <<"/">>,
-
-    FilterByIssuer = fun({Iss, _, _, _})
-                        when is_binary(Iss)->
-                             IssSlash = << Iss/binary, Slash/binary >>,
-                             (Iss == Issuer) or (IssSlash == Issuer);
-                        ({any, _, _, _}) ->
-                             true
+        FilterById = fun({Id, _, _, _}) ->
+                             case Id of
+                                 ProviderId -> true;
+                                 any -> true;
+                                 _ -> false
+                             end
                      end,
-    Allow = lists:filter(FilterByIssuer, Allow0),
-    Forbid = lists:filter(FilterByIssuer, Forbid0),
-    lager:debug("running through allow ~p and forbid ~p", [Allow, Forbid]),
-    Allowed = apply_rules(ServiceId, UserInfo, Allow, false),
-    Forbidden = apply_rules(ServiceId, UserInfo, Forbid, true),
-    Allowed and (not Forbidden).
+        Allow = lists:filter(FilterById, Allow0),
+        Forbid = lists:filter(FilterById, Forbid0),
+        lager:debug("running through allow ~p and forbid ~p", [Allow, Forbid]),
+        Allowed = apply_rules(ServiceId, UserInfo, Allow, false),
+        Forbidden = apply_rules(ServiceId, UserInfo, Forbid, true),
+        Allowed and (not Forbidden)
+    catch
+        Error:Reason ->
+            StackTrace = erlang:get_stacktrace(),
+            EMsg = "Service ~p: Authzcheck for ~p failed due to ~p:~p at ~p",
+            lager:error(EMsg, [ServiceId, UserInfo, Error, Reason, StackTrace]),
+            false
+     end.
 
 apply_rules(ServiceId, UserInfo, Rules, Default) ->
     ApplyRule = fun(Rule, Current) ->
@@ -38,29 +46,25 @@ apply_rules(ServiceId, UserInfo, Rules, Default) ->
 apply_rule(_ServiceId, {_Iss, Key, Op, Value}, UserInfo, Default) ->
     case tts_userinfo:return({key, Key}, UserInfo) of
         {ok, KeyValue} ->
-            Res = perform_operation(Op, KeyValue, Value, Default),
+            Res = perform_operation(Op, KeyValue, Value),
             lager:debug("performed ~p(~p, ~p) -> ~p",
                         [Op, KeyValue, Value, Res]),
             Res;
         _ ->
             Default
-    end;
-apply_rule(ServiceId, Rule, _UserInfo, Default) ->
-    lager:critical("Service ~p: rule not understood: ~p, setting to ~p",
-                   [ServiceId, Rule, Default]),
-    Default.
+    end.
 
-perform_operation(any, _, Value, _) ->
+perform_operation(any, _, Value) ->
     Value;
-perform_operation(equals, KeyValue, Value, _) ->
+perform_operation(equals, KeyValue, Value) ->
     (KeyValue == Value);
-perform_operation(is_member_of, KeyValue, Value, _)
+perform_operation(is_member_of, KeyValue, Value)
   when is_list(Value) ->
     lists:member(KeyValue, Value);
-perform_operation(contains, KeyValue, Value, _)
+perform_operation(contains, KeyValue, Value)
   when is_list(KeyValue), is_binary(Value) ->
     lists:member(Value, KeyValue);
-perform_operation(contains, KeyValue, Value, _)
+perform_operation(contains, KeyValue, Value)
   when is_binary(KeyValue), is_binary(Value) ->
     case binary:match(KeyValue, [Value]) of
         {_, _} ->
@@ -68,17 +72,13 @@ perform_operation(contains, KeyValue, Value, _)
         _ ->
             false
     end;
-perform_operation(regexp, KeyValue, Value, _) ->
+perform_operation(regexp, KeyValue, Value) ->
     case re:run(KeyValue, Value, []) of
         {match, _} ->
             true;
         _ ->
             false
-    end;
-perform_operation(Op, KeyValue, Value, Default) ->
-    lager:critical("unknwon operation/value combination: ~p(~p, ~p), using ~p",
-                   [Op, KeyValue, Value, Default]),
-    Default.
+    end.
 
 
 
@@ -117,9 +117,7 @@ validate([{ProviderId, OidcKey, Operation, Value} | T], ProviderList, Result) ->
 maybe_add_to_result({true, Issuer}, AtomOp, OidcKey, Value, {Result, List}) ->
     {Result, [ {Issuer, OidcKey, AtomOp, Value} | List ]} ;
 maybe_add_to_result({false, Id}, Op, Key, Val, Result) ->
-    add_failed("provider not found", Key, Op, Val, Id, Result);
-maybe_add_to_result(Id, Op, Key, Val, Result) ->
-    add_failed("unknown error", Key, Op, Val, Id, Result).
+    add_failed("provider not found", Key, Op, Val, Id, Result).
 
 add_failed(Reason, Key, Op, Val, Id, {Result, List}) ->
     Msg = "bad rule ~p ~p ~p for provider ~p (~s) -> ~p",
@@ -130,10 +128,9 @@ add_failed(Reason, Key, Op, Val, Id, {Result, List}) ->
 does_provider_exist(ProviderId, ProviderList) ->
     case {lists:keyfind(ProviderId, 1, ProviderList), ProviderId == any} of
         {false, false} ->
-            {false, ProviderId};
+            {false, undefined};
         {false, true} ->
             {true, any};
         {_, false} ->
-            {ok, #{issuer := Iss}} = oidcc:get_openid_provider_info(ProviderId),
-            {true, Iss}
+            {true, ProviderId}
     end.

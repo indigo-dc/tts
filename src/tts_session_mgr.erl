@@ -156,8 +156,6 @@ lookup_session_pid(ID) ->
 set_session_for_token(Token, Pid) ->
     tts_data:sessions_update_pid(Token, Pid).
 
-delete_session(undefined) ->
-    ok;
 delete_session(ID) ->
     tts_data:sessions_delete(ID),
     ok.
