@@ -1,9 +1,25 @@
 -module(tts_test).
 -include_lib("eunit/include/eunit.hrl").
 
+error_session_test() ->
+    {ok, Meck} = start_meck(),
+    EMsg = <<"this is some error message">>,
+    {ok, Pid} = tts:session_with_error(EMsg),
+    tts_session:close(Pid),
+    test_util:wait_for_process_to_die(Pid, 100),
+    stop_meck(Meck),
+    ok.
 
 
-%% login_test() ->
+login_test() ->
+    {ok, Meck} = start_meck(),
+    BadOidcToken = #{},
+    BadAccessToken = "token",
+    Issuer = <<"issuer">>,
+    {error, bad_token} = tts:login_with_oidcc(BadOidcToken),
+    {error, bad_token} = tts:login_with_access_token(BadAccessToken, Issuer),
+    stop_meck(Meck),
+    ok.
 %%     MeckModules = [tts_session_mgr, tts_session, oidcc],
 
 %%     Issuer = <<"https://tts.provider">>,
@@ -91,42 +107,40 @@
 %%     ok.
 
 
-%% proxy_function_test() ->
+proxy_function_test() ->
 
-%%     CredId = <<"cred1">>,
-%%     OtherId = <<"other_id">>,
-%%     Credential = [#{name => id, value=> CredId},
-%%                   #{name => <<"user">>, type => text, value => <<"joe">>},
-%%                   #{name => <<"password">>, type => text, value => <<"secret">>}
-%%                  ],
-%%     SessionPid = pid1,
-%%     DisplayName = <<"User Name">>,
+    %% CredId = <<"cred1">>,
+    %% OtherId = <<"other_id">>,
+    %% Credential = [#{name => id, value=> CredId},
+    %%               #{name => <<"user">>, type => text, value => <<"joe">>},
+    %%               #{name => <<"password">>, type => text, value => <<"secret">>}
+    %%              ],
+    %% SessionPid = pid1,
+    %% DisplayName = <<"User Name">>,
 
-%%     setup_mecking(),
+    %% {ok, Meck} = start_meck(),
+    %% ?assertEqual(true, tts:does_credential_exist(CredId, SessionPid)),
+    %% ?assertEqual(false, tts:does_credential_exist(OtherId, SessionPid)),
+    %% ?assertEqual({ok, [#{id => <<"id">>,
+    %%                      desc => <<"info">>,
+    %%                      issuer => <<"https://tts.issuer">>,
+    %%                      ready => false}]},
+    %%              tts:get_openid_provider_list()),
+    %% ?assertEqual(true, tts:does_temp_cred_exist(CredId, SessionPid)),
+    %% ?assertEqual(false, tts:does_temp_cred_exist(OtherId, SessionPid)),
+    %% ?assertEqual({ok, []}, tts:get_service_list_for(SessionPid)),
+    %% ?assertEqual({ok, [CredId]}, tts:get_credential_list_for(SessionPid)),
+    %% ?assertEqual({ok, <<"AccessToken">>}, tts:get_access_token_for(SessionPid)),
+    %% ?assertEqual({ok, DisplayName}, tts:get_display_name_for(SessionPid)),
+    %% ?assertEqual({ok, CredId}, tts:store_temp_cred(Credential, SessionPid)),
+    %% ?assertEqual({ok, Credential}, tts:get_temp_cred(CredId, SessionPid)),
 
-%%     ?assertEqual(true, tts:does_credential_exist(CredId, SessionPid)),
-%%     ?assertEqual(false, tts:does_credential_exist(OtherId, SessionPid)),
-%%     ?assertEqual({ok, [#{id => <<"id">>,
-%%                          desc => <<"info">>,
-%%                          issuer => <<"https://tts.issuer">>,
-%%                          ready => false}]},
-%%                  tts:get_openid_provider_list()),
-%%     ?assertEqual(true, tts:does_temp_cred_exist(CredId, SessionPid)),
-%%     ?assertEqual(false, tts:does_temp_cred_exist(OtherId, SessionPid)),
-%%     ?assertEqual({ok, []}, tts:get_service_list_for(SessionPid)),
-%%     ?assertEqual({ok, [CredId]}, tts:get_credential_list_for(SessionPid)),
-%%     ?assertEqual({ok, <<"AccessToken">>}, tts:get_access_token_for(SessionPid)),
-%%     ?assertEqual({ok, DisplayName}, tts:get_display_name_for(SessionPid)),
-%%     ?assertEqual({ok, CredId}, tts:store_temp_cred(Credential, SessionPid)),
-%%     ?assertEqual({ok, Credential}, tts:get_temp_cred(CredId, SessionPid)),
-
-%%     stop_mecking(),
-%%     ok.
+    %% stop_meck(Meck),
+    ok.
 
 
 %% request_credential_test() ->
-
-%%     setup_mecking(),
+%%     {ok, Meck} = start_meck(),
 %%     CredId = <<"cred1">>,
 %%     Credential = [#{name => id, value=> CredId},
 %%                   #{name => <<"user">>, type => text, value => <<"joe">>},
@@ -135,137 +149,139 @@
 %%     ?assertEqual({ok, Credential, []},
 %%                   tts:request_credential_for(<<"good">>, session, [], <<"test">>)),
 %%     {error, _, []} = tts:request_credential_for(<<"bad">>, session, [], <<"test">>),
-%%     stop_mecking(),
+%%     stop_meck(Meck),
 %%     ok.
 
 %% revoke_credential_test() ->
 %%     CredId = <<"good_cred">>,
 %%     BadId = <<"bad">>,
-%%     setup_mecking(),
+%%     {ok, Meck} = start_meck(),
 %%     {ok, _, []} = tts:revoke_credential_for(CredId, session),
 %%     {error, _, []} = tts:revoke_credential_for(BadId, session),
-%%     stop_mecking(),
+%%     stop_meck(Meck),
 %%     ok.
 
 
 
-%% setup_mecking() ->
-%%     MeckModules = [tts_session, tts_credential, tts_temp_cred, oidcc,
-%%                    tts_service],
-%%     Uid = <<"user1">>,
-%%     CredId = <<"cred1">>,
-%%     Issuer = <<"https://tts.issuer">>,
-%%     Subject = <<"TTsUserOne">>,
-%%     ServiceId = <<"good">>,
-%%     Credential = [#{name => id, value=> CredId},
-%%                   #{name => <<"user">>, type => text, value => <<"joe">>},
-%%                   #{name => <<"password">>, type => text, value => <<"secret">>}
-%%                  ],
-%%     CredentialId = <<"good_cred">>,
-%%     SessionId = <<"sess1">>,
-%%     Token = #{access => #{ token => <<"AccessToken">>}},
-%%     DisplayName = <<"User Name">>,
 
-%%     GetUserInfo = fun(_SessionPid) ->
-%%                           {ok, #{ site => #{uid => Uid}}}
-%%                   end,
-%%     GetToken = fun(_SessionPid) ->
-%%                        {ok, Token}
-%%                end,
-%%     GetId = fun(_SessionPid) ->
-%%                        {ok, SessionId}
-%%                end,
-%%     GetIssSub = fun(_SessionPid) ->
-%%                        {ok, Issuer, Subject}
-%%                end,
-%%     GetDisplayName = fun(_SessionPid) ->
-%%                              {ok, DisplayName}
-%%                      end,
-%%     CredentialExist = fun(UId, CId) ->
-%%                               case {UId, CId} of
-%%                                   {Uid, CredId} ->
-%%                                       true;
-%%                                   _ -> false
-%%                               end
-%%                       end,
-%%     CredentialGetList = fun(_UId) ->
-%%                                 {ok, [CredId]}
-%%                            end,
-%%     CredentialRequest = fun(SerId, _UserInfo, _IFace, _Token, _Param) ->
-%%                                 case SerId of
-%%                                     ServiceId ->
-%%                                         {ok, Credential, []};
-%%                                     _ ->
-%%                                         {error, internal, []}
-%%                                 end
-%%                            end,
 
-%%     CredentialRevoke = fun(CId, _UserInfo) ->
-%%                                 case CId of
-%%                                     CredentialId ->
-%%                                         {ok, <<"done">>, []};
-%%                                     _ ->
-%%                                         {error, internal, []}
-%%                                 end
-%%                            end,
-%%     TempCredExist = fun(CId, UsrInfo) ->
-%%                             #{ site := #{uid := UId}} = UsrInfo,
-%%                               case {UId, CId} of
-%%                                   {Uid, CredId} ->
-%%                                       true;
-%%                                   _ -> false
-%%                               end
-%%                       end,
+start_meck() ->
+    MeckModules = [tts_session_mgr],
+    %% Uid = <<"user1">>,
+    %% CredId = <<"cred1">>,
+    %% Issuer = <<"https://tts.issuer">>,
+    %% Subject = <<"TTsUserOne">>,
+    %% ServiceId = <<"good">>,
+    %% UserId = <<"123234">>,
+    %% Credential = [#{name => id, value=> CredId},
+    %%               #{name => <<"user">>, type => text, value => <<"joe">>},
+    %%               #{name => <<"password">>, type => text, value => <<"secret">>}
+    %%              ],
+    %% CredentialId = <<"good_cred">>,
+    %% SessionId = <<"sess1">>,
+    %% DisplayName = <<"User Name">>,
 
-%%     TempCredAdd = fun(_Cred, _Session) ->
-%%                           {ok, CredId}
-%%                       end,
+    %% GetUserInfo = fun(_SessionPid) ->
+    %%                       {ok, #{ site => #{uid => Uid}}}
+    %%               end,
+    %% GetId = fun(_SessionPid) ->
+    %%                    {ok, SessionId}
+    %%            end,
+    %% GetUserId = fun(_SessionPid) ->
+    %%                    {ok, UserId}
+    %%            end,
+    %% GetIssSub = fun(_SessionPid) ->
+    %%                    {ok, Issuer, Subject}
+    %%            end,
+    %% GetDisplayName = fun(_SessionPid) ->
+    %%                          {ok, DisplayName}
+    %%                  end,
+    %% CredentialExist = fun(UId, CId) ->
+    %%                           case {UId, CId} of
+    %%                               {Uid, CredId} ->
+    %%                                   true;
+    %%                               _ -> false
+    %%                           end
+    %%                   end,
+    %% CredentialGetList = fun(_UId) ->
+    %%                             {ok, [CredId]}
+    %%                        end,
+    %% CredentialRequest = fun(SerId, _UserInfo, _IFace, _Param) ->
+    %%                             case SerId of
+    %%                                 ServiceId ->
+    %%                                     {ok, Credential, []};
+    %%                                 _ ->
+    %%                                     {error, internal, []}
+    %%                             end
+    %%                        end,
 
-%%     TempCredGet = fun(CId, _Session) ->
-%%                           case CId of
-%%                               CredId ->
-%%                                   {ok, Credential};
-%%                               _ ->
-%%                                   {error, not_found}
-%%                           end
-%%                   end,
-%%     ServiceGetList = fun(_Uid) ->
-%%                              {ok, []}
-%%                      end,
+    %% CredentialRevoke = fun(CId, _UserInfo) ->
+    %%                             case CId of
+    %%                                 CredentialId ->
+    %%                                     {ok, <<"done">>, []};
+    %%                                 _ ->
+    %%                                     {error, internal, []}
+    %%                             end
+    %%                        end,
+    %% TempCredExist = fun(CId, UsrInfo) ->
+    %%                         #{ site := #{uid := UId}} = UsrInfo,
+    %%                           case {UId, CId} of
+    %%                               {Uid, CredId} ->
+    %%                                   true;
+    %%                               _ -> false
+    %%                           end
+    %%                   end,
 
-%%     ServiceEnabled = fun(_Uid) ->
-%%                              true
-%%                      end,
-%%     ProviderList = fun() ->
-%%                              {ok, [ {<<"id">>, pid1} ]}
-%%                      end,
+    %% TempCredAdd = fun(_Cred, _Session) ->
+    %%                       {ok, CredId}
+    %%                   end,
 
-%%     ProviderInfo = fun(_Pid) ->
-%%                              {ok, #{description => <<"info">>,
-%%                                      ready => false,
-%%                                      issuer => <<"https://tts.issuer">>}}
-%%                      end,
-%%     ok = test_util:meck_new(MeckModules),
-%%     ok = meck:expect(tts_session, get_user_info, GetUserInfo),
-%%     ok = meck:expect(tts_session, get_token, GetToken),
-%%     ok = meck:expect(tts_session, get_display_name, GetDisplayName),
-%%     ok = meck:expect(tts_session, get_id, GetId),
-%%     ok = meck:expect(tts_session, get_iss_sub, GetIssSub),
-%%     ok = meck:expect(tts_credential, exists, CredentialExist),
-%%     ok = meck:expect(tts_credential, get_list, CredentialGetList),
-%%     ok = meck:expect(tts_credential, request, CredentialRequest),
-%%     ok = meck:expect(tts_credential, revoke, CredentialRevoke),
-%%     ok = meck:expect(tts_service, get_list, ServiceGetList),
-%%     ok = meck:expect(tts_service, is_enabled, ServiceEnabled),
-%%     ok = meck:expect(tts_temp_cred, exists, TempCredExist),
-%%     ok = meck:expect(tts_temp_cred, add_cred, TempCredAdd),
-%%     ok = meck:expect(tts_temp_cred, get_cred, TempCredGet),
-%%     ok = meck:expect(oidcc, get_openid_provider_list, ProviderList),
-%%     ok = meck:expect(oidcc, get_openid_provider_info, ProviderInfo),
-%%     ok.
+    %% TempCredGet = fun(CId, _Session) ->
+    %%                       case CId of
+    %%                           CredId ->
+    %%                               {ok, Credential};
+    %%                           _ ->
+    %%                               {error, not_found}
+    %%                       end
+    %%               end,
+    %% ServiceGetList = fun(_Uid) ->
+    %%                          {ok, []}
+    %%                  end,
 
-%% stop_mecking() ->
-%%     MeckModules = [tts_session, tts_credential, tts_temp_cred, oidcc,
-%%                    tts_service],
-%%     ok = test_util:meck_done(MeckModules),
-%%     ok.
+    %% ServiceEnabled = fun(_Uid) ->
+    %%                          true
+    %%                  end,
+    %% ProviderList = fun() ->
+    %%                          {ok, [ {<<"id">>, pid1} ]}
+    %%                  end,
+
+    %% ProviderInfo = fun(_Pid) ->
+    %%                          {ok, #{description => <<"info">>,
+    %%                                  ready => false,
+    %%                                  issuer => <<"https://tts.issuer">>}}
+    %%                  end,
+    NewSession = fun() ->
+                         tts_session:start_link(<<"some session token">>)
+                 end,
+    ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(tts_session_mgr, new_session, NewSession),
+    ok = meck:expect(tts_session_mgr, session_terminating, fun(_) -> ok end),
+    %% ok = meck:expect(tts_session, get_display_name, GetDisplayName),
+    %% ok = meck:expect(tts_session, get_userid, GetUserId),
+    %% ok = meck:expect(tts_session, get_id, GetId),
+    %% ok = meck:expect(tts_plugin, exists, CredentialExist),
+    %% ok = meck:expect(tts_plugin, request, CredentialRequest),
+    %% ok = meck:expect(tts_plugin, revoke, CredentialRevoke),
+    %% ok = meck:expect(tts_service, get_list, ServiceGetList),
+    %% ok = meck:expect(tts_service, is_enabled, ServiceEnabled),
+    %% ok = meck:expect(tts_temp_cred, exists, TempCredExist),
+    %% ok = meck:expect(tts_temp_cred, add_cred, TempCredAdd),
+    %% ok = meck:expect(tts_temp_cred, get_cred, TempCredGet),
+    %% ok = meck:expect(oidcc, get_openid_provider_list, ProviderList),
+    %% ok = meck:expect(oidcc, get_openid_provider_info, ProviderInfo),
+    {ok, {MeckModules}}.
+
+
+stop_meck({MeckModules}) ->
+    ok = test_util:meck_done(MeckModules),
+    ok.

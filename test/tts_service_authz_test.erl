@@ -1,12 +1,17 @@
 -module(tts_service_authz_test).
 -include_lib("eunit/include/eunit.hrl").
 
+-define(ISSUER, <<"https://iam.it">>).
 authorization_test() ->
     {ok, Meck} = start_meck(),
     ServiceId = <<"test">>,
+    Sub = <<"sub">>,
+    Iam = <<"iam">>,
+    Other = <<"iom">>,
+
     {ok, UserInfo0} = tts_userinfo:new(),
-    IdToken = #{claims => #{sub => <<"sub">>,
-                            iss => <<"http://iam.it">>,
+    IdToken = #{claims => #{sub => Sub,
+                            iss => ?ISSUER,
                             groups => [<<"Developer">>, <<"User">>],
                             acr => <<"https://egi.eu/LoA#Substantial">>,
                             groups2 => <<"good,bad,bad-good,not_good ">>,
@@ -15,8 +20,7 @@ authorization_test() ->
     {ok, UserInfo1} = tts_userinfo:update_id_token(IdToken
                                                  , UserInfo0),
     UserInfo = UserInfo1,
-    Iam = <<"iam">>,
-    Other = <<"iom">>,
+    io:format("userinfo: ~p~n",[UserInfo]),
     {ok, RegExp} = re:compile(",bad-good,|^bad-good,|,bad-good$|^bad-good$"),
 
     Tests = [
@@ -121,16 +125,16 @@ start_meck() ->
         fun(Id) ->
                 case Id of
                     <<"iam">> ->
-                        {ok, #{issuer => <<"http://iam.it">>, id => <<"iam">>}};
+                        {ok, #{issuer => ?ISSUER, id => <<"iam">>}};
                     pid ->
-                        {ok, #{issuer => <<"http://iam.it">>, id => <<"iam">>}};
+                        {ok, #{issuer => ?ISSUER, id => <<"iam">>}};
                     _ ->
                         {error, not_found}
                 end
         end,
-    FindProvider = fun(Issuer) ->
-                           case Issuer of
-                               <<"http://iam.it">> ->
+    FindProvider = fun(Iss) ->
+                           case Iss of
+                               ?ISSUER ->
                                    {ok, pid};
                                _ ->
                                    {error, not_found}

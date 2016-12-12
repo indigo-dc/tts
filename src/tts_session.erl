@@ -31,7 +31,6 @@
 -export([set_max_age/2]).
 
 -export([set_token/2]).
--export([get_token/1]).
 
 -export([set_error/2]).
 -export([get_error/1]).
@@ -40,7 +39,6 @@
 -export([get_display_name/1]).
 
 -export([set_iss_sub/3]).
--export([get_iss_sub/1]).
 
 -export([is_user_agent/2]).
 -export([is_same_ip/2]).
@@ -89,10 +87,6 @@ get_max_age(Pid) ->
 set_max_age(MaxAge, Pid) ->
     gen_server:call(Pid, {set_max_age, MaxAge}).
 
--spec get_token(Pid :: pid()) -> {ok, Token::map()}.
-get_token(Pid) ->
-    gen_server:call(Pid, get_token).
-
 -spec set_token(Token :: map(), Pid :: pid()) -> ok.
 set_token(Token, Pid) ->
     gen_server:call(Pid, {set_token, Token}).
@@ -112,11 +106,6 @@ get_user_info(Pid) ->
 -spec get_display_name(Pid :: pid()) -> {ok, Name::binary()}.
 get_display_name(Pid) ->
     gen_server:call(Pid, get_display_name).
-
--spec get_iss_sub(Pid :: pid()) ->
-    {ok, Issuer :: binary(), Subject :: binary()}.
-get_iss_sub( Pid) ->
-    gen_server:call(Pid, get_iss_sub).
 
 -spec set_iss_sub(Issuer :: binary(), Subject::binary(), Pid :: pid()) -> ok.
 set_iss_sub(Issuer, Subject, Pid) ->
@@ -139,7 +128,6 @@ is_same_ip(IP, Pid) ->
           sess_token = undefined,
           user_agent = undefined,
           ip = undefined,
-          token = none,
           error = <<"">>,
           user_info = undefined,
           max_age = 10
@@ -165,9 +153,6 @@ handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
     {reply, ok, State#state{max_age=MA}, MA};
-handle_call(get_iss_sub, _From, #state{max_age=MA, user_info=Info}=State) ->
-    Result = tts_userinfo:return(issuer_subject, Info),
-    {reply, Result, State, MA};
 handle_call({set_iss_sub, Issuer, Subject}, _From,
             #state{max_age=MA, user_info=Info}=State) ->
     {ok, NewInfo} = tts_userinfo:update_iss_sub(Issuer, Subject, Info),
@@ -202,11 +187,7 @@ handle_call({set_token, Token}, _From,
                 {ok, Inf3} = tts_userinfo:update_access_token(AccToken, Info2),
                 Inf3
         end,
-    TokenKeys = [access, id, refresh],
-    TokenMap = maps:with(TokenKeys, Token),
-    {reply, ok, State#state{token=TokenMap, user_info=Info3}, MA};
-handle_call(get_token, _From, #state{max_age=MA, token=Token}=State) ->
-    {reply, {ok, Token}, State, MA};
+    {reply, ok, State#state{user_info=Info3}, MA};
 handle_call({set_error, Error}, _From, #state{max_age=MA}=State) ->
     {reply, ok, State#state{error=Error}, MA};
 handle_call(get_error, _From, #state{max_age=MA, error=Error}=State) ->

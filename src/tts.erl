@@ -48,7 +48,6 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
 = TokenMap) ->
     do_login(Issuer, Subject, TokenMap);
 login_with_oidcc(_BadToken) ->
-    lager:debug("bad token"),
     {error, bad_token}.
 
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
@@ -135,11 +134,9 @@ get_credential_list_for(Session) ->
 
 request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, Token} = tts_session:get_token(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     true = tts_service:is_enabled(ServiceId),
-    case tts_plugin:request(ServiceId, UserInfo, Interface, Token,
-                                Params) of
+    case tts_plugin:request(ServiceId, UserInfo, Interface, Params) of
         {ok, Credential} ->
             #{id := CredId} = Credential,
             lager:info("SESS~p got credential ~p for ~p",
@@ -198,7 +195,8 @@ revoke_credential_for(CredId, Session) ->
 
 
 get_access_token_for(Session) ->
-    {ok, #{access := #{token := AccessToken}}} = tts_session:get_token(Session),
+    {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, AccessToken} = tts_userinfo:return(access_token, UserInfo),
     {ok, AccessToken}.
 
 get_display_name_for(Session) ->

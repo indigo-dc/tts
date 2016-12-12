@@ -25,7 +25,7 @@
          get_cred_list/1,
          get_count/2,
          exists/2,
-         request/5,
+         request/4,
          revoke/2,
          get_params/1
         ]).
@@ -65,7 +65,7 @@ exists(UserId, CredId) ->
 
 %% -spec request(binary(), binary(), tts:user_info(), binary(), map()|atom(),
 %%               list()) -> {ok, map(), list()} | {error, any(), list()}.
-request(ServiceId, UserInfo, Interface, Token, Params) ->
+request(ServiceId, UserInfo, Interface, Params) ->
     {ok, Limit} = tts_service:get_credential_limit(ServiceId),
     {ok, QueueName} = tts_service:get_queue(ServiceId),
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
@@ -80,8 +80,7 @@ request(ServiceId, UserInfo, Interface, Token, Params) ->
             handle_result(Result, #{ action => request,
                                      service_id => ServiceId,
                                      user_info => UserInfo,
-                                     interface => Interface,
-                                     token => Token
+                                     interface => Interface
                                    });
         {false, _, _} ->
             {error, user_not_allowed};
