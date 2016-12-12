@@ -88,6 +88,12 @@ code_change(_OldVsn, State, _Extra) ->
 
 start_database() ->
     ok = tts_data_sqlite:reconfigure(),
+    case tts_data_sqlite:is_ready() of
+        ok -> ok;
+        {error, _} ->
+            lager:critical("unable to start database"),
+            erlang:error(no_database)
+    end,
     ok.
 
 

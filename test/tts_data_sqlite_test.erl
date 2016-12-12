@@ -21,7 +21,7 @@ create_db_test_() ->
 
 create_db_check() ->
     file:delete(?TEST_DB),
-    application:set_env(tts,sqlite_db,?TEST_DB),
+    application:set_env(tts, sqlite_db, ?TEST_DB),
     {ok, Pid} = tts_data_sqlite:start_link(),
     ok = tts_data_sqlite:reconfigure(),
     ok = tts_data_sqlite:reconfigure(),

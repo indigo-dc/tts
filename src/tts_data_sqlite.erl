@@ -26,6 +26,8 @@
 -export([credential_get_list/1]).
 -export([credential_get_count/2]).
 -export([credential_remove/2]).
+-export([is_ready/0]).
+
 -export([stop/0]).
 
 
@@ -76,6 +78,10 @@ credential_get(CredId) ->
 credential_remove(UserId, CredId) ->
     gen_server:call(?MODULE, {credential_remove, UserId, CredId}).
 
+-spec is_ready() -> ok | {error, not_configured}.
+is_ready() ->
+    gen_server:call(?MODULE, is_ready).
+
 -spec stop() -> ok.
 stop() ->
     gen_server:cast(?MODULE, stop).
@@ -105,6 +111,8 @@ handle_call({credential_get, CredId}, _From, #state{con=Con}=State) ->
 handle_call({credential_remove, UserId, CredentialId}, _From
             , #state{con=Con}=State) ->
     ok = credential_remove(UserId, CredentialId, Con),
+    {reply, ok, State};
+handle_call(is_ready, _From, State) ->
     {reply, ok, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.

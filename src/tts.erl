@@ -48,7 +48,6 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
 = TokenMap) ->
     do_login(Issuer, Subject, TokenMap);
 login_with_oidcc(_BadToken) ->
-    lager:debug("bad token"),
     {error, bad_token}.
 
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),

@@ -24,6 +24,7 @@ eunit: check
 	$(REBAR) do eunit,cover -v
 
 ct: check
+	./utils/setup_ct.sh
 	$(REBAR) do ct,cover -v
 
 tests: check
