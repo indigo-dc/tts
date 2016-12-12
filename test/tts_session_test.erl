@@ -49,42 +49,6 @@ userinfo_test() ->
     ok = tts_session:close(Pid),
     ok = stop_meck(Meck).
 
-%% token_login_test() ->
-%%     MeckModules = [tts_session_mgr],
-%%     test_util:meck_new(MeckModules),
-%%     ok = meck:expect(tts_session_mgr, session_terminating, fun(_) -> ok end),
-%%     {ok, Pid} = tts_session:start_link(?ID),
-%%     Subject = "foo",
-%%     Issuer = "https://bar.com",
-%%     Token = #{id => #{ claims => #{sub => Subject, iss=>Issuer}}},
-%%     false = tts_session:is_logged_in(Pid),
-%%     ok = tts_session:set_token(Token, Pid),
-%%     true = tts_session:is_logged_in(Pid),
-%%     {ok, Token} = tts_session:get_token(Pid),
-%%     true = tts_session:is_logged_in(Pid),
-%%     {ok, Issuer, Subject} = tts_session:get_iss_sub(Pid),
-%%     true = tts_session:is_logged_in(Pid),
-%%     ok = tts_session:close(Pid),
-%%     ok = test_util:wait_for_process_to_die(Pid,100),
-%%     ok = test_util:meck_done(MeckModules).
-
-
-
-%% redirect_test() ->
-%%     MeckModules = [tts_session_mgr],
-%%     test_util:meck_new(MeckModules),
-%%     ok = meck:expect(tts_session_mgr, session_terminating, fun(_) -> ok end),
-%%     Redirect = <<"https://localhost/back">>,
-%%     BadRedirect = "https://localhost/back",
-%%     {ok, Pid} = tts_session:start_link(?ID),
-%%     ok = tts_session:set_used_redirect(Redirect, Pid),
-%%     {ok,Redirect} = tts_session:get_used_redirect(Pid),
-%%     ignored = tts_session:set_used_redirect(BadRedirect, Pid),
-%%     ok = tts_session:close(Pid),
-%%     ok = test_util:wait_for_process_to_die(Pid,100),
-%%     ok = test_util:meck_done(MeckModules).
-
-
 
 error_test() ->
     {ok, {_, Pid} = Meck} = start_meck(),
