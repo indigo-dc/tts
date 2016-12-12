@@ -22,20 +22,26 @@ new() ->
     {ok, #user_info{}}.
 
 
-update_iss_sub(Issuer, Subject, Info) ->
-    {ok, Info#user_info{issuer=Issuer, subject=Subject}}.
+update_iss_sub(Issuer, Subject,
+               #user_info{issuer=Issuer, subject=Subject} = Info) ->
+    {ok, Info};
+update_iss_sub(Issuer, Subject,
+               #user_info{issuer=Issuer, subject=undefined} = Info) ->
+    {ok, Info#user_info{subject=Subject}};
+update_iss_sub(Issuer, Subject,
+               #user_info{issuer=undefined, subject=undefined} = Info) ->
+    {ok, Info#user_info{issuer=Issuer, subject=Subject}};
+update_iss_sub(_Issuer, _Subject, _Info) ->
+    {error, bad_iss_sub}.
 
-update_id_token(IdToken, #user_info{issuer=Issuer, subject=Subject}=Info) ->
+update_id_token(IdToken, Info) ->
     Claims = maps:get(claims, IdToken, #{}),
     Iss = maps:get(iss, Claims),
     Sub = maps:get(sub, Claims),
-    case {Issuer, Subject} of
-        {Iss, Sub} ->
-            {ok, update_plugin_info(Info#user_info{id_token=IdToken})};
-        {undefined, undefined} ->
-            {ok, update_plugin_info(Info#user_info{id_token=IdToken, issuer=Iss,
-                                                   subject=Sub})};
-        _ ->
+    case update_iss_sub(Iss, Sub, Info) of
+        {ok, NewInfo} ->
+            {ok, update_plugin_info(NewInfo#user_info{id_token = IdToken})};
+        {error, bad_iss_sub} ->
             {error, not_match}
     end.
 
