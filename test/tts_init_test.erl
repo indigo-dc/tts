@@ -61,6 +61,7 @@ start_meck() ->
                   end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(tts_data_sqlite, reconfigure, Reconfigure),
+    ok = meck:expect(tts_data_sqlite, is_ready, Reconfigure),
     ok = meck:expect(tts_service, add, AddService),
     ok = meck:expect(tts_service, update_params, UpdateParams),
     ok = meck:expect(oidcc_client, register, RegisterClient),
