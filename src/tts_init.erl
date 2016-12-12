@@ -49,7 +49,7 @@ stop(Pid) ->
 
 init([]) ->
     gen_server:cast(self(), start_database),
-    {ok, #state{}, 1}.
+    {ok, #state{}}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -68,16 +68,13 @@ handle_cast(add_services, State) ->
     {noreply, State};
 handle_cast(start_http, State) ->
     start_web_interface(),
-    gen_server:cast(self(), stop),
+    stop(self()),
     {noreply, State};
 handle_cast(stop, State) ->
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info(timeout, _State) ->
-    % stop depending services
-    {stop, normal, #state{}};
 handle_info(_Info, State) ->
     {noreply, State}.
 
