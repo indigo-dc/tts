@@ -22,10 +22,10 @@
 
 all() ->
     [
+     init_done,
      python2_check,
      provider_config,
      service_config,
-     init_done,
      rest_communication
     ].
 

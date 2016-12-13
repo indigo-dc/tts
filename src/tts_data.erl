@@ -127,10 +127,33 @@ create_tables() ->
                           create_table(Table)
                   end,
     lists:map(CreateTable, ?TTS_TABLES),
+    ok = wait_for_tables(?TTS_TABLES),
     ok.
 
 create_table(TableName) ->
-    ets:new(TableName, [set, public, named_table, {keypos, 1}]).
+    Heir = case erlang:whereis(tts_sup) of
+              undefined -> {heir, none};
+              Pid -> {heir, Pid, none}
+          end,
+    ets:new(TableName, [set, public, named_table, {keypos, 1}, Heir]).
+
+
+wait_for_tables(List) ->
+    Check = fun(Table, Result) ->
+                     case ets:info(Table) of
+                         undefined ->
+                             false;
+                         _ ->
+                             Result
+                     end
+             end,
+    case lists:foldl(Check, true, List) of
+        false ->
+            timer:sleep(100),
+            wait_for_tables(List);
+        true ->
+            ok
+    end.
 
 
 delete_tables() ->

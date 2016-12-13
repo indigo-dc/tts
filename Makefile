@@ -27,8 +27,11 @@ ct: check
 	./utils/setup_ct.sh
 	$(REBAR) do ct,cover -v
 
-tests: check
-	$(REBAR) do eunit, ct, cover -v
+tests: elvis
+	$(REBAR) cover -r
+	$(REBAR) eunit
+	./utils/setup_ct.sh
+	$(REBAR) do ct,cover -v
 
 elvis: check
 	$(REBAR) lint
