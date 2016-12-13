@@ -85,17 +85,9 @@ exists(ServiceId) ->
             false
      end.
 
-
 get_queue(ServiceId) ->
     case tts_data:service_get(ServiceId) of
-        {ok, {ServiceId, Info}} ->
-            QueueId = gen_queue_name(ServiceId),
-            case maps:get(parallel_runner, Info) of
-                infinite ->
-                    {ok, undefined};
-                Num when is_number(Num) ->
-                    {ok, QueueId}
-            end;
+        {ok, {_Id, Info}} -> {ok, maps:get(queue, Info, undefined)};
         _ -> {ok, undefined}
     end.
 
@@ -341,7 +333,7 @@ list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
 start_runner_queue_if_needed(#{enabled := true,
                                parallel_runner := NumRunner,
                                id := Id
-                              })
+                              } = Info)
   when is_number(NumRunner) ->
     QueueId = gen_queue_name(Id),
     ok = jobs:add_queue(QueueId, [{regulators, [
@@ -350,9 +342,11 @@ start_runner_queue_if_needed(#{enabled := true,
                              {type, fifo}
                             ]),
     Msg = "service ~p: queue ~p started with max ~p parallel runners",
-    lager:info(Msg, [Id, QueueId, NumRunner]);
-start_runner_queue_if_needed(_) ->
-    ok.
+    lager:info(Msg, [Id, QueueId, NumRunner]),
+    {ok, maps:put(queue, QueueId, Info)};
+start_runner_queue_if_needed(Info) ->
+    {ok, Info}.
+
 
 
 

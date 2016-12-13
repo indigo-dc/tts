@@ -215,8 +215,8 @@ connect_to_service(#{type := local}) ->
     lager:debug("runner ~p: using local connection", [self()]),
     {ok, local};
 connect_to_service(#{type := ssh , host := Host } = Info ) ->
-    {ok, Port} = maps:get(port, Info),
-    {ok, User} = maps:get(user, Info),
+    Port = maps:get(port, Info),
+    User = maps:get(user, Info),
     AcceptHosts = false,
     Options0 = [
                 {id_string, "TokenTranslationService"},
@@ -264,7 +264,7 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
     AddAccessToken = maps:get(pass_access_token, ServiceInfo, false),
     ConnType = maps:get(type, ConnInfo, local),
-    {ok, Version} = application:get_key(tts, vsn),
+    {ok, Version} = application:get_env(tts, vsn),
     ParamUpdate =
         case Action == parameter of
             false ->
