@@ -98,7 +98,8 @@ start_meck() ->
                      cred_limit => 2,
                      enabled => true,
                      allow_same_state => false,
-                     parallel_runner => 2
+                     parallel_runner => 2,
+                     queue => <<"ab">>
                     },
                    #{id => <<"id2">>,
                      authz => #{ allow => [{<<"other">>, <<"sub">>, any, true}],
@@ -109,7 +110,8 @@ start_meck() ->
                      cred_limit => 1,
                      enabled => false,
                      allow_same_state => true,
-                     parallel_runner => infinite
+                     parallel_runner => infinite,
+                     queue => undefined
                     },
                    #{id => <<"params1">>,
                      authz => #{ allow => [{<<"iam">>, <<"sub">>, any, true}],
@@ -120,7 +122,8 @@ start_meck() ->
                      cred_limit => 3,
                      plugin_conf_config => #{<<"boolean_test">> => <<"true">>},
                      cmd => <<"command">>,
-                     parallel_runner => 2
+                     parallel_runner => 2,
+                     queue => <<"bc">>
                     },
                    #{id => <<"params2">>,
                      authz => #{ allow => [{<<"other">>, <<"sub">>, any, true}],

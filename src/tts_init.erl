@@ -115,6 +115,10 @@ add_openid_provider([], _) ->
 
 
 add_services() ->
+    %% copy the version into the config
+    %% only using env values, so everything can be tested
+    Vsn = application:get_key(tts, vsn),
+    application:set_env(tts, vsn, Vsn),
     ServiceList = ?CONFIG(service_list),
     ok = add_services(ServiceList),
     ok.
