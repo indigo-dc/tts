@@ -24,7 +24,6 @@
 
 start(_Type, _Args) ->
     lager:info("Token Translation Service starting"),
-    tts_data:init(),
     tts_sup:start_link().
 
 stop(_State) ->

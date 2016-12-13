@@ -68,7 +68,7 @@ handle_cast(add_services, State) ->
     {noreply, State};
 handle_cast(start_http, State) ->
     start_web_interface(),
-    stop(self()),
+    stop(),
     {noreply, State};
 handle_cast(stop, State) ->
     {stop, normal, State};
@@ -87,6 +87,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 start_database() ->
+    ok = tts_data:init(),
     ok = tts_data_sqlite:reconfigure(),
     case tts_data_sqlite:is_ready() of
         ok -> ok;
@@ -117,7 +118,10 @@ add_openid_provider([], _) ->
 add_services() ->
     %% copy the version into the config
     %% only using env values, so everything can be tested
-    {ok, Vsn} = application:get_key(tts, vsn),
+    Vsn =  case application:get_key(tts, vsn) of
+               undefined -> "testing";
+               {ok, V} -> V
+           end,
     ok = application:set_env(tts, vsn, Vsn),
     ServiceList = ?CONFIG(service_list),
     ok = add_services(ServiceList),
@@ -196,3 +200,7 @@ start_web_interface() ->
 
 local_endpoint() ->
     tts_http_util:whole_url(tts_http_util:relative_path("oidc")).
+
+
+stop() ->
+    stop(self()).
