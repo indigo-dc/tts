@@ -127,7 +127,7 @@ add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     AuthzConf0 = maps:get(authz, ServiceInfo, #{allow => [], forbid => []}),
     {ok, AuthzConf} = tts_service_authz:validate_config(ServiceId, AuthzConf0),
     Update = #{enabled => false, authz => AuthzConf},
-    tts_data:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
+    ok = tts_data:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
     {ok, ServiceId};
 add(_ServiceMap)  ->
     {error, invalid_config}.
@@ -364,35 +364,30 @@ update_service( _, _) ->
 convert_to_type(Value, string)
   when is_binary(Value) ->
     {ok, Value};
-convert_to_type(true, boolean) ->
-    {ok, true};
-convert_to_type(<<"True">>, boolean) ->
-    {ok, true};
-convert_to_type(<<"true">>, boolean) ->
-    {ok, true};
-convert_to_type(false, boolean) ->
-    {ok, false};
-convert_to_type(<<"False">>, boolean) ->
-    {ok, false};
-convert_to_type(<<"false">>, boolean) ->
-    {ok, false};
-convert_to_type(_, _ ) ->
+convert_to_type(Value, boolean) ->
+    TrueValues = [true, <<"True">>, <<"true">>],
+    IsTrue = lists:member(Value, TrueValues),
+    FalseValues = [false, <<"False">>, <<"false">>],
+    IsFalse = lists:member(Value, FalseValues),
+    case {IsTrue, IsFalse} of
+        {true, false} ->
+            {ok, true};
+        {false, true} ->
+            {ok, false};
+        _ ->
+            {error, bad_value}
+    end;
+convert_to_type(_, _) ->
     {error, bad_value}.
 
 
 
-to_atom(Type)
-  when is_binary(Type) ->
+to_atom(Type) ->
     try
         binary_to_existing_atom(Type, utf8)
     catch error:badarg ->
             unknown
-    end;
-to_atom(Type)
-  when is_list(Type) ->
-    to_atom(list_to_binary(Type));
-to_atom(_) ->
-    unknown.
+    end.
 
 to_conf_type(Type) ->
     ValidTypes = [boolean, string],

@@ -21,16 +21,14 @@
 new() ->
     {ok, #user_info{}}.
 
-
 update_iss_sub(Issuer, Subject,
-               #user_info{issuer=Issuer, subject=Subject} = Info) ->
+               #user_info{issuer=Issuer, subject=Subject} = Info)
+  when is_binary(Issuer), is_binary(Subject)->
     {ok, Info};
 update_iss_sub(Issuer, Subject,
-               #user_info{issuer=Issuer, subject=undefined} = Info) ->
-    {ok, Info#user_info{subject=Subject}};
-update_iss_sub(Issuer, Subject,
-               #user_info{issuer=undefined, subject=undefined} = Info) ->
-    {ok, Info#user_info{issuer=Issuer, subject=Subject}};
+               #user_info{issuer=undefined, subject=undefined} = Info)
+  when is_binary(Issuer), is_binary(Subject)->
+    {ok, update_plugin_info(Info#user_info{issuer=Issuer, subject=Subject})};
 update_iss_sub(_Issuer, _Subject, _Info) ->
     {error, bad_iss_sub}.
 
@@ -129,11 +127,13 @@ access_token(_) ->
     {error, not_set}.
 
 
-update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken} = UserInfo) ->
+update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken,
+                              issuer=Issuer, subject=Subject} = UserInfo) ->
     RemoveClaims = [aud, exp, nbf, iat, jti, azp, kid, aud, auth_time, at_hash,
                     c_hash],
     ReducedClaims = maps:without(RemoveClaims, maps:get(claims, IdToken, #{})),
-    PluginInfo = maps:merge(IdInfo, ReducedClaims),
+    IssSubUpdate = #{iss => Issuer, sub=> Subject},
+    PluginInfo = maps:merge( maps:merge(IdInfo, ReducedClaims), IssSubUpdate),
     UserInfo#user_info{plugin_info=PluginInfo}.
 
 maybe_to_atom(Bin) ->
