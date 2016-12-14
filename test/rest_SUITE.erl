@@ -17,7 +17,8 @@
          provider_config/1,
          init_done/1,
          %% provider_list/0,
-         rest_communication/1
+         rest_communication_v1/1,
+         rest_communication_v2/1
         ]).
 
 all() ->
@@ -26,7 +27,8 @@ all() ->
      python2_check,
      provider_config,
      service_config,
-     rest_communication
+     rest_communication_v2,
+     rest_communication_v1
     ].
 
 %% groups() ->
@@ -145,67 +147,83 @@ python2_check(_Config) ->
 
 
 
-rest_communication(_Config) ->
+rest_communication_v1(_Config) ->
+    rest_communication(1).
+
+rest_communication_v2(_Config) ->
+    rest_communication(2).
+
+rest_communication(Version) ->
     mock_oidcc(),
     Issuer = <<"https://iam-test.indigo-datacloud.eu/">>,
 
-    {ok, ProviderList} = perform_rest_request("lsprov"),
+    {ok, ProviderList} = perform_rest_request("lsprov", Version),
     {ok, _ProvId} = validate_provider_list(ProviderList, Issuer),
-    {ok, ServiceList} = perform_rest_request("lsserv"),
-    {ok, ServiceId} = validate_service_list(list_to_binary(ServiceList)),
-    {ok, CredList} = perform_rest_request("lscred"),
+    {ok, ServiceList} = perform_rest_request("lsserv", Version),
+    {ok, ServiceId} = validate_service_list(ServiceList),
+    {ok, CredList} = perform_rest_request("lscred", Version),
     true = is_empty_credential_list(CredList),
-    {ok, CredentialData} = perform_rest_request("request "++ServiceId),
-    {ok, CredId} = validate_credential(CredentialData),
-    {ok, CredList2} = perform_rest_request("lscred"),
+    {ok, CredentialData} = perform_rest_request("request "++binary_to_list(ServiceId), Version),
+    {ok, CredId} = validate_credential(CredentialData, Version),
+    {ok, CredList2} = perform_rest_request("lscred", Version),
     false = is_empty_credential_list(CredList2),
-    {ok, _Result} = perform_rest_request("revoke "++CredId),
-    {ok, CredList3} = perform_rest_request("lscred"),
+    true = is_in_cred_list(CredId, CredList2, Version),
+    {ok, _Result} = perform_rest_request("revoke "++binary_to_list(CredId), Version),
+    {ok, CredList3} = perform_rest_request("lscred", Version),
     true = is_empty_credential_list(CredList3),
     unmock_oidcc(),
     ok.
 
-validate_provider_list(String, Issuer) when is_list(String) ->
-    validate_provider_list(list_to_binary(String), Issuer);
-validate_provider_list(Bin, Issuer) ->
-    Entries = binary:split(Bin, [<<"[">>, <<"]">>, <<" (">>, <<")\n">>],
-                           [global, trim_all]),
-    ct:log("provider list entries: ~p",[Entries]),
-    find_provider(Entries, Issuer).
+validate_provider_list(#{openid_provider_list := List}, Issuer) ->
+    ct:log("provider list entries: ~p",[List]),
+    find_provider(List, Issuer).
 
 find_provider([], _Issuer) ->
     {error, not_found};
-find_provider([Id, <<"ready">>, _Desc, Issuer | _T], Issuer) ->
-    {ok, binary_to_list(Id)};
+find_provider([#{issuer := Issuer, id := Id} | _T], Issuer) ->
+    {ok, Id};
 find_provider([_H | T], Issuer) ->
     find_provider(T, Issuer).
 
-validate_service_list(Bin) ->
-    Entries = binary:split(Bin, [<<"[">>, <<"]">>], [global, trim_all]),
-    ct:log("service list entries: ~p",[Entries]),
-    [_, Id | _ ] = Entries,
-    {ok, binary_to_list(Id)}.
+validate_service_list(#{service_list := List}) ->
+    [#{id := Id} | _ ] = List,
+    {ok, Id}.
 
-is_empty_credential_list(Output) when is_list(Output) ->
-    is_empty_credential_list(list_to_binary(Output));
-is_empty_credential_list(Bin) ->
-    case binary:match(Bin, <<"*** no credentials ***">>) of
-        nomatch ->
-            false;
-        _ ->
-            true
-    end.
+is_empty_credential_list(#{credential_list := List}) ->
+    List == [].
 
 
-validate_credential(Data) when is_list(Data) ->
-    validate_credential(list_to_binary(Data));
-validate_credential(Data) ->
-    Entries = binary:split(Data, [<<"[">>, <<"]">>], [global, trim_all]),
-    ct:log("credential enries: ~p~n", [Entries]),
-    [_, _, _, Id | _ ] = Entries,
-    {ok, binary_to_list(Id)}.
+validate_credential(#{credential := #{entries := List}}, 1)  ->
+    Filter = fun(#{name := Name}) ->
+                     Name == <<"id">>
+             end,
+    case lists:filter(Filter, List) of
+        [#{value := Id}] -> {ok, Id};
+        _ -> {error, not_found}
+    end;
+validate_credential(#{credential := #{id := Id}}, 2)  ->
+    {ok, Id};
+validate_credential(_, 2)  ->
+        {error, not_found}.
 
-
+is_in_cred_list(CredId, #{credential_list := List}, Version) ->
+    Findv1 = fun(#{id := #{cred_id := CId}}, Result) ->
+                   case CId == CredId of
+                       true -> true;
+                       _ -> Result
+                   end
+           end,
+    Findv2 = fun(#{cred_id:= CId}, Result) ->
+                   case CId == CredId of
+                       true -> true;
+                       _ -> Result
+                   end
+             end,
+    Find = case Version of
+               1 -> Findv1;
+               2 -> Findv2
+           end,
+    lists:foldl(Find, false, List).
 
 
 
@@ -215,12 +233,23 @@ validate_credential(Data) ->
 
 
 %%%%%% internal
-perform_rest_request(Params) ->
+perform_rest_request(Params, ProtVer) ->
+    ExtraParams = case ProtVer of
+                      2 -> " --json -p 2 ";
+                      1 -> " --json -p 1 "
+                  end,
     Exec = "/tmp/tts_common_test/ttsc/ttsc",
-    Cmd = "export TTSC_TOKEN=MockToken && export TTSC_ISSUER=https://iam-test.indigo-datacloud.eu/ && export TTSC_URL=http://localhost:8080 && "++Exec++" "++Params,
+    Cmd = "export TTSC_TOKEN=MockToken && export TTSC_ISSUER=https://iam-test.indigo-datacloud.eu/ && export TTSC_URL=http://localhost:8080 && "++Exec++ExtraParams++Params,
     Result = os:cmd(Cmd),
-    ct:log("executed '~s ~s' with result ~p~n",[Exec, Params, Result]),
-    {ok, Result}.
+    ct:log("executed '~s ~s ~s' with result ~p~n",[Exec, ExtraParams, Params, Result]),
+    case jsone:try_decode(list_to_binary(Result), [{keys, attempt_atom}, {object_format, map}]) of
+        {ok, Map, _} ->
+            ct:log("  parsed to: ~p~n",[Map]),
+            {ok, Map};
+        {error, Reason} ->
+            ct:log("  parsing error: ~p~n",[Reason]),
+            {error, bad_json_result}
+    end.
 
 
 mock_oidcc() ->
