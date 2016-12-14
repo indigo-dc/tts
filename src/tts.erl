@@ -97,8 +97,8 @@ logout(Session) ->
     tts_session:close(Session).
 
 does_credential_exist(Id, Session) ->
-    {ok, UserId} =  tts_session:get_userid(Session),
-    tts_plugin:exists(UserId, Id).
+    {ok, UserInfo} =  tts_session:get_user_info(Session),
+    tts_plugin:exists(UserInfo, Id).
 
 does_temp_cred_exist(Id, Session) ->
     {ok, UserId} =  tts_session:get_userid(Session),

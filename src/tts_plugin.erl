@@ -56,8 +56,9 @@ get_count(UserInfo, ServiceId) ->
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
     get_credential_count(UserId, ServiceId).
 
--spec exists(binary(), binary()) -> true | false.
-exists(UserId, CredId) ->
+%% -spec exists(binary(), binary()) -> true | false.
+exists(UserInfo, CredId) ->
+    {ok, UserId} = tts_userinfo:return(id, UserInfo),
     case get_credential(UserId, CredId) of
         {ok, _} -> true;
         _ -> false
