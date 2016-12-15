@@ -20,7 +20,7 @@ get_list_test() ->
     {ok, Meck} = start_meck(),
     ServiceId = <<"ssh1">>,
     OtherId = <<"ssh2">>,
-    CredentialId = <<"cred1">>,
+    CredId1 = <<"some credential id1">>,
     OtherCred = <<"cred2">>,
 
     {ok, UserInfo0} = tts_userinfo:new(),
@@ -31,7 +31,7 @@ get_list_test() ->
                  tts_plugin:get_cred_list(UserInfo)),
     ?assertEqual({ok, 1}, tts_plugin:get_count(UserInfo, ServiceId)),
     ?assertEqual({ok, 0}, tts_plugin:get_count(UserInfo, OtherId)),
-    ?assertEqual(true, tts_plugin:exists(UserInfo, CredentialId)),
+    ?assertEqual(true, tts_plugin:exists(UserInfo, CredId1)),
     ?assertEqual(false, tts_plugin:exists(UserInfo, OtherCred)),
     ok = tts_plugin:stop(),
     test_util:wait_for_process_to_die(Pid, 100),
@@ -44,11 +44,12 @@ request_test() ->
     Service3 = <<"ssh3">>,
     Service4 = <<"ssh4">>,
     Service5 = <<"ssh5">>,
+    Service6 = <<"ssh6">>,
     Cred1 = #{name => "password", type => <<"text">>, value => <<"secret">>},
-    Cred2 = #{name => "secret file", type => <<"textarea">>, value => <<"secret">>},
-    Cred3 = #{name => "secret file", type => <<"textarea">>, value => #{id => <<"secret">>}},
-    Cred4 = #{name => "secret file", type => <<"textfile">>, value => <<"secret">>},
-    Cred5 = #{name => "secret file", type => <<"textfile">>, value => <<"secretlines">>},
+    Cred2 = #{name => "secret1", type => <<"textarea">>, value => <<"secret">>},
+    Cred3 = #{name => "secret2", type => <<"textarea">>, value => <<"#{id => <<\"secret\">>}">>},
+    Cred4 = #{name => "secret3", type => <<"textfile">>, value => <<"secret">>},
+    Cred5 = #{name => "secret4", type => <<"textfile">>, value => <<"secretlines">>},
     Interface = <<"test interface">>,
     Params = [],
 
@@ -56,36 +57,46 @@ request_test() ->
 
     {ok, UserInfo0} = tts_userinfo:new(),
     {ok, UserInfo1} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+    {ok, UserInfo2} = tts_userinfo:update_iss_sub(<<"iss">>, <<"su">>, UserInfo0),
+    {ok, UserInfo3} = tts_userinfo:update_iss_sub(<<"other">>, <<"sub">>, UserInfo0),
 
     {ok, Pid} = tts_plugin:start_link(),
-    {ok, #{id := <<"123">>, entries := [Cred1]}} =
-        tts_plugin:request(Service1, UserInfo1, Interface, Params),
+    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred1]}},
+        tts_plugin:request(Service1, UserInfo1, Interface, Params)),
 
-    {ok, #{id := <<"123">>, entries := [Cred2]}} =
-        tts_plugin:request(Service2, UserInfo1, Interface, Params),
+    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred2]}},
+        tts_plugin:request(Service2, UserInfo1, Interface, Params)),
 
-    %% {ok, #{id := <<"123">>, entries := [Cred3]}} =
-    %%     tts_plugin:request(Service3, UserInfo1, Interface, Params),
+    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred3]}},
+        tts_plugin:request(Service3, UserInfo1, Interface, Params)),
 
-    {ok, #{id := <<"123">>, entries := [Cred4]}} =
-        tts_plugin:request(Service4, UserInfo1, Interface, Params),
+    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred4]}},
+        tts_plugin:request(Service4, UserInfo1, Interface, Params)),
 
-    {ok, #{id := <<"123">>, entries := [Cred5]}} =
-        tts_plugin:request(Service5, UserInfo1, Interface, Params),
+    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred5]}},
+        tts_plugin:request(Service5, UserInfo1, Interface, Params)),
 
-    %% {error, {script, <<>>}, []} = tts_plugin:request(Service1, UserInfo2,
-    %%                                                      Interface, Token,
-    %%                                                      Params),
-    %% {error, {missing_state, Service1},  []} = tts_plugin:request(Service1,
-    %%                                                                   UserInfo3,
-    %%                                                                   Interface,
-    %%                                                                   Token,
-    %%                                                                   Params),
-    %% {error, {internal, just_because}, []} = tts_plugin:request(Service1,
-    %%                                                                UserInfo4,
-    %%                                                                Interface,
-    %%                                                                Token,
-    %%                                                                Params),
+    ?assertEqual({error,#{log_msg => <<"logged">>,user_msg => <<"some message">>}},
+                 tts_plugin:request(Service1, UserInfo2, Interface, Params)),
+
+    ?assertEqual({error, limit_reached},
+                 tts_plugin:request(Service2, UserInfo2, Interface, Params)),
+
+    {error, #{user_msg := _, log_msg := _}} =
+                 tts_plugin:request(Service3, UserInfo2, Interface, Params),
+
+    {error, #{user_msg := _, log_msg := _}} =
+                 tts_plugin:request(Service4, UserInfo2, Interface, Params),
+
+    {error, #{user_msg := _, log_msg := _}} =
+                 tts_plugin:request(Service5, UserInfo2, Interface, Params),
+
+    ?assertEqual({error, service_disabled},
+                 tts_plugin:request(Service6, UserInfo2, Interface, Params)),
+
+
+    ?assertEqual({error, user_not_allowed},
+                 tts_plugin:request(Service1, UserInfo3, Interface, Params)),
 
 
     ok = tts_plugin:stop(),
@@ -94,74 +105,32 @@ request_test() ->
     ok = stop_meck(Meck),
     ok.
 
-%% revoke_test() ->
-%%     CredId1 = <<"some credential id1">>,
-%%     CredId2 = <<"some credential id2">>,
-%%     CredId3 = <<"some credential id3">>,
-%%     CredId4 = <<"some credential id4">>,
-%%     CredId5 = <<"some credential id5">>,
-%%     ServiceId = <<"ssh">>,
-%%     UserId1 = <<"foo">>,
-%%     UserId2 = <<"bar">>,
-%%     UserId3 = <<"joe">>,
-%%     UserId4 = <<"ann">>,
-%%     UserInfo1 = #{site => #{uid => UserId1}},
-%%     UserInfo2 = #{site => #{uid => UserId2}},
-%%     UserInfo3 = #{site => #{uid => UserId3}},
-%%     UserInfo4 = #{site => #{uid => UserId4}},
+revoke_test() ->
+    {ok, Meck} = start_meck(),
+    {ok, UserInfo0} = tts_userinfo:new(),
+    {ok, UserInfo1} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+    CredId1 = <<"some credential id1">>,
+    CredId2 = <<"some credential id2">>,
+    CredId3 = <<"some credential id3">>,
+    CredId6 = <<"some credential id6">>,
 
-%%     CredState = <<"some_cred">>,
-%%     RevokeResult = <<"some info">>,
-%%     MeckModules = [tts_data_sqlite, tts_plugin_sup, tts_cred_worker],
-%%     MyPid = self(),
-%%     Cred = #{ service_id => ServiceId, cred_state => CredState},
-%%     GetFun = fun(CredentialId) ->
-%%                      NewCred = maps:put(cred_id, CredentialId, Cred),
-%%                      case CredentialId of
-%%                          CredId1 -> {ok, maps:put(user_id, UserId1, NewCred)};
-%%                          CredId2 -> {ok, maps:put(user_id, UserId2, NewCred)};
-%%                          CredId3 -> {ok, maps:put(user_id, UserId3, NewCred)};
-%%                          CredId4 -> {error, not_found};
-%%                          _ -> {ok, maps:put(userid, UserId1, NewCred)}
-%%                      end
-%%              end,
-%%     DelFun = fun(UserId, _CredentialId) ->
-%%                      case UserId of
-%%                          UserId1 -> ok;
-%%                          UserId2 -> ok;
-%%                          UserId3 -> ok;
-%%                          _ -> {error, should_not_happen}
-%%                     end
-%%              end,
-%%     RevokeFun = fun(Service, UserInfo, _Par, Pid) ->
-%%                          Service = ServiceId,
-%%                          #{site := #{uid := User}} = UserInfo,
-%%                          Pid = MyPid,
-%%                          case User of
-%%                              UserId1 -> {ok, #{result => RevokeResult,
-%%                                               state => CredState}, []};
-%%                              UserId2 -> {ok, #{
-%%                                            result => RevokeResult,
-%%                                            error => <<>>}, []};
-%%                              _ -> {error, just_because, []}
-%%                          end
-%%                  end,
-%%     ok = test_util:meck_new(MeckModules),
-%%     ok = meck:expect(tts_data_sqlite, credential_remove, DelFun),
-%%     ok = meck:expect(tts_data_sqlite, credential_get, GetFun),
-%%     ok = meck:expect(tts_plugin_sup, new_worker, fun() -> {ok, MyPid} end),
-%%     ok = meck:expect(tts_cred_worker, revoke, RevokeFun),
-
-%%     {ok, Pid} = tts_plugin:start_link(),
-%%     {ok, RevokeResult, []} = tts_plugin:revoke(CredId1, UserInfo1),
-%%     {error, {script, <<>>}, []} = tts_plugin:revoke(CredId2, UserInfo2),
-%%     {error, {internal, just_because}, []} = tts_plugin:revoke(CredId3, UserInfo3),
-%%     {error, not_found, []} =  tts_plugin:revoke(CredId4, UserInfo4),
-%%     {error, bad_user, []} = tts_plugin:revoke(CredId5, UserInfo4),
-%%     ok = tts_plugin:stop(),
-%%     ok = test_util:wait_for_process_to_die(Pid,100),
-%%     ok = test_util:meck_done(MeckModules),
-%%     ok.
+    {ok, Pid} = tts_plugin:start_link(),
+    {ok, #{}} = tts_plugin:revoke(CredId1, UserInfo1),
+    {error, #{user_msg := _, log_msg := _}} =
+        tts_plugin:revoke(CredId2, UserInfo1),
+    {error, #{user_msg := _, log_msg := _}} =
+        tts_plugin:revoke(CredId3, UserInfo1),
+    application:unset_env(tts, allow_dropping_credentials),
+    {error, #{user_msg := _, log_msg := _}} =
+        tts_plugin:revoke(CredId6, UserInfo1),
+    application:set_env(tts, allow_dropping_credentials, true),
+    {ok, #{}} =
+        tts_plugin:revoke(CredId6, UserInfo1),
+    application:unset_env(tts, allow_dropping_credentials),
+    ok = tts_plugin:stop(),
+    ok = test_util:wait_for_process_to_die(Pid,100),
+    ok = stop_meck(Meck),
+    ok.
 
 start_meck() ->
     Service1 = <<"ssh1">>,
@@ -169,17 +138,29 @@ start_meck() ->
     Service3 = <<"ssh3">>,
     Service4 = <<"ssh4">>,
     Service5 = <<"ssh5">>,
+    Service6 = <<"ssh6">>,
+    CredId1 = <<"some credential id1">>,
+    CredId2 = <<"some credential id2">>,
+    CredId3 = <<"some credential id3">>,
+    CredId4 = <<"some credential id4">>,
+    CredId5 = <<"some credential id5">>,
+    CredId6 = <<"some credential id6">>,
+    Cred1State = <<"state1">>,
+    Cred2State = <<"state1">>,
+    Cred3State = <<"state1">>,
+    Cred4State = <<"state1">>,
+    Cred5State = <<"state1">>,
     Cred1 = #{name => "password", type => <<"text">>, value => <<"secret">>},
-    Cred2 = #{name => "secret file", type => <<"textarea">>, value => <<"secret">>},
-    Cred3 = #{name => "secret file", type => <<"textarea">>, value => #{id => <<"secret">>}},
-    Cred4 = #{name => "secret file", type => <<"textfile">>, value => <<"secret">>},
-    Cred5 = #{name => "secret file", type => <<"textfile">>, value => <<"secretlines">>},
+    Cred2 = #{name => "secret1", type => <<"textarea">>, value => <<"secret">>},
+    Cred3 = #{name => "secret2", type => <<"textarea">>, value => #{id => <<"secret">>}},
+    Cred4 = #{name => "secret3", type => <<"textfile">>, value => <<"secret">>},
+    Cred5 = #{name => "secret4", type => <<"textfile">>, value => <<"secretlines">>},
     MyPid = self(),
     Interface = <<"test interface">>,
 
     CredState = <<"some_cred">>,
     UserId1 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoic3ViIn0">>,
-    %% UserId2 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoi3ViIn0">>,
+    UserId2 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoic3UifQ">>,
     %% UserId3 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoi3ViIn0">>,
     MeckModules = [tts_data_sqlite, tts_plugin_sup, tts_plugin_runner, tts_service],
     ok = test_util:meck_new(MeckModules),
@@ -188,8 +169,24 @@ start_meck() ->
              end,
     GetCredFun = fun(CredId) ->
                          case CredId of
-                             <<"cred1">> ->
-                                 {ok, #{user_id => UserId1}};
+                             CredId1 ->
+                                 {ok, #{user_id => UserId1, service_id => Service1,
+                                       cred_id => CredId, cred_state => Cred1State}};
+                             CredId2 ->
+                                 {ok, #{user_id => UserId1, service_id => Service2,
+                                       cred_id => CredId, cred_state => Cred2State}};
+                             CredId3 ->
+                                 {ok, #{user_id => UserId1, service_id => Service3,
+                                       cred_id => CredId, cred_state => Cred3State}};
+                             CredId4 ->
+                                 {ok, #{user_id => UserId1, service_id => Service4,
+                                       cred_id => CredId, cred_state => Cred4State}};
+                             CredId5 ->
+                                 {ok, #{user_id => UserId1, service_id => Service5,
+                                       cred_id => CredId, cred_state => Cred5State}};
+                             CredId6 ->
+                                 {ok, #{user_id => UserId1, service_id => Service6,
+                                       cred_id => CredId, cred_state => Cred5State}};
                              _ ->
                                  {ok, #{user_id => no_one}}
                          end
@@ -197,8 +194,10 @@ start_meck() ->
     GetCountFun = fun(User, Service) ->
                           io:format("userid: ~p",[User]),
                          case {User, Service} of
-                             {UserId1, <<"ssh1">>} ->
+                             {UserId1, Service1} ->
                                  {ok, 1};
+                             {UserId2, Service2} ->
+                                 {ok, 101};
                              _ ->
                                  {ok, 0}
                          end
@@ -209,6 +208,13 @@ start_meck() ->
                      CredState = State,
                      CredId = <<"123">>,
                      {ok, CredId}
+             end,
+    DelFun = fun(UserId, _CredentialId) ->
+                     case UserId of
+                         UserId1 -> ok;
+                         UserId2 -> ok;
+                         _ -> {error, should_not_happen}
+                    end
              end,
     RequestFun = fun(Service, UserInfo, _Par, _Queue, Pid) ->
                          {ok, User}  = tts_userinfo:return(id, UserInfo),
@@ -234,13 +240,43 @@ start_meck() ->
                                  {ok, #{result => <<"ok">>,
                                         credential => [Cred5],
                                         state => CredState}, []};
-                             %% {UserId2,_} -> {ok, #{
-                             %%                   credential => [Cred1],
-                             %%                   error => <<>>}, []};
+                             {UserId2, Service1} -> {ok, #{
+                                               result => <<"error">>,
+                                               user_msg => <<"some message">>,
+                                               log_msg => <<"logged">>
+                                               }, []};
+                             {UserId2, Service3} -> {ok, #{
+                                               user_msg => <<"some message">>,
+                                               log_msg => <<"logged">>
+                                               }, []};
+                             {UserId2, Service4} -> {error, #{
+                                               result => <<"error">>,
+                                               log_msg => <<"logged">>
+                                               }, []};
+                             {UserId2, Service5} -> {ok, #{
+                                               result => <<"ok">>,
+                                               log_msg => <<"logged">>
+                                               }, []};
                              %% {UserId3, _} -> {ok, #{credential => [Cred1]}, []};
                              _ -> {error, just_because, []}
                          end
                  end,
+    RevokeFun = fun(Service, UserInfo, _Par, _Queue, Pid) ->
+                         %% Service = ServiceId,
+                        {ok, UserId} = tts_userinfo:return(id, UserInfo),
+                        Pid = MyPid,
+                        case {UserId, Service} of
+                            {UserId1, Service1} -> {ok, #{result => <<"ok">>}, []};
+                            {UserId1, Service2} -> {ok, #{result => <<"error">>,
+                                                          user_msg => <<"user">>,
+                                                          log_msg => <<"log">>
+                                                         }, []};
+                            {UserId1, Service3} -> {ok, #{result => <<"error">>,
+                                                          log_msg => <<"log">>
+                                                         }, []};
+                            _ -> {error, just_because, []}
+                        end
+                end,
     AllowSame = fun(SerId) ->
                             case SerId of
                                 Service1 -> true;
@@ -249,21 +285,36 @@ start_meck() ->
                     end,
     NewRunner = fun() -> {ok, self()} end,
     GetQueue = fun(_) -> {ok, queue_id} end,
-    IsEnabled = fun(_) -> true end,
-    IsAllowd = fun(_, _) -> true end,
+    IsEnabled = fun(ServiceId) ->
+                       not (Service6 == ServiceId)
+                end,
+    IsAllowd = fun(UserInfo, _) ->
+                       {ok, UserId} = tts_userinfo:return(id, UserInfo),
+                       case UserId of
+                           UserId1 -> true;
+                           UserId2 -> true;
+                           _ -> false
+                       end
+               end,
     CredLimit = fun(_) -> {ok, 100} end,
 
+    Exists = fun(ServiceId) ->
+                    not( (ServiceId == Service6))
+             end,
     ok = meck:expect(tts_data_sqlite, credential_get_list, GetFun),
     ok = meck:expect(tts_data_sqlite, credential_get, GetCredFun),
     ok = meck:expect(tts_data_sqlite, credential_get_count, GetCountFun),
     ok = meck:expect(tts_data_sqlite, credential_add, AddFun),
+    ok = meck:expect(tts_data_sqlite, credential_remove, DelFun),
     ok = meck:expect(tts_plugin_sup, new_worker, NewRunner),
     ok = meck:expect(tts_plugin_runner, request, RequestFun),
+    ok = meck:expect(tts_plugin_runner, revoke, RevokeFun),
     ok = meck:expect(tts_service, get_queue, GetQueue),
     ok = meck:expect(tts_service, is_enabled, IsEnabled),
     ok = meck:expect(tts_service, is_allowed, IsAllowd),
     ok = meck:expect(tts_service, get_credential_limit, CredLimit),
     ok = meck:expect(tts_service, allows_same_state, AllowSame),
+    ok = meck:expect(tts_service, exists, Exists),
     {ok, {MeckModules}}.
 
 
