@@ -364,7 +364,6 @@ post_json_test() ->
                     ok
             end,
     ok = lists:foldl(Test,ok,Requests),
-    %% ok = test_util:meck_done(MeckModules),
     application:unset_env(tts, ep_main),
     ok = stop_meck(Meck),
     ok.
