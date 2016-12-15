@@ -182,7 +182,7 @@ handle_result(ok, Map, Log, #{action := request}) ->
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
 handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := request} ) ->
     %% a valid error response
-    LogMsg = maps:get(log_msg, Map, <<"">>),
+    LogMsg = log_msg(Map, UMsg),
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
 handle_result(error, Map, _Log, #{ action := request})->
     %% a bad error response
@@ -200,7 +200,7 @@ handle_result(ok, _, _Log, #{action := revoke} = Info) ->
     remove_credential(UserId, CredId);
 handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := revoke} ) ->
     %% a valid error response
-    LogMsg = maps:get(log_msg, Map, <<"">>),
+    LogMsg = log_msg(Map, UMsg),
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
 handle_result(error, Map, Log, #{ action := revoke})->
     %% a bad error response
@@ -239,6 +239,9 @@ handle_result(Result, Map, _Log, Info) ->
     UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg => LogMsg}).
 
+
+log_msg(Map, UMsg) ->
+    maps:get(log_msg, Map, io_lib:format("error response: ~p", [UMsg])).
 
 
 
