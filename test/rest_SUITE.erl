@@ -63,9 +63,9 @@ init_per_suite(Conf) ->
                   plugin_timeout => 10000}],
     ProviderList = [#{client_id => <<"1234">>,
                    client_secret => <<"secret">>,
-                   config_endpoint => <<"https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration">>,
-                   description => <<"INDIGO IAM">>,
-                   id => <<"iam">>,
+                   description => <<"Google">>,
+                   config_endpoint=> <<"https://accounts.google.com/.well-known/openid-configuration">>,
+                   id => <<"google">>,
                    scopes => [<<"openid">>,<<"profile">>]}],
     application:set_env(tts, service_list, ServiceList),
     application:set_env(tts, provider_list, ProviderList),
@@ -155,7 +155,7 @@ rest_communication_v2(_Config) ->
 
 rest_communication(Version) ->
     mock_oidcc(),
-    Issuer = <<"https://iam-test.indigo-datacloud.eu/">>,
+    Issuer = <<"https://accounts.google.com">>,
 
     {ok, ProviderList} = perform_rest_request("lsprov", Version),
     {ok, _ProvId} = validate_provider_list(ProviderList, Issuer),
@@ -239,7 +239,7 @@ perform_rest_request(Params, ProtVer) ->
                       1 -> " --json -p 1 "
                   end,
     Exec = "/tmp/tts_common_test/ttsc/ttsc",
-    Cmd = "export TTSC_TOKEN=MockToken && export TTSC_ISSUER=https://iam-test.indigo-datacloud.eu/ && export TTSC_URL=http://localhost:8080 && "++Exec++ExtraParams++Params,
+    Cmd = "export TTSC_TOKEN=MockToken && export TTSC_ISSUER=https://accounts.google.com && export TTSC_URL=http://localhost:8080 && "++Exec++ExtraParams++Params,
     Result = os:cmd(Cmd),
     ct:log("executed '~s ~s ~s' with result ~p~n",[Exec, ExtraParams, Params, Result]),
     case jsone:try_decode(list_to_binary(Result), [{keys, attempt_atom}, {object_format, map}]) of
