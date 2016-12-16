@@ -1,37 +1,27 @@
 %% @doc the description of the OpenId Connect provider
 {mapping, "openid.$id.description", "tts.provider_list", [
-          {datatype, string},
-          {commented, "INDIGO Datacloud Identity and Access Management (IAM)"},
-          {include_default, "iam"}
+          {datatype, string}
           ]}.
 
 %% @doc the client id of TTS at the OpenId Connect provider
 {mapping, "openid.$id.client_id", "tts.provider_list.a", [
-          {datatype, string},
-          {commented, "e70e7190-f19a-44be-8f6c-d64cad3771b9"},
-          {include_default, "iam"}
+          {datatype, string}
           ]}.
 
 %% @doc the client secret of TTS at the OpenId Connect provider
 {mapping, "openid.$id.client_secret", "tts.provider_list.b", [
-          {datatype, string},
-          {commented, "AN5pY379_Z_1jgiiAzmQFB4lYMsBYJOAQrCoTtf2stPA6dMghW5KAoKob4zCDCg_yKBEHe8zKP2KuiWxV34zWzw"},
-          {include_default, "iam"}
+          {datatype, string}
           ]}.
 
 %% @doc the configuration endpoint of the OpenId Connect provider
 {mapping, "openid.$id.config_endpoint", "tts.provider_list.c", [
-          {datatype, string},
-          {commented, "https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration"},
-          {include_default, "iam"}
+          {datatype, string}
           ]}.
 
 
 %% @doc the scopes to request the OpenId Connect provider
 {mapping, "openid.$id.request_scopes", "tts.provider_list.d", [
-          {datatype, string},
-          {commented, "openid, profile"},
-          {include_default, "iam"}
+          {datatype, string}
           ]}.
 
 

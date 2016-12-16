@@ -2,6 +2,7 @@
 
 %% @doc the hostname to use for redirects etc
 {mapping, "hostname", "tts.hostname", [
+          {commented, "localhost"},
           {default, "localhost"}
           ]}.
 
@@ -134,6 +135,7 @@
 %% all credentials of unconfigured services can be revoked
 {mapping, "allow_dropping_credentials", "tts.allow_dropping_credentials", [
           {datatype ,    {enum ,  [true, false]}},
+          {commented, false},
           {default, false}
           ]}.
 

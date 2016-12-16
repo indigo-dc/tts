@@ -56,7 +56,7 @@ run: rel
 install_deps:
 	$(REBAR) install_deps
 
-sample_config: rel
+sample_config:
 	./utils/install_sample_config
 
 
