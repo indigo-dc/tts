@@ -87,7 +87,9 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 start_database() ->
+    lager:debug("Init: starting ets database"),
     ok = tts_data:init(),
+    lager:debug("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
     ok = tts_data_sqlite:reconfigure(),
     case tts_data_sqlite:is_ready() of
         ok -> ok;
@@ -99,6 +101,7 @@ start_database() ->
 
 
 add_openid_provider() ->
+    lager:debug("Init: adding openid provider"),
     LocalEndpoint = local_endpoint(),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
@@ -107,15 +110,22 @@ add_openid_provider() ->
 add_openid_provider([#{id := Id, description := Desc, client_id := ClientId,
                        client_secret := Secret, scopes := RequestScopes,
                        config_endpoint := ConfigEndpoint}|T], LocalEndpoint) ->
-    {ok, _InternalId, _Pid} =
+        lager:debug("Init: adding provider ~p", [Id]),
+    try
+        {ok, _InternalId, _Pid} =
         oidcc:add_openid_provider(Id, Id, Desc, ClientId, Secret,
                                   ConfigEndpoint, LocalEndpoint, RequestScopes),
-    add_openid_provider(T, LocalEndpoint);
+        add_openid_provider(T, LocalEndpoint)
+    catch Error:Reason ->
+            lager:critical("error occured OpenId Connect provider ~p: '~p' ~p",
+                           [Id, Error, Reason])
+    end;
 add_openid_provider([], _) ->
     ok.
 
 
 add_services() ->
+    lager:debug("Init: adding services"),
     %% copy the version into the config
     %% only using env values, so everything can be tested
     Vsn =  case application:get_key(tts, vsn) of
@@ -127,10 +137,16 @@ add_services() ->
     ok = add_services(ServiceList),
     ok.
 
-add_services([ConfigMap | T]) ->
-    {ok, Id} = tts_service:add(ConfigMap),
-    tts_service:update_params(Id),
-    add_services(T);
+add_services([#{id := Id } = ConfigMap | T]) ->
+    lager:debug("Init: adding service ~p", [Id]),
+    try
+        {ok, Id} = tts_service:add(ConfigMap),
+        ok = tts_service:update_params(Id)
+     catch Error:Reason ->
+            lager:critical("error occured during adding service ~p: '~p' ~p",
+                           [Id, Error, Reason])
+     end,
+     add_services(T);
 add_services(undefined) ->
     ok;
 add_services([]) ->
@@ -139,6 +155,7 @@ add_services([]) ->
 
 
 start_web_interface() ->
+    lager:debug("Init: starting web interface"),
     oidcc_client:register(tts_oidc_client),
     EpMain = ?CONFIG(ep_main),
     EpOidc = tts_http_util:relative_path("oidc"),
@@ -203,4 +220,5 @@ local_endpoint() ->
 
 
 stop() ->
+    lager:debug("Init: done"),
     stop(self()).

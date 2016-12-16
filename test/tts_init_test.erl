@@ -18,7 +18,7 @@ basic_init_test() ->
 advanced_init_test() ->
     {ok, Meck} = start_meck(),
     {ok, Pid} = tts_init:start_link(),
-    ServiceList = [#{}, #{}],
+    ServiceList = [#{id => <<"info">>}, #{id => <<"ssh">>}],
     ProviderList = [#{client_id => <<"1234">>,
                       client_secret => <<"seCret">>,
                       config_endpoint => <<"https://some.config">>,

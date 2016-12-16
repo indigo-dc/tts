@@ -112,8 +112,14 @@ handle_call({credential_remove, UserId, CredentialId}, _From
             , #state{con=Con}=State) ->
     ok = credential_remove(UserId, CredentialId, Con),
     {reply, ok, State};
-handle_call(is_ready, _From, State) ->
-    {reply, ok, State};
+handle_call(is_ready, _From, #state{con=Con} = State) ->
+    Result = case Con of
+                 undefined ->
+                     {error, not_ready};
+                 _ ->
+                     ok
+             end,
+    {reply, Result, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
@@ -227,9 +233,14 @@ create_random_uuid(Con) ->
 reconfigure(undefined, #state{con=undefined} = State) ->
     State;
 reconfigure(NewDB, #state{con=undefined}) ->
-    {ok, Con} = esqlite3:open(NewDB),
-    ok = create_tables_if_needed(Con),
-    #state{con=Con};
+    case esqlite3:open(NewDB) of
+        {ok, Con} ->
+            ok = create_tables_if_needed(Con),
+            #state{con=Con};
+        {error, Reason} ->
+            lager:critical("error opening the sqlite database ~p", [Reason]),
+            #state{con=undefined}
+    end;
 reconfigure(NewDB, #state{con=Con} = State) ->
     esqlite3:close(Con),
     reconfigure(NewDB, State#state{con=undefined}).
