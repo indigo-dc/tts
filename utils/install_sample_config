@@ -1,17 +1,47 @@
 #!/bin/bash
 DATA_DIR=~/.config/tts
 BACKUPDIR=~/.config/tts_`date +%Y%m%d_%H%M%S`
-CONF_FILE=_build/default/rel/tts/etc/tts.conf
 
 if [ -d "$DATA_DIR" ]; then
+    echo
+    echo
     echo "storing backup of current config in $BACKUPDIR"
+    echo
     mv "$DATA_DIR" "$BACKUPDIR"
 fi
-
-echo -n "copy configuration "
-echo -n "."
 mkdir -p $DATA_DIR
-echo -n "."
-cp $CONF_FILE $DATA_DIR
-echo -n "."
-echo " done"
+cd $DATA_DIR
+echo
+echo
+echo "*** installing info plugin ***"
+echo
+git clone https://github.com/indigo-dc/tts_plugin_info.git
+cp tts_plugin_info/plugin/info.py .
+rm -rf tts_plugin_info
+
+echo
+echo
+echo "*** configuring TTS ***"
+echo
+echo "hostname = localhost" > tts.conf
+echo "port = 8080" >> tts.conf
+echo "sqlite_file = $HOME/.config/tts/tts.db" >> tts.conf
+echo "openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)" >> tts.conf
+echo "openid.iam.client_id = e70e7190-f19a-44be-8f6c-d64cad3771b9" >> tts.conf
+echo "openid.iam.client_secret = AN5pY379_Z_1jgiiAzmQFB4lYMsBYJOAQrCoTtf2stPA6dMghW5KAoKob4zCDCg_yKBEHe8zKP2KuiWxV34zWzw" >> tts.conf
+echo "openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration" >> tts.conf
+echo "openid.iam.request_scopes = openid, profile" >> tts.conf
+
+echo
+echo
+echo "*** configuring service ***"
+echo
+echo "service.info.description = Simple Info Service" >> tts.conf
+echo "service.info.credential_limit = 1 " >> tts.conf
+echo "service.info.connection.type = local" >> tts.conf
+echo "service.info.cmd = $HOME/.config/tts/info.py" >> tts.conf
+echo "service.info.parallel_runner = infinite " >> tts.conf
+echo "service.info.authz.allow.any.sub.any = true" >> tts.conf
+
+echo "done, ready to start TTS, just type:"
+echo "make run"
