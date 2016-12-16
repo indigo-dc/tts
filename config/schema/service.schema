@@ -1,4 +1,4 @@
-%% @doc the description of the service
+%% @doc the description of the service, as shown to the user
 {mapping, "service.$id.description", "tts.service_list", [
           {datatype, string}
           ]}.
@@ -29,6 +29,7 @@
 {mapping, "service.$id.plugin_timeout", "tts.service_list.e", [
           {datatype, [{duration, ms}, {atom, infinity}] }
           ]}.
+
 %% @doc if enabled the plugin will get the access token, use this
 %% option with caution! default is 'false'
 {mapping, "service.$id.pass_access_token", "tts.service_list.f", [
@@ -80,22 +81,25 @@
           ]}.
 
 
-%% @doc the authorization configuration for the service
+%% @doc wether to hide the service from unauthorized users, default is false
 {mapping, "service.$id.authz.hide", "tts.service_list.w", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
-%% @doc the authorization configuration for the service
+%% @doc the tooltip, when unauthorized, shown to the user
 {mapping, "service.$id.authz.tooltip", "tts.service_list.x", [
           {datatype, string}
           ]}.
 
-%% @doc the authorization configuration for the service
+%% @doc the authorization configuration for the service, who is
+%% allowed to access the service, if not configured no one can
+%% use the service
 {mapping, "service.$id.authz.allow.$provider.$oidckey.$operation", "tts.service_list.y", [
           {datatype, string}
           ]}.
 
-%% @doc the authorization configuration for the service
+%% @doc the authorization configuration for the service, who will be
+%% denied to use the service even if in 'allowed'
 {mapping, "service.$id.authz.forbid.$provider.$oidckey.$operation", "tts.service_list.z", [
           {datatype, string}
           ]}.

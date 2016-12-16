@@ -1,4 +1,5 @@
 %% @doc the description of the OpenId Connect provider
+%% this description is shown to the user
 {mapping, "openid.$id.description", "tts.provider_list", [
           {datatype, string}
           ]}.

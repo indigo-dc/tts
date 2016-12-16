@@ -34,11 +34,8 @@ q().
 The sample configuration includes a development [INDIGO Idetntity and Access Management (IAM)](https://github.com/indigo-iam/iam)
 configuration that only runs at localhost:8080 and a simple Info service.
 
-Just edit the configuration file to add more OpenId Connec Provider or services.
+Just edit the configuration file to add more OpenId Connect Provider or services.
 The steps needed to do this are described in the [Configuration Guide](https://indigo-dc.gitbooks.io/token-translation-service/content/config.html)
-
-Provider, the INDIGO Identity and Access Managent (IAM) [IAM on Github](https://github.com/indigo-iam/iam)
-
 
 
 ## Documentation
