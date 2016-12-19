@@ -1,6 +1,5 @@
-
-
-%% @doc the hostname to use for redirects etc
+%% @doc the hostname of the tts, use localhost
+%% for developing
 {mapping, "hostname", "tts.hostname", [
           {commented, "localhost"},
           {default, "localhost"}
