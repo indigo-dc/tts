@@ -10,16 +10,28 @@ that can be adapted by a site-administrator.
 
 ## Quickstart
 The Token Translation Service (TTS) requires [Erlang](http://www.erlang.org/) OTP 18.1 or newer to run
-(due to a bug in the cover compiler OTP 18.3 or newer is needed to run the tests)
+(due to a bug in the cover compiler OTP 18.3 or newer is needed to run the tests). For configuration the
+TTS uses [cuttlefish](https://github.com/basho/cuttlefish), which needs to be installed into the Erlang
+Runtime Sytem directory. Scripts to support you are in the utils directory of this repository.
 
-The following lines clone the git repository and creates the default configuration
-in `~/.config/tts` and installs a sample plugin, called 'info' into the same directory:
+First clone the repository and change into the cloned directory:
 ```
 git clone https://github.com/indigo-dc/tts.git
 cd tts
+```
+If you do not have Erlang installed and want a fast and easy setup run:
+```
+./utils/prepare_system.sh
+```
+This will install Erlang and cuttlefish onto you system.
+
+Now copy the sample configuration and adjust it to your needs, the config will be at
+`~/.config/tts`:
+```
 make sample_config
 ```
-Now just fire up TTS:
+
+Once you are satisfied with your config or just to start TTS after some configuration changes:
 ```
 make run
 ```
