@@ -20,13 +20,13 @@ echo "preparing the system ..."
 echo "distribution: $DISTRIBUTION"
 echo "utils dir: $UTILS_DIR"
 echo "current dir: $CURRENT_DIR"
-echo " "
-echo "installing needed packages"
 if [ "$DISTRIBUTION" = "unknown" ]; then
     echo "ERROR: unknown distribution"
     exit 1
 fi
 
+echo " "
+echo " "
 echo "*** INSTALLING PACKAGES ***"
 cd $UTILS_DIR
 case "$DISTRIBUTION" in
@@ -41,13 +41,20 @@ case "$DISTRIBUTION" in
         ;;
 esac
 
+echo " "
+echo " "
 echo "*** BUILDING AND INSTALLING ERLANG ***"
 cd $UTILS_DIR
 ./build_install_erlang.sh
 
+echo " "
+echo " "
 echo "*** BUILDING AND INSTALLING CUTTLEFISH ***"
 cd $UTILS_DIR
 ./build_install_cuttlefish.sh
 
 cd $CURRENT_DIR
-echo "done"
+echo " "
+echo " "
+echo "*** SYSTEM SETUP DONE ***"
+echo " "

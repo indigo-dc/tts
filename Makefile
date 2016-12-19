@@ -18,6 +18,7 @@ check:
 clean: check
 	$(REBAR) do cover -r, clean -a
 	rm -rf _build/default/plugins
+	rm -rf _build/default/test
 	rm -rf _build/default/bin
 
 eunit: check
