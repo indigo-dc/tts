@@ -6,7 +6,8 @@ mkdir -p $TEMP_PATH
 cd $TEMP_PATH
 git clone https://github.com/indigo-dc/ttsc
 cd ttsc
-make compile
+./utils/compile.sh
+echo -n "TTSc version: " && ./ttsc --version
 
 cd $TEMP_PATH
 git clone https://github.com/indigo-dc/tts_plugin_info
