@@ -4,10 +4,10 @@ TEMP_PATH=/tmp/tts_common_test
 rm -rf $TEMP_PATH
 mkdir -p $TEMP_PATH
 cd $TEMP_PATH
-git clone https://github.com/indigo-dc/ttsc
-cd ttsc
+git clone https://github.com/indigo-dc/wattson
+cd wattson
 ./utils/compile.sh
-echo -n "TTSc version: " && ./ttsc --version
+echo -n "wattson version: " && ./wattson --version
 
 cd $TEMP_PATH
 git clone https://github.com/indigo-dc/tts_plugin_info
