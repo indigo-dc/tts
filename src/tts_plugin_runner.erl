@@ -17,6 +17,8 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
 
+-include("tts.hrl").
+
 %% API.
 -define(TIMEOUT, 20000).
 
@@ -264,7 +266,7 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
     AddAccessToken = maps:get(pass_access_token, ServiceInfo, false),
     ConnType = maps:get(type, ConnInfo, local),
-    {ok, Version} = application:get_env(tts, vsn),
+    {ok, Version} = ?CONFIG_(vsn),
     ParamUpdate =
         case Action == parameter of
             false ->

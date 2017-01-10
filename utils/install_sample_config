@@ -1,6 +1,6 @@
 #!/bin/bash
-DATA_DIR=~/.config/tts
-BACKUPDIR=~/.config/tts_`date +%Y%m%d_%H%M%S`
+DATA_DIR=~/.config/watts
+BACKUPDIR=~/.config/watts_`date +%Y%m%d_%H%M%S`
 
 if [ -d "$DATA_DIR" ]; then
     echo
@@ -21,27 +21,27 @@ rm -rf tts_plugin_info
 
 echo
 echo
-echo "*** configuring TTS ***"
+echo "*** configuring WaTTS ***"
 echo
-echo "hostname = localhost" > tts.conf
-echo "port = 8080" >> tts.conf
-echo "sqlite_file = $HOME/.config/tts/tts.db" >> tts.conf
-echo "openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)" >> tts.conf
-echo "openid.iam.client_id = e70e7190-f19a-44be-8f6c-d64cad3771b9" >> tts.conf
-echo "openid.iam.client_secret = AN5pY379_Z_1jgiiAzmQFB4lYMsBYJOAQrCoTtf2stPA6dMghW5KAoKob4zCDCg_yKBEHe8zKP2KuiWxV34zWzw" >> tts.conf
-echo "openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration" >> tts.conf
-echo "openid.iam.request_scopes = openid, profile" >> tts.conf
+echo "hostname = localhost" > watts.conf
+echo "port = 8080" >> watts.conf
+echo "sqlite_file = $HOME/.config/watts/watts.db" >> watts.conf
+echo "openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)" >> watts.conf
+echo "openid.iam.client_id = e70e7190-f19a-44be-8f6c-d64cad3771b9" >> watts.conf
+echo "openid.iam.client_secret = AN5pY379_Z_1jgiiAzmQFB4lYMsBYJOAQrCoTtf2stPA6dMghW5KAoKob4zCDCg_yKBEHe8zKP2KuiWxV34zWzw" >> watts.conf
+echo "openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration" >> watts.conf
+echo "openid.iam.request_scopes = openid, profile" >> watts.conf
 
 echo
 echo
 echo "*** configuring service ***"
 echo
-echo "service.info.description = Simple Info Service" >> tts.conf
-echo "service.info.credential_limit = 1 " >> tts.conf
-echo "service.info.connection.type = local" >> tts.conf
-echo "service.info.cmd = $HOME/.config/tts/info.py" >> tts.conf
-echo "service.info.parallel_runner = infinite " >> tts.conf
-echo "service.info.authz.allow.any.sub.any = true" >> tts.conf
+echo "service.info.description = Simple Info Service" >> watts.conf
+echo "service.info.credential_limit = 1 " >> watts.conf
+echo "service.info.connection.type = local" >> watts.conf
+echo "service.info.cmd = $HOME/.config/watts/info.py" >> watts.conf
+echo "service.info.parallel_runner = infinite " >> watts.conf
+echo "service.info.authz.allow.any.sub.any = true" >> watts.conf
 
-echo "done, ready to start TTS, just type:"
+echo "done, ready to start WaTTS, just type:"
 echo "make run"

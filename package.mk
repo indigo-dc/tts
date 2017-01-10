@@ -11,9 +11,9 @@ $(if $(ERLANG_BIN),,$(warning "Warning: No Erlang found in your path, this will 
 ##
 
 # Tag from git with style <tagname>-<commits_since_tag>-<current_commit_hash>
-# Ex: When on a tag:            tts-v0.0.3   (no commits since tag)
-#     For most normal Commits:  tts-v0.1.0pre1-27-g1170096
-#                                 Last tag:          tts-v0.1.0pre1
+# Ex: When on a tag:            watts-v0.0.3   (no commits since tag)
+#     For most normal Commits:  watts-v0.1.0pre1-27-g1170096
+#                                 Last tag:          watts-v0.1.0pre1
 #                                 Commits since tag: 27
 #                                 Hash of commit:    g1170096
 REPO_TAG 	:= $(shell git describe --tags)

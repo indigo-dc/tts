@@ -1,3 +1,5 @@
--define(CONFIG(K,D), application:get_env(tts, K,D)).
+-define(APPLICATION, watts).
+-define(CONFIG(K,D), application:get_env(?APPLICATION, K,D) ).
+-define(CONFIG_(K), application:get_env(?APPLICATION, K) ).
 -define(CONFIG(K), ?CONFIG(K, undefined) ).
 -define(DEBUG_MODE, ?CONFIG(debug_mode, false)).

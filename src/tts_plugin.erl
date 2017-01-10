@@ -124,7 +124,7 @@ revoke_or_drop(true, CredInfo, UserInfo ) ->
 revoke_or_drop(false, #{service_id := ServiceId,
                         cred_id := CredId}, UserInfo  ) ->
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
-    DropEnabled = application:get_env(tts, allow_dropping_credentials),
+    DropEnabled = ?CONFIG_(allow_dropping_credentials),
     UMsg = "the service does not exist, please contact the administrator",
     case DropEnabled of
         {ok, true} ->

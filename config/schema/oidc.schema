@@ -1,32 +1,32 @@
 %% @doc the description of the OpenId Connect provider
 %% this description is shown to the user
-{mapping, "openid.$id.description", "tts.provider_list", [
+{mapping, "openid.$id.description", "watts.provider_list", [
           {datatype, string}
           ]}.
 
-%% @doc the client id of TTS at the OpenId Connect provider
-{mapping, "openid.$id.client_id", "tts.provider_list.a", [
+%% @doc the client id of WATTS.at the OpenId Connect provider
+{mapping, "openid.$id.client_id", "watts.provider_list.a", [
           {datatype, string}
           ]}.
 
-%% @doc the client secret of TTS at the OpenId Connect provider
-{mapping, "openid.$id.client_secret", "tts.provider_list.b", [
+%% @doc the client secret of WATTS.at the OpenId Connect provider
+{mapping, "openid.$id.client_secret", "watts.provider_list.b", [
           {datatype, string}
           ]}.
 
 %% @doc the configuration endpoint of the OpenId Connect provider
-{mapping, "openid.$id.config_endpoint", "tts.provider_list.c", [
+{mapping, "openid.$id.config_endpoint", "watts.provider_list.c", [
           {datatype, string}
           ]}.
 
 
 %% @doc the scopes to request the OpenId Connect provider
-{mapping, "openid.$id.request_scopes", "tts.provider_list.d", [
+{mapping, "openid.$id.request_scopes", "watts.provider_list.d", [
           {datatype, string}
           ]}.
 
 
-{translation, "tts.provider_list",
+{translation, "watts.provider_list",
     fun(Conf) ->
             DescList = lists:filter(
                          fun({K, _V}) ->
