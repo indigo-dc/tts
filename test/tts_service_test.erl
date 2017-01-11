@@ -4,7 +4,7 @@
 -define(ISSUER, <<"https://iam.it">>).
 get_list_test() ->
     {ok, Meck} = start_meck(),
-    {ok, List} = tts_service:get_list(),
+    {ok, List} = watts_service:get_list(),
     ?assertEqual(4, length(List)),
     ok = stop_meck(Meck),
     ok.
@@ -16,7 +16,7 @@ get_list_for_user_test() ->
     {ok, Info} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, Info0),
 
 
-    {ok, List} = tts_service:get_list(Info),
+    {ok, List} = watts_service:get_list(Info),
     ?assertEqual(3, length(List)),
     ok = stop_meck(Meck),
     ok.
@@ -25,8 +25,8 @@ get_list_for_user_test() ->
 get_service_info_test() ->
     {ok, Meck} = start_meck(),
     ServiceId = <<"id1">>,
-    {ok, _} = tts_service:get_info(ServiceId),
-    {error, not_found} = tts_service:get_info(some_other_service),
+    {ok, _} = watts_service:get_info(ServiceId),
+    {error, not_found} = watts_service:get_info(some_other_service),
     ok = stop_meck(Meck),
     ok.
 
@@ -39,27 +39,27 @@ proxy_function_test() ->
     {ok, UserInfo} = tts_userinfo:update_iss_sub(?ISSUER, <<"sub">>, UserInfo0),
     io:format("using userinfo ~p~n",[UserInfo]),
 
-    ?assertEqual(true, tts_service:exists(Service1)),
-    ?assertEqual(true, tts_service:is_allowed(UserInfo, Service1)),
-    ?assertEqual({ok, 2}, tts_service:get_credential_limit(Service1)),
-    ?assertEqual(true, tts_service:is_enabled(Service1)),
-    ?assertEqual(false, tts_service:allows_same_state(Service1)),
-    {ok, Queue1} = tts_service:get_queue(Service1),
+    ?assertEqual(true, watts_service:exists(Service1)),
+    ?assertEqual(true, watts_service:is_allowed(UserInfo, Service1)),
+    ?assertEqual({ok, 2}, watts_service:get_credential_limit(Service1)),
+    ?assertEqual(true, watts_service:is_enabled(Service1)),
+    ?assertEqual(false, watts_service:allows_same_state(Service1)),
+    {ok, Queue1} = watts_service:get_queue(Service1),
     ?assertNotEqual(undefined, Queue1),
 
-    ?assertEqual(true, tts_service:exists(Service2)),
-    ?assertEqual(false, tts_service:is_allowed(UserInfo, Service2)),
-    ?assertEqual({ok, 1}, tts_service:get_credential_limit(Service2)),
-    ?assertEqual(false, tts_service:is_enabled(Service2)),
-    ?assertEqual(true, tts_service:allows_same_state(Service2)),
-    ?assertEqual({ok, undefined}, tts_service:get_queue(Service2)),
+    ?assertEqual(true, watts_service:exists(Service2)),
+    ?assertEqual(false, watts_service:is_allowed(UserInfo, Service2)),
+    ?assertEqual({ok, 1}, watts_service:get_credential_limit(Service2)),
+    ?assertEqual(false, watts_service:is_enabled(Service2)),
+    ?assertEqual(true, watts_service:allows_same_state(Service2)),
+    ?assertEqual({ok, undefined}, watts_service:get_queue(Service2)),
 
-    ?assertEqual(false, tts_service:exists(Unknown)),
-    ?assertEqual(false, tts_service:is_allowed(UserInfo, Unknown)),
-    ?assertEqual({ok, 0}, tts_service:get_credential_limit(Unknown)),
-    ?assertEqual(false, tts_service:is_enabled(Unknown)),
-    ?assertEqual(false, tts_service:allows_same_state(Unknown)),
-    ?assertEqual({ok, undefined}, tts_service:get_queue(Unknown)),
+    ?assertEqual(false, watts_service:exists(Unknown)),
+    ?assertEqual(false, watts_service:is_allowed(UserInfo, Unknown)),
+    ?assertEqual({ok, 0}, watts_service:get_credential_limit(Unknown)),
+    ?assertEqual(false, watts_service:is_enabled(Unknown)),
+    ?assertEqual(false, watts_service:allows_same_state(Unknown)),
+    ?assertEqual({ok, undefined}, watts_service:get_queue(Unknown)),
 
     ok = stop_meck(Meck),
     ok.
@@ -68,8 +68,8 @@ add_test() ->
     {ok, Meck} = start_meck(),
     BasicId = <<"basic_id">>,
     BasicService = #{id => BasicId},
-    ?assertEqual({ok, BasicId}, tts_service:add(BasicService)),
-    ?assertEqual({error, invalid_config}, tts_service:add(#{})),
+    ?assertEqual({ok, BasicId}, watts_service:add(BasicService)),
+    ?assertEqual({error, invalid_config}, watts_service:add(#{})),
     ok = stop_meck(Meck),
     ok.
 
@@ -78,9 +78,9 @@ params_test() ->
     Params1 = <<"params1">>,
     Params2 = <<"params2">>,
     Unknown = <<"idk">>,
-    ?assertEqual({error, not_found}, tts_service:update_params(Unknown)),
-    ?assertEqual(ok, tts_service:update_params(Params1)),
-    ?assertEqual(ok, tts_service:update_params(Params2)),
+    ?assertEqual({error, not_found}, watts_service:update_params(Unknown)),
+    ?assertEqual(ok, watts_service:update_params(Params1)),
+    ?assertEqual(ok, watts_service:update_params(Params2)),
     ok = stop_meck(Meck),
     ok.
 

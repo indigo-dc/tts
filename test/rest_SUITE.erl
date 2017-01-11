@@ -103,7 +103,7 @@ end_per_suite(Conf) ->
 
 
 service_config(_Config) ->
-    {ok, Services} = tts_service:get_list(),
+    {ok, Services} = watts_service:get_list(),
     ct:log("service configs:~n~p~n", [Services]),
     ok.
 

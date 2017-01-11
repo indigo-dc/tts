@@ -123,7 +123,7 @@ get_openid_provider_list() ->
 
 get_service_list_for(Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, ServiceList} = tts_service:get_list(UserInfo),
+    {ok, ServiceList} = watts_service:get_list(UserInfo),
     {ok, ServiceList}.
 
 get_credential_list_for(Session) ->
@@ -135,7 +135,7 @@ get_credential_list_for(Session) ->
 request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     {ok, SessionId} = tts_session:get_id(Session),
-    true = tts_service:is_enabled(ServiceId),
+    true = watts_service:is_enabled(ServiceId),
     case watts_plugin:request(ServiceId, UserInfo, Interface, Params) of
         {ok, Credential} ->
             #{id := CredId} = Credential,

@@ -150,8 +150,8 @@ add_services() ->
 add_services([#{id := Id } = ConfigMap | T]) ->
     lager:debug("Init: adding service ~p", [Id]),
     try
-        {ok, Id} = tts_service:add(ConfigMap),
-        ok = tts_service:update_params(Id)
+        {ok, Id} = watts_service:add(ConfigMap),
+        ok = watts_service:update_params(Id)
      catch Error:Reason ->
             lager:critical("error occured during adding service ~p: '~p' ~p",
                            [Id, Error, Reason])

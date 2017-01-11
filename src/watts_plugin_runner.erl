@@ -73,7 +73,7 @@ stop(Pid) ->
                                        {error, any(), list()} | {error, atom()}.
 request(ServiceId, UserInfo, Params, Queue, Pid) ->
     try
-        {ok, ServiceInfo} = tts_service:get_info(ServiceId),
+        {ok, ServiceInfo} = watts_service:get_info(ServiceId),
         Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
         gen_server:call(Pid, {request_credential, ServiceInfo, UserInfo, Params,
                               Queue}, Timeout)
@@ -90,7 +90,7 @@ request(ServiceId, UserInfo, Params, Queue, Pid) ->
                                          {error, any(), list()}|{error, atom()}.
 revoke(ServiceId, UserInfo, CredState, Queue, Pid) ->
     try
-        {ok, ServiceInfo} = tts_service:get_info(ServiceId),
+        {ok, ServiceInfo} = watts_service:get_info(ServiceId),
         Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
         gen_server:call(Pid, {revoke_credential, ServiceInfo, UserInfo,
                               CredState, Queue}, Timeout)
@@ -106,7 +106,7 @@ revoke(ServiceId, UserInfo, CredState, Queue, Pid) ->
                                                    {error, atom()}.
 get_params(ServiceId, Pid) ->
     try
-        {ok, ServiceInfo} = tts_service:get_info(ServiceId),
+        {ok, ServiceInfo} = watts_service:get_info(ServiceId),
         Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
         gen_server:call(Pid, {get_params, ServiceInfo}, Timeout)
     catch

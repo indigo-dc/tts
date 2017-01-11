@@ -67,12 +67,12 @@ exists(UserInfo, CredId) ->
 %% -spec request(binary(), binary(), tts:user_info(), binary(), map()|atom(),
 %%               list()) -> {ok, map(), list()} | {error, any(), list()}.
 request(ServiceId, UserInfo, Interface, Params) ->
-    {ok, Limit} = tts_service:get_credential_limit(ServiceId),
-    {ok, QueueName} = tts_service:get_queue(ServiceId),
+    {ok, Limit} = watts_service:get_credential_limit(ServiceId),
+    {ok, QueueName} = watts_service:get_queue(ServiceId),
     {ok, UserId} = tts_userinfo:return(id, UserInfo),
     {ok, Count} = get_credential_count(UserId, ServiceId),
-    Enabled = tts_service:is_enabled(ServiceId),
-    Allowed = tts_service:is_allowed(UserInfo, ServiceId),
+    Enabled = watts_service:is_enabled(ServiceId),
+    Allowed = watts_service:is_allowed(UserInfo, ServiceId),
     case { Allowed, Enabled, Count < Limit } of
         {true, true, true} ->
             {ok, Pid} = watts_plugin_sup:new_worker(),
@@ -101,7 +101,7 @@ revoke(CredentialId, UserInfo) ->
 
 revoke_credential({ok, #{ service_id := ServiceId, cred_state := _CredState,
                           cred_id := _CredId } = Credential}, UserInfo) ->
-    ServiceExists = tts_service:exists(ServiceId),
+    ServiceExists = watts_service:exists(ServiceId),
     revoke_or_drop(ServiceExists, Credential, UserInfo);
 revoke_credential({error, Reason}, _UserInfo) ->
     {error, Reason}.
@@ -112,7 +112,7 @@ revoke_or_drop(true, CredInfo, UserInfo ) ->
       cred_state := CredState,
       cred_id := CredId
      } = CredInfo,
-    {ok, QueueName} = tts_service:get_queue(ServiceId),
+    {ok, QueueName} = watts_service:get_queue(ServiceId),
     {ok, Pid} = watts_plugin_sup:new_worker(),
     Result=watts_plugin_runner:revoke(ServiceId, UserInfo,
                                     CredState, QueueName, Pid),
@@ -318,7 +318,7 @@ get_credential_list(UserId) ->
     watts_data_sqlite:credential_get_list(UserId).
 
 store_credential(UserId, ServiceId, Interface, CredentialState) ->
-    SameStateAllowed = tts_service:allows_same_state(ServiceId),
+    SameStateAllowed = watts_service:allows_same_state(ServiceId),
     watts_data_sqlite:credential_add(UserId, ServiceId, Interface,
                                    CredentialState, SameStateAllowed).
 
