@@ -239,7 +239,7 @@ perform_rest_request(Params, ProtVer) ->
                       2 -> " --json -p 2 ";
                       1 -> " --json -p 1 "
                   end,
-    Exec = "/tmp/tts_common_test/wattson/wattson",
+    Exec = "/tmp/watts_common_test/wattson/wattson",
     Cmd = "export WATTSON_TOKEN=MockToken && export WATTSON_ISSUER=https://accounts.google.com && export WATTSON_URL=http://localhost:8080 && "++Exec++ExtraParams++Params,
     Result = os:cmd(Cmd),
     ct:log("executed '~s ~s ~s' with result ~p~n",[Exec, ExtraParams, Params, Result]),
