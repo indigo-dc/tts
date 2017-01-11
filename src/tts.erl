@@ -102,7 +102,7 @@ does_credential_exist(Id, Session) ->
 
 does_temp_cred_exist(Id, Session) ->
     {ok, UserId} =  tts_session:get_userid(Session),
-    tts_temp_cred:exists(Id, UserId).
+    watts_temp_cred:exists(Id, UserId).
 
 
 
@@ -205,12 +205,12 @@ get_display_name_for(Session) ->
 
 store_temp_cred(Credential, Session) ->
     {ok, UserId} = tts_session:get_userid(Session),
-    {ok, Id} = tts_temp_cred:add_cred(Credential, UserId),
+    {ok, Id} = watts_temp_cred:add_cred(Credential, UserId),
     {ok, Id}.
 
 get_temp_cred(Id, Session) ->
     {ok, UserId} = tts_session:get_userid(Session),
-    tts_temp_cred:get_cred(Id, UserId).
+    watts_temp_cred:get_cred(Id, UserId).
 
 start_full_debug() ->
     %debug these modules
