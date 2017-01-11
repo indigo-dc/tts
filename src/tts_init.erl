@@ -106,8 +106,8 @@ start_database() ->
     lager:info("Init: starting ets database"),
     ok = watts_data:init(),
     lager:info("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
-    ok = tts_data_sqlite:reconfigure(),
-    case tts_data_sqlite:is_ready() of
+    ok = watts_data_sqlite:reconfigure(),
+    case watts_data_sqlite:is_ready() of
         ok -> ok;
         {error, Reason} ->
             Msg = io_lib:format("unable to start sqlite-db: ~p", [Reason]),

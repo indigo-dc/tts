@@ -309,21 +309,21 @@ get_credential(UserId, CredentialId) ->
 
 % functions with data access
 get_credential_count(UserId, ServiceId) ->
-    tts_data_sqlite:credential_get_count(UserId, ServiceId).
+    watts_data_sqlite:credential_get_count(UserId, ServiceId).
 
 get_credential(CredId) ->
-    tts_data_sqlite:credential_get(CredId).
+    watts_data_sqlite:credential_get(CredId).
 
 get_credential_list(UserId) ->
-    tts_data_sqlite:credential_get_list(UserId).
+    watts_data_sqlite:credential_get_list(UserId).
 
 store_credential(UserId, ServiceId, Interface, CredentialState) ->
     SameStateAllowed = tts_service:allows_same_state(ServiceId),
-    tts_data_sqlite:credential_add(UserId, ServiceId, Interface,
+    watts_data_sqlite:credential_add(UserId, ServiceId, Interface,
                                    CredentialState, SameStateAllowed).
 
 remove_credential(UserId, CredentialId) ->
-    case tts_data_sqlite:credential_remove(UserId, CredentialId) of
+    case watts_data_sqlite:credential_remove(UserId, CredentialId) of
         ok ->
             return(result, #{});
         Error ->
