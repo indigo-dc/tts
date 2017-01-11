@@ -47,7 +47,7 @@ init_per_suite(Conf) ->
                     forbid => [],
                     hide => false,
                     tooltip => <<"Tooltip">>},
-                  cmd => <<"/tmp/watts_common_test/tts_plugin_info/plugin/info.py">>,
+                  cmd => <<"/tmp/watts_common_test/watts_plugin_info/plugin/info.py">>,
                   connection => #{host => undefined,
                     passwd => undefined,
                     port => 22,
