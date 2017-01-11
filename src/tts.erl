@@ -57,14 +57,14 @@ login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
 
 session_with_error(Msg) ->
-    {ok, SessPid} = tts_session_mgr:new_session(),
+    {ok, SessPid} = watts_session_mgr:new_session(),
     ok = tts_session:set_error(Msg, SessPid),
     false = tts_session:is_logged_in(SessPid),
     {ok, SessPid}.
 
 
 do_login(Issuer, Subject0, Token0) ->
-    {ok, SessPid} = tts_session_mgr:new_session(),
+    {ok, SessPid} = watts_session_mgr:new_session(),
     SessionId = tts_session:get_id(SessPid),
     try
         Result = case Subject0 of

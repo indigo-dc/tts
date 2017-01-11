@@ -89,7 +89,7 @@ allow_missing_post(Req, State) ->
 malformed_request(Req, State) ->
     CookieName = tts_http_util:cookie_name(),
     {CookieSessionToken, Req2} = cowboy_req:cookie(CookieName, Req),
-    CookieSession = tts_session_mgr:get_session(CookieSessionToken),
+    CookieSession = watts_session_mgr:get_session(CookieSessionToken),
     {InVersion, Req3} = cowboy_req:binding(version, Req2, no_version),
     {InType, Req4} = cowboy_req:binding(type, Req3),
     {InId, Req5} = cowboy_req:binding(id, Req4, undefined),

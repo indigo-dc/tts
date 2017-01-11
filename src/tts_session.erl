@@ -227,14 +227,14 @@ handle_cast(_Msg, State) ->
 
 handle_info(timeout, #state{id=ID, sess_token=Token} = State) ->
     lager:info("SESS~p timeout, asking for termination", [ID]),
-    tts_session_mgr:session_wants_to_close(Token),
+    watts_session_mgr:session_wants_to_close(Token),
     {noreply, State, 5000};
 handle_info(_Info, State) ->
     {noreply, State}.
 
 terminate(_Reason, #state{id=ID, sess_token=Token}) ->
     lager:info("SESS~p terminating", [ID]),
-    tts_session_mgr:session_terminating(Token),
+    watts_session_mgr:session_terminating(Token),
     ok.
 
 code_change(_OldVsn, State, _Extra) ->
