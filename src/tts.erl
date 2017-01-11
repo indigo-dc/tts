@@ -98,7 +98,7 @@ logout(Session) ->
 
 does_credential_exist(Id, Session) ->
     {ok, UserInfo} =  tts_session:get_user_info(Session),
-    tts_plugin:exists(UserInfo, Id).
+    watts_plugin:exists(UserInfo, Id).
 
 does_temp_cred_exist(Id, Session) ->
     {ok, UserId} =  tts_session:get_userid(Session),
@@ -128,7 +128,7 @@ get_service_list_for(Session) ->
 
 get_credential_list_for(Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, CredentialList} = tts_plugin:get_cred_list(UserInfo),
+    {ok, CredentialList} = watts_plugin:get_cred_list(UserInfo),
     {ok, CredentialList}.
 
 
@@ -136,7 +136,7 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     {ok, SessionId} = tts_session:get_id(Session),
     true = tts_service:is_enabled(ServiceId),
-    case tts_plugin:request(ServiceId, UserInfo, Interface, Params) of
+    case watts_plugin:request(ServiceId, UserInfo, Interface, Params) of
         {ok, Credential} ->
             #{id := CredId} = Credential,
             lager:info("SESS~p got credential ~p for ~p",
@@ -174,7 +174,7 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = tts_session:get_user_info(Session),
     {ok, SessionId} = tts_session:get_id(Session),
-    case tts_plugin:revoke(CredId, UserInfo) of
+    case watts_plugin:revoke(CredId, UserInfo) of
         {ok, #{}} ->
             lager:info("SESS~p revoked credential ~p",
                        [SessionId, CredId]),

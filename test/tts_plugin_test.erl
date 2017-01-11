@@ -3,17 +3,17 @@
 -include("tts.hrl").
 
 start_stop_test() ->
-    {ok, Pid} = tts_plugin:start_link(),
-    ok = tts_plugin:stop(),
+    {ok, Pid} = watts_plugin:start_link(),
+    ok = watts_plugin:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
 garbage_test() ->
-    {ok, Pid} = tts_plugin:start_link(),
+    {ok, Pid} = watts_plugin:start_link(),
     ignored = gen_server:call(Pid,unsupported_call),
     ok = gen_server:cast(Pid,unsupported_cast),
     Pid ! unsupported_msg,
-    ok = tts_plugin:stop(),
+    ok = watts_plugin:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
@@ -26,15 +26,15 @@ get_list_test() ->
 
     {ok, UserInfo0} = tts_userinfo:new(),
     {ok, UserInfo} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
-    {ok, Pid} = tts_plugin:start_link(),
+    {ok, Pid} = watts_plugin:start_link(),
 
     ?assertEqual({ok, [#{service_id => ServiceId}]},
-                 tts_plugin:get_cred_list(UserInfo)),
-    ?assertEqual({ok, 1}, tts_plugin:get_count(UserInfo, ServiceId)),
-    ?assertEqual({ok, 0}, tts_plugin:get_count(UserInfo, OtherId)),
-    ?assertEqual(true, tts_plugin:exists(UserInfo, CredId1)),
-    ?assertEqual(false, tts_plugin:exists(UserInfo, OtherCred)),
-    ok = tts_plugin:stop(),
+                 watts_plugin:get_cred_list(UserInfo)),
+    ?assertEqual({ok, 1}, watts_plugin:get_count(UserInfo, ServiceId)),
+    ?assertEqual({ok, 0}, watts_plugin:get_count(UserInfo, OtherId)),
+    ?assertEqual(true, watts_plugin:exists(UserInfo, CredId1)),
+    ?assertEqual(false, watts_plugin:exists(UserInfo, OtherCred)),
+    ok = watts_plugin:stop(),
     test_util:wait_for_process_to_die(Pid, 100),
     ok = stop_meck(Meck),
     ok.
@@ -61,46 +61,46 @@ request_test() ->
     {ok, UserInfo2} = tts_userinfo:update_iss_sub(<<"iss">>, <<"su">>, UserInfo0),
     {ok, UserInfo3} = tts_userinfo:update_iss_sub(<<"other">>, <<"sub">>, UserInfo0),
 
-    {ok, Pid} = tts_plugin:start_link(),
+    {ok, Pid} = watts_plugin:start_link(),
     ?assertEqual({ok, #{id => <<"123">>, entries => [Cred1]}},
-        tts_plugin:request(Service1, UserInfo1, Interface, Params)),
+        watts_plugin:request(Service1, UserInfo1, Interface, Params)),
 
     ?assertEqual({ok, #{id => <<"123">>, entries => [Cred2]}},
-        tts_plugin:request(Service2, UserInfo1, Interface, Params)),
+        watts_plugin:request(Service2, UserInfo1, Interface, Params)),
 
     ?assertEqual({ok, #{id => <<"123">>, entries => [Cred3]}},
-        tts_plugin:request(Service3, UserInfo1, Interface, Params)),
+        watts_plugin:request(Service3, UserInfo1, Interface, Params)),
 
     ?assertEqual({ok, #{id => <<"123">>, entries => [Cred4]}},
-        tts_plugin:request(Service4, UserInfo1, Interface, Params)),
+        watts_plugin:request(Service4, UserInfo1, Interface, Params)),
 
     ?assertEqual({ok, #{id => <<"123">>, entries => [Cred5]}},
-        tts_plugin:request(Service5, UserInfo1, Interface, Params)),
+        watts_plugin:request(Service5, UserInfo1, Interface, Params)),
 
     ?assertEqual({error,#{log_msg => <<"logged">>,user_msg => <<"some message">>}},
-                 tts_plugin:request(Service1, UserInfo2, Interface, Params)),
+                 watts_plugin:request(Service1, UserInfo2, Interface, Params)),
 
     ?assertEqual({error, limit_reached},
-                 tts_plugin:request(Service2, UserInfo2, Interface, Params)),
+                 watts_plugin:request(Service2, UserInfo2, Interface, Params)),
 
     {error, #{user_msg := _, log_msg := _}} =
-                 tts_plugin:request(Service3, UserInfo2, Interface, Params),
+                 watts_plugin:request(Service3, UserInfo2, Interface, Params),
 
     {error, #{user_msg := _, log_msg := _}} =
-                 tts_plugin:request(Service4, UserInfo2, Interface, Params),
+                 watts_plugin:request(Service4, UserInfo2, Interface, Params),
 
     {error, #{user_msg := _, log_msg := _}} =
-                 tts_plugin:request(Service5, UserInfo2, Interface, Params),
+                 watts_plugin:request(Service5, UserInfo2, Interface, Params),
 
     ?assertEqual({error, service_disabled},
-                 tts_plugin:request(Service6, UserInfo2, Interface, Params)),
+                 watts_plugin:request(Service6, UserInfo2, Interface, Params)),
 
 
     ?assertEqual({error, user_not_allowed},
-                 tts_plugin:request(Service1, UserInfo3, Interface, Params)),
+                 watts_plugin:request(Service1, UserInfo3, Interface, Params)),
 
 
-    ok = tts_plugin:stop(),
+    ok = watts_plugin:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
 
     ok = stop_meck(Meck),
@@ -115,20 +115,20 @@ revoke_test() ->
     CredId3 = <<"some credential id3">>,
     CredId6 = <<"some credential id6">>,
 
-    {ok, Pid} = tts_plugin:start_link(),
-    {ok, #{}} = tts_plugin:revoke(CredId1, UserInfo1),
+    {ok, Pid} = watts_plugin:start_link(),
+    {ok, #{}} = watts_plugin:revoke(CredId1, UserInfo1),
     {error, #{user_msg := _, log_msg := _}} =
-        tts_plugin:revoke(CredId2, UserInfo1),
+        watts_plugin:revoke(CredId2, UserInfo1),
     {error, #{user_msg := _, log_msg := _}} =
-        tts_plugin:revoke(CredId3, UserInfo1),
+        watts_plugin:revoke(CredId3, UserInfo1),
     ?UNSETCONFIG( allow_dropping_credentials),
     {error, #{user_msg := _, log_msg := _}} =
-        tts_plugin:revoke(CredId6, UserInfo1),
+        watts_plugin:revoke(CredId6, UserInfo1),
     ?SETCONFIG( allow_dropping_credentials, true),
     {ok, #{}} =
-        tts_plugin:revoke(CredId6, UserInfo1),
+        watts_plugin:revoke(CredId6, UserInfo1),
     ?UNSETCONFIG( allow_dropping_credentials),
-    ok = tts_plugin:stop(),
+    ok = watts_plugin:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = stop_meck(Meck),
     ok.
