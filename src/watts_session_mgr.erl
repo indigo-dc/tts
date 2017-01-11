@@ -1,4 +1,4 @@
--module(tts_session_mgr).
+-module(watts_session_mgr).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -121,7 +121,7 @@ delete_sessions([#{id:= Id, pid:= Pid}|T]) ->
 
 
 get_unique_token() ->
-    Token = tts_utils:random_string(64),
+    Token = watts_utils:random_string(64),
     repeat_id_gen_if_needed(add_new_session_entry(Token)).
 
 start_session(Token) ->

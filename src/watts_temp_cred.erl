@@ -1,4 +1,4 @@
--module(tts_temp_cred).
+-module(watts_temp_cred).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -108,7 +108,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 gen_random_id(#state{creds = Creds} = State) ->
-    Id = tts_utils:random_string(16),
+    Id = watts_utils:random_string(16),
     case lists:keyfind(Id, 1, Creds) of
         false -> Id;
         _ -> gen_random_id(State)

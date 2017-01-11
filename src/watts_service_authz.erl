@@ -1,4 +1,4 @@
--module(tts_service_authz).
+-module(watts_service_authz).
 
 -export([is_authorized/3]).
 -export([validate_config/2]).

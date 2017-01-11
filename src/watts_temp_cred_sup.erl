@@ -1,4 +1,4 @@
--module(tts_temp_cred_sup).
+-module(watts_temp_cred_sup).
 %%
 %% Copyright 2016 SCC/KIT
 %%

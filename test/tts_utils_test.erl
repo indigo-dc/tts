@@ -13,7 +13,7 @@ random_string_test() ->
                   end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(crypto, strong_rand_bytes, RandomBytes),
-    tts_utils:random_string(10),
+    watts_utils:random_string(10),
     %% just unload as this is known and wanted to fail
     ok = meck:unload(crypto),
     ok.

@@ -1,4 +1,4 @@
--module(tts_oidc_client).
+-module(watts_oidc_client).
 -behaviour(oidcc_client).
 -include("tts.hrl").
 
@@ -8,7 +8,7 @@
         ]).
 
 login_succeeded(TokenMap) ->
-    case tts:login_with_oidcc(TokenMap) of
+    case watts:login_with_oidcc(TokenMap) of
         {ok, #{session_pid := SessPid}} ->
             redirect_set_cookie(SessPid);
         {error, Reason} ->
@@ -23,7 +23,7 @@ login_failed(Reason, Details) ->
     redirect_error(ErrMsg).
 
 redirect_error(ErrorMsg) ->
-    {ok, SessPid} = tts:session_with_error(ErrorMsg),
+    {ok, SessPid} = watts:session_with_error(ErrorMsg),
     redirect_set_cookie(SessPid).
 
 redirect_set_cookie(SessPid) ->

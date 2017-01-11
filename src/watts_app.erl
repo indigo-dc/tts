@@ -1,4 +1,4 @@
--module(tts_app).
+-module(watts_app).
 %%
 %% Copyright 2016 SCC/KIT
 %%

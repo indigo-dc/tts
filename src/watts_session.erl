@@ -1,4 +1,4 @@
--module(tts_session).
+-module(watts_session).
 %%
 %% Copyright 2016 SCC/KIT
 %%

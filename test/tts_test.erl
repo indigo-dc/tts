@@ -7,7 +7,7 @@
 error_session_test() ->
     {ok, Meck} = start_meck(),
     EMsg = <<"this is some error message">>,
-    {ok, Pid} = tts:session_with_error(EMsg),
+    {ok, Pid} = watts:session_with_error(EMsg),
     watts_session:close(Pid),
     test_util:wait_for_process_to_die(Pid, 100),
     stop_meck(Meck),
@@ -21,14 +21,14 @@ login_and_out_test() ->
     BadAccessToken = "token",
     GoodAccessToken = <<"accesstoken">>,
     Issuer = ?ISSUER_URL,
-    {error, bad_token} = tts:login_with_oidcc(BadOidcToken),
-    {error, bad_token} = tts:login_with_access_token(BadAccessToken, Issuer),
-    {ok, #{session_pid := Pid1}} = tts:login_with_oidcc(GoodOidcToken),
-    {ok, #{session_pid := Pid2}} = tts:login_with_access_token(GoodAccessToken,
+    {error, bad_token} = watts:login_with_oidcc(BadOidcToken),
+    {error, bad_token} = watts:login_with_access_token(BadAccessToken, Issuer),
+    {ok, #{session_pid := Pid1}} = watts:login_with_oidcc(GoodOidcToken),
+    {ok, #{session_pid := Pid2}} = watts:login_with_access_token(GoodAccessToken,
                                                                Issuer),
 
-    ok = tts:logout(Pid1),
-    ok = tts:logout(Pid2),
+    ok = watts:logout(Pid1),
+    ok = watts:logout(Pid2),
     test_util:wait_for_process_to_die(Pid1, 100),
     test_util:wait_for_process_to_die(Pid2, 100),
     stop_meck(Meck),
@@ -37,16 +37,16 @@ login_and_out_test() ->
 proxy_function_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
 
-    ?assertEqual(true, tts:does_credential_exist(<<"id">>, Session)),
-    ?assertEqual(true, tts:does_temp_cred_exist(<<"id">>, Session)),
-    {ok, [#{id := <<"id">>}]} = tts:get_openid_provider_list(),
-    ?assertEqual({ok, []}, tts:get_service_list_for(Session)),
-    ?assertEqual({ok, []}, tts:get_credential_list_for(Session)),
-    ?assertEqual({ok, <<"accesstoken">>}, tts:get_access_token_for(Session)),
-    ?assertEqual({ok, <<"Nice Name">>}, tts:get_display_name_for(Session)),
-    ?assertEqual({ok, <<"TempCredId">>}, tts:store_temp_cred(<<"credential">>,
+    ?assertEqual(true, watts:does_credential_exist(<<"id">>, Session)),
+    ?assertEqual(true, watts:does_temp_cred_exist(<<"id">>, Session)),
+    {ok, [#{id := <<"id">>}]} = watts:get_openid_provider_list(),
+    ?assertEqual({ok, []}, watts:get_service_list_for(Session)),
+    ?assertEqual({ok, []}, watts:get_credential_list_for(Session)),
+    ?assertEqual({ok, <<"accesstoken">>}, watts:get_access_token_for(Session)),
+    ?assertEqual({ok, <<"Nice Name">>}, watts:get_display_name_for(Session)),
+    ?assertEqual({ok, <<"TempCredId">>}, watts:store_temp_cred(<<"credential">>,
                                                              Session)),
-    ?assertEqual({ok, <<"credential">>}, tts:get_temp_cred(<<"TempCredId">>,
+    ?assertEqual({ok, <<"credential">>}, watts:get_temp_cred(<<"TempCredId">>,
                                                              Session)),
 
     stop_meck(Meck),
@@ -56,16 +56,16 @@ proxy_function_test() ->
 
 request_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
-    {ok, _} = tts:request_credential_for(<<"service">>, Session, [], <<"test interface">>),
-    {error, _} = tts:request_credential_for(<<"error">>, Session, [], <<"test interface">>),
-    {error, _} = tts:request_credential_for(<<"bad">>, Session, [], <<"test interface">>),
+    {ok, _} = watts:request_credential_for(<<"service">>, Session, [], <<"test interface">>),
+    {error, _} = watts:request_credential_for(<<"error">>, Session, [], <<"test interface">>),
+    {error, _} = watts:request_credential_for(<<"bad">>, Session, [], <<"test interface">>),
     stop_meck(Meck),
     ok.
 
 revoke_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
-    ok = tts:revoke_credential_for(<<"cred1">>, Session),
-    {error, _} = tts:revoke_credential_for(<<"cred2">>, Session),
+    ok = watts:revoke_credential_for(<<"cred1">>, Session),
+    {error, _} = watts:revoke_credential_for(<<"cred2">>, Session),
     stop_meck(Meck),
     ok.
 

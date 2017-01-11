@@ -1,4 +1,4 @@
--module(tts_userinfo).
+-module(watts_userinfo).
 
 -export([
          new/0,

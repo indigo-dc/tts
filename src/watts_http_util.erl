@@ -1,4 +1,4 @@
--module(tts_http_util).
+-module(watts_http_util).
 -include("tts.hrl").
 -export([
          perform_cookie_action/4,

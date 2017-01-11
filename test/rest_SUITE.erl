@@ -109,17 +109,17 @@ service_config(_Config) ->
 
 provider_config(_Config) ->
     WaitList = fun() ->
-                   {ok, Provider} = tts:get_openid_provider_list(),
+                   {ok, Provider} = watts:get_openid_provider_list(),
                    length(Provider) >= 1
            end,
     ok = test_util:wait_for_true(WaitList, 10),
     WaitReady = fun() ->
-                   {ok, Provider} = tts:get_openid_provider_list(),
+                   {ok, Provider} = watts:get_openid_provider_list(),
                    [#{ready := Result}| _] = Provider,
                    Result
            end,
     ok = test_util:wait_for_true(WaitReady, 1000),
-    {ok, Provider} = tts:get_openid_provider_list(),
+    {ok, Provider} = watts:get_openid_provider_list(),
     ct:log("provider configs:~n~p~n", [Provider]),
     ok.
 

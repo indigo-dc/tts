@@ -1,4 +1,4 @@
--module(tts_file_util).
+-module(watts_file_util).
 %%
 %% Copyright 2016 SCC/KIT
 %%

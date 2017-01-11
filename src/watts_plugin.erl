@@ -1,4 +1,4 @@
--module(tts_plugin).
+-module(watts_plugin).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -46,7 +46,7 @@ start_link() ->
 stop() ->
     gen_server:cast(?MODULE, stop).
 
-%% -spec get_list(binary()) -> {ok, [tts:cred()]}.
+%% -spec get_list(binary()) -> {ok, [watts:cred()]}.
 get_cred_list(UserInfo) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     get_credential_list(UserId).
@@ -64,7 +64,7 @@ exists(UserInfo, CredId) ->
         _ -> false
     end.
 
-%% -spec request(binary(), binary(), tts:user_info(), binary(), map()|atom(),
+%% -spec request(binary(), binary(), watts:user_info(), binary(), map()|atom(),
 %%               list()) -> {ok, map(), list()} | {error, any(), list()}.
 request(ServiceId, UserInfo, Interface, Params) ->
     {ok, Limit} = watts_service:get_credential_limit(ServiceId),
@@ -92,7 +92,7 @@ request(ServiceId, UserInfo, Interface, Params) ->
     end.
 
 %% -spec revoke(binary(), binary(), map()) ->
-%%     {ok, tts:cred(), list()} | {error, any(), list()}.
+%%     {ok, watts:cred(), list()} | {error, any(), list()}.
 revoke(CredentialId, UserInfo) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     CredentialInfo = get_credential(UserId, CredentialId),

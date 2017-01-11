@@ -1,4 +1,4 @@
--module(tts_plugin_sup).
+-module(watts_plugin_sup).
 %%
 %% Copyright 2016 SCC/KIT
 %%

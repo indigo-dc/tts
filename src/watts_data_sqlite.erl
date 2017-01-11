@@ -1,4 +1,4 @@
--module(tts_data_sqlite).
+-module(watts_data_sqlite).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -61,7 +61,7 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
     gen_server:call(?MODULE, {credential_add, UserId, ServiceId, Interface,
                               CredState, SameStateAllowed}).
 
--spec credential_get_list(UserId::binary()) -> {ok, [tts:cred()]}.
+-spec credential_get_list(UserId::binary()) -> {ok, [watts:cred()]}.
 credential_get_list(UserId) ->
     gen_server:call(?MODULE, {credential_get_list, UserId}).
 
@@ -69,7 +69,7 @@ credential_get_list(UserId) ->
 credential_get_count(UserId, ServiceId) ->
     gen_server:call(?MODULE, {credential_get_count, UserId, ServiceId}).
 
--spec credential_get(CredId::binary()) -> {ok, tts:cred()}.
+-spec credential_get(CredId::binary()) -> {ok, watts:cred()}.
 credential_get(CredId) ->
     gen_server:call(?MODULE, {credential_get, CredId}).
 

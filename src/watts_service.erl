@@ -1,4 +1,4 @@
--module(tts_service).
+-module(watts_service).
 %%
 %% Copyright 2016 SCC/KIT
 %%

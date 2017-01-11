@@ -1,4 +1,4 @@
--module(tts_sessions_sup).
+-module(watts_sessions_sup).
 %%
 %% Copyright 2016 SCC/KIT
 %%

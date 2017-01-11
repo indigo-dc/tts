@@ -1,4 +1,4 @@
--module(tts_rest).
+-module(watts_rest).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -145,7 +145,7 @@ is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer,
                           session_pid=undefined} = State)
   when Type==service; Type==credential; Type==cred_data; Type == oidcp ;
        Type == info ->
-    case tts:login_with_access_token(Token, Issuer) of
+    case watts:login_with_access_token(Token, Issuer) of
         {ok, #{session_pid := SessionPid}} ->
             {true, Req, State#state{session_pid = SessionPid}};
         {error, internal} ->
@@ -182,11 +182,11 @@ resource_exists(Req, #state{type=Type, id=undefined} = State)
     {true, Req, State};
 resource_exists(Req, #state{type=credential, id=Id, session_pid=Session}
                 = State) ->
-    Exists = tts:does_credential_exist(Id, Session),
+    Exists = watts:does_credential_exist(Id, Session),
     {Exists, Req, State};
 resource_exists(Req, #state{type=cred_data, id=Id, session_pid=Session}
                 = State) ->
-    Exists = tts:does_temp_cred_exist(Id, Session),
+    Exists = watts:does_temp_cred_exist(Id, Session),
     {Exists, Req, State};
 resource_exists(Req, State) ->
     Msg = <<"resource not found">>,
@@ -197,7 +197,7 @@ resource_exists(Req, State) ->
 delete_resource(Req, #state{type=credential,
                             id=CredentialId, session_pid=Session}=State) ->
     {Result, Req2}  =
-        case tts:revoke_credential_for(CredentialId, Session) of
+        case watts:revoke_credential_for(CredentialId, Session) of
             ok ->
                 Body = jsone:encode(#{result => ok}),
                 Req1 = cowboy_req:set_resp_body(Body, Req),
@@ -229,19 +229,19 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
     {Result, Req2, State#state{session_pid=undefined}}.
 
 perform_get(service, undefined, Session, 1) ->
-    {ok, ServiceList} = tts:get_service_list_for(Session),
+    {ok, ServiceList} = watts:get_service_list_for(Session),
     return_json_service_list(ServiceList, [id, type, host, port]);
 perform_get(service, undefined, Session, _) ->
-    {ok, ServiceList} = tts:get_service_list_for(Session),
+    {ok, ServiceList} = watts:get_service_list_for(Session),
     return_json_service_list(ServiceList, [id, description,
                                            enabled, cred_count, cred_limit,
                                            limit_reached, params, authorized,
                                            authz_tooltip] );
 perform_get(oidcp, _, _, 1) ->
-    {ok, OIDCList} = tts:get_openid_provider_list(),
+    {ok, OIDCList} = watts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);
 perform_get(oidcp, _, _, _) ->
-    {ok, OIDCList} = tts:get_openid_provider_list(),
+    {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
     {LoggedIn, DName, Error}  =
@@ -269,13 +269,13 @@ perform_get(logout, undefined, Session, _) ->
     ok = perform_logout(Session),
     jsone:encode(#{result => ok});
 perform_get(access_token, undefined, Session, _) ->
-    {ok, AccessToken} = tts:get_access_token_for(Session),
+    {ok, AccessToken} = watts:get_access_token_for(Session),
     jsone:encode(#{access_token => AccessToken});
 perform_get(credential, undefined, Session, Version) ->
-    {ok, CredList} = tts:get_credential_list_for(Session),
+    {ok, CredList} = watts:get_credential_list_for(Session),
     return_json_credential_list(CredList, Version);
 perform_get(cred_data, Id, Session, Version) ->
-    case tts:get_temp_cred(Id, Session) of
+    case watts:get_temp_cred(Id, Session) of
         {ok, Cred} ->
             return_json_credential(Cred, Version);
         _ ->
@@ -290,9 +290,9 @@ perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
                  true ->  <<"Web App">>
              end,
     Params = maps:get(params, Data, #{}),
-    case  tts:request_credential_for(ServiceId, Session, Params, IFace) of
+    case  watts:request_credential_for(ServiceId, Session, Params, IFace) of
         {ok, CredData} ->
-            {ok, Id} = tts:store_temp_cred(CredData, Session),
+            {ok, Id} = watts:store_temp_cred(CredData, Session),
             Url = id_to_url(Id, Ver),
             {Req, {true, Url}};
         {error, ErrorInfo} ->
@@ -532,4 +532,4 @@ update_cookie_if_used(Req, #state{cookie_based = _}) ->
 
 
 perform_logout(Session) ->
-    tts:logout(Session).
+    watts:logout(Session).

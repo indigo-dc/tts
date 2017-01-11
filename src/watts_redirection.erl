@@ -1,4 +1,4 @@
--module(tts_redirection).
+-module(watts_redirection).
 -behaviour(cowboy_http_handler).
 -export([
          init/3,
