@@ -24,7 +24,7 @@
 
 start(_Type, _Args) ->
     lager:info("WaTTS starting ..."),
-    tts_sup:start_link().
+    watts_sup:start_link().
 
 stop(_State) ->
     ok.
