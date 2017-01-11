@@ -1,5 +1,6 @@
 -module(tts_plugin_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("tts.hrl").
 
 start_stop_test() ->
     {ok, Pid} = tts_plugin:start_link(),
@@ -120,13 +121,13 @@ revoke_test() ->
         tts_plugin:revoke(CredId2, UserInfo1),
     {error, #{user_msg := _, log_msg := _}} =
         tts_plugin:revoke(CredId3, UserInfo1),
-    application:unset_env(tts, allow_dropping_credentials),
+    ?UNSETCONFIG( allow_dropping_credentials),
     {error, #{user_msg := _, log_msg := _}} =
         tts_plugin:revoke(CredId6, UserInfo1),
-    application:set_env(tts, allow_dropping_credentials, true),
+    ?SETCONFIG( allow_dropping_credentials, true),
     {ok, #{}} =
         tts_plugin:revoke(CredId6, UserInfo1),
-    application:unset_env(tts, allow_dropping_credentials),
+    ?UNSETCONFIG( allow_dropping_credentials),
     ok = tts_plugin:stop(),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = stop_meck(Meck),

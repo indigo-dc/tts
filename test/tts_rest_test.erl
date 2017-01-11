@@ -1,5 +1,6 @@
 -module(tts_rest_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("tts.hrl").
 
 
 -define(ISSUER_URL, <<"https://test.tts.somewhere">>).
@@ -337,7 +338,7 @@ get_json_test() ->
 
 post_json_test() ->
     {ok, Meck} = start_meck(),
-    application:set_env(tts, ep_main, <<"/">>),
+    ?SETCONFIG( ep_main, <<"/">>),
 
     Url = <<"/api/v2/credential_data/CRED1">>,
     Requests = [
@@ -364,7 +365,7 @@ post_json_test() ->
                     ok
             end,
     ok = lists:foldl(Test,ok,Requests),
-    application:unset_env(tts, ep_main),
+    ?UNSETCONFIG( ep_main),
     ok = stop_meck(Meck),
     ok.
 
