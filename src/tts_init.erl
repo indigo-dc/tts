@@ -48,12 +48,16 @@ stop(Pid) ->
 %% gen_server.
 
 init([]) ->
-    gen_server:cast(self(), start_database),
+    gen_server:cast(self(), start_watts),
     {ok, #state{}}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast(start_watts, State) ->
+    init_watts(),
+    gen_server:cast(self(), start_database),
+    {noreply, State};
 handle_cast(start_database, State) ->
     start_database(),
     gen_server:cast(self(), add_oidc),
@@ -85,16 +89,29 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
+init_watts() ->
+    lager:info("Init: starting  "),
+    %% copy the version into the config
+    %% only using env values, so everything can be tested
+    Vsn =  case ?GETKEY(vsn) of
+               undefined -> "testing";
+               {ok, V} -> V
+           end,
+    ok = ?SETCONFIG(vsn, Vsn),
+    lager:debug("Init: config = ~p", [?ALLCONFIG]),
+    ok.
+
 
 start_database() ->
-    lager:debug("Init: starting ets database"),
+    lager:info("Init: starting ets database"),
     ok = tts_data:init(),
-    lager:debug("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
+    lager:info("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
     ok = tts_data_sqlite:reconfigure(),
     case tts_data_sqlite:is_ready() of
         ok -> ok;
-        {error, _} ->
-            lager:critical("unable to start database"),
+        {error, Reason} ->
+            Msg = io_lib:format("unable to start sqlite-db: ~p", [Reason]),
+            lager:critical(Msg),
             erlang:error(no_database)
     end,
     ok.
@@ -125,14 +142,7 @@ add_openid_provider([], _) ->
 
 
 add_services() ->
-    lager:debug("Init: adding services"),
-    %% copy the version into the config
-    %% only using env values, so everything can be tested
-    Vsn =  case application:get_key(tts, vsn) of
-               undefined -> "testing";
-               {ok, V} -> V
-           end,
-    ok = application:set_env(tts, vsn, Vsn),
+    lager:info("Init: adding services"),
     ServiceList = ?CONFIG(service_list),
     ok = add_services(ServiceList),
     ok.
@@ -155,24 +165,24 @@ add_services([]) ->
 
 
 start_web_interface() ->
-    lager:debug("Init: starting web interface"),
+    lager:info("Init: starting web interface"),
     oidcc_client:register(tts_oidc_client),
     EpMain = ?CONFIG(ep_main),
     EpOidc = tts_http_util:relative_path("oidc"),
     EpApiBase = tts_http_util:relative_path("api"),
     EpStatic = tts_http_util:relative_path("static/[...]"),
     EpApi = tts_rest:dispatch_mapping(EpApiBase),
-    Dispatch = cowboy_router:compile( [{'_',
-                                         [
-                                          {EpStatic, cowboy_static,
-                                           {priv_dir, tts, "http_static"}},
-                                          {EpApi, tts_rest, []},
-                                          {EpMain, cowboy_static,
-                                           {priv_file, tts,
-                                            "http_static/index.html"}},
-                                          {EpOidc, oidcc_cowboy, []}
-                                         ]}]),
-
+    Dispatch = cowboy_router:compile(
+                 [{'_', [{EpStatic, cowboy_static,
+                          {priv_dir, ?APPLICATION, "http_static"}
+                         },
+                         {EpApi, tts_rest, []},
+                         {EpMain, cowboy_static,
+                          {priv_file, ?APPLICATION, "http_static/index.html"}},
+                         {EpOidc, oidcc_cowboy, []}
+                        ]
+                  }]
+                ),
     SSL = ?CONFIG(ssl),
     ListenPort = ?CONFIG(listen_port),
     case SSL of
@@ -220,5 +230,6 @@ local_endpoint() ->
 
 
 stop() ->
-    lager:debug("Init: done"),
+    lager:info("Init: done"),
+    lager:info("WaTTS ready"),
     stop(self()).

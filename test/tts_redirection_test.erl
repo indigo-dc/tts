@@ -1,5 +1,6 @@
 -module(tts_redirection_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("tts.hrl").
 
 basic_test() ->
     {ok, req, []} = tts_redirection:init(ignored, req, ignored),
@@ -33,13 +34,13 @@ redirect_test() ->
 
 
 set_needed_env() ->
-    application:set_env(tts, hostname, "localhost"),
-    application:set_env(tts, port, 8080),
-    application:set_env(tts, ssl, false),
+    ?SETCONFIG( hostname, "localhost"),
+    ?SETCONFIG( port, 8080),
+    ?SETCONFIG( ssl, false),
     ok.
 
 unset_env() ->
-    application:unset_env(tts, hostname),
-    application:unset_env(tts, port),
-    application:unset_env(tts, ssl),
+    ?UNSETCONFIG( hostname),
+    ?UNSETCONFIG( port),
+    ?UNSETCONFIG( ssl),
     ok.

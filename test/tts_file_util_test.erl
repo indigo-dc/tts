@@ -1,9 +1,9 @@
 -module(tts_file_util_test).
 -include_lib("eunit/include/eunit.hrl").
-
+-include("tts.hrl").
 
 absolute_path_test() ->
-    ok = application:set_env(tts, config_path, "/usr/local/etc/tts"),
+    ok = ?SETCONFIG(config_path, "/usr/local/etc/tts"),
 
     {ok, [[Home]]} = init:get_argument(home),
     HomeBin = list_to_binary(Home),
@@ -58,5 +58,5 @@ absolute_path_test() ->
     Res8_2 = tts_file_util:to_abs(AbsBin, "/etc/tts"),
     ?assertEqual(Exp8, Res8_2),
 
-    ok = application:unset_env(tts, config_path),
+    ok = ?UNSETCONFIG(config_path),
     ok.

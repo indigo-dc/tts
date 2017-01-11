@@ -1,35 +1,36 @@
 -module(tts_http_util_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("tts.hrl").
 
 perform_cookie_action_test() ->
     {ok, Meck} = start_meck(),
     {ok, req2} = tts_http_util:perform_cookie_action(clear, ignored, ignored, req),
     {ok, req2} = tts_http_util:perform_cookie_action(update, 0, ignored, req),
-    application:set_env(tts,ssl, true),
+    ?SETCONFIG(ssl, true),
     {ok, req2} = tts_http_util:perform_cookie_action(update, ignored, deleted, req),
     {ok, req2} = tts_http_util:perform_cookie_action(update, 10, <<"content">>, req),
-    application:unset_env(tts,ssl),
+    ?UNSETCONFIG(ssl),
     ok = stop_meck(Meck),
     ok.
 
 
 relative_path_test() ->
-    application:set_env(tts,ssl, true),
+    ?SETCONFIG(ssl, true),
     %% the config ensures that ep_main always ends on /
-    application:set_env(tts, ep_main, <<"/non_default/">>),
+    ?SETCONFIG( ep_main, <<"/non_default/">>),
     <<"/non_default/sub/">> = tts_http_util:relative_path("sub/"),
     ok.
 
 whole_url_test() ->
     Path = "/api",
-    application:set_env(tts, hostname, "localhost"),
+    ?SETCONFIG( hostname, "localhost"),
     TestUrl =
         fun({Ssl, Port, Exp}, Other) ->
-                application:set_env(tts, ssl, Ssl),
-                application:set_env(tts, port, Port),
+                ?SETCONFIG( ssl, Ssl),
+                ?SETCONFIG( port, Port),
                 Exp = tts_http_util:whole_url(Path),
-                application:unset_env(tts, ssl),
-                application:unset_env(tts, port),
+                ?UNSETCONFIG( ssl),
+                ?UNSETCONFIG( port),
                 Other
         end,
     Tests =

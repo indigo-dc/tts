@@ -1,5 +1,6 @@
 -module(tts_plugin_runner_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("tts.hrl").
 
 start_stop_test() ->
     {ok, Pid} = tts_plugin_runner:start_link(),
@@ -79,7 +80,7 @@ no_cmd_crash_test() ->
 start_meck() ->
     MeckModules = [tts_service, ssh, ssh_connection],
     ok = test_util:meck_new(MeckModules),
-    application:set_env(tts, vsn, "eunit"),
+    ?SETCONFIG( vsn, "eunit"),
     SShCmd = <<"create credential">>,
     Credential = <<"secret">>,
     CredState = <<"internalState">>,
@@ -196,5 +197,5 @@ start_meck() ->
 stop_meck({SshPid, MeckModules}) ->
     SshPid ! stop,
     ok = test_util:meck_done(MeckModules),
-    application:unset_env(tts, vsn),
+    ?UNSETCONFIG( vsn),
     ok.

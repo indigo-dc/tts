@@ -49,10 +49,10 @@ endif
 
 
 run: rel
-	if [ -f ~/.config/tts/tts.conf ] ; then \
-		cp ~/.config/tts/tts.conf _build/default/rel/tts/etc/tts.conf ; \
+	if [ -f ~/.config/watts/watts.conf ] ; then \
+		cp ~/.config/watts/watts.conf _build/default/rel/watts/etc/watts.conf ; \
 	fi ;
-	./_build/default/rel/tts/bin/tts console
+	./_build/default/rel/watts/bin/watts console
 
 install_deps:
 	$(REBAR) install_deps

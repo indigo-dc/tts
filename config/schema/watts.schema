@@ -1,6 +1,6 @@
-%% @doc the hostname of the tts, use localhost
+%% @doc the hostname of watts, use localhost
 %% for developing
-{mapping, "hostname", "tts.hostname", [
+{mapping, "hostname", "watts.hostname", [
           {commented, "localhost"},
           {default, "localhost"}
           ]}.
@@ -9,13 +9,13 @@
 %% @doc The port at which traffic seams to enter
 %% the TTS. This can be different from the port
 %% TTS actually listens on @see listen_port .
-{mapping, "port", "tts.port", [
+{mapping, "port", "watts.port", [
           {commented, 8080},
           {default, 8080},
           {datatype,  [integer, {atom, default}]}
           ]}.
 
-{translation, "tts.port",
+{translation, "watts.port",
     fun(Conf) ->
         Port = cuttlefish:conf_get("port", Conf),
         Ssl = cuttlefish:conf_get("ssl", Conf),
@@ -33,13 +33,13 @@
 %% port this can be used to pretend to be listening on
 %% e.g. 443, although the TTS actually listens on 8443
 %% the default setting is to have it the same as port
-{mapping, "listen_port", "tts.listen_port", [
+{mapping, "listen_port", "watts.listen_port", [
           {default, port},
           {commented, port},
           {datatype,  [{atom, port}, integer]}
           ]}.
 
-{translation, "tts.listen_port",
+{translation, "watts.listen_port",
     fun(Conf) ->
         Port = cuttlefish:conf_get("port", Conf),
         Listen = cuttlefish:conf_get("listen_port", Conf),
@@ -53,14 +53,14 @@
 
 %% @doc Enable/Disable SSL support, please
 %% enable it before using TTS in production
-{mapping, "ssl", "tts.ssl", [
+{mapping, "ssl", "watts.ssl", [
           {default, false},
           {commented, true},
           {datatype, {enum, [true, false]}}
           ]}.
 
 %% @doc The CA cert file to use for ssl
-{mapping, "ca_cert_file", "tts.ca_cert_file", [
+{mapping, "ca_cert_file", "watts.ca_cert_file", [
           {default, "{{platform_etc_dir}}/ca.cert"},
           {commented, "{{platform_etc_dir}}/ca.cert"},
           hidden,
@@ -68,28 +68,28 @@
           ]}.
 
 %% @doc The cert file of the server, for ssl
-{mapping, "cert_file", "tts.cert_file", [
+{mapping, "cert_file", "watts.cert_file", [
           {default, "{{platform_etc_dir}}/tts.cert"},
           {commented, "{{platform_etc_dir}}/tts.cert"},
           {datatype, file}
           ]}.
 
 %% @doc The private key file of the server, for ssl
-{mapping, "key_file", "tts.key_file", [
+{mapping, "key_file", "watts.key_file", [
           {default, "{{platform_etc_dir}}/tts.key"},
           {commented, "{{platform_etc_dir}}/tts.key"},
           {datatype, file}
           ]}.
 
 %% @doc The duration of a session when using a web browser
-{mapping, "session_timeout", "tts.session_timeout", [
+{mapping, "session_timeout", "watts.session_timeout", [
           {default, "15m"},
           {commented, "15m"},
           {datatype, {duration, ms}}
           ]}.
 
 %% @doc The path to the sqlite database file
-{mapping, "sqlite_file", "tts.sqlite_db", [
+{mapping, "sqlite_file", "watts.sqlite_db", [
           {default, "{{platform_data_dir}}/tts.db"},
           {commented, "{{platform_data_dir}}/tts.db"},
           {datatype, file}
@@ -97,13 +97,13 @@
 
 %% @doc The base path at the server
 %% e.g. https://server.my.domain/tts would main_path be 'tts'
-{mapping, "main_path", "tts.ep_main", [
+{mapping, "main_path", "watts.ep_main", [
           {datatype, string},
           {default, "/"},
           hidden
           ]}.
 
-{translation, "tts.ep_main",
+{translation, "watts.ep_main",
  fun(Conf) ->
          Path = cuttlefish:conf_get("main_path", Conf),
          BinPath = list_to_binary(Path),
@@ -116,14 +116,14 @@
  end}.
 
 %% @doc set to true to enable redirection
-{mapping, "redirection.enable", "tts.redirection_enable", [
+{mapping, "redirection.enable", "watts.redirection_enable", [
           {datatype, {enum, [true, false]}},
           {default, false},
           {commented, false}
           ]}.
 
 %% @doc the port number to listen at for traffic to redirect
-{mapping, "redirection.listen_port", "tts.redirection_port", [
+{mapping, "redirection.listen_port", "watts.redirection_port", [
           {datatype, integer},
           {default, 8080},
           {commented, 8080}
@@ -132,7 +132,7 @@
 %% @doc if a service id is not configured by default the user is
 %% unable to revoke credentials of that service, by setting this to true
 %% all credentials of unconfigured services can be revoked
-{mapping, "allow_dropping_credentials", "tts.allow_dropping_credentials", [
+{mapping, "allow_dropping_credentials", "watts.allow_dropping_credentials", [
           {datatype ,    {enum ,  [true, false]}},
           {commented, false},
           {default, false}

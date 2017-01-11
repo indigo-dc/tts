@@ -21,8 +21,8 @@ tts.db
 distdir/
 package
 elm-stuff/
-ui/tts_ui.js
-ui/tts_ui_elm.js
+ui/watts_ui.js
+ui/watts_ui_elm.js
 TAGS
 *~
 *#

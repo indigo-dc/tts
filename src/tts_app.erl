@@ -23,7 +23,7 @@
 -export([stop/1]).
 
 start(_Type, _Args) ->
-    lager:info("Token Translation Service starting"),
+    lager:info("WaTTS starting ..."),
     tts_sup:start_link().
 
 stop(_State) ->

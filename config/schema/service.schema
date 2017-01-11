@@ -1,111 +1,111 @@
 %% @doc the description of the service, as shown to the user
-{mapping, "service.$id.description", "tts.service_list", [
+{mapping, "service.$id.description", "watts.service_list", [
           {datatype, string}
           ]}.
 
 %% @doc the command to execute, the so called 'plugin'
-{mapping, "service.$id.cmd", "tts.service_list.a", [
+{mapping, "service.$id.cmd", "watts.service_list.a", [
           {datatype, string}
           ]}.
 
 %% @doc the credential limit for this service
-{mapping, "service.$id.credential_limit", "tts.service_list.b", [
+{mapping, "service.$id.credential_limit", "watts.service_list.b", [
           {datatype, [{atom, infinite}, integer]}
           ]}.
 
 %% @doc the max count of parallel running plugins for this service
-{mapping, "service.$id.parallel_runner", "tts.service_list.c", [
+{mapping, "service.$id.parallel_runner", "watts.service_list.c", [
           {datatype, [{atom, infinite}, integer]}
           ]}.
 
 %% @doc wether the plugin is allowed to return the same state
 %% more than once
-{mapping, "service.$id.allow_same_state", "tts.service_list.d", [
+{mapping, "service.$id.allow_same_state", "watts.service_list.d", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
-%% @doc the time after which the TTS will stop waiting for a response
+%% @doc the time after which the WATTS.will stop waiting for a response
 %% from the plugin
-{mapping, "service.$id.plugin_timeout", "tts.service_list.e", [
+{mapping, "service.$id.plugin_timeout", "watts.service_list.e", [
           {datatype, [{duration, ms}, {atom, infinity}] }
           ]}.
 
 %% @doc if enabled the plugin will get the access token, use this
 %% option with caution! default is 'false'
-{mapping, "service.$id.pass_access_token", "tts.service_list.f", [
+{mapping, "service.$id.pass_access_token", "watts.service_list.f", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
-%% @doc the way tts connects to the place where to start the plugin
+%% @doc the way watts.connects to the place where to start the plugin
 %% this can be either local or ssh
 %% @see service.$id.cmd
-{mapping, "service.$id.connection.type", "tts.service_list.g", [
+{mapping, "service.$id.connection.type", "watts.service_list.g", [
           {datatype, {enum, [local, ssh]}}
           ]}.
 
 %% @doc the username to use for the connection
-{mapping, "service.$id.connection.user", "tts.service_list.h", [
+{mapping, "service.$id.connection.user", "watts.service_list.h", [
           {datatype, string}
           ]}.
 
 %% @doc the password to use for the connection
-{mapping, "service.$id.connection.password", "tts.service_list.i", [
+{mapping, "service.$id.connection.password", "watts.service_list.i", [
           {datatype, string}
           ]}.
 
 %% @doc the host to connect to
-{mapping, "service.$id.connection.host", "tts.service_list.j", [
+{mapping, "service.$id.connection.host", "watts.service_list.j", [
           {datatype, string}
           ]}.
 
 %% @doc the port to connect to
-{mapping, "service.$id.connection.port", "tts.service_list.k", [
+{mapping, "service.$id.connection.port", "watts.service_list.k", [
           {datatype, integer}
           ]}.
 
 
 %% @doc the sshDir to use when connecting
-{mapping, "service.$id.connection.ssh_dir", "tts.service_list.l", [
+{mapping, "service.$id.connection.ssh_dir", "watts.service_list.l", [
           {datatype, string}
           ]}.
 
 
 %% @doc the password for the ssh private key
-{mapping, "service.$id.connection.ssh_key_pass", "tts.service_list.m", [
+{mapping, "service.$id.connection.ssh_key_pass", "watts.service_list.m", [
           {datatype, string}
           ]}.
 
 %% @doc the plugin configuration parameter
-{mapping, "service.$id.plugin.$key", "tts.service_list.n", [
+{mapping, "service.$id.plugin.$key", "watts.service_list.n", [
           {datatype, string}
           ]}.
 
 
 %% @doc wether to hide the service from unauthorized users, default is false
-{mapping, "service.$id.authz.hide", "tts.service_list.w", [
+{mapping, "service.$id.authz.hide", "watts.service_list.w", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
 %% @doc the tooltip, when unauthorized, shown to the user
-{mapping, "service.$id.authz.tooltip", "tts.service_list.x", [
+{mapping, "service.$id.authz.tooltip", "watts.service_list.x", [
           {datatype, string}
           ]}.
 
 %% @doc the authorization configuration for the service, who is
 %% allowed to access the service, if not configured no one can
 %% use the service
-{mapping, "service.$id.authz.allow.$provider.$oidckey.$operation", "tts.service_list.y", [
+{mapping, "service.$id.authz.allow.$provider.$oidckey.$operation", "watts.service_list.y", [
           {datatype, string}
           ]}.
 
 %% @doc the authorization configuration for the service, who will be
 %% denied to use the service even if in 'allowed'
-{mapping, "service.$id.authz.forbid.$provider.$oidckey.$operation", "tts.service_list.z", [
+{mapping, "service.$id.authz.forbid.$provider.$oidckey.$operation", "watts.service_list.z", [
           {datatype, string}
           ]}.
 
 
-{translation, "tts.service_list",
+{translation, "watts.service_list",
  fun(Conf) ->
          TypeFilter =
              fun(Type) ->

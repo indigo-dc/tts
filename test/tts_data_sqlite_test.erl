@@ -1,9 +1,10 @@
 -module(tts_data_sqlite_test).
 -include_lib("eunit/include/eunit.hrl").
 -define(TEST_DB,"tts_unittest.db").
+-include("tts.hrl").
 
 start_link_test() ->
-    application:unset_env(tts,sqlite_db),
+    ?UNSETCONFIG(sqlite_db),
     {ok, Pid} = tts_data_sqlite:start_link(),
     ok = tts_data_sqlite:reconfigure(),
     {error, not_configured} = tts_data_sqlite:credential_add(<<"user1">>,
@@ -21,7 +22,7 @@ create_db_test_() ->
 
 create_db_check() ->
     file:delete(?TEST_DB),
-    application:set_env(tts, sqlite_db, ?TEST_DB),
+    ?SETCONFIG( sqlite_db, ?TEST_DB),
     {ok, Pid} = tts_data_sqlite:start_link(),
     ok = tts_data_sqlite:reconfigure(),
     ok = tts_data_sqlite:reconfigure(),
@@ -35,7 +36,7 @@ credential_test_() ->
 
 credential_check() ->
     file:delete(?TEST_DB),
-    application:set_env(tts,sqlite_db,?TEST_DB),
+    ?SETCONFIG(sqlite_db,?TEST_DB),
     {ok, Pid} = tts_data_sqlite:start_link(),
     ok = tts_data_sqlite:reconfigure(),
     MockModules = [cowboy_clock],

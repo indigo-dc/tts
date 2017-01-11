@@ -1,5 +1,6 @@
 -module(tts_temp_cred_test).
 -include_lib("eunit/include/eunit.hrl").
+-include("tts.hrl").
 
 start_stop_test() ->
     {ok, Pid} = tts_temp_cred:start_link(),
@@ -10,7 +11,7 @@ start_stop_test() ->
     {ok, Pid2} = tts_temp_cred_data:start_link(Cred),
     ok = tts_temp_cred_data:stop(Pid2),
     ok = test_util:wait_for_process_to_die(Pid2,300),
-    application:set_env(tts, credential_timeout, 30000),
+    ?SETCONFIG( credential_timeout, 30000),
     ok.
 
 add_get_test() ->
@@ -42,10 +43,10 @@ add_get_test() ->
 
 timeout_test() ->
     Cred = [],
-    application:set_env(tts, credential_timeout, 300),
+    ?SETCONFIG( credential_timeout, 300),
     {ok, Pid} = tts_temp_cred_data:start_link(Cred),
     ok = test_util:wait_for_process_to_die(Pid, 500),
-    application:set_env(tts, credential_timeout, 10000),
+    ?SETCONFIG( credential_timeout, 10000),
     ok.
 
 garbage_test() ->
