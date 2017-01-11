@@ -3,17 +3,17 @@
 -include("tts.hrl").
 
 start_stop_test() ->
-    {ok, Pid} = tts_plugin_runner:start_link(),
-    ok = tts_plugin_runner:stop(Pid),
+    {ok, Pid} = watts_plugin_runner:start_link(),
+    ok = watts_plugin_runner:stop(Pid),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
 garbage_test() ->
-    {ok, Pid} = tts_plugin_runner:start_link(),
+    {ok, Pid} = watts_plugin_runner:start_link(),
     ignored = gen_server:call(Pid, unsupported_call),
     ok = gen_server:cast(Pid, unsupported_cast),
     Pid ! unsupported_msg,
-    ok = tts_plugin_runner:stop(Pid),
+    ok = watts_plugin_runner:stop(Pid),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok.
 
@@ -25,14 +25,14 @@ request_ssh_test() ->
     Params = [],
 
 
-    {ok, Pid} = tts_plugin_runner:start(),
+    {ok, Pid} = watts_plugin_runner:start(),
     SshPid ! {pid, Pid},
 
     {ok, #{credential:=_Credential, state:=_CredState},
-     _} = tts_plugin_runner:request(ServiceId, UserInfo,Params,undefined,Pid),
+     _} = watts_plugin_runner:request(ServiceId, UserInfo,Params,undefined,Pid),
 
 
-    ok = tts_plugin_runner:stop(Pid),
+    ok = watts_plugin_runner:stop(Pid),
     ok = test_util:wait_for_process_to_die(Pid,100),
     ok = stop_meck(Meck),
     ok.
@@ -43,15 +43,15 @@ request_local_test() ->
     {ok, UserInfo0} = tts_userinfo:new(),
     {ok, UserInfo} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
     Params = [],
-    {ok, ReqPid} = tts_plugin_runner:start(),
+    {ok, ReqPid} = watts_plugin_runner:start(),
 
     {error, bad_json_result
-     , _} = tts_plugin_runner:request(ServiceId, UserInfo,Params, undefined, ReqPid),
+     , _} = watts_plugin_runner:request(ServiceId, UserInfo,Params, undefined, ReqPid),
     ok = test_util:wait_for_process_to_die(ReqPid,100),
 
-    {ok, RevPid} = tts_plugin_runner:start(),
+    {ok, RevPid} = watts_plugin_runner:start(),
     {error, bad_json_result
-     , _} = tts_plugin_runner:revoke(ServiceId, UserInfo,<<"credstate">>, undefined, RevPid),
+     , _} = watts_plugin_runner:revoke(ServiceId, UserInfo,<<"credstate">>, undefined, RevPid),
     ok = test_util:wait_for_process_to_die(RevPid,100),
 
     ok = stop_meck(Meck),
@@ -68,9 +68,9 @@ no_cmd_crash_test() ->
                 },
     Params = [],
 
-    {ok, Pid} = tts_plugin_runner:start(),
-    {error, {internal, _}} = tts_plugin_runner:request(ServiceId, UserInfo,Params, undefined,Pid),
-    ok = tts_plugin_runner:stop(Pid),
+    {ok, Pid} = watts_plugin_runner:start(),
+    {error, {internal, _}} = watts_plugin_runner:request(ServiceId, UserInfo,Params, undefined,Pid),
+    ok = watts_plugin_runner:stop(Pid),
     ok = test_util:wait_for_process_to_die(Pid,1000),
 
     ok = stop_meck(Meck),
