@@ -11,15 +11,15 @@ dispatch_mapping_test() ->
 
     ExpMapping = <<"/test/:version/:type/[:id]">>,
 
-    Mapping1 = tts_rest:dispatch_mapping(BasePath1),
-    Mapping2 = tts_rest:dispatch_mapping(BasePath2),
+    Mapping1 = watts_rest:dispatch_mapping(BasePath1),
+    Mapping2 = watts_rest:dispatch_mapping(BasePath2),
     ?assertEqual(ExpMapping, Mapping1),
     ?assertEqual(Mapping1, Mapping2),
     ok.
 
 
 init_test() ->
-    ?assertEqual({upgrade, protocol, cowboy_rest}, tts_rest:init(a,b,c)),
+    ?assertEqual({upgrade, protocol, cowboy_rest}, watts_rest:init(a,b,c)),
     ok.
 
 %% state from tts_rest
@@ -39,7 +39,7 @@ init_test() ->
 rest_init_test() ->
     {ok, Meck} = start_meck(),
     Req = req,
-    {ok, Req, #state{}} = tts_rest:rest_init(Req, doesnt_matter),
+    {ok, Req, #state{}} = watts_rest:rest_init(Req, doesnt_matter),
     ok = stop_meck(Meck),
     ok.
 
@@ -47,25 +47,25 @@ allowed_methods_test() ->
     State = #state{},
     Req = req,
     {[<<"GET">>, <<"POST">>, <<"DELETE">>], Req, State} =
-    tts_rest:allowed_methods(Req, State),
+    watts_rest:allowed_methods(Req, State),
     ok.
 
 allow_missing_post_test() ->
     State = #state{},
     Req = req,
-    {false, Req, State} = tts_rest:allow_missing_post(Req, State).
+    {false, Req, State} = watts_rest:allow_missing_post(Req, State).
 
 content_types_provided_test() ->
     State = #state{},
     Req = req,
-    {[ContentType], Req, State} = tts_rest:content_types_provided(Req, State),
+    {[ContentType], Req, State} = watts_rest:content_types_provided(Req, State),
     {{<<"application">>, <<"json">>, '*'}, get_json} = ContentType,
     ok.
 
 content_types_accepted_test() ->
     State = #state{},
     Req = req,
-    {[ContentType], Req, State} = tts_rest:content_types_accepted(Req, State),
+    {[ContentType], Req, State} = watts_rest:content_types_accepted(Req, State),
     {{<<"application">>, <<"json">>, '*'}, post_json} = ContentType,
     ok.
 
@@ -211,7 +211,7 @@ malformed_request_test() ->
 
     Test  = fun({Request, ExpResult}, _) ->
                     io:format("testing with request ~p~n",[Request]),
-                    {Result, Request, _} = tts_rest:malformed_request(Request,
+                    {Result, Request, _} = watts_rest:malformed_request(Request,
                                                                       State),
                     io:format("got result ~p, expecting ~p~n",[Result, ExpResult]),
                     ?assertEqual(ExpResult, Result),
@@ -247,7 +247,7 @@ is_authorized_test() ->
     Req = req,
     Test = fun({State, ExpResult}, _AccIn) ->
                    io:format("testing with state ~p~n",[State]),
-                   {Result, Req, _CState} = tts_rest:is_authorized(Req, State),
+                   {Result, Req, _CState} = watts_rest:is_authorized(Req, State),
                    io:format("got result ~p, expecting ~p~n",[Result, ExpResult]),
                    ?assertEqual(ExpResult, Result),
                    ok
@@ -281,7 +281,7 @@ resource_exists_test() ->
 
     Test  = fun({State, ExpResult}, _) ->
                     io:format("testing ~p, expecting: ~p~n", [State, ExpResult]),
-                    {Result, req, _} = tts_rest:resource_exists(req, State),
+                    {Result, req, _} = watts_rest:resource_exists(req, State),
                     ?assertEqual(ExpResult, Result),
                     ok
             end,
@@ -327,7 +327,7 @@ get_json_test() ->
 
     Test  = fun({State, ExpResult}, _) ->
                     io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                    {Result, req, _NewState} = tts_rest:get_json(req, State),
+                    {Result, req, _NewState} = watts_rest:get_json(req, State),
                     ?assertEqual(ExpResult, Result),
                     ok
             end,
@@ -360,7 +360,7 @@ post_json_test() ->
 
     Test  = fun({State, ExpResult}, _) ->
                     io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                    {Result, req, _NewState} = tts_rest:post_json(req, State),
+                    {Result, req, _NewState} = watts_rest:post_json(req, State),
                     ?assertEqual(ExpResult, Result),
                     ok
             end,
@@ -389,7 +389,7 @@ delete_resource_test() ->
 
     Test  = fun({State, ExpResult}, _) ->
                     io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                    {Result, req, _NewState} = tts_rest:delete_resource(req, State),
+                    {Result, req, _NewState} = watts_rest:delete_resource(req, State),
                     ?assertEqual(ExpResult, Result),
                     ok
             end,
