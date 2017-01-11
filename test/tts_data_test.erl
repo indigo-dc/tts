@@ -9,15 +9,15 @@ session_test() ->
     %%            sessions_get_pid/1,
     %%            sessions_update_pid/2,
     %%            sessions_delete/1
-    ok = tts_data:init(),
+    ok = watts_data:init(),
     ID1 = 1234,
     ID2 = 5678,
-    ?assertEqual([], tts_data:sessions_get_list()),
-    ok = tts_data:sessions_create_new(ID1),
-    {error, _} = tts_data:sessions_create_new(ID1),
-    [#{id := ID1}] = tts_data:sessions_get_list(),
-    ok = tts_data:sessions_create_new(ID2),
-    List = tts_data:sessions_get_list(),
+    ?assertEqual([], watts_data:sessions_get_list()),
+    ok = watts_data:sessions_create_new(ID1),
+    {error, _} = watts_data:sessions_create_new(ID1),
+    [#{id := ID1}] = watts_data:sessions_get_list(),
+    ok = watts_data:sessions_create_new(ID2),
+    List = watts_data:sessions_get_list(),
     ?assertEqual(2,length(List)),
     Find = fun(#{id := Id}, IdList) ->
                    case lists:member(Id, IdList) of
@@ -27,15 +27,15 @@ session_test() ->
            end,
     ?assertEqual([], lists:foldl(Find, [ID1, ID2], List)),
 
-    {error, _} = tts_data:sessions_get_pid(ID1),
-    ?assertEqual(ok, tts_data:sessions_update_pid(ID1, self())),
-    ?assertEqual({ok, self()}, tts_data:sessions_get_pid(ID1)),
-    ?assertEqual(ok, tts_data:sessions_delete(ID1)),
-    [#{id := ID2}] = tts_data:sessions_get_list(),
-    ?assertEqual(ok, tts_data:sessions_delete(ID1)),
-    ?assertEqual(ok, tts_data:sessions_delete(ID2)),
-    ?assertEqual([], tts_data:sessions_get_list()),
-    ok = tts_data:destroy(),
+    {error, _} = watts_data:sessions_get_pid(ID1),
+    ?assertEqual(ok, watts_data:sessions_update_pid(ID1, self())),
+    ?assertEqual({ok, self()}, watts_data:sessions_get_pid(ID1)),
+    ?assertEqual(ok, watts_data:sessions_delete(ID1)),
+    [#{id := ID2}] = watts_data:sessions_get_list(),
+    ?assertEqual(ok, watts_data:sessions_delete(ID1)),
+    ?assertEqual(ok, watts_data:sessions_delete(ID2)),
+    ?assertEqual([], watts_data:sessions_get_list()),
+    ok = watts_data:destroy(),
     ok.
 
 service_test() ->
@@ -44,18 +44,18 @@ service_test() ->
     %%     service_update/2,
     %%     service_get/1,
     %%     service_get_list/0
-    ok = tts_data:init(),
+    ok = watts_data:init(),
     ID1 = 1234,
     ID2 = 5678,
-    ?assertEqual({ok, []}, tts_data:service_get_list()),
-    ok = tts_data:service_add(ID1, #{info => nothing, id => ID1}),
-    {error, _} = tts_data:service_add(ID1, #{}),
-    ?assertEqual({ok, [#{info => nothing, id => ID1}]}, tts_data:service_get_list()),
-    ?assertEqual({ok, {ID1, #{info => nothing, id => ID1}}}, tts_data:service_get(ID1)),
-    ok = tts_data:service_update(ID1, #{id => ID1, info => important}),
-    ?assertEqual({ok, [#{info => important, id => ID1}]}, tts_data:service_get_list()),
-    ok = tts_data:service_add(ID2, #{id => ID2}),
-    {ok, List} = tts_data:service_get_list(),
+    ?assertEqual({ok, []}, watts_data:service_get_list()),
+    ok = watts_data:service_add(ID1, #{info => nothing, id => ID1}),
+    {error, _} = watts_data:service_add(ID1, #{}),
+    ?assertEqual({ok, [#{info => nothing, id => ID1}]}, watts_data:service_get_list()),
+    ?assertEqual({ok, {ID1, #{info => nothing, id => ID1}}}, watts_data:service_get(ID1)),
+    ok = watts_data:service_update(ID1, #{id => ID1, info => important}),
+    ?assertEqual({ok, [#{info => important, id => ID1}]}, watts_data:service_get_list()),
+    ok = watts_data:service_add(ID2, #{id => ID2}),
+    {ok, List} = watts_data:service_get_list(),
     ?assertEqual(2,length(List)),
     Find = fun(#{id := Id}, IdList) ->
                    case lists:member(Id, IdList) of
@@ -65,5 +65,5 @@ service_test() ->
            end,
     ?assertEqual([], lists:foldl(Find, [ID1, ID2], List)),
 
-    ok = tts_data:destroy(),
+    ok = watts_data:destroy(),
     ok.

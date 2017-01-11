@@ -104,7 +104,7 @@ init_watts() ->
 
 start_database() ->
     lager:info("Init: starting ets database"),
-    ok = tts_data:init(),
+    ok = watts_data:init(),
     lager:info("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
     ok = tts_data_sqlite:reconfigure(),
     case tts_data_sqlite:is_ready() of

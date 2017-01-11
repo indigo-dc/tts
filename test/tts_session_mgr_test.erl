@@ -113,8 +113,8 @@ garbage_test() ->
 
 start_meck() ->
     MeckModules = [tts_session_sup],
-    tts_data:destroy(),
-    tts_data:init(),
+    watts_data:destroy(),
+    watts_data:init(),
     ok = test_util:meck_new(MeckModules),
     NewSession = fun(ID) ->
                          tts_session:start_link(ID)
@@ -124,6 +124,6 @@ start_meck() ->
 
 
 stop_meck({MeckModules}) ->
-    tts_data:destroy(),
+    watts_data:destroy(),
     ok = test_util:meck_done(MeckModules),
     ok.

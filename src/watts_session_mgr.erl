@@ -137,16 +137,16 @@ repeat_id_gen_if_needed(_) ->
 %% functions with data access
 %%
 get_all_sessions() ->
-    tts_data:sessions_get_list().
+    watts_data:sessions_get_list().
 
 add_new_session_entry(Token) ->
-    case tts_data:sessions_create_new(Token) of
+    case watts_data:sessions_create_new(Token) of
         ok -> {ok, Token};
         _ -> {error, used}
     end.
 
 lookup_session_pid(ID) ->
-    case tts_data:sessions_get_pid(ID) of
+    case watts_data:sessions_get_pid(ID) of
         {ok, Pid} ->
             {ok, Pid};
         {error, _} ->
@@ -154,8 +154,8 @@ lookup_session_pid(ID) ->
     end.
 
 set_session_for_token(Token, Pid) ->
-    tts_data:sessions_update_pid(Token, Pid).
+    watts_data:sessions_update_pid(Token, Pid).
 
 delete_session(ID) ->
-    tts_data:sessions_delete(ID),
+    watts_data:sessions_delete(ID),
     ok.
