@@ -52,9 +52,9 @@ authorization_test() ->
         = fun({Rules, Exp1, Exp2}, _) ->
                   AuthMap1 = #{allow => Rules, forbid => []},
                   AuthMap2 = #{allow => AllowRule, forbid => Rules},
-                  Res1 = tts_service_authz:is_authorized(ServiceId, UserInfo,
+                  Res1 = watts_service_authz:is_authorized(ServiceId, UserInfo,
                                                         AuthMap1),
-                  Res2 = tts_service_authz:is_authorized(ServiceId, UserInfo,
+                  Res2 = watts_service_authz:is_authorized(ServiceId, UserInfo,
                                                         AuthMap2),
                   case {Exp1 == Res1, Exp2 == Res2} of
                       {false, false} ->
@@ -105,7 +105,7 @@ validate_config_test() ->
 
     Validate
         = fun({Config, Exp}, _)  ->
-                  {ok, Res} = tts_service_authz:validate_config(ServiceId,
+                  {ok, Res} = watts_service_authz:validate_config(ServiceId,
                                                                 Config),
                   ?assertEqual(Exp, Res),
                   ok

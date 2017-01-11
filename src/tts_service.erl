@@ -112,12 +112,12 @@ is_allowed(UserInfo, ServiceId) ->
     end.
 
 is_allowed(ServiceId, UserInfo, AuthzConf) ->
-    tts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
+    watts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
 
 
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     AuthzConf0 = maps:get(authz, ServiceInfo, #{allow => [], forbid => []}),
-    {ok, AuthzConf} = tts_service_authz:validate_config(ServiceId, AuthzConf0),
+    {ok, AuthzConf} = watts_service_authz:validate_config(ServiceId, AuthzConf0),
     Update = #{enabled => false, authz => AuthzConf},
     ok = watts_data:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
     {ok, ServiceId};
