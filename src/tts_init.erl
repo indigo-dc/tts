@@ -91,7 +91,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 init_watts() ->
     lager:info("Init: starting  "),
-    lager:debug("Init: config = ~p", [application:get_all_env(?APPLICATION)]),
+    %% copy the version into the config
+    %% only using env values, so everything can be tested
+    Vsn =  case ?GETKEY(vsn) of
+               undefined -> "testing";
+               {ok, V} -> V
+           end,
+    ok = ?SETCONFIG(vsn, Vsn),
+    lager:debug("Init: config = ~p", [?ALLCONFIG]),
     ok.
 
 
@@ -136,13 +143,6 @@ add_openid_provider([], _) ->
 
 add_services() ->
     lager:info("Init: adding services"),
-    %% copy the version into the config
-    %% only using env values, so everything can be tested
-    Vsn =  case application:get_key(?APPLICATION, vsn) of
-               undefined -> "testing";
-               {ok, V} -> V
-           end,
-    ok = application:set_env(?APPLICATION, vsn, Vsn),
     ServiceList = ?CONFIG(service_list),
     ok = add_services(ServiceList),
     ok.
