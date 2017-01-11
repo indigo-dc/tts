@@ -74,7 +74,7 @@ init([]) ->
 
 handle_call({add,  Cred, UserId}, _From, #state{creds = Creds} = State) ->
     Id = gen_random_id(State),
-    {ok, DataPid} = tts_temp_cred_sup:new_temp_cred(Cred),
+    {ok, DataPid} = watts_temp_cred_sup:new_temp_cred(Cred),
     MRef = monitor(process, DataPid),
     NewCreds = [{Id, UserId, DataPid, MRef} | Creds],
     {reply, {ok, Id}, State#state{creds=NewCreds}};
