@@ -125,7 +125,7 @@ get_unique_token() ->
     repeat_id_gen_if_needed(add_new_session_entry(Token)).
 
 start_session(Token) ->
-    {ok, Pid} = tts_session_sup:new_session(Token),
+    {ok, Pid} = watts_session_sup:new_session(Token),
     Pid.
 
 repeat_id_gen_if_needed({ok, Token}) ->
