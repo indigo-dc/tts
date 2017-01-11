@@ -2,7 +2,7 @@
                     {description, ""},
                     {vsn, "semver"},
                     {modules, []},
-                    {registered, [tts_sup]},
+                    {registered, [watts_sup]},
                     {applications, [
                                     kernel,
                                     stdlib,
@@ -20,5 +20,5 @@
                                     jobs,
                                     eper
                                    ]},
-                    {mod, {tts_app, []}}
+                    {mod, {watts_app, []}}
                    ]}.

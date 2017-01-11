@@ -1,6 +1,6 @@
 -module(rest_SUITE).
 -include_lib("common_test/include/ct.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 -export([all/0,
          %% groups/0,
@@ -103,29 +103,29 @@ end_per_suite(Conf) ->
 
 
 service_config(_Config) ->
-    {ok, Services} = tts_service:get_list(),
+    {ok, Services} = watts_service:get_list(),
     ct:log("service configs:~n~p~n", [Services]),
     ok.
 
 provider_config(_Config) ->
     WaitList = fun() ->
-                   {ok, Provider} = tts:get_openid_provider_list(),
+                   {ok, Provider} = watts:get_openid_provider_list(),
                    length(Provider) >= 1
            end,
     ok = test_util:wait_for_true(WaitList, 10),
     WaitReady = fun() ->
-                   {ok, Provider} = tts:get_openid_provider_list(),
+                   {ok, Provider} = watts:get_openid_provider_list(),
                    [#{ready := Result}| _] = Provider,
                    Result
            end,
     ok = test_util:wait_for_true(WaitReady, 1000),
-    {ok, Provider} = tts:get_openid_provider_list(),
+    {ok, Provider} = watts:get_openid_provider_list(),
     ct:log("provider configs:~n~p~n", [Provider]),
     ok.
 
 init_done(_Config) ->
     Done = fun() ->
-                   Children = supervisor:which_children(tts_sup),
+                   Children = supervisor:which_children(watts_sup),
                    case lists:keyfind(init, 1, Children) of
                        {init, undefined, worker, _} ->
                            true;
