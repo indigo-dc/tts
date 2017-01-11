@@ -3,8 +3,8 @@
 -include("tts.hrl").
 
 basic_test() ->
-    {ok, req, []} = tts_redirection:init(ignored, req, ignored),
-    ok = tts_redirection:terminate( ignored, ignored, ignored).
+    {ok, req, []} = watts_redirection:init(ignored, req, ignored),
+    ok = watts_redirection:terminate( ignored, ignored, ignored).
 
 
 redirect_test() ->
@@ -27,7 +27,7 @@ redirect_test() ->
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(cowboy_req, reply, Reply),
     set_needed_env(),
-    {ok, req2, []} = tts_redirection:handle(req, ignored),
+    {ok, req2, []} = watts_redirection:handle(req, ignored),
     unset_env(),
     ok = test_util:meck_done(MeckModules),
     ok.
