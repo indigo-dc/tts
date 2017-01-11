@@ -196,7 +196,7 @@ revoke_credential_for(CredId, Session) ->
 
 get_access_token_for(Session) ->
     {ok, UserInfo} = watts_session:get_user_info(Session),
-    {ok, AccessToken} = tts_userinfo:return(access_token, UserInfo),
+    {ok, AccessToken} = watts_userinfo:return(access_token, UserInfo),
     {ok, AccessToken}.
 
 get_display_name_for(Session) ->

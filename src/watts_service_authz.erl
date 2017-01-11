@@ -5,7 +5,7 @@
 
 
 is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
-    {ok, Issuer, Subject} = tts_userinfo:return(issuer_subject, UserInfo),
+    {ok, Issuer, Subject} = watts_userinfo:return(issuer_subject, UserInfo),
     lager:debug("checking authorization of ~p ~p at service ~p [~p]",
                 [Issuer, Subject, ServiceId, A]),
     try
@@ -44,7 +44,7 @@ apply_rules(ServiceId, UserInfo, Rules, Default) ->
     lists:foldl(ApplyRule, false, Rules).
 
 apply_rule(_ServiceId, {_Iss, Key, Op, Value}, UserInfo, Default) ->
-    case tts_userinfo:return({key, Key}, UserInfo) of
+    case watts_userinfo:return({key, Key}, UserInfo) of
         {ok, KeyValue} ->
             Res = perform_operation(Op, KeyValue, Value),
             lager:debug("performed ~p(~p, ~p) -> ~p",

@@ -12,8 +12,8 @@ get_list_test() ->
 
 get_list_for_user_test() ->
     {ok, Meck} = start_meck(),
-    {ok, Info0} = tts_userinfo:new(),
-    {ok, Info} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, Info0),
+    {ok, Info0} = watts_userinfo:new(),
+    {ok, Info} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, Info0),
 
 
     {ok, List} = watts_service:get_list(Info),
@@ -35,8 +35,8 @@ proxy_function_test() ->
     Service1 = <<"id1">>,
     Service2 = <<"id2">>,
     Unknown = <<"idk">>,
-    {ok, UserInfo0} = tts_userinfo:new(),
-    {ok, UserInfo} = tts_userinfo:update_iss_sub(?ISSUER, <<"sub">>, UserInfo0),
+    {ok, UserInfo0} = watts_userinfo:new(),
+    {ok, UserInfo} = watts_userinfo:update_iss_sub(?ISSUER, <<"sub">>, UserInfo0),
     io:format("using userinfo ~p~n",[UserInfo]),
 
     ?assertEqual(true, watts_service:exists(Service1)),

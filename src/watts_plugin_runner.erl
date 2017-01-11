@@ -295,13 +295,13 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
 add_user_info_if_present(ScriptParam, undefined, _) ->
     ScriptParam;
 add_user_info_if_present(ScriptParam, UserInfo, true) ->
-    {ok, AccessToken} = tts_userinfo:return(access_token, UserInfo),
+    {ok, AccessToken} = watts_userinfo:return(access_token, UserInfo),
     Update = #{access_token => AccessToken},
     NewParams = maps:merge(ScriptParam, Update),
     add_user_info_if_present(NewParams, UserInfo, false);
 add_user_info_if_present(ScriptParam, UserInfo, _) ->
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
-    {ok, PluginUserInfo} = tts_userinfo:return(plugin_info, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
+    {ok, PluginUserInfo} = watts_userinfo:return(plugin_info, UserInfo),
     Update = #{tts_userid => UserId, user_info => PluginUserInfo},
     maps:merge(ScriptParam, Update).
 

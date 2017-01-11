@@ -48,17 +48,17 @@ stop() ->
 
 %% -spec get_list(binary()) -> {ok, [tts:cred()]}.
 get_cred_list(UserInfo) ->
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     get_credential_list(UserId).
 
 %% -spec get_count(binary(), binary()) -> {ok, non_neg_integer()}.
 get_count(UserInfo, ServiceId) ->
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     get_credential_count(UserId, ServiceId).
 
 %% -spec exists(binary(), binary()) -> true | false.
 exists(UserInfo, CredId) ->
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     case get_credential(UserId, CredId) of
         {ok, _} -> true;
         _ -> false
@@ -69,7 +69,7 @@ exists(UserInfo, CredId) ->
 request(ServiceId, UserInfo, Interface, Params) ->
     {ok, Limit} = watts_service:get_credential_limit(ServiceId),
     {ok, QueueName} = watts_service:get_queue(ServiceId),
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     {ok, Count} = get_credential_count(UserId, ServiceId),
     Enabled = watts_service:is_enabled(ServiceId),
     Allowed = watts_service:is_allowed(UserInfo, ServiceId),
@@ -94,7 +94,7 @@ request(ServiceId, UserInfo, Interface, Params) ->
 %% -spec revoke(binary(), binary(), map()) ->
 %%     {ok, tts:cred(), list()} | {error, any(), list()}.
 revoke(CredentialId, UserInfo) ->
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     CredentialInfo = get_credential(UserId, CredentialId),
     revoke_credential(CredentialInfo, UserInfo).
 
@@ -123,7 +123,7 @@ revoke_or_drop(true, CredInfo, UserInfo ) ->
                            });
 revoke_or_drop(false, #{service_id := ServiceId,
                         cred_id := CredId}, UserInfo  ) ->
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     DropEnabled = ?CONFIG_(allow_dropping_credentials),
     UMsg = "the service does not exist, please contact the administrator",
     case DropEnabled of
@@ -168,7 +168,7 @@ handle_result(ok, #{credential := Cred0, state := CredState}, _Log,
     Interface = maps:get(interface, Info),
     ServiceId = maps:get(service_id, Info),
     Cred = validate_credential_values(Cred0),
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     case sync_store_credential(UserId, ServiceId, Interface, CredState) of
         {ok, CredId} ->
             return(result, #{id => CredId, entries => Cred});
@@ -196,7 +196,7 @@ handle_result(ok, _, _Log, #{action := revoke} = Info) ->
     %% a valid credential response
     UserInfo = maps:get(user_info, Info),
     CredId = maps:get(cred_id, Info),
-    {ok, UserId} = tts_userinfo:return(id, UserInfo),
+    {ok, UserId} = watts_userinfo:return(id, UserInfo),
     remove_credential(UserId, CredId);
 handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := revoke} ) ->
     %% a valid error response

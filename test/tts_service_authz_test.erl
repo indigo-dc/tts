@@ -9,7 +9,7 @@ authorization_test() ->
     Iam = <<"iam">>,
     Other = <<"iom">>,
 
-    {ok, UserInfo0} = tts_userinfo:new(),
+    {ok, UserInfo0} = watts_userinfo:new(),
     IdToken = #{claims => #{sub => Sub,
                             iss => ?ISSUER,
                             groups => [<<"Developer">>, <<"User">>],
@@ -17,7 +17,7 @@ authorization_test() ->
                             groups2 => <<"good,bad,bad-good,not_good ">>,
                             groups3 => <<"good,bad,tbad-good,not_good ">>
                            }},
-    {ok, UserInfo1} = tts_userinfo:update_id_token(IdToken
+    {ok, UserInfo1} = watts_userinfo:update_id_token(IdToken
                                                  , UserInfo0),
     UserInfo = UserInfo1,
     io:format("userinfo: ~p~n",[UserInfo]),

@@ -138,7 +138,7 @@ init([Token]) ->
     Id = self(),
     lager:info("SESS~p starting", [Id]),
     MaxAge = ?CONFIG(session_timeout, 10000),
-    {ok, UserInfo} = tts_userinfo:new(),
+    {ok, UserInfo} = watts_userinfo:new(),
     {ok, #state{id = Id, sess_token=Token, max_age=MaxAge, user_info=UserInfo}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
@@ -147,7 +147,7 @@ handle_call(get_sess_token, _From, #state{sess_token=Token,
                                           max_age=MA}=State) ->
     {reply, {ok, Token}, State, MA};
 handle_call(get_userid, _From, #state{max_age=MA, user_info=UserInfo}=State) ->
-    Result = tts_userinfo:return(id, UserInfo),
+    Result = watts_userinfo:return(id, UserInfo),
     {reply, Result, State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
@@ -155,7 +155,7 @@ handle_call({set_max_age, MA}, _From, State) ->
     {reply, ok, State#state{max_age=MA}, MA};
 handle_call({set_iss_sub, Issuer, Subject}, _From,
             #state{max_age=MA, user_info=Info}=State) ->
-    {ok, NewInfo} = tts_userinfo:update_iss_sub(Issuer, Subject, Info),
+    {ok, NewInfo} = watts_userinfo:update_iss_sub(Issuer, Subject, Info),
     {reply, ok, State#state{user_info=NewInfo}, MA};
 handle_call({set_token, Token}, _From,
             #state{user_info=Info, max_age=MA}=State) ->
@@ -168,7 +168,7 @@ handle_call({set_token, Token}, _From,
             undefined ->
                 Info;
             _ ->
-                {ok, Inf1} = tts_userinfo:update_id_token(IdToken, Info),
+                {ok, Inf1} = watts_userinfo:update_id_token(IdToken, Info),
                 Inf1
         end,
     Info2 =
@@ -176,7 +176,7 @@ handle_call({set_token, Token}, _From,
             undefined ->
                 Info1;
             _ ->
-                {ok, Inf2} = tts_userinfo:update_id_info(IdInfo, Info1),
+                {ok, Inf2} = watts_userinfo:update_id_info(IdInfo, Info1),
                 Inf2
         end,
     Info3 =
@@ -184,7 +184,7 @@ handle_call({set_token, Token}, _From,
             undefined ->
                 Info2;
             _ ->
-                {ok, Inf3} = tts_userinfo:update_access_token(AccToken, Info2),
+                {ok, Inf3} = watts_userinfo:update_access_token(AccToken, Info2),
                 Inf3
         end,
     {reply, ok, State#state{user_info=Info3}, MA};
@@ -195,10 +195,10 @@ handle_call(get_error, _From, #state{max_age=MA, error=Error}=State) ->
 handle_call(get_user_info, _From, #state{max_age=MA, user_info=Info} =State) ->
     {reply, {ok, Info}, State, MA};
 handle_call(get_display_name, _Frm, #state{max_age=MA, user_info=Info}=State) ->
-    Result = tts_userinfo:return(display_name, Info),
+    Result = watts_userinfo:return(display_name, Info),
     {reply, Result, State, MA};
 handle_call(is_logged_in, _From, #state{user_info=Info, max_age=MA}=State) ->
-    Result = tts_userinfo:return(logged_in, Info),
+    Result = watts_userinfo:return(logged_in, Info),
     {reply, Result, State, MA};
 handle_call({is_user_agent, UserAgent}, _From,
             #state{user_agent=undefined, max_age=MA}=State) ->

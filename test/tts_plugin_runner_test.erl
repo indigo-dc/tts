@@ -20,8 +20,8 @@ garbage_test() ->
 request_ssh_test() ->
     {ok, {SshPid,_} = Meck } = start_meck(),
     ServiceId = <<"ssh1">>,
-    {ok, UserInfo0} = tts_userinfo:new(),
-    {ok, UserInfo} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+    {ok, UserInfo0} = watts_userinfo:new(),
+    {ok, UserInfo} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
     Params = [],
 
 
@@ -40,8 +40,8 @@ request_ssh_test() ->
 request_local_test() ->
     {ok, Meck} = start_meck(),
     ServiceId = <<"local1">>,
-    {ok, UserInfo0} = tts_userinfo:new(),
-    {ok, UserInfo} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+    {ok, UserInfo0} = watts_userinfo:new(),
+    {ok, UserInfo} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
     Params = [],
     {ok, ReqPid} = watts_plugin_runner:start(),
 

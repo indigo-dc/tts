@@ -31,9 +31,9 @@ userinfo_test() ->
     {error, not_set} = watts_session:get_display_name(Pid),
     false = watts_session:is_logged_in(Pid),
     {ok, Info} = watts_session:get_user_info(Pid),
-    false = tts_userinfo:return(logged_in, Info),
-    {error, not_set} = tts_userinfo:return(id, Info),
-    {error, not_set} = tts_userinfo:return(display_name, Info),
+    false = watts_userinfo:return(logged_in, Info),
+    {error, not_set} = watts_userinfo:return(id, Info),
+    {error, not_set} = watts_userinfo:return(display_name, Info),
 
 
     ok = watts_session:set_iss_sub(<<"iss">>, <<"sub">>, Pid),

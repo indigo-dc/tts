@@ -24,8 +24,8 @@ get_list_test() ->
     CredId1 = <<"some credential id1">>,
     OtherCred = <<"cred2">>,
 
-    {ok, UserInfo0} = tts_userinfo:new(),
-    {ok, UserInfo} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+    {ok, UserInfo0} = watts_userinfo:new(),
+    {ok, UserInfo} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
     {ok, Pid} = watts_plugin:start_link(),
 
     ?assertEqual({ok, [#{service_id => ServiceId}]},
@@ -56,10 +56,10 @@ request_test() ->
 
     {ok, Meck} = start_meck(),
 
-    {ok, UserInfo0} = tts_userinfo:new(),
-    {ok, UserInfo1} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
-    {ok, UserInfo2} = tts_userinfo:update_iss_sub(<<"iss">>, <<"su">>, UserInfo0),
-    {ok, UserInfo3} = tts_userinfo:update_iss_sub(<<"other">>, <<"sub">>, UserInfo0),
+    {ok, UserInfo0} = watts_userinfo:new(),
+    {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+    {ok, UserInfo2} = watts_userinfo:update_iss_sub(<<"iss">>, <<"su">>, UserInfo0),
+    {ok, UserInfo3} = watts_userinfo:update_iss_sub(<<"other">>, <<"sub">>, UserInfo0),
 
     {ok, Pid} = watts_plugin:start_link(),
     ?assertEqual({ok, #{id => <<"123">>, entries => [Cred1]}},
@@ -108,8 +108,8 @@ request_test() ->
 
 revoke_test() ->
     {ok, Meck} = start_meck(),
-    {ok, UserInfo0} = tts_userinfo:new(),
-    {ok, UserInfo1} = tts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+    {ok, UserInfo0} = watts_userinfo:new(),
+    {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
     CredId1 = <<"some credential id1">>,
     CredId2 = <<"some credential id2">>,
     CredId3 = <<"some credential id3">>,
@@ -218,7 +218,7 @@ start_meck() ->
                     end
              end,
     RequestFun = fun(Service, UserInfo, _Par, _Queue, Pid) ->
-                         {ok, User}  = tts_userinfo:return(id, UserInfo),
+                         {ok, User}  = watts_userinfo:return(id, UserInfo),
                          Pid = MyPid,
                          case {User, Service} of
                              {UserId1, Service1} ->
@@ -264,7 +264,7 @@ start_meck() ->
                  end,
     RevokeFun = fun(Service, UserInfo, _Par, _Queue, Pid) ->
                          %% Service = ServiceId,
-                        {ok, UserId} = tts_userinfo:return(id, UserInfo),
+                        {ok, UserId} = watts_userinfo:return(id, UserInfo),
                         Pid = MyPid,
                         case {UserId, Service} of
                             {UserId1, Service1} -> {ok, #{result => <<"ok">>}, []};
@@ -290,7 +290,7 @@ start_meck() ->
                        not (Service6 == ServiceId)
                 end,
     IsAllowd = fun(UserInfo, _) ->
-                       {ok, UserId} = tts_userinfo:return(id, UserInfo),
+                       {ok, UserId} = watts_userinfo:return(id, UserInfo),
                        case UserId of
                            UserId1 -> true;
                            UserId2 -> true;
