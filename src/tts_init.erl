@@ -168,9 +168,9 @@ start_web_interface() ->
     lager:info("Init: starting web interface"),
     oidcc_client:register(tts_oidc_client),
     EpMain = ?CONFIG(ep_main),
-    EpOidc = tts_http_util:relative_path("oidc"),
-    EpApiBase = tts_http_util:relative_path("api"),
-    EpStatic = tts_http_util:relative_path("static/[...]"),
+    EpOidc = watts_http_util:relative_path("oidc"),
+    EpApiBase = watts_http_util:relative_path("api"),
+    EpStatic = watts_http_util:relative_path("static/[...]"),
     EpApi = watts_rest:dispatch_mapping(EpApiBase),
     Dispatch = cowboy_router:compile(
                  [{'_', [{EpStatic, cowboy_static,
@@ -226,7 +226,7 @@ start_web_interface() ->
 
 
 local_endpoint() ->
-    tts_http_util:whole_url(tts_http_util:relative_path("oidc")).
+    watts_http_util:whole_url(watts_http_util:relative_path("oidc")).
 
 
 stop() ->

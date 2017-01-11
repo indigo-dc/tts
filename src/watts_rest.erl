@@ -87,7 +87,7 @@ allow_missing_post(Req, State) ->
     {false, Req, State}.
 
 malformed_request(Req, State) ->
-    CookieName = tts_http_util:cookie_name(),
+    CookieName = watts_http_util:cookie_name(),
     {CookieSessionToken, Req2} = cowboy_req:cookie(CookieName, Req),
     CookieSession = watts_session_mgr:get_session(CookieSessionToken),
     {InVersion, Req3} = cowboy_req:binding(version, Req2, no_version),
@@ -464,7 +464,7 @@ safe_binary_to_integer(Version) ->
                       ]).
 
 id_to_url(Id, ApiVersion) ->
-    ApiBase = tts_http_util:relative_path("api"),
+    ApiBase = watts_http_util:relative_path("api"),
     Version = list_to_binary(io_lib:format("v~p", [ApiVersion])),
     PathElements =[Version, <<"credential_data">>, Id],
     Concat = fun(Element, Path) ->
@@ -516,16 +516,16 @@ end_session_if_rest(_) ->
     ok.
 
 update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
-    tts_http_util:perform_cookie_action(clear, 0, deleted, Req);
+    watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
 update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
     case tts_session:is_logged_in(Session) of
         true ->
             {ok, Max} = tts_session:get_max_age(Session),
             {ok, Token} = tts_session:get_sess_token(Session),
-            tts_http_util:perform_cookie_action(update, Max, Token, Req);
+            watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
             perform_logout(Session),
-            tts_http_util:perform_cookie_action(clear, 0, deleted, Req)
+            watts_http_util:perform_cookie_action(clear, 0, deleted, Req)
     end;
 update_cookie_if_used(Req, #state{cookie_based = _}) ->
     {ok, Req}.

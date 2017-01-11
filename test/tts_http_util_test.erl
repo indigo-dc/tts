@@ -4,11 +4,11 @@
 
 perform_cookie_action_test() ->
     {ok, Meck} = start_meck(),
-    {ok, req2} = tts_http_util:perform_cookie_action(clear, ignored, ignored, req),
-    {ok, req2} = tts_http_util:perform_cookie_action(update, 0, ignored, req),
+    {ok, req2} = watts_http_util:perform_cookie_action(clear, ignored, ignored, req),
+    {ok, req2} = watts_http_util:perform_cookie_action(update, 0, ignored, req),
     ?SETCONFIG(ssl, true),
-    {ok, req2} = tts_http_util:perform_cookie_action(update, ignored, deleted, req),
-    {ok, req2} = tts_http_util:perform_cookie_action(update, 10, <<"content">>, req),
+    {ok, req2} = watts_http_util:perform_cookie_action(update, ignored, deleted, req),
+    {ok, req2} = watts_http_util:perform_cookie_action(update, 10, <<"content">>, req),
     ?UNSETCONFIG(ssl),
     ok = stop_meck(Meck),
     ok.
@@ -18,7 +18,7 @@ relative_path_test() ->
     ?SETCONFIG(ssl, true),
     %% the config ensures that ep_main always ends on /
     ?SETCONFIG( ep_main, <<"/non_default/">>),
-    <<"/non_default/sub/">> = tts_http_util:relative_path("sub/"),
+    <<"/non_default/sub/">> = watts_http_util:relative_path("sub/"),
     ok.
 
 whole_url_test() ->
@@ -28,7 +28,7 @@ whole_url_test() ->
         fun({Ssl, Port, Exp}, Other) ->
                 ?SETCONFIG( ssl, Ssl),
                 ?SETCONFIG( port, Port),
-                Exp = tts_http_util:whole_url(Path),
+                Exp = watts_http_util:whole_url(Path),
                 ?UNSETCONFIG( ssl),
                 ?UNSETCONFIG( port),
                 Other
@@ -51,7 +51,7 @@ whole_url_test() ->
 start_meck() ->
     MeckModules = [cowboy_req],
     SetCookie = fun(Name, _Value, _Opts, Req) ->
-                        Name = tts_http_util:cookie_name(),
+                        Name = watts_http_util:cookie_name(),
                         case Req of
                             req ->
                                 req2;

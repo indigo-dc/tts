@@ -13,7 +13,7 @@ terminate(_Reason, _Req, _State) ->
     ok.
 
 handle(Req, _State) ->
-    Url = tts_http_util:whole_url(""),
+    Url = watts_http_util:whole_url(""),
     redirect_to(Url, Req).
 
 
