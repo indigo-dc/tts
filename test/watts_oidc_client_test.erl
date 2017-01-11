@@ -24,7 +24,7 @@ fail_test() ->
 
 
 start_meck() ->
-    MeckModules = [tts, tts_session_mgr],
+    MeckModules = [watts, watts_session_mgr],
     {ok, Pid1} = watts_session:start_link(<<"1">>),
     ok = watts_session:set_token(#{}, Pid1),
     {ok, Pid2} = watts_session:start_link(<<"2">>),
@@ -41,9 +41,9 @@ start_meck() ->
                            {ok, Pid2}
                    end,
     ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts, login_with_oidcc, Login),
-    ok = meck:expect(tts, session_with_error, ErrorSession),
-    ok = meck:expect(tts_session_mgr, session_terminating, fun(_) -> ok end),
+    ok = meck:expect(watts, login_with_oidcc, Login),
+    ok = meck:expect(watts, session_with_error, ErrorSession),
+    ok = meck:expect(watts_session_mgr, session_terminating, fun(_) -> ok end),
     {ok, {MeckModules, Pid1, Pid2}}.
 
 

@@ -1,6 +1,6 @@
 -module(watts_file_util_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 absolute_path_test() ->
     ok = ?SETCONFIG(config_path, "/usr/local/etc/tts"),

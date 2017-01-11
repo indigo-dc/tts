@@ -15,7 +15,7 @@
 %% limitations under the License.
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
--include("tts.hrl").
+-include("watts.hrl").
 
 -export([init/0,
          destroy/0
@@ -36,14 +36,14 @@
          service_get_list/0
         ]).
 
--define(TTS_SESSIONS, tts_sessions).
--define(TTS_OIDCP, tts_oidcp).
--define(TTS_SERVICE, tts_service).
+-define(WATTS_SESSIONS, watts_sessions).
+-define(WATTS_OIDCP, watts_oidcp).
+-define(WATTS_SERVICE, watts_service).
 
--define(TTS_TABLES, [
-                     ?TTS_SESSIONS
-                    , ?TTS_OIDCP
-                    , ?TTS_SERVICE
+-define(WATTS_TABLES, [
+                     ?WATTS_SESSIONS
+                    , ?WATTS_OIDCP
+                    , ?WATTS_SERVICE
                     ]).
 
 init() ->
@@ -55,7 +55,7 @@ destroy() ->
 % functions for session management
 -spec sessions_get_list() -> [map()].
 sessions_get_list() ->
-    Entries = get_all_entries(?TTS_SESSIONS),
+    Entries = get_all_entries(?WATTS_SESSIONS),
     ExtractValue = fun({Id, Pid}, List) ->
                            [#{id => Id, pid => Pid} | List]
                    end,
@@ -64,45 +64,45 @@ sessions_get_list() ->
 
 -spec sessions_create_new(Token :: binary()) -> ok | {error, Reason :: atom()}.
 sessions_create_new(Token) ->
-    return_ok_or_error(insert_new(?TTS_SESSIONS, {Token, none_yet})).
+    return_ok_or_error(insert_new(?WATTS_SESSIONS, {Token, none_yet})).
 
 
 -spec sessions_get_pid(Token :: binary()) -> {ok, Pid :: pid()} |
                                           {error, Reason :: atom()}.
 sessions_get_pid(Token) ->
-    case return_value(lookup(?TTS_SESSIONS, Token)) of
+    case return_value(lookup(?WATTS_SESSIONS, Token)) of
         {ok, none_yet} -> {error, none_yet};
         Other -> Other
     end.
 
 -spec sessions_update_pid(Token :: binary(), Pid :: pid()) -> ok.
 sessions_update_pid(Token, Pid) ->
-    insert(?TTS_SESSIONS, {Token, Pid}),
+    insert(?WATTS_SESSIONS, {Token, Pid}),
     ok.
 
 -spec sessions_delete(Token :: binary()) -> true.
 sessions_delete(Token) ->
-    delete(?TTS_SESSIONS, Token).
+    delete(?WATTS_SESSIONS, Token).
 
 
 % functions for service  management
 -spec service_add(Identifier::binary(), Info :: map()) ->
     ok | {error, Reason :: atom()}.
 service_add(Identifier, Info) ->
-    return_ok_or_error(insert_new(?TTS_SERVICE, {Identifier, Info})).
+    return_ok_or_error(insert_new(?WATTS_SERVICE, {Identifier, Info})).
 
 -spec service_update(Identifier::binary(), Info :: map()) ->
     ok | {error, Reason :: atom()}.
 service_update(Identifier, Info) ->
-    return_ok_or_error(insert(?TTS_SERVICE, {Identifier, Info})).
+    return_ok_or_error(insert(?WATTS_SERVICE, {Identifier, Info})).
 
 -spec service_get(Identifier::binary()) ->ok.
 service_get(Id) ->
-    lookup(?TTS_SERVICE, Id).
+    lookup(?WATTS_SERVICE, Id).
 
 -spec service_get_list() -> {ok, [map()]}.
 service_get_list() ->
-    Entries = get_all_entries(?TTS_SERVICE),
+    Entries = get_all_entries(?WATTS_SERVICE),
     ExtractValue = fun({_, Val}, List) ->
                            [Val | List]
                    end,
@@ -126,12 +126,12 @@ create_tables() ->
     CreateTable = fun(Table) ->
                           create_table(Table)
                   end,
-    lists:map(CreateTable, ?TTS_TABLES),
-    ok = wait_for_tables(?TTS_TABLES),
+    lists:map(CreateTable, ?WATTS_TABLES),
+    ok = wait_for_tables(?WATTS_TABLES),
     ok.
 
 create_table(TableName) ->
-    Heir = case erlang:whereis(tts_sup) of
+    Heir = case erlang:whereis(watts_sup) of
               undefined -> {heir, none};
               Pid -> {heir, Pid, none}
           end,
@@ -160,7 +160,7 @@ delete_tables() ->
     DeleteTable = fun(Table) ->
                           delete_table(Table)
                   end,
-    lists:map(DeleteTable, ?TTS_TABLES),
+    lists:map(DeleteTable, ?WATTS_TABLES),
     ok.
 
 delete_table(Name) ->

@@ -112,14 +112,14 @@ garbage_test() ->
 
 
 start_meck() ->
-    MeckModules = [tts_session_sup],
+    MeckModules = [watts_session_sup],
     watts_data:destroy(),
     watts_data:init(),
     ok = test_util:meck_new(MeckModules),
     NewSession = fun(ID) ->
                          watts_session:start_link(ID)
                  end,
-    ok = meck:expect(tts_session_sup, new_session,NewSession),
+    ok = meck:expect(watts_session_sup, new_session,NewSession),
     {ok, {MeckModules}}.
 
 

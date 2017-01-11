@@ -31,7 +31,7 @@ new_session(Token) ->
 init([]) ->
     Session = #{
       id => session,
-      start => {tts_session, start_link, []},
+      start => {watts_session, start_link, []},
       restart => transient
      },
     Procs = [Session],

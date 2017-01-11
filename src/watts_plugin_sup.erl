@@ -32,7 +32,7 @@ start_link() ->
 init([]) ->
     CredWorker = #{
       id => cred_worker,
-      start => {tts_plugin_runner, start_link, []},
+      start => {watts_plugin_runner, start_link, []},
       restart => transient
      },
     Procs = [CredWorker],

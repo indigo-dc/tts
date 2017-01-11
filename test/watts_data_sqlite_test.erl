@@ -1,7 +1,7 @@
 -module(watts_data_sqlite_test).
 -include_lib("eunit/include/eunit.hrl").
 -define(TEST_DB,"tts_unittest.db").
--include("tts.hrl").
+-include("watts.hrl").
 
 start_link_test() ->
     ?UNSETCONFIG(sqlite_db),

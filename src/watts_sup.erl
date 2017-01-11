@@ -40,39 +40,39 @@ init([]) ->
 
 sessions_supervisor() ->
     #{ id => sessions_sup,
-       start => {tts_sessions_sup, start_link, []},
+       start => {watts_sessions_sup, start_link, []},
        type => supervisor
      }.
 
 plugin_worker() ->
     #{ id => plugin,
-       start => {tts_plugin, start_link, []}
+       start => {watts_plugin, start_link, []}
      }.
 
 plugin_supervisor() ->
     #{ id => plugin_sup,
-       start => {tts_plugin_sup, start_link, []},
+       start => {watts_plugin_sup, start_link, []},
        type => supervisor
      }.
 
 init_worker() ->
     #{ id => init,
-       start => {tts_init, start_link, []},
+       start => {watts_init, start_link, []},
        restart => transient
      }.
 
 sqlite_worker() ->
     #{ id => sqlite,
-       start => {tts_data_sqlite, start_link, []}
+       start => {watts_data_sqlite, start_link, []}
      }.
 
 temp_cred() ->
     #{ id => temp_cred,
-       start => {tts_temp_cred, start_link, []}
+       start => {watts_temp_cred, start_link, []}
      }.
 
 temp_cred_sup() ->
     #{ id => temp_cred_sup,
-       start => {tts_temp_cred_sup, start_link, []},
+       start => {watts_temp_cred_sup, start_link, []},
        type => supervisor
      }.

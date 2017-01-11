@@ -31,7 +31,7 @@ new_temp_cred(Credential) ->
 init([]) ->
     TempCred = #{
       id => temp_cred,
-      start => {tts_temp_cred_data, start_link, []},
+      start => {watts_temp_cred_data, start_link, []},
       restart => transient
      },
     Procs = [TempCred],

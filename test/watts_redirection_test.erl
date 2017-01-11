@@ -1,6 +1,6 @@
 -module(watts_redirection_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 basic_test() ->
     {ok, req, []} = watts_redirection:init(ignored, req, ignored),

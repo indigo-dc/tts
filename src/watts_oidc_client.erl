@@ -1,6 +1,6 @@
 -module(watts_oidc_client).
 -behaviour(oidcc_client).
--include("tts.hrl").
+-include("watts.hrl").
 
 -export([
          login_succeeded/1,

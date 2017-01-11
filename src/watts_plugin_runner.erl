@@ -17,7 +17,7 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
 
--include("tts.hrl").
+-include("watts.hrl").
 
 %% API.
 -define(TIMEOUT, 20000).

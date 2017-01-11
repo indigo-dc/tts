@@ -1,5 +1,5 @@
 -module(watts_http_util).
--include("tts.hrl").
+-include("watts.hrl").
 -export([
          perform_cookie_action/4,
          create_cookie_opts/1,

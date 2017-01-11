@@ -74,8 +74,8 @@ revoke_test() ->
 
 
 start_meck() ->
-    MeckModules = [tts_session_mgr, oidcc, tts_plugin, tts_temp_cred,
-                   tts_service],
+    MeckModules = [watts_session_mgr, oidcc, watts_plugin, watts_temp_cred,
+                   watts_service],
     CredId = <<"cred1">>,
     Credential = #{id => CredId,
                    entries => [
@@ -138,21 +138,21 @@ start_meck() ->
                              true
                      end,
     ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts_session_mgr, new_session, NewSession),
-    ok = meck:expect(tts_session_mgr, session_terminating, fun(_) -> ok end),
+    ok = meck:expect(watts_session_mgr, new_session, NewSession),
+    ok = meck:expect(watts_session_mgr, session_terminating, fun(_) -> ok end),
     ok = meck:expect(oidcc, get_openid_provider_list, ProviderList),
     ok = meck:expect(oidcc, retrieve_user_info, RetrieveUserInfo),
     ok = meck:expect(oidcc, get_openid_provider_info, ProviderInfo),
     ok = meck:expect(oidcc, find_openid_provider, FindProvider),
-    ok = meck:expect(tts_plugin, exists, Exists),
-    ok = meck:expect(tts_plugin, get_cred_list, CredGetList),
-    ok = meck:expect(tts_plugin, request, CredentialRequest),
-    ok = meck:expect(tts_plugin, revoke, CredentialRevoke),
-    ok = meck:expect(tts_temp_cred, exists, Exists),
-    ok = meck:expect(tts_temp_cred, add_cred, TempCredAdd),
-    ok = meck:expect(tts_temp_cred, get_cred, TempCredGet),
-    ok = meck:expect(tts_service, get_list, ServiceGetList),
-    ok = meck:expect(tts_service, is_enabled, ServiceEnabled),
+    ok = meck:expect(watts_plugin, exists, Exists),
+    ok = meck:expect(watts_plugin, get_cred_list, CredGetList),
+    ok = meck:expect(watts_plugin, request, CredentialRequest),
+    ok = meck:expect(watts_plugin, revoke, CredentialRevoke),
+    ok = meck:expect(watts_temp_cred, exists, Exists),
+    ok = meck:expect(watts_temp_cred, add_cred, TempCredAdd),
+    ok = meck:expect(watts_temp_cred, get_cred, TempCredGet),
+    ok = meck:expect(watts_service, get_list, ServiceGetList),
+    ok = meck:expect(watts_service, is_enabled, ServiceEnabled),
 
 
 

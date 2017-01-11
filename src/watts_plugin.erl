@@ -16,7 +16,7 @@
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
--include("tts.hrl").
+-include("watts.hrl").
 
 %% API.
 -export([start_link/0]).

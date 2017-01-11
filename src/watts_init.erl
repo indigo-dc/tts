@@ -17,7 +17,7 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
 
--include("tts.hrl").
+-include("watts.hrl").
 
 %% API.
 -export([start_link/0]).
@@ -166,7 +166,7 @@ add_services([]) ->
 
 start_web_interface() ->
     lager:info("Init: starting web interface"),
-    oidcc_client:register(tts_oidc_client),
+    oidcc_client:register(watts_oidc_client),
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
     EpApiBase = watts_http_util:relative_path("api"),
@@ -176,7 +176,7 @@ start_web_interface() ->
                  [{'_', [{EpStatic, cowboy_static,
                           {priv_dir, ?APPLICATION, "http_static"}
                          },
-                         {EpApi, tts_rest, []},
+                         {EpApi, watts_rest, []},
                          {EpMain, cowboy_static,
                           {priv_file, ?APPLICATION, "http_static/index.html"}},
                          {EpOidc, oidcc_cowboy, []}
@@ -208,10 +208,12 @@ start_web_interface() ->
     end,
     Redirect = ?CONFIG(redirection_enable),
     RedirectPort = ?CONFIG(redirection_port),
-    RedirDispatch = cowboy_router:compile([{'_',
-                                                [
-                                                 {"/[...]", tts_redirection, []}
-                                                 ]}]),
+    RedirDispatch = cowboy_router:compile(
+                      [{'_', [
+                              {"/[...]", watts_redirection, []}
+                             ]
+                       }]
+                     ),
     case Redirect of
         true ->
             {ok, _} = cowboy:start_http( redirect_handler

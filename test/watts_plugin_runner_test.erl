@@ -1,6 +1,6 @@
 -module(watts_plugin_runner_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 start_stop_test() ->
     {ok, Pid} = watts_plugin_runner:start_link(),
@@ -78,7 +78,7 @@ no_cmd_crash_test() ->
 
 
 start_meck() ->
-    MeckModules = [tts_service, ssh, ssh_connection],
+    MeckModules = [watts_service, ssh, ssh_connection],
     ok = test_util:meck_new(MeckModules),
     ?SETCONFIG( vsn, "eunit"),
     SShCmd = <<"create credential">>,
@@ -186,7 +186,7 @@ start_meck() ->
                         SshPid ! ssh_start,
                         success
                  end,
-    ok = meck:expect(tts_service,get_info,InfoFun),
+    ok = meck:expect(watts_service,get_info,InfoFun),
     ok = meck:expect(ssh,connect,ConnectFun),
     ok = meck:expect(ssh,close,CloseFun),
     ok = meck:expect(ssh_connection,session_channel,ChannelFun),

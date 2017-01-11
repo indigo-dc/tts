@@ -1,6 +1,6 @@
 -module(rest_SUITE).
 -include_lib("common_test/include/ct.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 -export([all/0,
          %% groups/0,
@@ -125,7 +125,7 @@ provider_config(_Config) ->
 
 init_done(_Config) ->
     Done = fun() ->
-                   Children = supervisor:which_children(tts_sup),
+                   Children = supervisor:which_children(watts_sup),
                    case lists:keyfind(init, 1, Children) of
                        {init, undefined, worker, _} ->
                            true;

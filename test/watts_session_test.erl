@@ -85,15 +85,15 @@ garbage_test() ->
     ok = stop_meck(Meck).
 
 start_meck() ->
-    MeckModules = [tts_session_mgr],
+    MeckModules = [watts_session_mgr],
     ok = test_util:meck_new(MeckModules),
     {ok, Pid} = watts_session:start_link(?TOKEN),
     CloseFun = fun(Token) ->
                        Token = ?TOKEN,
                        watts_session:close(Pid)
                end,
-    ok = meck:expect(tts_session_mgr,session_terminating, fun(_) -> ok end),
-    ok = meck:expect(tts_session_mgr,session_wants_to_close, CloseFun),
+    ok = meck:expect(watts_session_mgr,session_terminating, fun(_) -> ok end),
+    ok = meck:expect(watts_session_mgr,session_wants_to_close, CloseFun),
     {ok, {MeckModules, Pid}}.
 
 

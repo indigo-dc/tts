@@ -15,7 +15,7 @@
 %% limitations under the License.
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
--include("tts.hrl").
+-include("watts.hrl").
 
 -export([
          login_with_oidcc/1,
@@ -214,15 +214,15 @@ get_temp_cred(Id, Session) ->
 
 start_full_debug() ->
     %debug these modules
-    ListOfModules = [ "tts_http",
-                      "tts_rest",
-                      "tts_oidc_client",
-                      "tts_rest_cred",
-                      "tts_session",
-                      "tts_session_mgr",
-                      "tts_service",
-                      "tts_plugin",
-                      "tts_plugin_runner"
+    ListOfModules = [ "watts_http",
+                      "watts_rest",
+                      "watts_oidc_client",
+                      "watts_rest_cred",
+                      "watts_session",
+                      "watts_session_mgr",
+                      "watts_service",
+                      "watts_plugin",
+                      "watts_plugin_runner"
                     ],
     start_debug(ListOfModules).
 

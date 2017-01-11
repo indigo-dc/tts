@@ -1,6 +1,6 @@
 -module(watts_init_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 basic_init_test() ->
     {ok, Meck} = start_meck(),
@@ -41,7 +41,8 @@ advanced_init_test() ->
     ok.
 
 start_meck() ->
-    MeckModules = [tts_data_sqlite, cowboy, oidcc, oidcc_client, tts_service],
+    MeckModules = [watts_data_sqlite, cowboy, oidcc, oidcc_client,
+                   watts_service],
     Reconfigure = fun() ->
                           ok
                   end,
@@ -61,10 +62,10 @@ start_meck() ->
                           {ok, id, pid}
                   end,
     ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(tts_data_sqlite, reconfigure, Reconfigure),
-    ok = meck:expect(tts_data_sqlite, is_ready, Reconfigure),
-    ok = meck:expect(tts_service, add, AddService),
-    ok = meck:expect(tts_service, update_params, UpdateParams),
+    ok = meck:expect(watts_data_sqlite, reconfigure, Reconfigure),
+    ok = meck:expect(watts_data_sqlite, is_ready, Reconfigure),
+    ok = meck:expect(watts_service, add, AddService),
+    ok = meck:expect(watts_service, update_params, UpdateParams),
     ok = meck:expect(oidcc_client, register, RegisterClient),
     ok = meck:expect(oidcc, add_openid_provider, AddProvider),
     ok = meck:expect(cowboy, start_http, StartHttp),

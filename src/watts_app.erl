@@ -17,7 +17,7 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 
 -behaviour(application).
--include("tts.hrl").
+-include("watts.hrl").
 
 -export([start/2]).
 -export([stop/1]).

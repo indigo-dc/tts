@@ -1,6 +1,6 @@
 -module(watts_http_util_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 perform_cookie_action_test() ->
     {ok, Meck} = start_meck(),

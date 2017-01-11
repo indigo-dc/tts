@@ -87,7 +87,7 @@ params_test() ->
 
 
 start_meck() ->
-    MeckModules = [tts_data, tts_plugin, oidcc, jobs],
+    MeckModules = [watts_data, watts_plugin, oidcc, jobs],
     ok = test_util:meck_new(MeckModules),
     ServiceList = [#{id => <<"id1">>,
                      authz => #{ allow => [{any, <<"sub">>, any, true}],
@@ -252,12 +252,12 @@ start_meck() ->
     AddQueue = fun(_, _) ->
                        ok
                    end,
-    ok = meck:expect(tts_data, service_get, GetService),
-    ok = meck:expect(tts_data, service_add, AddService),
-    ok = meck:expect(tts_data, service_get_list, GetServiceList),
-    ok = meck:expect(tts_data, service_update, ServiceUpdate),
-    ok = meck:expect(tts_plugin, get_count, GetCredCount),
-    ok = meck:expect(tts_plugin, get_params, GetParams),
+    ok = meck:expect(watts_data, service_get, GetService),
+    ok = meck:expect(watts_data, service_add, AddService),
+    ok = meck:expect(watts_data, service_get_list, GetServiceList),
+    ok = meck:expect(watts_data, service_update, ServiceUpdate),
+    ok = meck:expect(watts_plugin, get_count, GetCredCount),
+    ok = meck:expect(watts_plugin, get_params, GetParams),
     ok = meck:expect(oidcc, find_openid_provider, FindProvider),
     ok = meck:expect(oidcc, get_openid_provider_list, GetProviderList),
     ok = meck:expect(oidcc, get_openid_provider_info, GetProviderInfo),

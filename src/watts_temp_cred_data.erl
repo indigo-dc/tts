@@ -32,7 +32,7 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
--include("tts.hrl").
+-include("watts.hrl").
 
 -record(state, {
           credential = undefined

@@ -27,12 +27,12 @@ start_link() ->
 init([]) ->
     SessionSup = #{
       id => session_sup,
-      start => {tts_session_sup, start_link, []},
+      start => {watts_session_sup, start_link, []},
       type => supervisor
      },
     SessionMgr = #{
       id => session_mgr,
-      start => {tts_session_mgr, start_link, []}
+      start => {watts_session_mgr, start_link, []}
      },
     Procs = [SessionSup, SessionMgr],
     Flags = #{ strategy => one_for_all },

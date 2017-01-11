@@ -1,6 +1,6 @@
 -module(watts_plugin_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 start_stop_test() ->
     {ok, Pid} = watts_plugin:start_link(),
@@ -163,7 +163,8 @@ start_meck() ->
     UserId1 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoic3ViIn0">>,
     UserId2 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoic3UifQ">>,
     %% UserId3 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoi3ViIn0">>,
-    MeckModules = [tts_data_sqlite, tts_plugin_sup, tts_plugin_runner, tts_service],
+    MeckModules = [watts_data_sqlite, watts_plugin_sup, watts_plugin_runner,
+                   watts_service],
     ok = test_util:meck_new(MeckModules),
     GetFun = fun(_User) ->
                      {ok, [#{service_id => Service1}]}
@@ -302,20 +303,20 @@ start_meck() ->
     Exists = fun(ServiceId) ->
                     not( (ServiceId == Service6))
              end,
-    ok = meck:expect(tts_data_sqlite, credential_get_list, GetFun),
-    ok = meck:expect(tts_data_sqlite, credential_get, GetCredFun),
-    ok = meck:expect(tts_data_sqlite, credential_get_count, GetCountFun),
-    ok = meck:expect(tts_data_sqlite, credential_add, AddFun),
-    ok = meck:expect(tts_data_sqlite, credential_remove, DelFun),
-    ok = meck:expect(tts_plugin_sup, new_worker, NewRunner),
-    ok = meck:expect(tts_plugin_runner, request, RequestFun),
-    ok = meck:expect(tts_plugin_runner, revoke, RevokeFun),
-    ok = meck:expect(tts_service, get_queue, GetQueue),
-    ok = meck:expect(tts_service, is_enabled, IsEnabled),
-    ok = meck:expect(tts_service, is_allowed, IsAllowd),
-    ok = meck:expect(tts_service, get_credential_limit, CredLimit),
-    ok = meck:expect(tts_service, allows_same_state, AllowSame),
-    ok = meck:expect(tts_service, exists, Exists),
+    ok = meck:expect(watts_data_sqlite, credential_get_list, GetFun),
+    ok = meck:expect(watts_data_sqlite, credential_get, GetCredFun),
+    ok = meck:expect(watts_data_sqlite, credential_get_count, GetCountFun),
+    ok = meck:expect(watts_data_sqlite, credential_add, AddFun),
+    ok = meck:expect(watts_data_sqlite, credential_remove, DelFun),
+    ok = meck:expect(watts_plugin_sup, new_worker, NewRunner),
+    ok = meck:expect(watts_plugin_runner, request, RequestFun),
+    ok = meck:expect(watts_plugin_runner, revoke, RevokeFun),
+    ok = meck:expect(watts_service, get_queue, GetQueue),
+    ok = meck:expect(watts_service, is_enabled, IsEnabled),
+    ok = meck:expect(watts_service, is_allowed, IsAllowd),
+    ok = meck:expect(watts_service, get_credential_limit, CredLimit),
+    ok = meck:expect(watts_service, allows_same_state, AllowSame),
+    ok = meck:expect(watts_service, exists, Exists),
     {ok, {MeckModules}}.
 
 

@@ -1,6 +1,6 @@
 -module(watts_rest_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 
 -define(ISSUER_URL, <<"https://test.tts.somewhere">>).
@@ -399,7 +399,7 @@ delete_resource_test() ->
 
 
 start_meck() ->
-    MeckModules = [cowboy_req, oidcc, tts, tts_session],
+    MeckModules = [cowboy_req, oidcc, watts, watts_session],
     Binding = fun(Name, #{bindings := Bindings} = Request, Default) ->
                       case lists:keyfind(Name, 1, Bindings) of
                           {Name, Value} -> {Value, Request};
@@ -526,18 +526,18 @@ start_meck() ->
     ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
     ok = meck:expect(cowboy_req, set_resp_header, SetHeader),
     ok = meck:expect(oidcc, get_openid_provider_info, GetOidcProvider),
-    ok = meck:expect(tts, login_with_access_token, Login),
-    ok = meck:expect(tts, does_credential_exist, CredExists),
-    ok = meck:expect(tts, does_temp_cred_exist, CredDataExists),
-    ok = meck:expect(tts, get_service_list_for, GetServiceList),
-    ok = meck:expect(tts, get_openid_provider_list, GetProvider),
-    ok = meck:expect(tts, get_credential_list_for, GetCredList),
-    ok = meck:expect(tts, get_temp_cred, GetCred),
-    ok = meck:expect(tts, revoke_credential_for, Revoke),
-    ok = meck:expect(tts, logout, fun(_) -> ok end),
-    ok = meck:expect(tts, request_credential_for, CredRequest),
-    ok = meck:expect(tts, store_temp_cred, StoreTempCred),
-    ok = meck:expect(tts_session, is_logged_in, fun(_) -> false end),
+    ok = meck:expect(watts, login_with_access_token, Login),
+    ok = meck:expect(watts, does_credential_exist, CredExists),
+    ok = meck:expect(watts, does_temp_cred_exist, CredDataExists),
+    ok = meck:expect(watts, get_service_list_for, GetServiceList),
+    ok = meck:expect(watts, get_openid_provider_list, GetProvider),
+    ok = meck:expect(watts, get_credential_list_for, GetCredList),
+    ok = meck:expect(watts, get_temp_cred, GetCred),
+    ok = meck:expect(watts, revoke_credential_for, Revoke),
+    ok = meck:expect(watts, logout, fun(_) -> ok end),
+    ok = meck:expect(watts, request_credential_for, CredRequest),
+    ok = meck:expect(watts, store_temp_cred, StoreTempCred),
+    ok = meck:expect(watts_session, is_logged_in, fun(_) -> false end),
     {ok, {MeckModules}}.
 
 stop_meck({MeckModules}) ->

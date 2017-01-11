@@ -1,6 +1,6 @@
 -module(watts_temp_cred_test).
 -include_lib("eunit/include/eunit.hrl").
--include("tts.hrl").
+-include("watts.hrl").
 
 start_stop_test() ->
     {ok, Pid} = watts_temp_cred:start_link(),
@@ -15,12 +15,12 @@ start_stop_test() ->
     ok.
 
 add_get_test() ->
-    MeckModules = [tts_temp_cred_sup],
+    MeckModules = [watts_temp_cred_sup],
     StartNew = fun(Cred) ->
                        watts_temp_cred_data:start(Cred)
                end,
     test_util:meck_new(MeckModules),
-    meck:expect(tts_temp_cred_sup, new_temp_cred, StartNew),
+    meck:expect(watts_temp_cred_sup, new_temp_cred, StartNew),
     {ok, Pid} = watts_temp_cred:start_link(),
 
     UserInfo = #{ site => #{ uid => <<"user1">>}},

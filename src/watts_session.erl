@@ -122,7 +122,7 @@ is_same_ip(IP, Pid) ->
     gen_server:call(Pid, {is_same_ip, IP}).
 
 %% gen_server.
--include("tts.hrl").
+-include("watts.hrl").
 -record(state, {
           id = unkonwn,
           sess_token = undefined,
@@ -184,7 +184,8 @@ handle_call({set_token, Token}, _From,
             undefined ->
                 Info2;
             _ ->
-                {ok, Inf3} = watts_userinfo:update_access_token(AccToken, Info2),
+                {ok, Inf3} = watts_userinfo:update_access_token(AccToken,
+                                                                Info2),
                 Inf3
         end,
     {reply, ok, State#state{user_info=Info3}, MA};
