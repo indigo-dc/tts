@@ -152,6 +152,8 @@ rest_communication_v1(_Config) ->
     rest_communication(1).
 
 rest_communication_v2(_Config) ->
+    {ok, Info} = perform_rest_request("info", 2),
+    true = is_valid_info(Info),
     rest_communication(2).
 
 rest_communication(Version) ->
@@ -174,6 +176,15 @@ rest_communication(Version) ->
     true = is_empty_credential_list(CredList3),
     unmock_oidcc(),
     ok.
+
+is_valid_info(#{display_name := _, logged_in := false, redirect_path := _,
+                version := _}) ->
+    true;
+is_valid_info(_) ->
+    false.
+
+
+
 
 validate_provider_list(#{openid_provider_list := List}, Issuer) ->
     ct:log("provider list entries: ~p",[List]),
