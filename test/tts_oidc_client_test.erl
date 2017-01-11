@@ -3,8 +3,8 @@
 
 succeed_test() ->
     {ok, Meck} = start_meck(),
-    {ok, _} = tts_oidc_client:login_succeeded(#{token => bad}),
-    {ok, _} = tts_oidc_client:login_succeeded(#{token => good}),
+    {ok, _} = watts_oidc_client:login_succeeded(#{token => bad}),
+    {ok, _} = watts_oidc_client:login_succeeded(#{token => good}),
     ok = stop_meck(Meck),
     ok.
 
@@ -13,12 +13,12 @@ succeed_test() ->
 
 fail_test() ->
     {ok, Meck} = start_meck(),
-    {ok, _} = tts_oidc_client:login_failed(internal, {token_invalid, blah}),
-    {ok, _} = tts_oidc_client:login_failed(internal, {bad_user_agent, blah}),
-    {ok, _} = tts_oidc_client:login_failed(internal, {bad_peer_ip, blah}),
-    {ok, _} = tts_oidc_client:login_failed(internal, {bad_cookie, blah}),
-    {ok, _} = tts_oidc_client:login_failed(session_not_found,  blah),
-    {ok, _} = tts_oidc_client:login_failed(blah,  blah),
+    {ok, _} = watts_oidc_client:login_failed(internal, {token_invalid, blah}),
+    {ok, _} = watts_oidc_client:login_failed(internal, {bad_user_agent, blah}),
+    {ok, _} = watts_oidc_client:login_failed(internal, {bad_peer_ip, blah}),
+    {ok, _} = watts_oidc_client:login_failed(internal, {bad_cookie, blah}),
+    {ok, _} = watts_oidc_client:login_failed(session_not_found,  blah),
+    {ok, _} = watts_oidc_client:login_failed(blah,  blah),
     ok = stop_meck(Meck),
     ok.
 
