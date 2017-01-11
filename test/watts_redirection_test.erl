@@ -1,4 +1,4 @@
--module(tts_redirection_test).
+-module(watts_redirection_test).
 -include_lib("eunit/include/eunit.hrl").
 -include("tts.hrl").
 

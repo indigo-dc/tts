@@ -1,4 +1,4 @@
--module(tts_data_sqlite_test).
+-module(watts_data_sqlite_test).
 -include_lib("eunit/include/eunit.hrl").
 -define(TEST_DB,"tts_unittest.db").
 -include("tts.hrl").

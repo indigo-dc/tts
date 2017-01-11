@@ -1,4 +1,4 @@
--module(tts_service_test).
+-module(watts_service_test).
 -include_lib("eunit/include/eunit.hrl").
 
 -define(ISSUER, <<"https://iam.it">>).

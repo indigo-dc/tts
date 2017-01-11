@@ -1,4 +1,4 @@
--module(tts_oidc_client_test).
+-module(watts_oidc_client_test).
 -include_lib("eunit/include/eunit.hrl").
 
 succeed_test() ->

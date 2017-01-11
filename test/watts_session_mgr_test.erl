@@ -1,4 +1,4 @@
--module(tts_session_mgr_test).
+-module(watts_session_mgr_test).
 -include_lib("eunit/include/eunit.hrl").
 
 

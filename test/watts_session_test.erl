@@ -1,4 +1,4 @@
--module(tts_session_test).
+-module(watts_session_test).
 -include_lib("eunit/include/eunit.hrl").
 
 -define(TOKEN,<<"JustSomeSessionToken">>).

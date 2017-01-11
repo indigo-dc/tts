@@ -1,4 +1,4 @@
--module(tts_utils_test).
+-module(watts_utils_test).
 -include_lib("eunit/include/eunit.hrl").
 
 random_string_test() ->

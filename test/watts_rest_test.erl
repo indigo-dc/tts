@@ -1,4 +1,4 @@
--module(tts_rest_test).
+-module(watts_rest_test).
 -include_lib("eunit/include/eunit.hrl").
 -include("tts.hrl").
 
