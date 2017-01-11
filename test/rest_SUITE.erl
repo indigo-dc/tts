@@ -1,5 +1,6 @@
 -module(rest_SUITE).
 -include_lib("common_test/include/ct.hrl").
+-include("tts.hrl").
 
 -export([all/0,
          %% groups/0,
@@ -46,7 +47,7 @@ init_per_suite(Conf) ->
                     forbid => [],
                     hide => false,
                     tooltip => <<"Tooltip">>},
-                  cmd => <<"/tmp/tts_common_test/tts_plugin_info/plugin/info.py">>,
+                  cmd => <<"/tmp/watts_common_test/tts_plugin_info/plugin/info.py">>,
                   connection => #{host => undefined,
                     passwd => undefined,
                     port => 22,
@@ -67,23 +68,23 @@ init_per_suite(Conf) ->
                    config_endpoint=> <<"https://accounts.google.com/.well-known/openid-configuration">>,
                    id => <<"google">>,
                    scopes => [<<"openid">>,<<"profile">>]}],
-    application:set_env(tts, service_list, ServiceList),
-    application:set_env(tts, provider_list, ProviderList),
-    application:set_env(tts, session_timeout, 90000),
-    application:set_env(tts, sqlite_db, "/tmp/tts_common_test/tts_ct.db"),
-    application:set_env(tts, allow_dropping_credentials, true),
-    application:set_env(tts, redirection_enabled, false),
-    application:set_env(tts, redirection_port, 8080),
-    application:set_env(tts, ssl, false),
-    application:set_env(tts, port, 8080),
-    application:set_env(tts, listen_port, 8080),
-    application:set_env(tts, ep_main, <<"/">>),
-    application:set_env(tts, hostname, "localhost"),
-    {ok, _} = application:ensure_all_started(tts),
+    ?SETCONFIG(service_list, ServiceList),
+    ?SETCONFIG(provider_list, ProviderList),
+    ?SETCONFIG(session_timeout, 90000),
+    ?SETCONFIG(sqlite_db, "/tmp/watts_common_test/watts_ct.db"),
+    ?SETCONFIG(allow_dropping_credentials, true),
+    ?SETCONFIG(redirection_enabled, false),
+    ?SETCONFIG(redirection_port, 8080),
+    ?SETCONFIG(ssl, false),
+    ?SETCONFIG(port, 8080),
+    ?SETCONFIG(listen_port, 8080),
+    ?SETCONFIG(ep_main, <<"/">>),
+    ?SETCONFIG(hostname, "localhost"),
+    {ok, _} = application:ensure_all_started(watts),
     Conf.
 
 end_per_suite(Conf) ->
-    ok = application:stop(tts),
+    ok = application:stop(watts),
     Conf.
 
 %% init_per_group(_Group, Conf) ->

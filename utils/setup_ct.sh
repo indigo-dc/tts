@@ -1,5 +1,5 @@
 #!/bin/bash
-TEMP_PATH=/tmp/tts_common_test
+TEMP_PATH=/tmp/watts_common_test
 
 rm -rf $TEMP_PATH
 mkdir -p $TEMP_PATH
