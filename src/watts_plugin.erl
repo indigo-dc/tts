@@ -75,7 +75,7 @@ request(ServiceId, UserInfo, Interface, Params) ->
     Allowed = tts_service:is_allowed(UserInfo, ServiceId),
     case { Allowed, Enabled, Count < Limit } of
         {true, true, true} ->
-            {ok, Pid} = tts_plugin_sup:new_worker(),
+            {ok, Pid} = watts_plugin_sup:new_worker(),
             Result = watts_plugin_runner:request(ServiceId, UserInfo,
                                                Params, QueueName, Pid),
             handle_result(Result, #{ action => request,
@@ -113,7 +113,7 @@ revoke_or_drop(true, CredInfo, UserInfo ) ->
       cred_id := CredId
      } = CredInfo,
     {ok, QueueName} = tts_service:get_queue(ServiceId),
-    {ok, Pid} = tts_plugin_sup:new_worker(),
+    {ok, Pid} = watts_plugin_sup:new_worker(),
     Result=watts_plugin_runner:revoke(ServiceId, UserInfo,
                                     CredState, QueueName, Pid),
     handle_result(Result, #{ action => revoke,
@@ -140,7 +140,7 @@ revoke_or_drop(false, #{service_id := ServiceId,
 
 
 get_params(ServiceId) ->
-    {ok, Pid} = tts_plugin_sup:new_worker(),
+    {ok, Pid} = watts_plugin_sup:new_worker(),
     Result = watts_plugin_runner:get_params(ServiceId, Pid),
     handle_result(Result, #{ action => parameter,
                              service_id => ServiceId
