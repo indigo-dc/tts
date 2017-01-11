@@ -126,7 +126,7 @@ is_authorized(Req, #state{type=Type, session_pid=Pid} = State)
   when is_pid(Pid) ->
     ValidType = lists:member(Type, [oidcp, info, logout, service, credential,
                                     cred_data, access_token]),
-    LoggedIn = tts_session:is_logged_in(Pid),
+    LoggedIn = watts_session:is_logged_in(Pid),
     case {ValidType, LoggedIn} of
         {false, _} ->
             Msg = list_to_binary(io_lib:format("unsupported path ~p", [Type])),
@@ -247,12 +247,12 @@ perform_get(info, undefined, Session, _) ->
     {LoggedIn, DName, Error}  =
         case is_pid(Session) of
             false -> {false, <<"">>, <<"">>};
-            true -> Name = case tts_session:get_display_name(Session) of
+            true -> Name = case watts_session:get_display_name(Session) of
                                {ok, N} -> N;
                                _ -> <<"">>
                            end,
-                    {ok, Err} = tts_session:get_error(Session),
-                    {tts_session:is_logged_in(Session), Name, Err}
+                    {ok, Err} = watts_session:get_error(Session),
+                    {watts_session:is_logged_in(Session), Name, Err}
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
@@ -518,10 +518,10 @@ end_session_if_rest(_) ->
 update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
     watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
 update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
-    case tts_session:is_logged_in(Session) of
+    case watts_session:is_logged_in(Session) of
         true ->
-            {ok, Max} = tts_session:get_max_age(Session),
-            {ok, Token} = tts_session:get_sess_token(Session),
+            {ok, Max} = watts_session:get_max_age(Session),
+            {ok, Token} = watts_session:get_sess_token(Session),
             watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
             perform_logout(Session),

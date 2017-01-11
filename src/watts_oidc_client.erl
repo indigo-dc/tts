@@ -27,8 +27,8 @@ redirect_error(ErrorMsg) ->
     redirect_set_cookie(SessPid).
 
 redirect_set_cookie(SessPid) ->
-    {ok, SessToken} = tts_session:get_sess_token(SessPid),
-    {ok, MaxAge} = tts_session:get_max_age(SessPid),
+    {ok, SessToken} = watts_session:get_sess_token(SessPid),
+    {ok, MaxAge} = watts_session:get_max_age(SessPid),
     Opts = watts_http_util:create_cookie_opts(MaxAge),
     CookieName = watts_http_util:cookie_name(),
     {ok, [{redirect, ?CONFIG(ep_main)},

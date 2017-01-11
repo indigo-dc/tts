@@ -83,7 +83,7 @@ handle_call(new_session, _From, State) ->
 handle_call({delete_session, ID}, _From, State) ->
     {ok, Pid} = lookup_session_pid(ID),
     delete_session(ID),
-    tts_session:close(Pid),
+    watts_session:close(Pid),
     {reply, ok, State};
 handle_call({purge_session, ID}, _From, State) ->
     delete_session(ID),
@@ -116,7 +116,7 @@ delete_sessions([]) ->
     ok;
 delete_sessions([#{id:= Id, pid:= Pid}|T]) ->
     delete_session(Id),
-    tts_session:close(Pid),
+    watts_session:close(Pid),
     delete_sessions(T).
 
 

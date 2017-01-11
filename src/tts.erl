@@ -58,14 +58,14 @@ login_with_access_token(_AccessToken, _Issuer) ->
 
 session_with_error(Msg) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
-    ok = tts_session:set_error(Msg, SessPid),
-    false = tts_session:is_logged_in(SessPid),
+    ok = watts_session:set_error(Msg, SessPid),
+    false = watts_session:is_logged_in(SessPid),
     {ok, SessPid}.
 
 
 do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
-    SessionId = tts_session:get_id(SessPid),
+    SessionId = watts_session:get_id(SessPid),
     try
         Result = case Subject0 of
                      undefined ->
@@ -94,14 +94,14 @@ do_login(Issuer, Subject0, Token0) ->
 
 
 logout(Session) ->
-    tts_session:close(Session).
+    watts_session:close(Session).
 
 does_credential_exist(Id, Session) ->
-    {ok, UserInfo} =  tts_session:get_user_info(Session),
+    {ok, UserInfo} =  watts_session:get_user_info(Session),
     watts_plugin:exists(UserInfo, Id).
 
 does_temp_cred_exist(Id, Session) ->
-    {ok, UserId} =  tts_session:get_userid(Session),
+    {ok, UserId} =  watts_session:get_userid(Session),
     watts_temp_cred:exists(Id, UserId).
 
 
@@ -122,19 +122,19 @@ get_openid_provider_list() ->
 
 
 get_service_list_for(Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, ServiceList} = watts_service:get_list(UserInfo),
     {ok, ServiceList}.
 
 get_credential_list_for(Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, CredentialList} = watts_plugin:get_cred_list(UserInfo),
     {ok, CredentialList}.
 
 
 request_credential_for(ServiceId, Session, Params, Interface) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, SessionId} = tts_session:get_id(Session),
+    {ok, UserInfo} = watts_session:get_user_info(Session),
+    {ok, SessionId} = watts_session:get_id(Session),
     true = watts_service:is_enabled(ServiceId),
     case watts_plugin:request(ServiceId, UserInfo, Interface, Params) of
         {ok, Credential} ->
@@ -172,8 +172,8 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
 
 
 revoke_credential_for(CredId, Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
-    {ok, SessionId} = tts_session:get_id(Session),
+    {ok, UserInfo} = watts_session:get_user_info(Session),
+    {ok, SessionId} = watts_session:get_id(Session),
     case watts_plugin:revoke(CredId, UserInfo) of
         {ok, #{}} ->
             lager:info("SESS~p revoked credential ~p",
@@ -195,21 +195,21 @@ revoke_credential_for(CredId, Session) ->
 
 
 get_access_token_for(Session) ->
-    {ok, UserInfo} = tts_session:get_user_info(Session),
+    {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, AccessToken} = tts_userinfo:return(access_token, UserInfo),
     {ok, AccessToken}.
 
 get_display_name_for(Session) ->
-    {ok, Name} = tts_session:get_display_name(Session),
+    {ok, Name} = watts_session:get_display_name(Session),
     {ok, Name}.
 
 store_temp_cred(Credential, Session) ->
-    {ok, UserId} = tts_session:get_userid(Session),
+    {ok, UserId} = watts_session:get_userid(Session),
     {ok, Id} = watts_temp_cred:add_cred(Credential, UserId),
     {ok, Id}.
 
 get_temp_cred(Id, Session) ->
-    {ok, UserId} = tts_session:get_userid(Session),
+    {ok, UserId} = watts_session:get_userid(Session),
     watts_temp_cred:get_cred(Id, UserId).
 
 start_full_debug() ->
@@ -240,12 +240,12 @@ stop_debug() ->
 
 
 update_session(Issuer, Subject, Token, SessionPid) ->
-    {ok, SessId} = tts_session:get_id(SessionPid),
-    {ok, SessToken} = tts_session:get_sess_token(SessionPid),
-    ok = tts_session:set_token(Token, SessionPid),
-    ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
-    true = tts_session:is_logged_in(SessionPid),
-    {ok, DisplayName} = tts_session:get_display_name(SessionPid),
+    {ok, SessId} = watts_session:get_id(SessionPid),
+    {ok, SessToken} = watts_session:get_sess_token(SessionPid),
+    ok = watts_session:set_token(Token, SessionPid),
+    ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
+    true = watts_session:is_logged_in(SessionPid),
+    {ok, DisplayName} = watts_session:get_display_name(SessionPid),
     lager:info("SESS~p logged in as ~p [~p at ~p]",
                [SessId, DisplayName, Subject, Issuer]),
 

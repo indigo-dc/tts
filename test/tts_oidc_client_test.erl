@@ -25,10 +25,10 @@ fail_test() ->
 
 start_meck() ->
     MeckModules = [tts, tts_session_mgr],
-    {ok, Pid1} = tts_session:start_link(<<"1">>),
-    ok = tts_session:set_token(#{}, Pid1),
-    {ok, Pid2} = tts_session:start_link(<<"2">>),
-    ok = tts_session:set_token(#{}, Pid2),
+    {ok, Pid1} = watts_session:start_link(<<"1">>),
+    ok = watts_session:set_token(#{}, Pid1),
+    {ok, Pid2} = watts_session:start_link(<<"2">>),
+    ok = watts_session:set_token(#{}, Pid2),
     Login = fun(TokenMap) ->
                     case TokenMap of
                         #{token := good} ->
@@ -48,7 +48,7 @@ start_meck() ->
 
 
 stop_meck({MeckModules, Pid1, Pid2}) ->
-    ok = tts_session:close(Pid1),
-    ok = tts_session:close(Pid2),
+    ok = watts_session:close(Pid1),
+    ok = watts_session:close(Pid2),
     ok = test_util:meck_done(MeckModules),
     ok.

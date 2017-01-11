@@ -31,9 +31,9 @@ session_timeout_test() ->
     {ok, Pid} = watts_session_mgr:start_link(),
     {ok, Session} = watts_session_mgr:new_session(),
 
-    {ok, Id} =  tts_session:get_sess_token(Session),
+    {ok, Id} =  watts_session:get_sess_token(Session),
     {ok, Session} = watts_session_mgr:get_session(Id),
-    tts_session:set_max_age(1,Session),
+    watts_session:set_max_age(1,Session),
     ok = test_util:wait_for_process_to_die(Session, 100),
 
     {ok, undefined} = watts_session_mgr:get_session(Id),
@@ -47,11 +47,11 @@ session_lookup_stop_test() ->
     {ok, Meck} = start_meck(),
     {ok, Pid} = watts_session_mgr:start_link(),
     {ok, Session} = watts_session_mgr:new_session(),
-    {ok, ID} = tts_session:get_sess_token(Session),
+    {ok, ID} = watts_session:get_sess_token(Session),
 
     %% Lookup an existing session
     {ok, Session} = watts_session_mgr:get_session(ID),
-    ok = tts_session:close(Session),
+    ok = watts_session:close(Session),
     ok = test_util:wait_for_process_to_die(Session, 100),
 
     %% try to lookup the closed session, yet fail and return undefined
@@ -117,7 +117,7 @@ start_meck() ->
     watts_data:init(),
     ok = test_util:meck_new(MeckModules),
     NewSession = fun(ID) ->
-                         tts_session:start_link(ID)
+                         watts_session:start_link(ID)
                  end,
     ok = meck:expect(tts_session_sup, new_session,NewSession),
     {ok, {MeckModules}}.

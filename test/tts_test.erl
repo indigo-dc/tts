@@ -8,7 +8,7 @@ error_session_test() ->
     {ok, Meck} = start_meck(),
     EMsg = <<"this is some error message">>,
     {ok, Pid} = tts:session_with_error(EMsg),
-    tts_session:close(Pid),
+    watts_session:close(Pid),
     test_util:wait_for_process_to_die(Pid, 100),
     stop_meck(Meck),
     ok.
@@ -99,7 +99,7 @@ start_meck() ->
                            {ok, provider_pid}
                      end,
     NewSession = fun() ->
-                         tts_session:start_link(<<"some session token">>)
+                         watts_session:start_link(<<"some session token">>)
                  end,
     Exists = fun(_, _) ->
                      true
@@ -156,19 +156,19 @@ start_meck() ->
 
 
 
-    {ok, SessionPid} = tts_session:start_link(<<"some id">>),
+    {ok, SessionPid} = watts_session:start_link(<<"some id">>),
     Issuer = ?ISSUER_URL,
     Subject = <<"sub">>,
     Token = #{access => #{token => <<"accesstoken">>},
               user_info => #{ name => <<"Nice Name">> , sub => <<"sub">>}
              },
-    ok = tts_session:set_iss_sub(Issuer, Subject, SessionPid),
-    ok = tts_session:set_token(Token, SessionPid),
+    ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
+    ok = watts_session:set_token(Token, SessionPid),
     {ok, {SessionPid, MeckModules}}.
 
 
 stop_meck({SessionPid, MeckModules}) ->
-    tts_session:close(SessionPid),
+    watts_session:close(SessionPid),
     test_util:wait_for_process_to_die(SessionPid, 100),
     ok = test_util:meck_done(MeckModules),
     ok.
