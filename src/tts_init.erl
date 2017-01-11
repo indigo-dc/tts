@@ -172,17 +172,17 @@ start_web_interface() ->
     EpApiBase = tts_http_util:relative_path("api"),
     EpStatic = tts_http_util:relative_path("static/[...]"),
     EpApi = tts_rest:dispatch_mapping(EpApiBase),
-    Dispatch = cowboy_router:compile( [{'_',
-                                         [
-                                          {EpStatic, cowboy_static,
-                                           {priv_dir, tts, "http_static"}},
-                                          {EpApi, tts_rest, []},
-                                          {EpMain, cowboy_static,
-                                           {priv_file, tts,
-                                            "http_static/index.html"}},
-                                          {EpOidc, oidcc_cowboy, []}
-                                         ]}]),
-
+    Dispatch = cowboy_router:compile(
+                 [{'_', [{EpStatic, cowboy_static,
+                          {priv_dir, ?APPLICATION, "http_static"}
+                         },
+                         {EpApi, tts_rest, []},
+                         {EpMain, cowboy_static,
+                          {priv_file, ?APPLICATION, "http_static/index.html"}},
+                         {EpOidc, oidcc_cowboy, []}
+                        ]
+                  }]
+                ),
     SSL = ?CONFIG(ssl),
     ListenPort = ?CONFIG(listen_port),
     case SSL of

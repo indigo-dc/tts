@@ -379,7 +379,9 @@ view model =
         div []
             [ div [ class "container" ]
                 [ h1 []
-                    [ text "INDIGO Token Translation Service" ]
+                    [ text "WaTTS  "
+                    , small [] [ text "- The INDIGO Token Translation Service" ]
+                    ]
                 , div [ class "alert alert-danger", hidden hideError ]
                     [ strong [] [ text "Login Error!" ]
                     , text " "
