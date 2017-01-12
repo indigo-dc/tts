@@ -10,4 +10,4 @@ cd wattson
 echo -n "wattson version: " && ./wattson --version
 
 cd $TEMP_PATH
-git clone https://github.com/indigo-dc/watts_plugin_info
+git clone https://github.com/indigo-dc/tts_plugin_info
