@@ -59,11 +59,9 @@
           {datatype, {enum, [true, false]}}
           ]}.
 
-%% @doc The CA cert file to use for ssl
-{mapping, "ca_cert_file", "watts.ca_cert_file", [
-          {default, "{{platform_etc_dir}}/ca.cert"},
-          {commented, "{{platform_etc_dir}}/ca.cert"},
-          hidden,
+%% @doc The CA chain  file to use for ssl
+{mapping, "cachain_file", "watts.cachain_file", [
+          {commented, "{{platform_etc_dir}}/cachain.cert"},
           {datatype, file}
           ]}.
 
