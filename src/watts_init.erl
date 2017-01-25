@@ -187,16 +187,23 @@ start_web_interface() ->
     ListenPort = ?CONFIG(listen_port),
     case SSL of
         true ->
-            %% CaCertFile = ?CONFIG(ca_cert_file),
             CertFile = ?CONFIG(cert_file),
             KeyFile = ?CONFIG(key_file),
+            BasicOptions =
+                [ {port, ListenPort},
+                  {certfile, CertFile},
+                  {keyfile, KeyFile}
+                ],
+            Options =
+                case ?CONFIG_(cachain_file) of
+                    {ok, CaChainFile} ->
+                        [ {cacertfile, CaChainFile} | BasicOptions ];
+                    _ ->
+                        BasicOptions
+                end,
             {ok, _} = cowboy:start_https( http_handler
                                           , 100
-                                          , [ {port, ListenPort},
-                                              %% {cacertfile, CaCertFile},
-                                              {certfile, CertFile},
-                                              {keyfile, KeyFile}
-                                            ]
+                                          , Options
                                           , [{env, [{dispatch, Dispatch}]}]
                                         );
         false ->
