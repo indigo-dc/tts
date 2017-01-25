@@ -58,7 +58,7 @@ start_meck() ->
     StartHttp = fun(_, _, _ ,_) ->
                         {ok, id}
                 end,
-    AddProvider = fun(_, _, _ ,_ ,_ ,_ , _, _) ->
+    AddProvider = fun(_, _, _) ->
                           {ok, id, pid}
                   end,
     ok = test_util:meck_new(MeckModules),

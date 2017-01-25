@@ -80,6 +80,8 @@ init_per_suite(Conf) ->
     ?SETCONFIG(listen_port, 8080),
     ?SETCONFIG(ep_main, <<"/">>),
     ?SETCONFIG(hostname, "localhost"),
+    application:set_env(oidcc, cert_depth, 5),
+    application:set_env(oidcc, cacertfile, "/etc/ssl/certs/ca-certificates.crt"),
     {ok, _} = application:ensure_all_started(watts),
     Conf.
 

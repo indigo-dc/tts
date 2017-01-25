@@ -124,14 +124,14 @@ add_openid_provider() ->
     ok = add_openid_provider(ProviderList, LocalEndpoint),
     ok.
 
-add_openid_provider([#{id := Id, description := Desc, client_id := ClientId,
-                       client_secret := Secret, scopes := RequestScopes,
-                       config_endpoint := ConfigEndpoint}|T], LocalEndpoint) ->
+add_openid_provider([#{id := Id,
+                       config_endpoint := ConfigEndpoint} = Config0 | T],
+                    LocalEndpoint) ->
         lager:debug("Init: adding provider ~p", [Id]),
     try
+        Config = maps:remove(config_endpoint, Config0),
         {ok, _InternalId, _Pid} =
-        oidcc:add_openid_provider(Id, Id, Desc, ClientId, Secret,
-                                  ConfigEndpoint, LocalEndpoint, RequestScopes),
+        oidcc:add_openid_provider(ConfigEndpoint, LocalEndpoint, Config),
         add_openid_provider(T, LocalEndpoint)
     catch Error:Reason ->
             lager:critical("error occured OpenId Connect provider ~p: '~p' ~p",

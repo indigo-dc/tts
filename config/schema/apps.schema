@@ -88,6 +88,20 @@
  ]
 }.
 
+{mapping, "oidc_ssl.cacertfile", "oidcc.cacertfile",
+ [
+  {datatype , string},
+  {default, "/etc/ssl/certs/ca-certificates.crt"}
+ ]
+}.
+
+{mapping, "oidc_ssl.cert_depth", "oidcc.cert_depth",
+ [
+  {datatype , integer},
+  {default, 5}
+ ]
+}.
+
 %% Kernel
 %% {kernel,[{start_timer,true}]}
 {mapping, "start_timer", "kernel.start_timer",
