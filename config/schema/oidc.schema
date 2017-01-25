@@ -105,7 +105,7 @@
                                      client_id => ClientId,
                                      client_secret => Secret,
                                      config_endpoint => Config,
-                                     scopes => Scope },
+                                     request_scopes => Scope },
                         [ Setting | Result]
                 end,
             lists:foldl(CreateSetting, [], Descs)
