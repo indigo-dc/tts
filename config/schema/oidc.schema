@@ -4,12 +4,12 @@
           {datatype, string}
           ]}.
 
-%% @doc the client id of WATTS.at the OpenId Connect provider
+%% @doc the client id of WATTS at the OpenId Connect provider
 {mapping, "openid.$id.client_id", "watts.provider_list.a", [
           {datatype, string}
           ]}.
 
-%% @doc the client secret of WATTS.at the OpenId Connect provider
+%% @doc the client secret of WATTS at the OpenId Connect provider
 {mapping, "openid.$id.client_secret", "watts.provider_list.b", [
           {datatype, string}
           ]}.

@@ -1,14 +1,14 @@
 %% @doc the hostname of watts, use localhost
-%% for developing
+%% for development
 {mapping, "hostname", "watts.hostname", [
           {commented, "localhost"},
           {default, "localhost"}
           ]}.
 
 
-%% @doc The port at which traffic seams to enter
-%% the TTS. This can be different from the port
-%% TTS actually listens on @see listen_port .
+%% @doc The port at which traffic seems to enter
+%% WaTTS. This can be different from the port
+%% WaTTS actually listens on @see listen_port .
 {mapping, "port", "watts.port", [
           {commented, 8080},
           {default, 8080},
@@ -29,9 +29,9 @@
 
 
 
-%% @doc the port to actually listen on. together with
+%% @doc The port to actually listen on. together with
 %% port this can be used to pretend to be listening on
-%% e.g. 443, although the TTS actually listens on 8443
+%% e.g. 443, although WaTTS actually listens on 8443
 %% the default setting is to have it the same as port
 {mapping, "listen_port", "watts.listen_port", [
           {default, port},
@@ -52,7 +52,7 @@
 
 
 %% @doc Enable/Disable SSL support, please
-%% enable it before using TTS in production
+%% enable it before using WaTTS in production
 {mapping, "ssl", "watts.ssl", [
           {default, false},
           {commented, true},
@@ -79,7 +79,7 @@
           {datatype, file}
           ]}.
 
-%% @doc The duration of a session when using a web browser
+%% @doc The duration of a web-session when using a web browser
 {mapping, "session_timeout", "watts.session_timeout", [
           {default, "15m"},
           {commented, "15m"},
@@ -94,7 +94,7 @@
           ]}.
 
 %% @doc The base path at the server
-%% e.g. https://server.my.domain/tts would main_path be 'tts'
+%% e.g. https://server.my.domain/watts would main_path be 'watts'
 {mapping, "main_path", "watts.ep_main", [
           {datatype, string},
           {default, "/"},
