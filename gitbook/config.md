@@ -20,7 +20,7 @@ seen in the following table.
 
 | Datatype | Description |
 | :---: | --- |
-| 'word'| the word itself is the value, without the "'" |
+| 'word'| the word itself is the value, without the ' |
 | host | a valid fully qualified hostname |
 | port | an integer witin the valid range for TCP ports |
 | boolean | either 'true' or 'false' |
