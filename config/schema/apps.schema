@@ -9,6 +9,8 @@
 %%                {lager_file_backend, [{file, "info.log"}, {level, info}]}
 %%                ]}
 %%     ]}
+
+
 {mapping, "log_dir", "lager.log_root", [
           {default, "{{runner_log_dir}}"},
           hidden

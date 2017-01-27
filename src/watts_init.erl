@@ -118,8 +118,9 @@ start_database() ->
 
 
 add_openid_provider() ->
-    lager:debug("Init: adding openid provider"),
+    lager:info("Init: adding openid provider"),
     LocalEndpoint = local_endpoint(),
+    lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
     ok.
