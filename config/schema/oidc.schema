@@ -86,7 +86,7 @@
                                     {Id, Scpe} ->
                                         ScpeBin  = list_to_binary(Scpe),
                                         binary:split(ScpeBin,
-                                                     [<<",">>],
+                                                     [<<",">>, <<" ">>],
                                                      [global,
                                                       trim_all]);
                                     _ -> undefined

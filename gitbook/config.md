@@ -15,6 +15,7 @@ key = value
 ```
 
 ### WaTTS server settings
+#### Introduction
 This section will describe the general settings of the WaTTS server. This will include options like
 ports, hostname and SSL.
 
@@ -25,11 +26,12 @@ Typical values that should be changed during the initial setup are:
 - `listen_port`, will be set to the internal port WaTTS is listening at
 
 And for production use:
-- SSL, set to 'true'
-- CaCertFile, set to the path to the file
-- CertFile, set to the path to the file
-- KeyFile, set to the path to the file
+- `ssl`, set to 'true'
+- `cachain_file`, set to the path to the file
+- `cert_file`, set to the path to the file
+- `key_file`, set to the path to the file
 
+#### Settings
 | Key | Description | Datatype | Default |
 | :---: | --- | :---: | :---: |
 | hostname | Hostname of the web server | hostname | localhost |
@@ -38,7 +40,7 @@ And for production use:
 | ssl | Whether SSL should be used | boolean | false |
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
-| KeyFile | Path to the private key file | file | /etc/watts/watts.key |
+| key_file | Path to the private key file | file | /etc/watts/watts.key |
 | session_timeout | the duration a session at the web-app is valid | duration | 15m |
 | sqlite_file | Path to the sqlite database | file | /etc/watts/watts.db |
 | redirection.enable | Wehter redirection should be enables | boolean | false |
@@ -48,37 +50,21 @@ And for production use:
 
 
 
-### Identity Harmonization (IDH)
-The purpose of the IDH script is to lookup or create site specific accounts for
-the OpenId Connect user. Usually there is no need for a simple setup to change
-this setting.
-
-Provided with the Token Translation Service is a basic IDH script, which uses a
-sqlite database to keep track of the virtually created users.
-
-
-The script location is `/var/lib/tts/idh/basic-idh.py` and contains several
-settings. These settings can be modified (in the file). The most
-important settings are:
-* MIN_UID: the minimal uid to use for TTS users
-* MAX_UID: the latest uid to use for TTS users, set to 0 for unlimited
-* CREATE_LOCAL_ACCOUNTS: wether accounts should be created at the TTS server
-
-
 ### OpenId Connect Provider
+#### Introduction
 To provide a login mechanism for the user, at least one OpenId Connect Provider
 is needed.
 
-The TTS needs to be registered as a client at an OpenId Connect Provider. For this
+WaTTS needs to be registered as a client at an OpenId Connect Provider. For this
 you need to perform the registration process at the Provider of your choice. The
 registration process heavily depends on the Provider and is out of the scope of this
 documentation, if you are unsure you can ask the provider.
 
 During the registration some informations need to be provided.
 The redirect uri is created from three settings:
-- SSL: http:// (false, default) and https:// (true)
-- HostName: localhost (default)
-- Port: 8080 (default)
+- `ssl`: http:// (false, default) or https:// (true)
+- `hostname`: localhost (default)
+- `port`: 8080 (default)
 - fix path: /oidc
 
 For the default settings this results in the redirect uri:
@@ -88,30 +74,32 @@ The redirect uri for the settings 'SSL = true', 'Port = 443', 'HostName=tts.exam
 would be https://tts.example.com/oidc (the port is not added as it is the default
 port for https, it would be the same for port 80 on SSL = false).
 
+If you are unsure just start WaTTS and check the logs. During the start of WaTTS it prints some
+some messages starting with 'Init:', one of them is 'Init: using local endpoint ....' which is
+telling you the uri to use.
 
-The Token Translation uses the 'code-auth-flow' and is a 'web-application'.
+WaTTS uses the 'code-auth-flow' and is a 'web-application'.
 
-#### Configuration File
-The files reside in the `oidc` subfolder of the TTS configuration and one
-file per provider is used. The filename has to end with `.conf`.
+#### Settings
 
-The possible settings are:
-
-| Key | Description | Mandatory |
+| Key | Description | Datatype |
 | :---: | --- | :---: |
-| Id | The Id to refer to this Provider | no (randomly generated) |
-| Description | A description of the Provider, shown at the login Screen | yes |
-| ClientId | The client id received at the registration | yes |
-| Secret | The client secret received at the registration | yes |
-| ConfigEndpoint | The configuration endpoint of the provider | yes |
+| description | A description of the Provider, shown at the login Screen | string |
+| client_id | The client id received at the registration | string |
+| client_secret | The client secret received at the registration | string |
+| config_endpoint | The configuration endpoint of the provider | url |
+| request_scopes | the scopes to request | comma separated list |
 
-An example for the IAM OpenId Connect Provider:
+Each setting is prefixed with 'openid.`id`.' where `id` must be replaced by the id
+you want to give to the provider.
+
+An example for the IAM OpenId Connect Provider, setting its id to 'iam':
 ```
-Id = IAM
-Description = INDIGO Datacloud Identity and Access Management (IAM)
-ClientId = <insert the client id>
-Secret =  <insert the client secret>
-ConfigEndpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration
+openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)
+openid.iam.client_id = <insert the client id>
+opemid.iam.client_secret =  <insert the client secret>
+openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration
+openid.iam.request_scopes = openid, profile
 ```
 
 ### Services
