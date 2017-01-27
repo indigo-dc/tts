@@ -17,8 +17,21 @@ key = value
 ### Datatypes
 There are different datatypes used in the configuration, a detailed description can be
 seen in the following table.
+
 | Datatype | Description |
 | :---: | --- |
+| 'word'| the word itself is the value, without the "'" |
+| host | a valid fully qualified hostname |
+| port | an integer witin the valid range for TCP ports |
+| boolean | either 'true' or 'false' |
+| file | an absolute path to a file |
+| duration | a timespan given by an integer and a unit, the unit can be ms, s, m, h |
+| string | just the string value |
+| integer | an integer value, so a number |
+| url | a valid url, use https as much as possible |
+| comma separated list | values separated by comma |
+| any | depends on the usage and can't be specified |
+
 
 
 ### WaTTS server settings
@@ -41,7 +54,7 @@ And for production use:
 #### Settings
 | Key | Description | Datatype | Default |
 | :---: | --- | :---: | :---: |
-| hostname | Hostname of the web server | hostname | localhost |
+| hostname | Hostname of the web server | host | localhost |
 | port | Port number where clients seem to connect to; deault means port 80 for non SSL, 443 for SSL. On production systems this should be 'default' | port or 'default' | 8080 |
 | listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privilidged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
 | ssl | Whether SSL should be used | boolean | false |
