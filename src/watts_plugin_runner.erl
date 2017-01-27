@@ -276,7 +276,7 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
         end,
     ScriptParam0 = maps:merge(
                      #{
-                        tts_version => list_to_binary(Version),
+                        watts_version => list_to_binary(Version),
                         action => Action,
                         cred_state => CredState
                       }, ParamUpdate),
@@ -302,7 +302,7 @@ add_user_info_if_present(ScriptParam, UserInfo, true) ->
 add_user_info_if_present(ScriptParam, UserInfo, _) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     {ok, PluginUserInfo} = watts_userinfo:return(plugin_info, UserInfo),
-    Update = #{tts_userid => UserId, user_info => PluginUserInfo},
+    Update = #{watts_userid => UserId, user_info => PluginUserInfo},
     maps:merge(ScriptParam, Update).
 
 
