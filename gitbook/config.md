@@ -14,6 +14,13 @@ Each setting consists of one simple line of the format, comments are starting wi
 key = value
 ```
 
+### Datatypes
+There are different datatypes used in the configuration, a detailed description can be
+seen in the following table.
+| Datatype | Description |
+| :---: | --- |
+
+
 ### WaTTS server settings
 #### Introduction
 This section will describe the general settings of the WaTTS server. This will include options like
@@ -48,7 +55,17 @@ And for production use:
 | allow_dropping_credentials | wether credentials of unknown services can be silently dropped | boolean | false |
 
 
-
+#### Example
+```
+hostname = my-watts.example.com
+listen_port = 8443
+port = default
+ssl = true
+# using default values for cachain_file, cert_file and key_file
+session_timeout = 10m
+redirection.enable = true
+redirection.listen_port = 8000
+```
 
 ### OpenId Connect Provider
 #### Introduction
@@ -93,6 +110,7 @@ WaTTS uses the 'code-auth-flow' and is a 'web-application'.
 Each setting is prefixed with 'openid.`id`.' where `id` must be replaced by the id
 you want to give to the provider.
 
+#### Example
 An example for the IAM OpenId Connect Provider, setting its id to 'iam':
 ```
 openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)
@@ -103,97 +121,146 @@ openid.iam.request_scopes = openid, profile
 ```
 
 ### Services
+#### Introduction
 A service is a single entity for which a user can request credentials.
-The configuration of a service consist of one `.conf` file per service, which
+The configuration of a service consist of one group of 'service' settings.
 are located in the `services` subfolder of the configuration.
 
-The TTS comes with some sample configurations for included plugins.
-you can easily test them by renaming them from .sample to .conf.
-Three services run out of the box after renaming the file:
-- info
-- ssh
-- x509
-
-To create credentials, the TTS connects to the service, either locally or
+To create credentials, WaTTS connects to the service, either locally or
 remotely using ssh. After the connection is established, a command is
 executed and the subsequent result is parsed and interpreted.
 
 The executed commands are also called plugins; for further information on how
 the plugins work and how to implement them, see the documentation for developers.
 
-List of parameters:
+#### Settings
+| Key | Description | Datatype | Mandatory |
+| :---: | --- | :---: | :---: |
+| description | A description of the service for the user | string | yes |
+| cmd | The command to execute after connecting | string | yes |
+| credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | yes |
+| connection_type | Either local or ssh | 'local' or 'ssh' | yes |
+| parallel_runner | the number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
+| allow_same_state | wether the plugin is allowed to return the same state more than once | boolean | no, (false) |
+| plugin_timeout | the time after wich WaTTS won't wait for the result of the plugin anymore | duration or 'infinity' | no (infinity) |
+| pass_access_token | wether the  access token should be passed to the plugin | boolean | no (false) |
+| connection.user | the user to use when connecting e.g. with ssh | string | no |
+| connection.password | the password to use when connecting e.g. with ssh | string | no |
+| connection.host | the host to connect to e.g. with ssh | host | no |
+| connection.port | the port to connect to e.g. with ssh | port | no |
+| connection.ssh_dir | the ssh_dir to use with ssh | port | no |
+| connection.ssh_key_pass | the password of the private key to use with ssh | string | no |
+| plugin.`key` | a setting to send to the plugin, the name of the parameter will be `key` | any | no |
+| authz.allow.`p`.`k`.`o` | see the Authorization section | other | no ([])|
+| authz.forbid.`p`.`k`.`o` | see the Authorization section | other | no ([]) |
+| authz.hide | hide the service if the user is not allowed | boolean | no (false) |
+| authz.tooltip | the message shown when hovering the row of the service and not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
 
-| Key | Description | Mandatory |
-| :---: | --- | :---: |
-| Id | The id used internally when referring to this service | yes |
-| Type | A type displayed to the user | yes |
-| Host | A host displayed to the user | yes |
-| Port | A port shown to the user | yes |
-| Description | A description of the service for the user | yes |
-| CredentialLimit | The maximum number of retrievable credentials | yes |
-| Cmd | The command to execute after connecting | yes |
-| AllowSameState | Allow the plugin to return the same state, usually not needed | no |
-| ConnectionType | Either local or ssh | yes |
-| ConnectionHost | Which host to connect to | no |
-| ConnectionPort | Which port to connect to | no |
-| ConnectionUser | Which user to use when connecting | no |
-| ConnectionPassword | Password used when connecting | no |
-| ConnectionSshDir | Folder for known_hosts and keys | no |
-| ConnectionSshKeyPass | Password for the private key | no |
-| ConnectionSshKeyAutoAcceptHosts | *WARNING* This introduces a security issue, automatically accept all ssh hosts | no |
 
-A very basic local example:
+Each setting is prefixed with 'service.`id`.' where `id` must be replaced by the id
+you want to give to the service.
+#### Example
 ```
-Id = ssh_local
-Type = ssh
-Host = localhost
-Port = 22
-Description = local ssh access to your own machine
-
-Cmd = /usr/share/tts/scripts/ssh.py
-
-ConnectionType = local
-CredentialLimit = 3
+service.info.description = Simple Info Service
+service.info.credential_limit = 1
+service.info.connection.type = local
+service.info.cmd = /home/watts/.config/watts/info.py
+service.info.parallel_runner = infinite
+# see the Authorization section regarding the next line
+service.info.authz.allow.any.sub.any = true
 ```
 
-A more advanced example for ssh:
+#### Authorization
+Authorization follows a few simple steps
+ 1. everyone is forbidden
+ 2. if a `allow` rule which matches the user is true she is allowed
+ 3. if a `forbid` rule which matches the user is true he is forbidden
+
+So a for a user to access a service she
+ - MUST match at least one `allow` rule and evaluate to true
+ - MUST NOT match any `forbid` rule  that evaluates to true
+
+Each rule is exactly one line. A rule consists always aut of five parts:
+` authz.allow.p.k.o = v `
+ - `p`: the Id of the provider
+ - `k`: the key within the OpenId Connect Id-Token or user information
+ - `info`: the information in the Id Token or user information with the key `k`
+ - `o`: the operation to perform
+ - `v`: the value
+
+The provider Id is the same as given during configuration, in the provider example above
+the id was 'iam' so using that for `p` would allow to decide on users coming from iam.
+There is a special provider id, which is `any` and it matches any provider.
+
+
+The key `k` has to match a value of the id token or the user info. The value of the
+Id Token ofer Userinfo having the key `k` is the `info`.
+if the key is not present:
+ - an allow rule evaluates to false
+ - a forbid rule evaluates to true
+
+the operation `o` can be one of the following list:
+ - contains: the `info` can either be a list or a string
+   - a list: the value `v` must be a member of the list `info`
+   - a string: the value `v` must be part of the string `info`
+ - is_member_of: the value `v` must be a comma separated list (with no spaces!) and `info` needs to be a member of that list
+ - equals: `v` and `info` need to be equal
+ - regexp: `v` is a regular expression and `info` needs to satisfy the expression
+ - any: evaluates to `v`, so to make this pass set `v` to 'true'
+
+#### Examples
 ```
-Id = ssh_remote
-Type = ssh
-Host = ssh.example.com
-Port = 22
-Description = ssh access to example.com
+# 'p' is any, so matching all provider
+# 'k' is sub, the subject of the id token, which for sure is always present
+# 'info' can be ignored due to
+# 'o' being 'any'
+# 'v' is true
+# so the following line allows anyone from any provider
+service.info.authz.allow.any.sub.any = true
 
-Cmd = /usr/share/tts/scripts/ssh.py
 
-ConnectionType = ssh
-ConnectionUser = root
-ConnectionHost =  ssh.example.com
-ConnectionPort = 22
-ConnectionSshKeyPass = secret
+# 'p' is iam, so matching only the provider with the id iam
+# 'k' is sub, the subject of the id token, which for sure is always present
+# 'info' can be ignored due to
+# 'o' being 'any'
+# 'v' is true
+# so the following line allows anyone from the iam provider
+service.info.authz.allow.iam.sub.any = true
 
-CredentialLimit = 3
+# the following examples will concentrate on the operations
+
+# 'k' is group, so the groups the user belongs to
+# 'info' should be a list
+# 'o' being 'contains'
+# 'v' is 'Developer'
+# so the following line allows anyone from the iam provider whos group
+# list contains 'Developer'
+service.info.authz.allow.iam.group.contains = Developer
+
+# 'k' is sub
+# 'info' is the subject within iam
+# 'o' being 'is_member_of'
+# 'v' is a comma separated list of subjects
+# so the following line allows sub1, sub2 and sub3 from the provider
+# iam
+service.info.authz.allow.iam.sub.is_member_of = sub1,sub3,sub2
 ```
-This assumes a `.ssh` folder is present at `~/.ssh/` with ssh.example.com
-listed in the `known_hosts` and at least one key file, encrypted using the passphrase
-given with the `ConnectionSshKeyPass`. The home folder in this case is the one of
-the user running the TTS.
 
-#### Configuring SSH for the TTS
-The TTS does not yet support hashed hosts in the `known_hosts` file. As the
+### Configuring SSH for WaTTS
+WaTTS does not yet support hashed hosts in the `known_hosts` file. As the
 connection to the remote host is done without user interaction the host MUST be
 listed in the `known_hosts` file.
 
-To add a host to the list of known hosts in a way readable for the TTS the
+To add a host to the list of known hosts in a way readable for WaTTS the
 `ssh_config` (usually at `/etc/ssh/ssh_config`) must have the setting
 `HashKnownHosts no`.  After checking and eventually updating the configuration
-login as the TTS user.
+login as the WaTTS user.
 
-As TTS user connects to the remote hosts using the credential specified in the
+As WaTTS user connects to the remote hosts using the credential specified in the
 service configuration, and potentially using the verbose flag (-v). During the
 connection there are two possibilities:
 1. The client asks whether the host should be added. In case it is a host that
-   should be accessible by the TTS, the user should answer with yes, and then
+   should be accessible by WaTTS, the user should answer with yes, and then
    can go on with the next host.
 2. The client silently connects without asking. If this is the case, the host is
    already in the `~/.ssh/known_hosts` file. In the verbose connection, the
