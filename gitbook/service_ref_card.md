@@ -1,50 +1,50 @@
-# TTS - Service Reference Card
+# WaTTS - Service Reference Card
 
 * Daemons running
-  * tts - Token Translation service
+  * watts - The INDIGO Token Translation service
     * run_erl
     * beam.smp (can be multiple, usually #cores + 1)
   * epmd - erlang distribution daemon
 * Init scripts and options
-  * tts start - starts the TTS
-  * tts stop - stops the TTS
-  * tts restart - restarts the TTS
-  * tts ping - check if TTS is up and running, prints "pong" if up
-  * tts getpid - prints the pid of TTS
-  * tts version - prints out the verison of the TTS
-  * tts console - starts the TTS in forground mode, e.g. for debugging
-  * tts attach - connects to the shell of a running TTS, use with caution
+  * watts start - starts WaTTS
+  * watts stop - stops WaTTS
+  * watts restart - restarts WaTTS
+  * watts ping - check if WaTTS is up and running, prints "pong" if up
+  * watts getpid - prints the pid of WaTTS
+  * watts version - prints out the verison of WaTTS
+  * watts console - starts WaTTS in forground mode, e.g. for debugging
+  * watts attach - connects to the shell of a running WaTTS, use with caution
 * Configuration files location
-  * /etc/tts/main.conf - the main configuration file
-  * /etc/tts/oidc/ - directory of OpenID Connect configurations
-  * /etc/tts/service/ - directory of service configurations
+  * /etc/watts/watts.conf - the main configuration file
 * Logfile locations (and management) and other useful audit information
-  * /var/log/tts/* - all differnet logs
+  * /var/log/watts/* - all differnet logs
 * Open ports
   * 8080 - in default config
   * 4369 - epmd, can be blocked by firewall
 * Possible unit test of the service
   * configure at least one OpenID Connect Provider
   * configure the info service
-  * login to TTS and request the Info credentials
+  * login to WaTTS and request the Info credentials
   * a list of informations should be shown
   * revoke the credential
   * the screen should look like in the beginning
 * Where is service state held (and can it be rebuilt)
-  * /var/lib/tts - this directory contains all data/state
-  * /etc/tts - this directory contains all settings
+  * /var/lib/watts - this directory contains all data/state
+  * /etc/watts - this directory contains all settings
 * Cron jobs
   * none
 * Security information
   * Access control Mechanism description (authentication & authorization)
     * done via OpenID Connect library, oidcc
   * How to block/ban a user
-    * done in the plugins
+    * either configuer the service authz (see configuration documentation)
+    * or done in the plugins (see developer documentation)
   * Network Usage
     * http connections for the REST/Web interface
-    * outgoing connections depend upon services/plugins in use
+    * outgoing https connections to OpenId Connect Provider
+    * other outgoing connections depend upon services/plugins in use
   * Firewall configuration
-    * only open port configured in main.conf, in default config port 8080
+    * only open listen_port and redirect_port configured in watts.conf, in default config port 8080
   * Security recommendations
     * run as a dedicated, non root, user
     * set up SSL before running in production
