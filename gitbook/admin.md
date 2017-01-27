@@ -48,10 +48,26 @@ make package
 ```
 the package can be found in `./package/packages`.
 
-## Upgrade the TTS
-### v0.2.2 to v0.4.0
+## Upgrade WaTTS
+### v0.2.2 to v0.4.0 (called TTS)
 Upgrading the TTS from version 0.2.2 to 0.4.0 is straight forward.
 As the configuration files are compatible the only actions to do are:
 * stop the TTS `tts stop`
 * install the new package
 * start the newly installed TTS `tts start`
+
+### v0.4.1 to v1.0.0
+Upgrading from TTS to WaTTS is not straight forward as the configuration file as well as
+the plugin API both have changed.
+You can not reuse any old configuration or plugins.
+Please see this Documentation on further information regarding a fresh setup.
+Proposed is a clean and fresh setup:
+* stop the TTS `tts stop`
+* install the new package (still called tts)
+* configure WaTTS to your needs (see below for reusing existing data)
+* start WaTTS `watts start`
+
+If you really need to keep using the existing data ensure:
+* a plugin using the same data does exist for WaTTS 1.0
+* you configure your newly setup WaTTS to use the existing sqlite db
+* you configure the plugin to use the existing data

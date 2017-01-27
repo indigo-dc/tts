@@ -1,20 +1,28 @@
 # Configuration Guide
-The configuration files of the Token Translation Service are usually located in
-`/etc/tts`. Other locations are also supported, for e.g. development purposes; in
-this case please place your configuration files in `~/.config/tts`. If the later
-location is found, it will override the global configuration.
+The configuration of WaTTS consists of one file. The file is located at `/etc/watts/watts.conf`.
+One other locations is supported for development purposes; in this case please place your
+configuration file at `~/.config/watts/watts.conf`.
 
 
-
-### Basic Configuration (main.conf)
-The main configuration for the TTS is `main.conf`.
-The TTS comes shipped with sane defaults, you only need to touch settings that you
+## Configuration (watts.conf)
+The WaTTS comes shipped with sane defaults, you only need to touch settings that you
 want to change.
 
+Each setting consists of one simple line of the format, comments are starting with '#'
+```
+# this is a comment and ignored
+key = value
+```
+
+### WaTTS server settings
+This section will describe the general settings of the WaTTS server. This will include options like
+ports, hostname and SSL.
+
+
 Typical values that should be changed during the initial setup are:
-- HostName, changing to the actual fully qualified hostname
-- Port, can be removed if the incomming traffic will arrive at port 80 for http or 443 for https
-- ListenPort, will be set to the internal port the TTS is listening at
+- `hostname`, changing to the actual fully qualified hostname
+- `port`, can be removed if the incomming traffic will arrive at port 80 for http or 443 for https
+- `listen_port`, will be set to the internal port WaTTS is listening at
 
 And for production use:
 - SSL, set to 'true'
@@ -22,24 +30,22 @@ And for production use:
 - CertFile, set to the path to the file
 - KeyFile, set to the path to the file
 
-| Key | Description | Default |
-| :---: | --- | :---: |
-| HostName | Hostname of the web server  |localhost |
-| Port | Port number for connections; default port is 80 for non SSL, and 443 for SSL | default |
-| ListenPort | Port which servers listens to, used if the TTS listens at a non-privileged port; the traffic is then redirected from the privileged ports e.g. 80 or 443 | default |
-| SSL | Whether SSL should be used | true |
-| CaCertFile | Location of the CA file; if not absolute, it is relative to the config path  | cert/ca.cert |
-| CertFile | Location of the certificate (see above) | cert/tts.cert |
-| KeyFile | Path to the private key file (see CaFile) | cert/tts.key |
-| SqliteFile | Path to the sqlite database | ./tts.db |
-| SessionTimeout | Timeout of web interface Session (in seconds) | 600 |
-| CacheTimeout | Timeout of the cached user information (seconds) |  900 |
-| CacheCheckInterval | Cache validation and cleanup interval (seconds) |  300 |
-| CacheMaxEntries | Max number of entries kept in the cache | 50000|
-| ServiceConfigPath | Folder where the service configs are stored, relative to the main config| ./services |
-| OidcConfigPath | Folder containing the OpenId Connect Provider configs | ./oidc |
-| IDHScript | Identiy Harmonization Script (IDH) to use | ./idh.py |
-| IDHMaxWorker | Max amount of workers looking up the user data in parallel | 5 |
+| Key | Description | Datatype | Default |
+| :---: | --- | :---: | :---: |
+| hostname | Hostname of the web server | hostname | localhost |
+| port | Port number where clients seem to connect to; deault means port 80 for non SSL, 443 for SSL. On production systems this should be 'default' | port or 'default' | 8080 |
+| listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privilidged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
+| ssl | Whether SSL should be used | boolean | false |
+| cachain_file | Location of the ca chain for the server  | file | none |
+| cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
+| KeyFile | Path to the private key file | file | /etc/watts/watts.key |
+| session_timeout | the duration a session at the web-app is valid | duration | 15m |
+| sqlite_file | Path to the sqlite database | file | /etc/watts/watts.db |
+| redirection.enable | Wehter redirection should be enables | boolean | false |
+| redirection.listen_port | the port to listen on for browsers to redirect | port | 8080 |
+| allow_dropping_credentials | wether credentials of unknown services can be silently dropped | boolean | false |
+
+
 
 
 ### Identity Harmonization (IDH)

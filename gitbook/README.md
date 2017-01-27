@@ -1,9 +1,9 @@
-# Token Translation Service 
+# WaTTS - The INDIGO Token Translation Service
 ## Purpose
 
-Token Translation Service (TTS) returns credentials after successful
-authentication.  It offers an easy way to self service credentials by the
-users. TTS was developed for cases in which users can be (only)
+WaTTS returns credentials after successful authentication.
+It offers an easy way to self service credentials by the
+users. WaTTS was developed for cases in which users can be (only)
 authenticated via OpenId-Connect but require different credentials for
 accessing services.
 
@@ -17,6 +17,5 @@ supported services include
 - OpenNebula credentials
 
 ## Interfaces
-TTS provides a web and a REST interface for users to create/retrieve and
+WaTTS provides a web and a REST interface for users to create/retrieve and
 remove credentials.
-
