@@ -24,7 +24,7 @@
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
-%% @doc the time after which the WATTS.will stop waiting for a response
+%% @doc the time after which the WATTS will stop waiting for a response
 %% from the plugin
 {mapping, "service.$id.plugin_timeout", "watts.service_list.e", [
           {datatype, [{duration, ms}, {atom, infinity}] }
@@ -36,7 +36,7 @@
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
-%% @doc the way watts.connects to the place where to start the plugin
+%% @doc the way watts connects to the place where to start the plugin
 %% this can be either local or ssh
 %% @see service.$id.cmd
 {mapping, "service.$id.connection.type", "watts.service_list.g", [
