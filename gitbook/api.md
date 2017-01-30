@@ -151,32 +151,27 @@ content-type: application/json
       {
         "name": "WaTTS userid",
         "type": "text",
-        "value": "eyJpc3N1ZXIiOiJodHRwczpcL1wvaWFtLXRlc3QuaW5kaWdvLWRhdGFjbG91ZC5ldVwvIiwic3ViamVjdCI6ImZjMTI3MTU2LTExODktNGU1Mi1iNTQyLTUyYzViZTdkMTQ3YiJ9"
+        "value": "eyJpZXIiYiJ9"
       },
       {
         "name": "WaTTS userid (decoded)",
         "type": "text",
-        "value": "{\"issuer\":\"https:\\/\\/iam-test.indigo-datacloud.eu\\/\",\"subject\":\"fc127156-1189-4e52-b542-52c5be7d147b\"}"
+        "value": "{\"issuer\":\"https://provider",\"subject\":\"sub\"}"
       },
       {
         "name": "family_name",
         "type": "text",
-        "value": "Wegh"
+        "value": "Mustermann"
       },
       {
         "name": "Name",
         "type": "text",
-        "value": "Bas Wegh"
-      },
-      {
-        "name": "external_authn",
-        "type": "text",
-        "value": "#{iss => <<\"https://accounts.google.com\">>,\n  sub => <<\"109538112780676045413\">>,\n  type => <<\"oidc\">>}"
+        "value": "Max Mustermann"
       },
       {
         "name": "Issuer",
         "type": "text",
-        "value": "https://iam-test.indigo-datacloud.eu/"
+        "value": "https://provider"
       },
       {
         "name": "Gender",
@@ -186,7 +181,7 @@ content-type: application/json
       {
         "name": "preferred_username",
         "type": "text",
-        "value": "bwegh"
+        "value": "mm"
       },
       {
         "name": "updated_at",
@@ -196,27 +191,17 @@ content-type: application/json
       {
         "name": "given_name",
         "type": "text",
-        "value": "Bas"
+        "value": "Max"
       },
       {
         "name": "Groups",
         "type": "textarea",
-        "value": "[<<\"Users\">>,<<\"Developers\">>]"
-      },
-      {
-        "name": "organisation_name",
-        "type": "text",
-        "value": "indigo-dc"
+        "value": "[<<\"Users\">>]"
       },
       {
         "name": "Subject",
         "type": "text",
-        "value": "fc127156-1189-4e52-b542-52c5be7d147b"
-      },
-      {
-        "name": "json object",
-        "type": "textarea",
-        "value": "{\n    \"action\": \"request\",\n    \"conf_params\": {},\n    \"cred_state\": \"undefined\",\n    \"params\": {},\n    \"user_info\": {\n        \"external_authn\": {\n            \"iss\": \"https://accounts.google.com\",\n            \"sub\": \"109538112780676045413\",\n            \"type\": \"oidc\"\n        },\n        \"family_name\": \"Wegh\",\n        \"gender\": \"M\",\n        \"given_name\": \"Bas\",\n        \"groups\": [\n            \"Users\",\n            \"Developers\"\n        ],\n        \"iss\": \"https://iam-test.indigo-datacloud.eu/\",\n        \"name\": \"Bas Wegh\",\n        \"organisation_name\": \"indigo-dc\",\n        \"preferred_username\": \"bwegh\",\n        \"sub\": \"fc127156-1189-4e52-b542-52c5be7d147b\",\n        \"updated_at\": \"Wed Aug 31 09:06:43 UTC 2016\"\n    },\n    \"watts_userid\": \"eyJpc3N1ZXIiOiJodHRwczpcL1wvaWFtLXRlc3QuaW5kaWdvLWRhdGFjbG91ZC5ldVwvIiwic3ViamVjdCI6ImZjMTI3MTU2LTExODktNGU1Mi1iNTQyLTUyYzViZTdkMTQ3YiJ9\",\n    \"watts_version\": \"1.0.0-rc7\"\n}"
+        "value": "sub"
       }
     ],
     "id": "9b579b68-ba01-44fb-9f00-576a055e12b1"
