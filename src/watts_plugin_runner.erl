@@ -48,9 +48,8 @@
           cred_state = undefined,
           connection = undefined,
           con_type = undefined,
-          cmd_list = [],
-          cmd_log = [],
-          cmd_state = undefined,
+          cmd_line = undefined,
+          cmd_output = undefined,
           error = undefined
          }).
 
@@ -72,48 +71,49 @@ stop(Pid) ->
               Params::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
                                        {error, any(), list()} | {error, atom()}.
 request(ServiceId, UserInfo, Params, Queue, Pid) ->
-    try
-        {ok, ServiceInfo} = watts_service:get_info(ServiceId),
-        Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
-        gen_server:call(Pid, {request_credential, ServiceInfo, UserInfo, Params,
-                              Queue}, Timeout)
-    catch
-        exit:{timeout, _} ->
-            UMsg = "the plugin timed out, please inform the administrator",
-            LMsg = "request timed out",
-            {ok, #{result => error, user_msg => UMsg, log_msg => LMsg}, []}
-    end.
-
+    Config = #{
+      action => request,
+      service_id => ServiceId,
+      user_info => UserInfo,
+      params => Params,
+      queue => Queue,
+      pid => Pid},
+    request_action(Config).
 
 -spec revoke(ServiceId :: binary(), UserInfo :: map(),
              CredState::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
                                          {error, any(), list()}|{error, atom()}.
 revoke(ServiceId, UserInfo, CredState, Queue, Pid) ->
-    try
-        {ok, ServiceInfo} = watts_service:get_info(ServiceId),
-        Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
-        gen_server:call(Pid, {revoke_credential, ServiceInfo, UserInfo,
-                              CredState, Queue}, Timeout)
-    catch
-        exit:{timeout, _} ->
-            UMsg = "the plugin timed out, please inform the administrator",
-            LMsg = "revoke timed out",
-            {ok, #{result => error, user_msg => UMsg, log_msg => LMsg}, []}
-    end.
+    Config = #{
+      action => revoke,
+      service_id => ServiceId,
+      user_info => UserInfo,
+      cred_state => CredState,
+      queue => Queue,
+      pid => Pid},
+    request_action(Config).
 
 -spec get_params(ServiceId ::any(), Pid::pid()) -> {ok, map()} |
                                                    {error, atom(), list()} |
                                                    {error, atom()}.
 get_params(ServiceId, Pid) ->
+    Config = #{
+      action => parameter,
+      service_id => ServiceId,
+      pid => Pid},
+    request_action(Config).
+
+
+request_action(#{action := Action, service_id := ServiceId,
+                 pid := Pid} = ConfigIn) ->
     try
         {ok, ServiceInfo} = watts_service:get_info(ServiceId),
         Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
-        gen_server:call(Pid, {get_params, ServiceInfo}, Timeout)
+        Config = maps:put(service_info, ServiceInfo, ConfigIn),
+        gen_server:call(Pid, {request_action,  Config}, Timeout)
     catch
         exit:{timeout, _} ->
-            UMsg = "the plugin timed out, please inform the administrator",
-            LMsg = "params timed out",
-            {ok, #{result => error, user_msg => UMsg, log_msg => LMsg}, []}
+            timeout_result(Action)
     end.
 
 
@@ -122,42 +122,31 @@ get_params(ServiceId, Pid) ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({request_credential, ServiceInfo, UserInfo, Params, Queue}, From,
-            #state{client = undefined} = State) ->
-    NewState = State#state{ action = request,
-                            client = From,
-                            service_info = ServiceInfo,
-                            user_info = UserInfo,
-                            params = Params,
-                            queue = Queue
-                          },
-    gen_server:cast(self(), request_slot),
-    {noreply, NewState, 200};
-handle_call({revoke_credential, ServiceInfo, UserInfo, CredState, Queue}, From,
-            #state{client = undefined} = State) ->
-    NewState = State#state{ action = revoke,
+handle_call({request_action,
+             #{action := Action, service_info := ServiceInfo} = Config},
+             From, #state{client = undefined} = State ) ->
+    UserInfo = maps:get(user_info, Config, undefined),
+    CredState = maps:get(cred_state, Config, undefined),
+    Params = maps:get(params, Config, undefined),
+    Queue = maps:get(queue, Config, undefined),
+    NewState = State#state{ action = Action,
                             client = From,
                             service_info = ServiceInfo,
                             user_info = UserInfo,
                             cred_state = CredState,
+                            params = Params,
                             queue = Queue
                           },
     gen_server:cast(self(), request_slot),
-    {noreply, NewState, 200};
-handle_call({get_params, ServiceInfo}, From, #state{client = undefined}=State)->
-    NewState = State#state{ action = parameter,
-                            client = From,
-                            service_info = ServiceInfo
-                          },
-    gen_server:cast(self(), perform_action),
     {noreply, NewState, 200};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
 
 
-
-
+handle_cast(request_slot, #state{action = parameter}=State) ->
+    gen_server:cast(self(), perform_action),
+    {noreply, State};
 handle_cast(request_slot, #state{queue = undefined}=State) ->
     gen_server:cast(self(), perform_action),
     {noreply, State};
@@ -171,11 +160,10 @@ handle_cast(request_slot, #state{queue = Queue}=State) ->
             {stop, normal, NewState}
     end;
 handle_cast(perform_action, State) ->
-    {ok, NewState} = prepare_action(State),
-    trigger_next_command(),
+    {ok, NewState} = execute_command(State),
     {noreply, NewState};
-handle_cast(execute_cmd, State) ->
-    execute_single_command_or_exit(State);
+handle_cast(send_result, State) ->
+    send_result(State);
 handle_cast(stop, State) ->
     {stop, normal, State};
 handle_cast(_Msg, State) ->
@@ -183,7 +171,7 @@ handle_cast(_Msg, State) ->
 
 handle_info({ssh_cm, SshCon, SshMsg}
             , #state{connection=SshCon,
-                     cmd_state = #{ channel_id := ChannelId}}=State) ->
+                     cmd_output = #{ channel_id := ChannelId}}=State) ->
     {ok, NewState} = handle_ssh_message(SshMsg, ChannelId, State),
     {noreply, NewState};
 handle_info(timeout, State) ->
@@ -201,6 +189,16 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
+
+execute_command(State) ->
+    {ok, NewState} = prepare_action(State),
+    #state{ cmd_line = Cmd,
+            connection = Connection,
+            con_type = ConType
+          } = NewState,
+    execute_command(Cmd, ConType, Connection, NewState).
+
+
 prepare_action(State) ->
     #state{service_info = ServiceInfo,
            user_info = UserInfo
@@ -208,7 +206,7 @@ prepare_action(State) ->
     {ok, ConnInfo} = get_connection_info(ServiceInfo),
     {ok, Cmd} = get_cmd(ServiceInfo),
     Connection = connect_to_service(ConnInfo),
-    create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
+    create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
                                          Connection, State).
 
 
@@ -253,8 +251,8 @@ get_connection_info(_) ->
     {error, no_connection_info}.
 
 
-create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
-                                     {ok, Connection}, State)
+create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
+                                {ok, Connection}, State)
   when is_binary(Cmd) ->
     #state{
        action = Action,
@@ -288,8 +286,7 @@ create_command_list_and_update_state(Cmd, UserInfo, ServiceInfo,
     CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
     lager:debug("runner ~p: the command line is (parameter in base64url): ~p",
                 [self(), CmdLine]),
-    CmdList = [CmdLine],
-    {ok, State#state{cmd_list=CmdList,
+    {ok, State#state{cmd_line=CmdLine,
                      connection = Connection, con_type = ConnType}}.
 
 add_user_info_if_present(ScriptParam, undefined, _) ->
@@ -305,69 +302,50 @@ add_user_info_if_present(ScriptParam, UserInfo, _) ->
     Update = #{watts_userid => UserId, user_info => PluginUserInfo},
     maps:merge(ScriptParam, Update).
 
-
-
-trigger_next_command() ->
-    gen_server:cast(self(), execute_cmd).
-
-execute_single_command_or_exit(State) ->
-    #state{ cmd_list = CmdList,
-            connection = Connection,
-            error = Error,
-            con_type = ConType,
-            cmd_log = CmdLog
-          } = State,
-    execute_command_or_send_result(CmdList, ConType, Connection, Error,
-                                   CmdLog, State).
-
-execute_command_or_send_result([], ConType, Connection, undefined, Log
-                               , State) ->
-    lager:debug("runner ~p: execution done, closing connection", [self()]),
-    close_connection(Connection, ConType),
-    [LastLog|_] = Log,
-    Result = create_result(LastLog, Log),
-    lager:debug("runner ~p: sending result ~p", [self(), Result]),
-    {ok, NewState} = send_reply(Result, State),
-    {stop, normal, NewState};
-execute_command_or_send_result([Cmd|T], ConType, Connection, undefined, _Log
-                               , State) ->
-    {ok, NewState} = execute_command(Cmd, ConType, Connection, State),
-    {noreply, NewState#state{ cmd_list = T}}.
-
-create_result(#{exit_status := 0, std_out := []}, Log) ->
-    {error, no_json, lists:reverse(Log)};
-create_result(#{exit_status := 0, std_out := [Json|_]}, Log) ->
-    case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
-        {ok, Map, _} -> {ok, Map, lists:reverse(Log)};
-        {error, _} -> {error, bad_json_result, Log}
-    end;
-create_result(#{exit_status := _}, Log) ->
-    {error, script_failed, lists:reverse(Log) };
-create_result(#{std_err := [], std_out := Data}, Log) ->
-    create_result(#{std_out=>Data, exit_status => 0}, Log);
-create_result(_, Log) ->
-    create_result(#{exit_status => -1}, Log).
-
-
 execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection, infinity),
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     success = ssh_connection:exec(Connection, ChannelId, Cmd, infinity),
-    CmdState =  #{channel_id => ChannelId, cmd => Cmd},
-    {ok, State#state{ cmd_state = CmdState }};
-execute_command(Cmd, local, _Connection, #state{cmd_log=Log} = State)
-  when is_list(Cmd) ->
+    CmdOutput =  #{channel_id => ChannelId, cmd => Cmd},
+    {ok, State#state{ cmd_output = CmdOutput }};
+execute_command(Cmd, local, _Connection, State) when is_list(Cmd) ->
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     StdOut = list_to_binary(os:cmd(Cmd)),
     lager:debug("runner ~p: result ~p", [self(), StdOut]),
-    trigger_next_command(),
-    CmdState = #{std_out => [StdOut], cmd => Cmd, std_err => []},
-    NewState = State#state{ cmd_state = #{},
-                            cmd_log = [ CmdState | Log] },
+    CmdOutput = #{std_out => [StdOut], cmd => Cmd, std_err => []},
+    NewState = State#state{ cmd_output = CmdOutput },
+    trigger_sending(),
     {ok, NewState};
 execute_command(Cmd, ConType, Connection, State)
   when is_binary(Cmd) ->
     execute_command(binary_to_list(Cmd), ConType, Connection, State).
+
+
+
+send_result(#state{ cmd_output = CmdOutput, connection = Connection,
+                    con_type = ConType} = State) ->
+    lager:debug("runner ~p: execution done, closing connection", [self()]),
+    close_connection(Connection, ConType),
+    Result = create_result(CmdOutput),
+    lager:debug("runner ~p: sending result ~p", [self(), Result]),
+    {ok, NewState} = send_reply(Result, State),
+    {stop, normal, NewState}.
+
+create_result(#{exit_status := 0, std_out := []} = Output) ->
+    {error, no_json, Output};
+create_result(#{exit_status := 0, std_out := [Json|_]} = Output) ->
+    case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
+        {ok, Map, _} -> {ok, Map, Output};
+        {error, _} -> {error, bad_json_result, Output}
+    end;
+create_result(#{exit_status := _} = Output) ->
+    {error, script_failed, Output};
+create_result(#{std_err := []} = Output) ->
+    create_result(maps:put(exit_status, 0, Output));
+create_result(Output) ->
+    create_result(maps:put(exit_status,-1, Output)).
+
+
 
 
 handle_ssh_message({data, ChannelId, 0, Data}, ChannelId, State) ->
@@ -380,32 +358,28 @@ handle_ssh_message({eof, ChannelId}, ChannelId, State) ->
     {ok, State};
 handle_ssh_message({exit_signal, ChannelId, ExitSignal, ErrorMsg, Lang},
                    ChannelId, State) ->
-    #state{ cmd_state = CmdState
+    #state{ cmd_output = CmdOutput
           } = State,
     Update = #{exit_signale => ExitSignal, err_msg => ErrorMsg, lang => Lang},
-    NewState = State#state{ cmd_state = maps:merge(CmdState, Update) },
+    NewState = State#state{ cmd_output = maps:merge(CmdOutput, Update) },
     {ok, NewState};
 handle_ssh_message({exit_status, ChannelId, ExitStatus}, ChannelId, State) ->
-    #state{ cmd_state = CmdState
+    #state{ cmd_output = CmdOutput
           } = State,
     Update = #{exit_status => ExitStatus},
-    NewState = State#state{ cmd_state = maps:merge(CmdState, Update) },
+    NewState = State#state{ cmd_output = maps:merge(CmdOutput, Update) },
     {ok, NewState};
 handle_ssh_message({closed, ChannelId}, ChannelId, State) ->
-    #state{ cmd_state = CmdState,
-            cmd_log = Log
-          } = State,
-    lager:debug("runner ~p: result ~p", [self(), CmdState]),
-    trigger_next_command(),
-    NewState = State#state{ cmd_state = #{},
-                            cmd_log = [ CmdState | Log] },
-    {ok, NewState}.
+    #state{ cmd_output = CmdOutput} = State,
+    lager:debug("runner ~p: result ~p", [self(), CmdOutput]),
+    trigger_sending(),
+    {ok, State}.
 
-update_std_out_err(Out, Err, #state{ cmd_state = CmdState } = State) ->
-    StdOut = [Out | maps:get(std_out, CmdState, [])],
-    StdErr = [Err | maps:get(std_err, CmdState, [])],
+update_std_out_err(Out, Err, #state{ cmd_output = CmdOutput } = State) ->
+    StdOut = [Out | maps:get(std_out, CmdOutput, [])],
+    StdErr = [Err | maps:get(std_err, CmdOutput, [])],
     Update = #{std_out => StdOut, std_err => StdErr},
-    NewState = State#state{ cmd_state = maps:merge(CmdState, Update) },
+    NewState = State#state{ cmd_output = maps:merge(CmdOutput, Update) },
     {ok, NewState}.
 
 
@@ -419,3 +393,12 @@ send_reply(_Reply, #state{client=undefined}=State) ->
 send_reply(Reply, #state{client=Client}=State) ->
     gen_server:reply(Client, Reply),
     {ok, State#state{client=undefined}}.
+
+trigger_sending() ->
+    gen_server:cast(self(), send_result).
+
+
+timeout_result(Action) ->
+    UMsg = "the plugin timed out, please inform the administrator",
+    LMsg = io_lib:format("~s timed out", [atom_to_list(Action)]),
+    {ok, #{result => error, user_msg => UMsg, log_msg => LMsg}, []}.
