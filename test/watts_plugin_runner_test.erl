@@ -28,8 +28,13 @@ request_ssh_test() ->
     {ok, Pid} = watts_plugin_runner:start(),
     SshPid ! {pid, Pid},
 
+    Config = #{action => request,
+               service_id => ServiceId,
+               user_info => UserInfo,
+               params => Params,
+               queue => undefined},
     {ok, #{credential:=_Credential, state:=_CredState},
-     _} = watts_plugin_runner:request(ServiceId, UserInfo,Params,undefined,Pid),
+     _} = watts_plugin_runner:request_action(Config, Pid),
 
 
     ok = watts_plugin_runner:stop(Pid),
@@ -45,13 +50,20 @@ request_local_test() ->
     Params = [],
     {ok, ReqPid} = watts_plugin_runner:start(),
 
+    ConfigReq = #{action => request,
+                  service_id => ServiceId,
+                  user_info => UserInfo,
+                  params => Params,
+                  queue => undefined},
     {error, bad_json_result
-     , _} = watts_plugin_runner:request(ServiceId, UserInfo,Params, undefined, ReqPid),
+     , _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
     ok = test_util:wait_for_process_to_die(ReqPid,100),
 
     {ok, RevPid} = watts_plugin_runner:start(),
+    ConfigRev = maps:merge(ConfigReq, #{action => revoke,
+                                        cred_state => <<"credstate">>}),
     {error, bad_json_result
-     , _} = watts_plugin_runner:revoke(ServiceId, UserInfo,<<"credstate">>, undefined, RevPid),
+     , _} = watts_plugin_runner:request_action(ConfigRev, RevPid),
     ok = test_util:wait_for_process_to_die(RevPid,100),
 
     ok = stop_meck(Meck),
@@ -68,8 +80,13 @@ no_cmd_crash_test() ->
                 },
     Params = [],
 
+    Config = #{action => request,
+               service_id => ServiceId,
+               user_info => UserInfo,
+               params => Params,
+               queue => undefined},
     {ok, Pid} = watts_plugin_runner:start(),
-    {error, {internal, _}} = watts_plugin_runner:request(ServiceId, UserInfo,Params, undefined,Pid),
+    {error, {internal, _}} = watts_plugin_runner:request_action(Config, Pid),
     ok = watts_plugin_runner:stop(Pid),
     ok = test_util:wait_for_process_to_die(Pid,1000),
 

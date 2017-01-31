@@ -76,13 +76,14 @@ request(ServiceId, UserInfo, Interface, Params) ->
     case { Allowed, Enabled, Count < Limit } of
         {true, true, true} ->
             {ok, Pid} = watts_plugin_sup:new_worker(),
-            Result = watts_plugin_runner:request(ServiceId, UserInfo,
-                                               Params, QueueName, Pid),
-            handle_result(Result, #{ action => request,
-                                     service_id => ServiceId,
-                                     user_info => UserInfo,
-                                     interface => Interface
-                                   });
+            Config = #{ action => request,
+                        queue => QueueName,
+                        service_id => ServiceId,
+                        user_info => UserInfo,
+                        interface => Interface,
+                        params => Params},
+            Result = watts_plugin_runner:request_action(Config, Pid),
+            handle_result(Result, Config);
         {false, _, _} ->
             {error, user_not_allowed};
         {true, false, _} ->
@@ -102,32 +103,28 @@ revoke(CredentialId, UserInfo) ->
 revoke_credential({ok, #{ service_id := ServiceId, cred_state := _CredState,
                           cred_id := _CredId } = Credential}, UserInfo) ->
     ServiceExists = watts_service:exists(ServiceId),
-    revoke_or_drop(ServiceExists, Credential, UserInfo);
+    {ok, QueueName} = watts_service:get_queue(ServiceId),
+    Config = maps:merge(#{action => revoke,
+                          queue => QueueName,
+                          user_info => UserInfo
+                         }, Credential),
+    revoke_or_drop(ServiceExists, Config);
 revoke_credential({error, Reason}, _UserInfo) ->
     {error, Reason}.
 
 
-revoke_or_drop(true, CredInfo, UserInfo ) ->
-    #{service_id := ServiceId,
-      cred_state := CredState,
-      cred_id := CredId
-     } = CredInfo,
-    {ok, QueueName} = watts_service:get_queue(ServiceId),
+revoke_or_drop(true, Config) ->
     {ok, Pid} = watts_plugin_sup:new_worker(),
-    Result=watts_plugin_runner:revoke(ServiceId, UserInfo,
-                                    CredState, QueueName, Pid),
-    handle_result(Result, #{ action => revoke,
-                             service_id => ServiceId,
-                             user_info => UserInfo,
-                             cred_id => CredId
-                           });
+    Result=watts_plugin_runner:request_action(Config, Pid),
+    handle_result(Result, Config);
 revoke_or_drop(false, #{service_id := ServiceId,
-                        cred_id := CredId}, UserInfo  ) ->
+                        user_info := UserInfo,
+                        cred_id := CredId} ) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
-    DropEnabled = ?CONFIG_(allow_dropping_credentials),
+    DropEnabled = ?CONFIG(allow_dropping_credentials),
     UMsg = "the service does not exist, please contact the administrator",
     case DropEnabled of
-        {ok, true} ->
+        true ->
             lager:warning("service ~p: dropping revocation request for ~p",
                           [ServiceId, CredId]),
             remove_credential(UserId, CredId);
@@ -141,10 +138,11 @@ revoke_or_drop(false, #{service_id := ServiceId,
 
 get_params(ServiceId) ->
     {ok, Pid} = watts_plugin_sup:new_worker(),
-    Result = watts_plugin_runner:get_params(ServiceId, Pid),
-    handle_result(Result, #{ action => parameter,
-                             service_id => ServiceId
-                             }).
+    Config = #{ action => parameter,
+                service_id => ServiceId},
+    %% Result = watts_plugin_runner:get_params(ServiceId, Pid),
+    Result = watts_plugin_runner:request_action(Config, Pid),
+    handle_result(Result, Config).
 
 
 handle_result({ok, #{result := Result}=Map, Log}, Info) ->
