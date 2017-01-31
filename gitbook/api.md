@@ -1,8 +1,11 @@
 # WaTTS - REST Api
+This documentation is for developers. If you want to use WaTTS at the command line level, please have a look at [wattson](https://github.com/indigo-dc/wattson).
+
+
 WaTTS offers a REST interface to perform all the actions possible via the web-interface.
 Actually the web interface uses the REST API.
 
-The WaTTS api includes the version in the path, which is mandatory. WaTTS supports the versions
+The WaTTS api interface is versioned, the version is part of the path. WaTTS supports the versions
 `v1` and `v2`. This document will describe the protocol version `v2`. The protocol `v1` is
 deprecated and should only be used by legacy applications needing the same results as with TTS v0.4.
 
@@ -14,9 +17,8 @@ GET /api/v2/oidcp HTTP/1.1
 Host: watts.example.com
 User-Agent: curl/7.47.0
 Accept: */*
-Authorization: Bearer
 ```
-and the reply is (with line breaking for nicer display):
+and the reply body is similar to (with line breaking for nicer display):
 ```
 {
   "openid_provider_list": [
@@ -36,9 +38,9 @@ Provider, the `id` is the internal id for that OpenId Provider in WaTTS, the
 in the `desc` field and `ready` indicates wether the provider is ready to be used.
 
 ## List Services
-To get the list of services for a user a GET call against the `/api/v2/service`
-path.  Authorization is needed for this request please refer to `Authorization
-Header` for details.
+To get the list of services for a user a GET request against the `/api/v2/service`
+path is performed.  Authorization is needed for this request please refer to
+`Authorization Header` for details.
 
 An example request is:
 ```
@@ -46,9 +48,9 @@ GET /api/v2/service HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
-X-OpenId-Connect-Issuer: https://iam-test.indigo-datacloud.eu/
+X-OpenId-Connect-Issuer: https://provider.example.com/
 ```
-And the response is:
+And the response is similar to:
 ```
 {
   "service_list": [
@@ -68,9 +70,18 @@ And the response is:
   ]
 }
 ```
-Again, it is a json object with one key, `service_list`, which holds the list of services as value.
+It is a json object with one key, `service_list`, which holds the list of services as value.
 Each entry is a service object, described by its fields.
 Important for requesting a credential is the `id`.
+ - authorized: wether the user is allowed to use this service
+ - authz_tooltip: information on how the user might get the authorization
+ - cred_count: the number of credentials for this service
+ - cred_limit: how many credentials are allowed
+ - description: a textual description of the service
+ - enabled: wether this service is actually enabled
+ - id: the id of the service, used to perform requests
+ - limit_reached: wether the credential limit is reached
+ - params: parameter sets, allowed to pass parameter to requests
 
 ## List Credentials
 Retrieving the list of credentials currently owned by the user is done by performing a
@@ -83,7 +94,7 @@ GET /api/v2/credential HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
-X-OpenId-Connect-Issuer: https://accounts.google.com
+X-OpenId-Connect-Issuer: https://provider.example.com
 ```
 The corresponding response might be:
 ```
@@ -102,6 +113,12 @@ The response consists of a json object with one key, `credential_list`. Its
 value is the list of credentials, where each element is again a json object.  For
 revoking a credential, only the id of the credential, `cred_id`,  is needed.
 
+ - cred_id: the id of the credential
+ - ctime: the creation time
+ - interface: wich interface was used, either 'Web App' or 'REST'
+ - service_id: the id of the service it was issued for
+
+
 ## Request Credential
 The creation of the credential is triggered by a POST request to
 `/api/v2/credential`, with the `service_id` as value in a json object.
@@ -109,27 +126,90 @@ Authorization is needed for this request, please refer to `Authorization Header`
 It is important to include the 'Content-Type' header with the value 'application/json', else
 the request will fail with a 'BAD REQUEST'.
 
-The post data is a simple json object of the form `{"service_id":"<id of service>"}`.
+### Basic Request
+A basic request is a just a simple post of the service id with no parameter.
+The post data is then simple json object of the form `{"service_id":"<id of service>"}`.
+
+A service might not support a basic request. The basic request is supported if one
+of the following is true:
+ - the `params` value of the service is an empty list
+ - one of the lists in `params` is an empty list
+ - one of the lists in `params` contains only entries with `mandatory` set as `false`
 
 An example would be:
 ```
 POST /api/v2/credential HTTP/1.1
 Host: localhost
 Accept: */*
+Authorization: Bearer ya29.[...]MUchM
+X-OpenId-Connect-Issuer: https://provider.example.com
 Content-Type: application/json
 Content-Length: 24
 
 {"service_id":"info"}
 ```
-and the corresponding reply of the TTS is:
+
+
+### Advanced Request
+an advanced request is a request that adds paramater to a request. Basically it is just
+extending the json object of the basic request.
+The important thing to note is that the keys need to be the same as specified by the
+service.
+
+Services that support parameter have a list of parameter sets given at the `params` key:
+```
+{
+  "service_list": [
+    {
+      "id": "with_params",
+      ....
+      "params": [
+        [
+            [
+             { "key":"param_key",
+               "name":"Name of Parameter",
+               "description":"a long description of the parameter",
+               "type":"textarea",
+               "mandatory":true}
+           ],
+           []
+       ]
+      ]
+    }
+  ]
+}
+```
+Each parameter set is a list of parameter. A request has to satisfy one set, meaning to give at
+least all mandatory fields of that set. The example above has two sets, one empty set and one
+set with one mandatory parameter `param_key`.
+
+The meaning of the parameter depends upon the service and should be understood by the description.
+
+To pass parameter to the request an aditional key value pair is added to the json object,
+the key being `params` and its value is a json object with each key being the value of the `key` value
+of the parameter entry in the set. In the above example it would be `param_key`.
+
+The advanced post body for this service might look like:
+```
+{ "service_id":"with_params",
+  "params": {
+              "param_key":"my passed parameter value"
+            }
+}
+```
+
+
+
+### Credential Response
+The response of WaTTS is a redirection:
 ```
 HTTP/1.1 303 See Other
 content-length: 0
 content-type: application/json
 location: /api/v2/credential_data/rwwwNYX-LaBL0dvZ7wq44g
 ```
-This is a redirection to a location where the credential data is actually available.
-Following the redirection, the credential data by the TTS are returned:
+This is a redirection to the location of the actual credential data.
+Following the redirection, the credential data are returned by WaTTS:
 ```
 GET /api/v2/credential_data/rwwwNYX-LaBL0dvZ7wq44g HTTP/1.1
 Host: localhost
@@ -209,6 +289,11 @@ content-type: application/json
   "result": "ok"
 }
 ```
+each entry consists of
+ - name: the name of the value
+ - type: the datatype
+ - value: the actual value
+the meaning of those entries depend on the service/plugin being used.
 
 ## Revoke Credential
 To revoke a credential, a DELETE request for that credential is needed. The path of a credential is
@@ -217,11 +302,11 @@ Authorization is needed for this request, please refer to `Authorization Header`
 
 A revocation of a credential might look like:
 ```
-DELETE /api/credential/qO10bfakPev2sbW5NWJuCdFKhzG4FmqV HTTP/1.1
+DELETE /api/v2/credential/qO10bfakPev2sbW5NWJuCdFKhzG4FmqV HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
-X-OpenId-Connect-Issuer: https://accounts.google.com
+X-OpenId-Connect-Issuer: https://provider.example.com
 ```
 And the result would be a status response.
 ```
@@ -239,7 +324,7 @@ Authorization: Bearer ya29.[...]uMUchM
 ```
 
 The second header field is the `X-OpenId-Connect-Issuer` header, which must
-include either the TTS id of the OpenId Connect provider or its issuer URL:
+include the issuer URL of the provider:
 ```
-X-OpenId-Connect-Issuer: https://accounts.google.com
+X-OpenId-Connect-Issuer: https://provider.example.com
 ```
