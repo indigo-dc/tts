@@ -279,6 +279,17 @@ start_meck() ->
                             _ -> {error, just_because, []}
                         end
                 end,
+    ActionFun = fun(#{action := Action, service_id := ServiceId,
+                      user_info := UserInfo }, Pid) ->
+                        case Action of
+                            request ->
+                                RequestFun(ServiceId, UserInfo, [], queue, Pid);
+                            revoke ->
+                                RevokeFun(ServiceId, UserInfo, [], queue, Pid)
+                            end
+                end,
+
+
     AllowSame = fun(SerId) ->
                             case SerId of
                                 Service1 -> true;
@@ -309,8 +320,7 @@ start_meck() ->
     ok = meck:expect(watts_data_sqlite, credential_add, AddFun),
     ok = meck:expect(watts_data_sqlite, credential_remove, DelFun),
     ok = meck:expect(watts_plugin_sup, new_worker, NewRunner),
-    ok = meck:expect(watts_plugin_runner, request, RequestFun),
-    ok = meck:expect(watts_plugin_runner, revoke, RevokeFun),
+    ok = meck:expect(watts_plugin_runner, request_action, ActionFun),
     ok = meck:expect(watts_service, get_queue, GetQueue),
     ok = meck:expect(watts_service, is_enabled, IsEnabled),
     ok = meck:expect(watts_service, is_allowed, IsAllowd),

@@ -25,9 +25,7 @@
 -export([start_link/0]).
 -export([start/0]).
 -export([stop/1]).
--export([request/5]).
--export([revoke/5]).
--export([get_params/2]).
+-export([request_action/2]).
 
 %% gen_server.
 -export([init/1]).
@@ -67,45 +65,8 @@ start() ->
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
--spec request(ServiceId :: binary(), UserInfo :: map(),
-              Params::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
-                                       {error, any(), list()} | {error, atom()}.
-request(ServiceId, UserInfo, Params, Queue, Pid) ->
-    Config = #{
-      action => request,
-      service_id => ServiceId,
-      user_info => UserInfo,
-      params => Params,
-      queue => Queue,
-      pid => Pid},
-    request_action(Config).
 
--spec revoke(ServiceId :: binary(), UserInfo :: map(),
-             CredState::any(), Queue::binary(), pid()) -> {ok, map(), list()} |
-                                         {error, any(), list()}|{error, atom()}.
-revoke(ServiceId, UserInfo, CredState, Queue, Pid) ->
-    Config = #{
-      action => revoke,
-      service_id => ServiceId,
-      user_info => UserInfo,
-      cred_state => CredState,
-      queue => Queue,
-      pid => Pid},
-    request_action(Config).
-
--spec get_params(ServiceId ::any(), Pid::pid()) -> {ok, map()} |
-                                                   {error, atom(), list()} |
-                                                   {error, atom()}.
-get_params(ServiceId, Pid) ->
-    Config = #{
-      action => parameter,
-      service_id => ServiceId,
-      pid => Pid},
-    request_action(Config).
-
-
-request_action(#{action := Action, service_id := ServiceId,
-                 pid := Pid} = ConfigIn) ->
+request_action(#{action := Action, service_id := ServiceId} = ConfigIn, Pid) ->
     try
         {ok, ServiceInfo} = watts_service:get_info(ServiceId),
         Timeout = maps:get(plugin_timeout, ServiceInfo, infinity),
@@ -343,7 +304,7 @@ create_result(#{exit_status := _} = Output) ->
 create_result(#{std_err := []} = Output) ->
     create_result(maps:put(exit_status, 0, Output));
 create_result(Output) ->
-    create_result(maps:put(exit_status,-1, Output)).
+    create_result(maps:put(exit_status, -1, Output)).
 
 
 
