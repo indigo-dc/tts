@@ -1,4 +1,6 @@
 # WaTTS - The INDIGO Token Translation Service
+WaTTS is using the [OpenId Connect certified library oidcc](https://github.com/indigo-dc/oidcc).
+
 
 ## Purpose
 WaTTS creates credentials for services that do not natively support OpenID Connect.
