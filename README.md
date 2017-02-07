@@ -11,46 +11,49 @@ that can be adapted by a site-administrator.
 
 ## Quickstart
 WaTTS requires [Erlang](http://www.erlang.org/) OTP 18.1 or newer to run (due to a bug in the
-cover compiler OTP 18.3 or newer is needed to run the tests). For configuration WaTTS uses
-[cuttlefish](https://github.com/basho/cuttlefish), which needs to be installed into the Erlang
-Runtime Sytem directory. Scripts to support you are in the utils directory of this repository.
+cover compiler, OTP 18.3 or newer is needed to run the tests). For configuration, WaTTS uses
+[cuttlefish](https://github.com/basho/cuttlefish), which needs to be installed in the Erlang
+Runtime Sytem folder. Supporting scripts are in the utils directory.
 
-First clone the repository and change into the cloned directory:
+### Installation
+First, clone the repository and change in the cloned folder:
 ```
 git clone https://github.com/indigo-dc/tts.git
 cd tts
 ```
-If you do not have Erlang installed and want a fast and easy setup run:
+<!-- If you do not have Erlang installed and want a fast and easy setup run: -->
+For fast and easy setup, execute:
 ```
 ./utils/prepare_system.sh
 ```
-This will install Erlang and cuttlefish onto you system.
+This will install Erlang and cuttlefish on the system.
 
-Now copy the sample configuration and after that adjust it to your needs, the config will be at
-`~/.config/watts`:
+Copy the sample configuration and modify it according to the requirements; the config is located in
+`~/.config/watts` folder:
 ```
 make sample_config
 ```
-
-Once you are satisfied with your config or just to start TTS after some configuration changes:
+### Running the local WaTTS instance
+Once the adjustments are made in the config, or to (re)start the WaTTS after
+changing the configuration , execute:
 ```
 make run
 ```
-[Now Browse to your local WaTTS on localhost:8080](http://localhost:8080)
+In browser, open local WaTTS instance on [localhost:8080](http://localhost:8080)
 
-If you want to stop WaTTS you just need to type the following in the console
+In order to stop WaTTS, type the following in the console
 (the '.' at the end is important):
 ```
 q().
 ```
 
-The sample configuration includes a development [INDIGO Idetntity and Access Management (IAM)](https://github.com/indigo-iam/iam)
-configuration that only runs at localhost:8080 and a simple Info service.
+The sample configuration includes a development [INDIGO Identity and Access Management (IAM)](https://github.com/indigo-iam/iam)
+configuration (which only runs at _localhost:8080_), and a simple Info service.
 
-Just edit the configuration file to add more OpenId Connect Provider or services.
-The steps needed to do this are described in the [Configuration Guide](https://indigo-dc.gitbooks.io/token-translation-service/content/config.html)
+To add more OpenId Connect Provider or services, edit the configuration file.
+Modifying the configuration is described in the [Configuration Guide](https://indigo-dc.gitbooks.io/token-translation-service/content/config.html).
 
 
 ## Documentation
-Further documentation of WaTTS can be found at the [WaTTS Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details)
-on GitBook.
+Further documentation for WaTTS can be found in the [WaTTS Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details)
+GitBook.

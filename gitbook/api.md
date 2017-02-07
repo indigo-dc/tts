@@ -1,17 +1,18 @@
 # WaTTS - REST Api
-This documentation is for developers. If you want to use WaTTS at the command line level, please have a look at [wattson](https://github.com/indigo-dc/wattson).
+This documentation is for developers. If you want to use WaTTS as a command line application, please have a look at [wattson](https://github.com/indigo-dc/wattson).
 
 
 WaTTS offers a REST interface to perform all the actions possible via the web-interface.
-Actually the web interface uses the REST API.
+Actually the web interface uses the REST API itself.
 
-The WaTTS api interface is versioned, the version is part of the path. WaTTS supports the versions
+The WaTTS API interface is versioned, the version is part of the path. WaTTS supports the versions
 `v1` and `v2`. This document will describe the protocol version `v2`. The protocol `v1` is
-deprecated and should only be used by legacy applications needing the same results as with TTS v0.4.
+deprecated and should only be used by legacy applications that need the same results when used with TTS v0.4.
 
 ## List Provider
 Retrieving the list of supported OpenId Connect provider is done by
 performing a GET request for the `/api/v2/oidcp` path.
+
 ```
 GET /api/v2/oidcp HTTP/1.1
 Host: watts.example.com
@@ -31,18 +32,19 @@ and the reply body is similar to (with line breaking for nicer display):
   ]
 }
 ```
-The response is a json object, and includes one key `openid_provider_list` which has
-the list of OpenId Providers as a value.  Each Object in the list is one OpenId
-Provider, the `id` is the internal id for that OpenId Provider in WaTTS, the
+The response is a `json` object, and includes one key `openid_provider_list` which has
+the list of OpenId Providers as a value.  Each *Object* in the list is one OpenId
+Provider, the `id` is the internal id for that OpenId Provider in the WaTTS, the
 `issuer` is the official issuer returned by the provider. A readable description is
-in the `desc` field and `ready` indicates wether the provider is ready to be used.
+in the `desc` field and `ready` indicates whether the provider is ready to be used.
 
 ## List Services
-To get the list of services for a user a GET request against the `/api/v2/service`
-path is performed.  Authorization is needed for this request please refer to
-`Authorization Header` for details.
+To get the list of services for a user, a GET request against the `/api/v2/service`
+path is performed.  Authorization is needed for this request. Please refer to
+`Authorization Header` for more details.
 
 An example request is:
+
 ```
 GET /api/v2/service HTTP/1.1
 Host: localhost
@@ -70,18 +72,18 @@ And the response is similar to:
   ]
 }
 ```
-It is a json object with one key, `service_list`, which holds the list of services as value.
+It is a `json` object with one key, `service_list`, which holds the list of services as value.
 Each entry is a service object, described by its fields.
 Important for requesting a credential is the `id`.
- - authorized: wether the user is allowed to use this service
- - authz_tooltip: information on how the user might get the authorization
- - cred_count: the number of credentials for this service
- - cred_limit: how many credentials are allowed
- - description: a textual description of the service
- - enabled: wether this service is actually enabled
- - id: the id of the service, used to perform requests
- - limit_reached: wether the credential limit is reached
- - params: parameter sets, allowed to pass parameter to requests
+ - *authorized*: whether the user is allowed to use this service
+ - *authz_tooltip*: information on how the user might get the authorization
+ - *cred_count*: the number of credentials for this service
+ - *cred_limit*: how many credentials are allowed
+ - *description*: a textual description of the service
+ - *enabled*: whether this service is actually enabled
+ - *id*: the id of the service, used to perform requests
+ - *limit_reached*: whether the credential limit is reached
+ - *params*: parameter sets, allowed to pass parameter to requests
 
 ## List Credentials
 Retrieving the list of credentials currently owned by the user is done by performing a
@@ -109,26 +111,26 @@ The corresponding response might be:
   ]
 }
 ```
-The response consists of a json object with one key, `credential_list`. Its
-value is the list of credentials, where each element is again a json object.  For
+The response consists of a `json` object with one key, `credential_list`. Its
+value is the list of credentials, where each element is again a `json` object.  For
 revoking a credential, only the id of the credential, `cred_id`,  is needed.
 
- - cred_id: the id of the credential
- - ctime: the creation time
- - interface: wich interface was used, either 'Web App' or 'REST'
- - service_id: the id of the service it was issued for
+ - *cred_id*: the id of the credential
+ - *ctime*: the creation time
+ - *interface*: which interface was used, either 'Web App' or 'REST'
+ - *service_id*: the id of the service it was issued for
 
 
 ## Request Credential
 The creation of the credential is triggered by a POST request to
-`/api/v2/credential`, with the `service_id` as value in a json object.
-Authorization is needed for this request, please refer to `Authorization Header` for details.
-It is important to include the 'Content-Type' header with the value 'application/json', else
-the request will fail with a 'BAD REQUEST'.
+`/api/v2/credential`, with the `service_id` as value in a `json` object.
+Authorization is needed for this request, please refer to the `Authorization Header` for details.
+It is important to include the *Content-Type* header with the value `application/json`, else
+the request will fail with a *BAD REQUEST*.
 
 ### Basic Request
 A basic request is a just a simple post of the service id with no parameter.
-The post data is then simple json object of the form `{"service_id":"<id of service>"}`.
+The post data is then simple `json` object of the form `{"service_id":"<id of service>"}`.
 
 A service might not support a basic request. The basic request is supported if one
 of the following is true:
@@ -151,8 +153,8 @@ Content-Length: 24
 
 
 ### Advanced Request
-an advanced request is a request that adds paramater to a request. Basically it is just
-extending the json object of the basic request.
+An advanced request is a request that adds *paramater* to a request. Basically it is just
+extending the `json` object of the basic request.
 The important thing to note is that the keys need to be the same as specified by the
 service.
 
@@ -179,15 +181,16 @@ Services that support parameter have a list of parameter sets given at the `para
   ]
 }
 ```
-Each parameter set is a list of parameter. A request has to satisfy one set, meaning to give at
-least all mandatory fields of that set. The example above has two sets, one empty set and one
-set with one mandatory parameter `param_key`.
+Each parameter set is a list of parameters. A request has to satisfy one set,
+meaning to provide at least all mandatory fields of that set. The example above
+has two sets, one empty set and one set with one mandatory parameter `param_key`.
 
-The meaning of the parameter depends upon the service and should be understood by the description.
+The meaning of the parameter depends on the service, and should be explained in the description.
 
-To pass parameter to the request an aditional key value pair is added to the json object,
-the key being `params` and its value is a json object with each key being the value of the `key` value
-of the parameter entry in the set. In the above example it would be `param_key`.
+To pass parameter to the request, an additional *key value* pair is added to the
+`json` object, the *key* being `params` and its *value* is an additional `json` object where
+each key is the value of the `key value` of the parameter entry in the set.
+In the example below it would be `param_key`.
 
 The advanced post body for this service might look like:
 ```
@@ -289,11 +292,12 @@ content-type: application/json
   "result": "ok"
 }
 ```
-each entry consists of
- - name: the name of the value
- - type: the datatype
- - value: the actual value
-the meaning of those entries depend on the service/plugin being used.
+each entry consists of:
+ - *name*: the name of the value
+ - *type*: the datatype
+ - *value*: the actual value
+
+The meaning of these entries depend on the service/plugin being used.
 
 ## Revoke Credential
 To revoke a credential, a DELETE request for that credential is needed. The path of a credential is

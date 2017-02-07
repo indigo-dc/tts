@@ -3,7 +3,7 @@
 
 WaTTS returns credentials after successful authentication.
 It offers an easy way to self service credentials by the
-users. WaTTS was developed for cases in which users can be (only)
+users. WaTTS was developed for cases in which users can (only) be 
 authenticated via OpenId-Connect but require different credentials for
 accessing services.
 
@@ -17,5 +17,5 @@ supported services include
 - OpenNebula credentials
 
 ## Interfaces
-WaTTS provides a web and a REST interface for users to create/retrieve and
+WaTTS provides a web and REST interface for users to create/retrieve and
 remove credentials.

@@ -3,18 +3,19 @@
 ### From Package
 For Ubuntu 14.04 and CentOS 7 a package is provided by the INDIGO DataCloud
 team.
-To be able to install the packages using the package manager of your system, the
+In order to install the packages using the system package manager, the
 repository needs to be added. This is done by adding the INDIGO DataCloud
 package repository to your system.
 
-The INDIGO DataCloud repository can be found at http://repo.indigo-datacloud.eu .
+The INDIGO DataCloud repository can be found at [INDIGO-DataCloud Software
+Repository](http://repo.indigo-datacloud.eu).
 
 
-For informations on how to add the repository to your system refer to the
-documentation of your operating system.
+For information how to add the repository to your system, please refer to the
+documentation of your respective operating system.
 
 #### Ubuntu 14.04
-After adding the repository one needs to update the package list and then install
+After adding the repository, one needs to update the package list and then install
 the Token Translation Service.
 ```
 apt update
@@ -22,7 +23,7 @@ apt install tts
 ```
 
 #### CentOS 7
-After adding the repository one needs to update the package list and then install
+After adding the repository, one needs to update the package list and then install
 the Token Translation Service.
 ```
 yum update
@@ -33,10 +34,11 @@ yum install tts
 To be able to install the Token Translation Service from source, you need Erlang
 OTP 18.1 or newer installed.
 
-Pre-built package for your operation system can be found at [Erlang Solutions](https://www.erlang-solutions.com/resources/download.html).
+Pre-built package for your operating system can be found at [Erlang Solutions](https://www.erlang-solutions.com/resources/download.html).
 Just download and install it.
 
 Then follow the next few steps:
+
 - clone the git repository
 - build the package yourself
 - install the package
@@ -46,28 +48,33 @@ cd tts
 make clean
 make package
 ```
-the package can be found in `./package/packages`.
+
+The package can be found in `./package/packages`.
 
 ## Upgrade WaTTS
 ### v0.2.2 to v0.4.0 (called TTS)
-Upgrading the TTS from version 0.2.2 to 0.4.0 is straight forward.
+Upgrading the TTS from version 0.2.2 to 0.4.0 is straightforward.
 As the configuration files are compatible the only actions to do are:
+
 * stop the TTS `tts stop`
 * install the new package
 * start the newly installed TTS `tts start`
 
 ### v0.4.1 to v1.0.0
-Upgrading from TTS to WaTTS is not straight forward as the configuration file as well as
-the plugin API both have changed.
+Upgrading from TTS to WaTTS is **not** straightforward as both the configuration
+file and the plugin API have changed.
 You can not reuse any old configuration or plugins.
-Please see this Documentation on further information regarding a fresh setup.
-Proposed is a clean and fresh setup:
-* stop the TTS `tts stop`
-* install the new package (still called tts)
-* configure WaTTS to your needs (see below for reusing existing data)
-* start WaTTS `watts start`
+<!-- Please see this Documentation on further information regarding a fresh setup. -->
 
-If you really need to keep using the existing data ensure:
+For a clean and fresh setup, do the following:
+
+* stop the TTS, with `tts stop`
+* install the new package (still called `tts`)
+* configure WaTTS according to your needs (see below for reusing existing data)
+* start WaTTS, with `watts start`
+
+If you really need to use the existing data, ensure the following:
+
 * a plugin using the same data does exist for WaTTS 1.0
-* you configure your newly setup WaTTS to use the existing sqlite db
+* you configure your newly set up WaTTS to use the existing *sqlite db*
 * you configure the plugin to use the existing data
