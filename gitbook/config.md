@@ -1,14 +1,15 @@
 # Configuration Guide
 The configuration of WaTTS consists of one file. The file is located at `/etc/watts/watts.conf`.
-One other locations is supported for development purposes; in this case please place your
-configuration file at `~/.config/watts/watts.conf`.
+One other location is supported for development purposes; in this case please place your
+configuration file as `~/.config/watts/watts.conf`.
 
 
 ## Configuration (watts.conf)
-The WaTTS comes shipped with sane defaults, you only need to touch settings that you
-want to change.
+The WaTTS is deployed with sane defaults, you only need to touch user-specific
+changes.
 
-Each setting consists of one simple line of the format, comments are starting with '#'
+Each setting consists of one simple line of the format, comments are starting with '#'.
+
 ```
 # this is a comment and ignored
 key = value
@@ -22,12 +23,12 @@ seen in the following table.
 | :---: | --- |
 | 'word'| the word itself is the value, without the ' |
 | host | a valid fully qualified hostname |
-| port | an integer witin the valid range for TCP ports |
+| port | an integer within the valid range for TCP ports |
 | boolean | either 'true' or 'false' |
 | file | an absolute path to a file |
 | duration | a timespan given by an integer and a unit, the unit can be ms, s, m, h |
 | string | just the string value |
-| integer | an integer value, so a number |
+| integer | an integer value, i.e. a number |
 | url | a valid url, use https as much as possible |
 | comma separated list | values separated by comma |
 | any | depends on the usage and can't be specified |
@@ -41,11 +42,13 @@ ports, hostname and SSL.
 
 
 Typical values that should be changed during the initial setup are:
-- `hostname`, changing to the actual fully qualified hostname
-- `port`, can be removed if the incomming traffic will arrive at port 80 for http or 443 for https
-- `listen_port`, will be set to the internal port WaTTS is listening at
+
+- `hostname`, change it to an actual fully qualified hostname
+- `port`, which can be removed if the incoming traffic arrives at port *80* for *http* or *443* for *https*
+- `listen_port`, it will be set to the internal port WaTTS is listening at
 
 And for production use:
+
 - `ssl`, set to 'true'
 - `cachain_file`, set to the path to the file
 - `cert_file`, set to the path to the file
@@ -55,20 +58,21 @@ And for production use:
 | Key | Description | Datatype | Default |
 | :---: | --- | :---: | :---: |
 | hostname | Hostname of the web server | host | localhost |
-| port | Port number where clients seem to connect to; deault means port 80 for non SSL, 443 for SSL. On production systems this should be 'default' | port or 'default' | 8080 |
-| listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privilidged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
+| port | Port number where clients seem to connect to; default is port 80 for non SSL, 443 for SSL. In production systems this should be left 'default' | port number or 'default' | 8080 |
+| listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privileged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
 | ssl | Whether SSL should be used | boolean | false |
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
 | key_file | Path to the private key file | file | /etc/watts/watts.key |
-| session_timeout | the duration a session at the web-app is valid | duration | 15m |
+| session_timeout | The duration for which a session at the web-app is valid | duration | 15m |
 | sqlite_file | Path to the sqlite database | file | /etc/watts/watts.db |
-| redirection.enable | Wehter redirection should be enables | boolean | false |
-| redirection.listen_port | the port to listen on for browsers to redirect | port | 8080 |
-| allow_dropping_credentials | wether credentials of unknown services can be silently dropped | boolean | false |
+| redirection.enable | Whether redirection should be enabled | boolean | false |
+| redirection.listen_port | The port to listen on for browsers to redirect | port | 8080 |
+| allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
 
 
 #### Example
+
 ```
 hostname = my-watts.example.com
 listen_port = 8443
@@ -85,13 +89,14 @@ redirection.listen_port = 8000
 To provide a login mechanism for the user, at least one OpenId Connect Provider
 is needed.
 
-WaTTS needs to be registered as a client at an OpenId Connect Provider. For this
+WaTTS needs to be registered as a client with OpenId Connect Provider. For this,
 you need to perform the registration process at the Provider of your choice. The
-registration process heavily depends on the Provider and is out of the scope of this
+registration process depends heavily on the Provider and is out of the scope of this
 documentation, if you are unsure you can ask the provider.
 
-During the registration some informations need to be provided.
-The redirect uri is created from three settings:
+During the registration, some information needs to be provided.
+The redirect *uri* is created from three settings:
+
 - `ssl`: http:// (false, default) or https:// (true)
 - `hostname`: localhost (default)
 - `port`: 8080 (default)
@@ -104,9 +109,9 @@ The redirect uri for the settings 'SSL = true', 'Port = 443', 'HostName=tts.exam
 would be https://tts.example.com/oidc (the port is not added as it is the default
 port for https, it would be the same for port 80 on SSL = false).
 
-If you are unsure just start WaTTS and check the logs. During the start of WaTTS it prints some
-some messages starting with 'Init:', one of them is 'Init: using local endpoint ....' which is
-telling you the uri to use.
+If you are unsure, just start the WaTTS and check the logs. During the start of WaTTS, it prints 
+some messages starting with `Init:`, one of them is `Init: using local endpoint ....` which is
+telling you which uri to use.
 
 WaTTS uses the 'code-auth-flow' and is a 'web-application'.
 
@@ -124,7 +129,7 @@ Each setting is prefixed with 'openid.`id`.' where `id` must be replaced by the 
 you want to give to the provider.
 
 #### Example
-An example for the IAM OpenId Connect Provider, setting its id to 'iam':
+An example for the IAM OpenId Connect Provider, setting its id to `iam`:
 ```
 openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)
 openid.iam.client_id = <insert the client id>
@@ -136,14 +141,14 @@ openid.iam.request_scopes = openid, profile
 ### Services
 #### Introduction
 A service is a single entity for which a user can request credentials.
-The configuration of a service consist of one group of 'service' settings.
-are located in the `services` subfolder of the configuration.
+The configuration of a service consists of one group of *service* settings.
+These are located in the `services` subfolder of the configuration.
 
 To create credentials, WaTTS connects to the service, either locally or
-remotely using ssh. After the connection is established, a command is
+remotely using *ssh*. After the connection is established, a command is
 executed and the subsequent result is parsed and interpreted.
 
-The executed commands are also called plugins; for further information on how
+The executed commands are also called *plugins*; for further information on how
 the plugins work and how to implement them, see the documentation for developers.
 
 #### Settings
@@ -154,20 +159,20 @@ the plugins work and how to implement them, see the documentation for developers
 | credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | yes |
 | connection_type | Either local or ssh | 'local' or 'ssh' | yes |
 | parallel_runner | the number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
-| allow_same_state | wether the plugin is allowed to return the same state more than once | boolean | no, (false) |
-| plugin_timeout | the time after wich WaTTS won't wait for the result of the plugin anymore | duration or 'infinity' | no (infinity) |
-| pass_access_token | wether the  access token should be passed to the plugin | boolean | no (false) |
-| connection.user | the user to use when connecting e.g. with ssh | string | no |
+| allow_same_state | whether the plugin is allowed to return the same state more than once | boolean | no, (false) |
+| plugin_timeout | the time after which WaTTS won't wait for the result of the plugin execution anymore | duration or 'infinity' | no (infinity) |
+| pass_access_token | whether the  access token should be passed to the plugin | boolean | no (false) |
+| connection.user | the user name to use when connecting e.g. with ssh | string | no |
 | connection.password | the password to use when connecting e.g. with ssh | string | no |
-| connection.host | the host to connect to e.g. with ssh | host | no |
-| connection.port | the port to connect to e.g. with ssh | port | no |
+| connection.host | the hostname to connect to e.g. with ssh | host | no |
+| connection.port | the port number to connect to e.g. with ssh | port | no |
 | connection.ssh_dir | the ssh_dir to use with ssh | port | no |
 | connection.ssh_key_pass | the password of the private key to use with ssh | string | no |
 | plugin.`key` | a setting to send to the plugin, the name of the parameter will be `key` | any | no |
 | authz.allow.`p`.`k`.`o` | see the Authorization section | other | no ([])|
 | authz.forbid.`p`.`k`.`o` | see the Authorization section | other | no ([]) |
 | authz.hide | hide the service if the user is not allowed | boolean | no (false) |
-| authz.tooltip | the message shown when hovering the row of the service and not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
+| authz.tooltip | message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
 
 
 Each setting is prefixed with 'service.`id`.' where `id` must be replaced by the id
@@ -184,102 +189,104 @@ service.info.authz.allow.any.sub.any = true
 ```
 
 #### Authorization
-Authorization follows a few simple steps
- 1. everyone is forbidden
- 2. if a `allow` rule which matches the user is true she is allowed
- 3. if a `forbid` rule which matches the user is true he is forbidden
+Authorization follows a few simple steps:
+ 1. everyone can be forbidden
+ 2. if an `allow` rule that matches the user is true, she is allowed
+ 3. if a `forbid` rule that matches the user is true, he is forbidden
 
-So a for a user to access a service she
- - MUST match at least one `allow` rule and evaluate to true
- - MUST NOT match any `forbid` rule  that evaluates to true
+So a for a user to access a service she:
+ - MUST match at least one `allow` rule that evaluates to true
+ - MUST NOT match any `forbid` rule that evaluates to true
 
-Each rule is exactly one line. A rule consists always aut of five parts:
-` authz.allow.p.k.o = v `
+Each rule is exactly one line long. A rule always consists of five parts:
+` authz.allow.p.k.o = v`, where the values are:
+
  - `p`: the Id of the provider
  - `k`: the key within the OpenId Connect Id-Token or user information
  - `info`: the information in the Id Token or user information with the key `k`
  - `o`: the operation to perform
  - `v`: the value
 
-The provider Id is the same as given during configuration, in the provider example above
-the id was 'iam' so using that for `p` would allow to decide on users coming from iam.
-There is a special provider id, which is `any` and it matches any provider.
+The provider Id is the same as was given during the configuration, in the provider example above
+the *id* was `iam`, so using that for `p` allows making decisions on users coming from `iam`.
+There is a special provider *id* value, `any`, which matches any provider.
 
 
-The key `k` has to match a value of the id token or the user info. The value of the
-Id Token ofer Userinfo having the key `k` is the `info`.
-if the key is not present:
- - an allow rule evaluates to false
- - a forbid rule evaluates to true
+The key `k` has to match a value of the *id* token or the user info. The value of the
+*Id Token* offers *Userinfo*, i.e. having the key `k` is the `info`.
+If the key is not present:
+ - `allow` rule evaluates to *false*
+ - `forbid` rule evaluates to *true*
 
-the operation `o` can be one of the following list:
- - contains: the `info` can either be a list or a string
-   - a list: the value `v` must be a member of the list `info`
-   - a string: the value `v` must be part of the string `info`
- - is_member_of: the value `v` must be a comma separated list (with no spaces!) and `info` needs to be a member of that list
- - equals: `v` and `info` need to be equal
- - regexp: `v` is a regular expression and `info` needs to satisfy the expression
- - any: evaluates to `v`, so to make this pass set `v` to 'true'
+The operation `o` can be one of the following list:
+ - `contains`: the `info` can either be a list or a string
+   - a *list*: the value `v` must be a member of the list `info`
+   - a *string*: the value `v` must be part of the string `info`
+ - `is_member_of`: the value `v` must be a comma separated list (with no spaces!) and `info` needs to be a member of that list
+ - `equals`: `v` and `info` need to be equal
+ - `regexp`: `v` is a regular expression and `info` needs to satisfy the expression
+ - `any`: evaluates to `v`, so to make this pass set `v` to 'true'
 
 #### Examples
 ```
-# 'p' is any, so matching all provider
-# 'k' is sub, the subject of the id token, which for sure is always present
+# 'p' is any, so matching all providers
+# 'k' is sub, the subject of the id token, this is always present
 # 'info' can be ignored due to
-# 'o' being 'any'
-# 'v' is true
-# so the following line allows anyone from any provider
+  # 'o' being 'any'
+  # 'v' is true
+# The following line is an example allowing anyone from any provider:
 service.info.authz.allow.any.sub.any = true
 
 
 # 'p' is iam, so matching only the provider with the id iam
 # 'k' is sub, the subject of the id token, which for sure is always present
 # 'info' can be ignored due to
-# 'o' being 'any'
-# 'v' is true
-# so the following line allows anyone from the iam provider
+  # 'o' being 'any'
+  # 'v' is true
+# The next line shows an example allowing anyone from the iam provider:
 service.info.authz.allow.iam.sub.any = true
 
-# the following examples will concentrate on the operations
+# The examples below will concentrate on the operations.
 
-# 'k' is group, so the groups the user belongs to
+# 'k' is a group, i.e. the groups the user belongs to
 # 'info' should be a list
-# 'o' being 'contains'
+# 'o' has value 'contains'
 # 'v' is 'Developer'
-# so the following line allows anyone from the iam provider whos group
-# list contains 'Developer'
+# The following line allows anyone whose group list contains 'Developer' and is 
+# from the iam provider
 service.info.authz.allow.iam.group.contains = Developer
 
 # 'k' is sub
 # 'info' is the subject within iam
 # 'o' being 'is_member_of'
 # 'v' is a comma separated list of subjects
-# so the following line allows sub1, sub2 and sub3 from the provider
-# iam
+# The following line allows sub1, sub2 and sub3 from the provider iam
 service.info.authz.allow.iam.sub.is_member_of = sub1,sub3,sub2
 ```
 
 ### Configuring SSH for WaTTS
 WaTTS does not yet support hashed hosts in the `known_hosts` file. As the
-connection to the remote host is done without user interaction the host MUST be
+connection to the remote host is done without user interaction, the host MUST be
 listed in the `known_hosts` file.
 
-To add a host to the list of known hosts in a way readable for WaTTS the
-`ssh_config` (usually at `/etc/ssh/ssh_config`) must have the setting
-`HashKnownHosts no`.  After checking and eventually updating the configuration
-login as the WaTTS user.
+To add a host to the list of known hosts in a way readable for WaTTS, the
+`ssh_config` (usually located in `/etc/ssh/ssh_config`) must have the setting
+`HashKnownHosts no`. After checking and eventually updating the configuration,
+one can login as a WaTTS user.
 
-As WaTTS user connects to the remote hosts using the credential specified in the
-service configuration, and potentially using the verbose flag (-v). During the
+As a WaTTS user, one connects to remote hosts using the credential specified in the
+service configuration, with potentially using the verbose flag (-v). During the
 connection there are two possibilities:
-1. The client asks whether the host should be added. In case it is a host that
+
+1. The client asks whether the host should be added. In the case it is a host that
    should be accessible by WaTTS, the user should answer with yes, and then
    can go on with the next host.
 2. The client silently connects without asking. If this is the case, the host is
    already in the `~/.ssh/known_hosts` file. In the verbose connection, the
-   output will tell which line in the file belongs to the remote host. Open the
-   `known_hosts` file and delete the line at the number printed before. Save the
-   file and start the connection step again.
+   output will tell which line in the file belongs to the remote host. In this
+   case you can edit the `known_hosts` file and delete the line at the number
+   printed before. Save the file and start the connection again, and the
+   situation described above will happen. 
 
 After adding all the hosts, the `ssh_config` should be modified. Open the
 `ssh_config` and change the hash hosts setting to `HashKnownHosts yes`.
