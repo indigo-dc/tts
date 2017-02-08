@@ -185,6 +185,18 @@ CA and intermediate CAs to have before reaching the server certificate.
 | oidc.check_user_agent| Wether the user agent identifier should be verified  | boolean | true |
 | oidc.check_peer_ip | Should the remote IP be checked when logging in the user | boolean | true |
 
+#### Example
+```
+# this should be the setting on debian based systems if you want to trust the default bundle
+oidc.cacertfile = /etc/ssl/certs/ca-certificates.crt
+# this should be the setting on centos systems if you want to trust the default bundle
+oidc.cacertfile = /etc/ssl/certs/ca-bundle.crt
+
+# on both systems you can cange the allowed depth by
+oidc.cert_depth = 5
+```
+
+
 #### Provider Settings
 
 | Key | Description | Datatype |
