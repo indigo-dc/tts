@@ -15,6 +15,18 @@ Each setting consists of one simple line of the format, comments are starting wi
 key = value
 ```
 
+
+### Testing your configuration
+WaTTS provides a simple command to check the configuration file
+```
+watts chkconfig
+```
+run it after changing the configuration to ensure your configuration file is correct.
+If everything is fine it will print out a line telling you so:
+```
+config is OK
+```
+
 ### Datatypes
 There are different datatypes used in the configuration, a detailed description can be
 seen in the following table.
@@ -60,7 +72,7 @@ And for production use:
 | hostname | Hostname of the web server | host | localhost |
 | port | Port number where clients seem to connect to; default is port 80 for non SSL, 443 for SSL. In production systems this should be left 'default' | port number or 'default' | 8080 |
 | listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privileged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
-| ssl | Whether SSL should be used | boolean | false |
+| ssl | Whether SSL should be used | boolean | true |
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
 | key_file | Path to the private key file | file | /etc/watts/watts.key |
@@ -71,18 +83,65 @@ And for production use:
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
 
 
-#### Example
 
+#### Listen_Port, Redirection Explained
+The idea is to run WaTTS as a dedicated *non root* user for security reasons.
+The drawback of not beeing root is that ports 1-1024 are not available to WaTTS.
+To still be able to have WaTTS running at port 80 or 443 several settings are needed.
+
+As an image tells more than a thousand words, soma ascii art:
+```
+client --[port]---> firewall rules --[listen_port]--> WaTTS
+```
+In the picture above the client connects to the port `port` and firewall rules
+redirect the packages arriving at `port` to the `listen_port` at which WaTTS is actually listen.
+The corresponding firewall rule is:
+```
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport `port` -j REDIRECT --to-port `listen_port`
+```
+
+Redirection is needed when using SSL and http traffic should be forwarded to the https endpoint.
+The problem is that http and https work completely different, so a pure redirection using the
+firewall does not work, instead a valid http-redirection message needs to be send. Sending
+this valid http message is the task of the redirection and needs to be listening at a different port:
+```
+client --[some port]--> firewall rules --[redirection.listen_port]--> redirection endpoint
+                                                                           |
+       <-------[ valid http message, redirecting to the http endpoint ]----/
+```
+The redirection follows the same idea as the port and listen_port above. So WaTTS is listening
+at redirection.listen_port for incomming traffic and sending a valid http redirection message back,
+which tells the browser to go tho the ssl endpoint: https://`hostname`:`port`.
+
+For the redirection another firewall rule is needed:
+```
+# redirecting all traffic arriving at the default http port, 80, to the the listen port
+# for redirection
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port `redirection.listen_port`
+```
+
+#### Example
+The following example is the basic SSL setup.
 ```
 hostname = my-watts.example.com
 listen_port = 8443
-port = default
+port = 443
 ssl = true
 # using default values for cachain_file, cert_file and key_file
 session_timeout = 10m
 redirection.enable = true
 redirection.listen_port = 8000
 ```
+
+and the firewall rules
+```
+# for the ssl traffic forwarding from 443 to the listen port of WaTTS
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 8443
+
+# for the non ssl traffic trying port 80 forwarding it to the redirection.listen_port of WaTTS
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 8000
+```
+
 
 ### OpenId Connect Provider
 #### Introduction
@@ -109,20 +168,49 @@ The redirect uri for the settings 'SSL = true', 'Port = 443', 'HostName=tts.exam
 would be https://tts.example.com/oidc (the port is not added as it is the default
 port for https, it would be the same for port 80 on SSL = false).
 
-If you are unsure, just start the WaTTS and check the logs. During the start of WaTTS, it prints 
-some messages starting with `Init:`, one of them is `Init: using local endpoint ....` which is
+If you are unsure, just start the WaTTS and check the logs. During the start of WaTTS, it prints
+some messages starting with `Init:`, one of them is `Init: using local endpoint ....`
 telling you which uri to use.
 
 WaTTS uses the 'code-auth-flow' and is a 'web-application'.
 
-#### Settings
+#### General Settings
+WaTTS verifies the complete SSL chain if https is used and is very strict to ensure the
+integrity for the user using WaTTS.
+
+To be able to verify a remote certificate WaTTS needs to know where the supported certification
+authority certificates are stored. The second information WaTTS needs is the allowed depth of
+CA and intermediate CAs to have before reaching the server certificate.
+
+
+| Key | Description | Datatype | Default |
+| :---: | --- | :---: | :---: |
+| oidc.cacertfile | The file containing all trusted CAs | file | none |
+| oidc.cert_depth | The number of intermediate CAs allowd | integer | 1 |
+| oidc.use_cookie | If cookies should be used to identify the user during login | boolean | true |
+| oidc.check_user_agent| Wether the user agent identifier should be verified  | boolean | true |
+| oidc.check_peer_ip | Should the remote IP be checked when logging in the user | boolean | true |
+
+#### Example
+```
+# this should be the setting on debian based systems if you want to trust the default bundle
+oidc.cacertfile = /etc/ssl/certs/ca-certificates.crt
+# this should be the setting on centos systems if you want to trust the default bundle
+oidc.cacertfile = /etc/ssl/certs/ca-bundle.crt
+
+# on both systems you can cange the allowed depth by
+oidc.cert_depth = 5
+```
+
+
+#### Provider Settings
 
 | Key | Description | Datatype |
 | :---: | --- | :---: |
 | description | A description of the Provider, shown at the login Screen | string |
 | client_id | The client id received at the registration | string |
 | client_secret | The client secret received at the registration | string |
-| config_endpoint | The configuration endpoint of the provider | url |
+| config_endpoint | The configuration endpoint of the provider, ensure you are using ssl | url |
 | request_scopes | the scopes to request | comma separated list |
 
 Each setting is prefixed with 'openid.`id`.' where `id` must be replaced by the id
@@ -142,7 +230,6 @@ openid.iam.request_scopes = openid, profile
 #### Introduction
 A service is a single entity for which a user can request credentials.
 The configuration of a service consists of one group of *service* settings.
-These are located in the `services` subfolder of the configuration.
 
 To create credentials, WaTTS connects to the service, either locally or
 remotely using *ssh*. After the connection is established, a command is
@@ -151,42 +238,44 @@ executed and the subsequent result is parsed and interpreted.
 The executed commands are also called *plugins*; for further information on how
 the plugins work and how to implement them, see the documentation for developers.
 
+The plugins are not part of WaTTS, so they can be changed independant of WaTTS and
+also maintained by the community.
+
+Known plugins(use them at your own risk):
+ - [Info plugin](https://github.com/indigo-dc/tts_plugin_info)
+ - [OpenNebula](https://github.com/indigo-dc/tts_plugin_opennebula)
+ - [Simple CA](https://github.com/indigo-dc/tts_plugin_ca)
+
+Feel free to add an issue to get your plugin listed above.
+
+
 #### Settings
+Each setting is prefixed with 'service.`id`.' where `id` must be replaced by the id
+you want to give to the service.
+
 | Key | Description | Datatype | Mandatory |
 | :---: | --- | :---: | :---: |
 | description | A description of the service for the user | string | yes |
-| cmd | The command to execute after connecting | string | yes |
+| cmd | The command to execute after connecting, needs to be executable/readable by the user WaTTS is running as | string | yes |
 | credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | yes |
-| connection_type | Either local or ssh | 'local' or 'ssh' | yes |
 | parallel_runner | the number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
 | allow_same_state | whether the plugin is allowed to return the same state more than once | boolean | no, (false) |
 | plugin_timeout | the time after which WaTTS won't wait for the result of the plugin execution anymore | duration or 'infinity' | no (infinity) |
 | pass_access_token | whether the  access token should be passed to the plugin | boolean | no (false) |
+| connection.type | Either local or ssh | 'local' or 'ssh' | yes |
 | connection.user | the user name to use when connecting e.g. with ssh | string | no |
 | connection.password | the password to use when connecting e.g. with ssh | string | no |
 | connection.host | the hostname to connect to e.g. with ssh | host | no |
 | connection.port | the port number to connect to e.g. with ssh | port | no |
 | connection.ssh_dir | the ssh_dir to use with ssh | port | no |
 | connection.ssh_key_pass | the password of the private key to use with ssh | string | no |
-| plugin.`key` | a setting to send to the plugin, the name of the parameter will be `key` | any | no |
+| plugin.`key` | a setting to send to the plugin, the name of the parameter will be `key`. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs | any | no |
 | authz.allow.`p`.`k`.`o` | see the Authorization section | other | no ([])|
 | authz.forbid.`p`.`k`.`o` | see the Authorization section | other | no ([]) |
 | authz.hide | hide the service if the user is not allowed | boolean | no (false) |
 | authz.tooltip | message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
 
 
-Each setting is prefixed with 'service.`id`.' where `id` must be replaced by the id
-you want to give to the service.
-#### Example
-```
-service.info.description = Simple Info Service
-service.info.credential_limit = 1
-service.info.connection.type = local
-service.info.cmd = /home/watts/.config/watts/info.py
-service.info.parallel_runner = infinite
-# see the Authorization section regarding the next line
-service.info.authz.allow.any.sub.any = true
-```
 
 #### Authorization
 Authorization follows a few simple steps:
@@ -252,7 +341,7 @@ service.info.authz.allow.iam.sub.any = true
 # 'info' should be a list
 # 'o' has value 'contains'
 # 'v' is 'Developer'
-# The following line allows anyone whose group list contains 'Developer' and is 
+# The following line allows anyone whose group list contains 'Developer' and is
 # from the iam provider
 service.info.authz.allow.iam.group.contains = Developer
 
@@ -263,6 +352,54 @@ service.info.authz.allow.iam.group.contains = Developer
 # The following line allows sub1, sub2 and sub3 from the provider iam
 service.info.authz.allow.iam.sub.is_member_of = sub1,sub3,sub2
 ```
+
+#### Complete Example
+```
+service.info.description = Simple Info Service
+service.info.credential_limit = 1
+service.info.connection.type = local
+service.info.cmd = /home/watts/.config/watts/info.py
+service.info.parallel_runner = infinite
+service.info.authz.allow.any.sub.any = true
+# the following will be sent to the plugin
+service.plugin.path = /tmp/data
+```
+
+
+### Complete Config Example
+This example uses the info plugin, which is a very simple plugin and can be downloaded [here](https://github.com/indigo-dc/tts_plugin_info).
+```
+hostname = watts.example.com
+port = 443
+listen_port = 8443
+redirection.enable = true
+redirection.listen_port = 8080
+
+ssl = true
+cachain_file = /home/watts/cert/ca-bundle.crt
+cert_file = /home/watts/cert/server.crt
+key_file = /home/watts/cert/server.key
+
+oidc.cacertfile = /etc/ss/certs/ca-certificates.crt
+oidc.cert_depth = 3
+
+sqlite_file = /home/watts/watts.db
+
+openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)
+openid.iam.client_id = e70e7190-d64cad3771b9
+openid.iam.client_secret = AN5pY379_Z_1jgiiAyKBEHe8zKP2KuiWxV34zWzw
+openid.iam.config_endpoint = https://iam.indigo-datacloud.eu/.well-known/openid-configuration
+openid.iam.request_scopes = openid, profile
+
+service.info.description = Simple Info Service
+service.info.credential_limit = 1
+service.info.connection.type = local
+service.info.cmd = /home/watts/info.py
+service.info.parallel_runner = infinite
+service.info.authz.allow.any.sub.any = true
+```
+
+
 
 ### Configuring SSH for WaTTS
 WaTTS does not yet support hashed hosts in the `known_hosts` file. As the
@@ -286,7 +423,7 @@ connection there are two possibilities:
    output will tell which line in the file belongs to the remote host. In this
    case you can edit the `known_hosts` file and delete the line at the number
    printed before. Save the file and start the connection again, and the
-   situation described above will happen. 
+   situation described above will happen.
 
 After adding all the hosts, the `ssh_config` should be modified. Open the
 `ssh_config` and change the hash hosts setting to `HashKnownHosts yes`.

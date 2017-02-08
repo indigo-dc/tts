@@ -90,17 +90,16 @@
  ]
 }.
 
-{mapping, "oidc_ssl.cacertfile", "oidcc.cacertfile",
+{mapping, "oidc.cacertfile", "oidcc.cacertfile",
  [
   {datatype , string},
-  {default, "/etc/ssl/certs/ca-certificates.crt"}
  ]
 }.
 
-{mapping, "oidc_ssl.cert_depth", "oidcc.cert_depth",
+{mapping, "oidc.cert_depth", "oidcc.cert_depth",
  [
   {datatype , integer},
-  {default, 5}
+  {default, 1}
  ]
 }.
 
