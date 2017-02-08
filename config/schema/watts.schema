@@ -54,8 +54,7 @@
 %% @doc Enable/Disable SSL support, please
 %% enable it before using WaTTS in production
 {mapping, "ssl", "watts.ssl", [
-          {default, false},
-          {commented, true},
+          {default, true},
           {datatype, {enum, [true, false]}}
           ]}.
 

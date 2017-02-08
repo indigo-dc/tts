@@ -72,7 +72,7 @@ And for production use:
 | hostname | Hostname of the web server | host | localhost |
 | port | Port number where clients seem to connect to; default is port 80 for non SSL, 443 for SSL. In production systems this should be left 'default' | port number or 'default' | 8080 |
 | listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privileged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
-| ssl | Whether SSL should be used | boolean | false |
+| ssl | Whether SSL should be used | boolean | true |
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
 | key_file | Path to the private key file | file | /etc/watts/watts.key |
@@ -87,8 +87,7 @@ And for production use:
 #### Listen_Port, Redirection Explained
 The idea is to run WaTTS as a dedicated *non root* user for security reasons.
 The drawback of not beeing root is that ports 1-1024 are not available to WaTTS.
-To still be able to have WaTTS running at port 80 or 443 the two settings `port`
-and `listen_port` are used.
+To still be able to have WaTTS running at port 80 or 443 several settings are needed.
 
 As an image tells more than a thousand words, soma ascii art:
 ```
@@ -101,11 +100,18 @@ The corresponding firewall rule is:
 iptables -t nat -A PREROUTING -i eth0 -p tcp --dport `port` -j REDIRECT --to-port `listen_port`
 ```
 
-Redirection is used to forward http traffic to the https endpoint, so users can just enter
-your hostname into the browser and get automatically redirected to the ssl encrypted endpoint.
-
+Redirection is needed when using SSL and http traffic should be forwarded to the https endpoint.
+The problem is that http and https work completely different, so a pure redirection using the
+firewall does not work, instead a valid http-redirection message needs to be send. Sending
+this valid http message is the task of the redirection and needs to be listening at a different port:
+```
+client --[some port]--> firewall rules --[redirection.listen_port]--> redirection endpoint
+                                                                           |
+       <-------[ valid http message, redirecting to the http endpoint ]----/
+```
 The redirection follows the same idea as the port and listen_port above. So WaTTS is listening
-at one port for incomming traffic and sending http redirects back to https://`hostname`:`port`.
+at redirection.listen_port for incomming traffic and sending a valid http redirection message back,
+which tells the browser to go tho the ssl endpoint: https://`hostname`:`port`.
 
 For the redirection another firewall rule is needed:
 ```
@@ -129,10 +135,10 @@ redirection.listen_port = 8000
 
 and the firewall rules
 ```
-# for the sll traffic forwarding from 443 to the listen port of WaTTS
+# for the ssl traffic forwarding from 443 to the listen port of WaTTS
 iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 8443
 
-# for the non sll traffic trying port 80 forwarding it to the redirection.listen_port of WaTTS
+# for the non ssl traffic trying port 80 forwarding it to the redirection.listen_port of WaTTS
 iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 8000
 ```
 
@@ -231,6 +237,17 @@ executed and the subsequent result is parsed and interpreted.
 
 The executed commands are also called *plugins*; for further information on how
 the plugins work and how to implement them, see the documentation for developers.
+
+The plugins are not part of WaTTS, so they can be changed independant of WaTTS and
+also maintained by the community.
+
+Known plugins(use them at your own risk):
+ - [Info plugin](https://github.com/indigo-dc/tts_plugin_info)
+ - [OpenNebula](https://github.com/indigo-dc/tts_plugin_opennebula)
+ - [Simple CA](https://github.com/indigo-dc/tts_plugin_ca)
+
+Feel free to add an issue to get your plugin listed above.
+
 
 #### Settings
 Each setting is prefixed with 'service.`id`.' where `id` must be replaced by the id
