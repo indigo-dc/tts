@@ -240,6 +240,7 @@ start_web_interface() ->
                      ),
     case Redirect and SSL of
         true ->
+            lager:info("Init: enable redirection at port ~p", [RedirectPort]),
             {ok, _} = cowboy:start_http( redirect_handler
                                           , 100
                                           , [ {port, RedirectPort}]
