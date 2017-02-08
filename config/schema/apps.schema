@@ -92,7 +92,7 @@
 
 {mapping, "oidc.cacertfile", "oidcc.cacertfile",
  [
-  {datatype , string},
+  {datatype , string}
  ]
 }.
 
