@@ -98,8 +98,22 @@ init_watts() ->
                {ok, V} -> V
            end,
     ok = ?SETCONFIG(vsn, Vsn),
+    ok = enforce_security(),
     lager:debug("Init: config = ~p", [?ALLCONFIG]),
     ok.
+
+enforce_security() ->
+    SSL = ?CONFIG(ssl),
+    Hostname0 = ?CONFIG(hostname),
+    Hostname = case SSL of
+                   false ->
+                       "localhost";
+                   _ ->
+                       Hostname0
+               end,
+    ?SETCONFIG(hostname, Hostname),
+    ok.
+
 
 
 start_database() ->
@@ -210,7 +224,9 @@ start_web_interface() ->
         false ->
             {ok, _} = cowboy:start_http( http_handler
                                          , 100
-                                         , [ {port, ListenPort} ]
+                                         , [ {port, ListenPort},
+                                             {ip, {127, 0, 0, 1}}
+                                             ]
                                          , [{env, [{dispatch, Dispatch}]}]
                                        )
     end,
@@ -222,8 +238,9 @@ start_web_interface() ->
                              ]
                        }]
                      ),
-    case Redirect of
+    case Redirect and SSL of
         true ->
+            lager:info("Init: enable redirection at port ~p", [RedirectPort]),
             {ok, _} = cowboy:start_http( redirect_handler
                                           , 100
                                           , [ {port, RedirectPort}]

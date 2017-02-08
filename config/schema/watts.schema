@@ -5,6 +5,19 @@
           {default, "localhost"}
           ]}.
 
+{translation, "watts.hostname",
+ fun(Conf) ->
+         SSL = cuttlefish:conf_get("ssl", Conf),
+         HostName = cuttlefish:conf_get("hostname", Conf),
+         Localhost = (HostName == "localhost"),
+         case SSL or Localhost of
+             true ->
+                 HostName;
+             false ->
+                 Msg = "only localhost supports non SSL setup",
+                 cuttlefish:invalid(Msg)
+         end
+ end}.
 
 %% @doc The port at which traffic seems to enter
 %% WaTTS. This can be different from the port
@@ -57,6 +70,7 @@
           {default, true},
           {datatype, {enum, [true, false]}}
           ]}.
+
 
 %% @doc The CA chain  file to use for ssl
 {mapping, "cachain_file", "watts.cachain_file", [

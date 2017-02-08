@@ -73,7 +73,7 @@ init_per_suite(Conf) ->
     ?SETCONFIG(session_timeout, 90000),
     ?SETCONFIG(sqlite_db, "/tmp/watts_common_test/watts_ct.db"),
     ?SETCONFIG(allow_dropping_credentials, true),
-    ?SETCONFIG(redirection_enabled, false),
+    ?SETCONFIG(redirection_enable, false),
     ?SETCONFIG(redirection_port, 8080),
     ?SETCONFIG(ssl, false),
     ?SETCONFIG(port, 8080),
