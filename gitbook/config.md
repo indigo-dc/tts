@@ -178,7 +178,7 @@ CA and intermediate CAs to have before reaching the server certificate.
 
 
 | Key | Description | Datatype | Default |
-| :---: | --- | :---: |
+| :---: | --- | :---: | :---: |
 | oidc.cacertfile | The file containing all trusted CAs | file | none |
 | oidc.cert_depth | The number of intermediate CAs allowd | integer | 1 |
 | oidc.use_cookie | If cookies should be used to identify the user during login | boolean | true |
