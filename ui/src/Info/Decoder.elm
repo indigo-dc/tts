@@ -16,3 +16,4 @@ decodeInfo =
         |> Json.Decode.Pipeline.required "logged_in" (Json.Decode.bool)
         |> Json.Decode.Pipeline.required "display_name" (Json.Decode.string)
         |> Json.Decode.Pipeline.required "error" (Json.Decode.string)
+        |> Json.Decode.Pipeline.required "issuer_id" (Json.Decode.string)

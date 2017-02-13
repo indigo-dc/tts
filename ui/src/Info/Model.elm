@@ -7,4 +7,5 @@ type alias Model =
     , loggedIn : Bool
     , displayName : String
     , error : String
+    , issuer_id : String
     }

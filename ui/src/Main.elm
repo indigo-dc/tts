@@ -58,6 +58,7 @@ type alias Model =
     , credentialList : CredentialList.Model
     , credential : Maybe Secret.Model
     , accessToken : AccessToken.Model
+    , issuer_id : String
     , loggedIn : Bool
     , error : String
     , displayName : String
@@ -76,7 +77,7 @@ update msg model =
                 ( nextPage, nextCmd ) =
                     case info.loggedIn of
                         True ->
-                            ( User, retrieveServiceList model.url model.restVersion )
+                            ( User, retrieveServiceList model.url model.restVersion info.issuer_id )
 
                         False ->
                             ( Login, retrieveProviderList model.url model.restVersion )
@@ -88,6 +89,7 @@ update msg model =
                     , error = info.error
                     , displayName = info.displayName
                     , activePage = nextPage
+                    , issuer_id = info.issuer_id
                   }
                 , nextCmd
                 )
@@ -117,7 +119,7 @@ update msg model =
                 ( { model
                     | serviceList = newServiceList
                   }
-                , retrieveCredentialList model.url model.restVersion
+                , retrieveCredentialList model.url model.restVersion model.issuer_id
                 )
 
         Messages.ServiceList (Err info) ->
@@ -146,7 +148,7 @@ update msg model =
                 , request_progressing = True
                 , progressing_title = Just "Requesting Credential ..."
               }
-            , request model.url model.restVersion serviceId model.current_param
+            , request model.url model.restVersion model.issuer_id serviceId model.current_param
             )
 
         Messages.Requested (Ok credential) ->
@@ -155,7 +157,7 @@ update msg model =
                 , request_progressing = False
                 , progressing_title = Nothing
               }
-            , retrieveServiceList model.url model.restVersion
+            , retrieveServiceList model.url model.restVersion model.issuer_id
             )
 
         Messages.Requested (Err (Http.BadStatus info)) ->
@@ -190,7 +192,7 @@ update msg model =
                                     , request_progressing = False
                                     , progressing_title = Nothing
                                   }
-                                , retrieveServiceList model.url model.restVersion
+                                , retrieveServiceList model.url model.restVersion model.issuer_id
                                 )
             in
                 result
@@ -215,7 +217,7 @@ update msg model =
                     , request_progressing = False
                     , progressing_title = Nothing
                   }
-                , retrieveServiceList model.url model.restVersion
+                , retrieveServiceList model.url model.restVersion model.issuer_id
                 )
 
         Messages.Revoke credId ->
@@ -223,7 +225,7 @@ update msg model =
                 | request_progressing = True
                 , progressing_title = Just "Revoking Credential ..."
               }
-            , revoke model.url model.restVersion credId
+            , revoke model.url model.restVersion model.issuer_id credId
             )
 
         Messages.Revoked (Ok _) ->
@@ -231,7 +233,7 @@ update msg model =
                 | request_progressing = False
                 , progressing_title = Nothing
               }
-            , retrieveServiceList model.url model.restVersion
+            , retrieveServiceList model.url model.restVersion model.issuer_id
             )
 
         Messages.Revoked (Err (Http.BadStatus info)) ->
@@ -266,7 +268,7 @@ update msg model =
                                     , request_progressing = False
                                     , progressing_title = Nothing
                                   }
-                                , retrieveServiceList model.url model.restVersion
+                                , retrieveServiceList model.url model.restVersion model.issuer_id
                                 )
             in
                 result
@@ -291,7 +293,7 @@ update msg model =
                     , request_progressing = False
                     , progressing_title = Nothing
                   }
-                , retrieveServiceList model.url model.restVersion
+                , retrieveServiceList model.url model.restVersion model.issuer_id
                 )
 
         Messages.AdvancedRequest service ->
@@ -489,6 +491,7 @@ initModel baseUrl restVersion =
       , loggedIn = False
       , error = ""
       , displayName = "unknown"
+      , issuer_id = "unknown"
       , current_service = Nothing
       , current_param = Nothing
       , request_progressing = False
@@ -522,11 +525,11 @@ retrieveProviderList baseUrl restVersion =
         Http.send Messages.ProviderList getProviderList
 
 
-retrieveServiceList : String -> String -> Cmd Msg
-retrieveServiceList baseUrl restVersion =
+retrieveServiceList : String -> String -> String -> Cmd Msg
+retrieveServiceList baseUrl restVersion issuer_id =
     let
         apiUrl =
-            baseUrl ++ "/api/" ++ restVersion ++ "/service/"
+            baseUrl ++ "/api/" ++ restVersion ++ "/" ++ issuer_id ++ "/service/"
 
         getServiceList =
             Http.get apiUrl ServiceList.decodeServiceList
@@ -534,11 +537,11 @@ retrieveServiceList baseUrl restVersion =
         Http.send Messages.ServiceList getServiceList
 
 
-retrieveCredentialList : String -> String -> Cmd Msg
-retrieveCredentialList baseUrl restVersion =
+retrieveCredentialList : String -> String -> String -> Cmd Msg
+retrieveCredentialList baseUrl restVersion issuer_id =
     let
         apiUrl =
-            baseUrl ++ "/api/" ++ restVersion ++ "/credential/"
+            baseUrl ++ "/api/" ++ restVersion ++ "/" ++ issuer_id ++ "/credential/"
 
         getCredentialList =
             Http.get apiUrl CredentialList.decodeCredentialList
@@ -570,11 +573,11 @@ logout baseUrl restVersion =
         Http.send Messages.LoggedOut logout
 
 
-request : String -> String -> String -> Maybe (Dict String Json.Value) -> Cmd Msg
-request baseUrl restVersion serviceId dict =
+request : String -> String -> String -> String -> Maybe (Dict String Json.Value) -> Cmd Msg
+request baseUrl restVersion issuer_id serviceId dict =
     let
         apiUrl =
-            baseUrl ++ "/api/" ++ restVersion ++ "/credential/"
+            baseUrl ++ "/api/" ++ restVersion ++ "/" ++ issuer_id ++ "/credential/"
 
         dataList =
             case dict of
@@ -602,11 +605,11 @@ request baseUrl restVersion serviceId dict =
         Http.send Messages.Requested request
 
 
-revoke : String -> String -> String -> Cmd Msg
-revoke baseUrl restVersion credId =
+revoke : String -> String -> String -> String -> Cmd Msg
+revoke baseUrl restVersion issuer_id credId =
     let
         apiUrl =
-            baseUrl ++ "/api/" ++ restVersion ++ "/credential/" ++ credId
+            baseUrl ++ "/api/" ++ restVersion ++ "/" ++ issuer_id ++ "/credential/" ++ credId
 
         revoke =
             Http.request
