@@ -5,18 +5,6 @@
 
 -define(ISSUER_URL, <<"https://test.tts.somewhere">>).
 
-dispatch_mapping_test() ->
-    BasePath1 = <<"/test">>,
-    BasePath2 = <<"/test/">>,
-
-    ExpMapping = <<"/test/:version/:type/[:id]">>,
-
-    Mapping1 = watts_rest:dispatch_mapping(BasePath1),
-    Mapping2 = watts_rest:dispatch_mapping(BasePath2),
-    ?assertEqual(ExpMapping, Mapping1),
-    ?assertEqual(Mapping1, Mapping2),
-    ok.
-
 
 init_test() ->
     ?assertEqual({upgrade, protocol, cowboy_rest}, watts_rest:init(a,b,c)),
@@ -74,135 +62,91 @@ malformed_request_test() ->
     State = #state{},
     Requests = [
                 % GOOD request
-                {#{ bindings => [{version, <<"v1">>},
-                                 {type, <<"oidcp">>}
-                                ],
+                {#{ path_info => [<<"v1">>,<<"oidcp">>],
                     header => [],
                     method => <<"GET">>,
                     body => []
                   }, false },
 
-                { #{ bindings => [{version, <<"V1">>},
-                                  {type, <<"service">>}
-                                 ],
+                { #{ path_info => [<<"V1">>, <<"ID1">>, <<"service">>],
                      header => [],
                      method => <<"GET">>,
                      body => []
                    }, false},
 
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"credential">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>],
                      header => [],
                      method => <<"GET">>,
                      body => []
                    }, false},
 
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"credential_data">>},
-                                  {id, <<"234">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>,
+                                   <<"credential_data">>, <<"234">>],
                      header => [],
                      method => <<"GET">>,
                      body => []
                    }, false },
 
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"credential">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>],
                      header => [{<<"content-type">>,{ok, {<<"application">>,
                                                            <<"json">>,[]}}}],
                      method => <<"POST">>,
                      body => <<"{\"service_id\":\"234\"}">>
                    }, false },
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"credential">>},
-                                  {id, <<"234">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>, <<"234">>],
                      header => [
-                                {<<"authorization">>,<<"Bearer SomeToken">>},
-                                {<<"x-openid-connect-issuer">>,?ISSUER_URL}
+                                {<<"authorization">>,<<"Bearer SomeToken">>}
                                ],
                      method => <<"DELETE">>,
                      body => []
                    }, false },
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"credential">>},
-                                  {id, <<"234">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>, <<"234">>],
                      header => [
-                                {<<"authorization">>,<<"Bearer SomeToken">>},
-                                {<<"x-openid-connect-issuer">>,<<"ID1">>}
+                                {<<"authorization">>,<<"Bearer SomeToken">>}
                                ],
                      method => <<"DELETE">>,
                      body => []
                    }, false },
 
                 % BAD requests
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"credential">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>],
                      header => [],
                      method => <<"POST">>,
                      body => <<"{\"service_id\":234}">>
                    }, true },
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"oidcp">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>, <<"oidcp">>],
                      header => [],
                      method => <<"POST">>,
                      body => <<"no json">>
                    }, true },
 
-                { #{ bindings => [{version, <<"latest">>},
-                                  {type, <<"unknown_type">>}
-                                 ],
+                { #{ path_info => [<<"latest">>, <<"ID1">>, <<"unknown_type">>],
                      header => [],
                      method => <<"GET">>,
                      body => []
                    }, true },
 
-                { #{ bindings => [{version, <<"v0">>},
-                                  {type, <<"oidcp">>}
-                                 ],
+                { #{ path_info => [<<"v0">>, <<"ID1">>, <<"oidcp">>],
                      header => [{<<"authorization">>, <<"missingBearer">>}],
                      method => <<"GET">>,
                      body => []
                    }, true },
 
-                { #{ bindings => [{version, <<"v0">>},
-                                  {type, <<"credentials">>}
-                                 ],
+                { #{ path_info => [<<"v0">>, <<"ID2">>, <<"credentials">>],
                      header => [
-                                {<<"authorization">>,<<"Bearer SomeToken">>},
-                                {<<"x-openid-connect-issuer">>,<<"NO URL">>}
+                                {<<"authorization">>,<<"Bearer SomeToken">>}
                                ],
                      method => <<"GET">>,
                      body => []
                    }, true },
 
-                { #{ bindings => [{version, <<"v0">>},
-                                  {type, <<"credentials">>}
-                                 ],
-                     header => [
-                                {<<"authorization">>,<<"Bearer SomeToken">>},
-                                {<<"x-openid-connect-issuer">>,<<"ID2">>}
-                               ],
-                     method => <<"GET">>,
-                     body => []
-                   }, true },
-
-                { #{ bindings => [{version, <<"vn">>},
-                                  {type, <<"oidcp">>}
-                                 ],
+                { #{ path_info => [<<"vn">>, <<"oidcp">>],
                      header => [],
                      method => <<"GET">>,
                      body => []
                    }, true },
 
-                { #{ bindings => [{version, <<"234">>},
-                                  {type, <<"oidcp">>}
-                                 ],
+                { #{ path_info => [<<"234">>, <<"oidcp">>],
                      header => [],
                      method => <<"GET">>,
                      body => []
@@ -340,7 +284,8 @@ post_json_test() ->
     {ok, Meck} = start_meck(),
     ?SETCONFIG( ep_main, <<"/">>),
 
-    Url = <<"/api/v2/credential_data/CRED1">>,
+    Url_v1 = <<"/api/v1/credential_data/CRED1">>,
+    Url_v2 = <<"/api/v2/ID1/credential_data/CRED1">>,
     Requests = [
                 {#state{version = 2,
                         type = credential,
@@ -348,7 +293,14 @@ post_json_test() ->
                         json = #{service_id => <<"Service1">>},
                         session_pid = pid1,
                         method = post
-                       }, {true, Url} },
+                       }, {true, Url_v2} },
+                {#state{version = 1,
+                        type = credential,
+                        id = undefined,
+                        json = #{service_id => <<"Service1">>},
+                        session_pid = pid1,
+                        method = post
+                       }, {true, Url_v1} },
                 {#state{version = 2,
                         type = credential,
                         id = undefined,
@@ -400,15 +352,6 @@ delete_resource_test() ->
 
 start_meck() ->
     MeckModules = [cowboy_req, oidcc, watts, watts_session],
-    Binding = fun(Name, #{bindings := Bindings} = Request, Default) ->
-                      case lists:keyfind(Name, 1, Bindings) of
-                          {Name, Value} -> {Value, Request};
-                          _ -> {Default, Request}
-                      end
-              end,
-    Binding2 = fun(Name, Request) ->
-                       Binding(Name, Request, undefined)
-               end,
     Header = fun(Name, #{header := Header} = Request) ->
                       case lists:keyfind(Name, 1, Header) of
                           {Name, Value} -> {Value, Request};
@@ -427,6 +370,11 @@ start_meck() ->
     Body = fun(#{body := Body} = Request) ->
                      {ok, Body, Request}
              end,
+
+    PathInfo = fun(#{path_info := PathInfo} = Request) ->
+                     {PathInfo, Request}
+             end,
+
     GetCookie = fun(_, Request) ->
                      {maps:get(cookie, Request, undefined), Request}
              end,
@@ -487,6 +435,15 @@ start_meck() ->
                               _ -> {ok, []}
                           end
               end,
+    GetIssSub = fun(SessionPid) ->
+                          case SessionPid of
+                              pid1 -> {ok, <<"https://test.tts">>, <<"ID1">>,
+                                            <<"sub">>};
+                              pid2 -> {ok, <<"https://other.tts">>, <<"ID2">>,
+                                            <<"sub">>};
+                              _ -> {error, not_found}
+                          end
+              end,
     GetCred = fun(Id, SessionPid) ->
                           case {Id, SessionPid} of
                               {<<"CRED1">>, pid1} ->
@@ -516,13 +473,12 @@ start_meck() ->
                     end,
 
     ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(cowboy_req, binding, Binding),
-    ok = meck:expect(cowboy_req, binding, Binding2),
     ok = meck:expect(cowboy_req, cookie, GetCookie),
     ok = meck:expect(cowboy_req, header, Header),
     ok = meck:expect(cowboy_req, parse_header, ParseHeader),
     ok = meck:expect(cowboy_req, method, Method),
     ok = meck:expect(cowboy_req, body, Body),
+    ok = meck:expect(cowboy_req, path_info, PathInfo),
     ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
     ok = meck:expect(cowboy_req, set_resp_header, SetHeader),
     ok = meck:expect(oidcc, get_openid_provider_info, GetOidcProvider),
@@ -533,6 +489,7 @@ start_meck() ->
     ok = meck:expect(watts, get_openid_provider_list, GetProvider),
     ok = meck:expect(watts, get_credential_list_for, GetCredList),
     ok = meck:expect(watts, get_temp_cred, GetCred),
+    ok = meck:expect(watts, get_iss_id_sub_for, GetIssSub),
     ok = meck:expect(watts, revoke_credential_for, Revoke),
     ok = meck:expect(watts, logout, fun(_) -> ok end),
     ok = meck:expect(watts, request_credential_for, CredRequest),

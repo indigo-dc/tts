@@ -37,8 +37,10 @@
 
 -export([get_user_info/1]).
 -export([get_display_name/1]).
+-export([get_iss_id/1]).
 
 -export([set_iss_sub/3]).
+-export([set_iss_id/2]).
 
 -export([is_user_agent/2]).
 -export([is_same_ip/2]).
@@ -107,9 +109,17 @@ get_user_info(Pid) ->
 get_display_name(Pid) ->
     gen_server:call(Pid, get_display_name).
 
+-spec get_iss_id(Pid :: pid()) -> {ok, IssId::binary()}.
+get_iss_id(Pid) ->
+    gen_server:call(Pid, get_issuer_id).
+
 -spec set_iss_sub(Issuer :: binary(), Subject::binary(), Pid :: pid()) -> ok.
 set_iss_sub(Issuer, Subject, Pid) ->
     gen_server:call(Pid, {set_iss_sub, Issuer, Subject}).
+
+-spec set_iss_id(IssuerId :: binary(), Pid :: pid()) -> ok.
+set_iss_id(IssuerId, Pid) ->
+    gen_server:call(Pid, {set_iss_id, IssuerId}).
 
 -spec is_logged_in(Pid :: pid()) -> true | false.
 is_logged_in(Pid) ->
@@ -125,6 +135,7 @@ is_same_ip(IP, Pid) ->
 -include("watts.hrl").
 -record(state, {
           id = unkonwn,
+          issuer_id = undefined,
           sess_token = undefined,
           user_agent = undefined,
           ip = undefined,
@@ -149,6 +160,8 @@ handle_call(get_sess_token, _From, #state{sess_token=Token,
 handle_call(get_userid, _From, #state{max_age=MA, user_info=UserInfo}=State) ->
     Result = watts_userinfo:return(id, UserInfo),
     {reply, Result, State, MA};
+handle_call(get_issuer_id, _From, #state{max_age=MA, issuer_id=IssId}=State) ->
+    {reply, {ok, IssId}, State, MA};
 handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
@@ -157,6 +170,9 @@ handle_call({set_iss_sub, Issuer, Subject}, _From,
             #state{max_age=MA, user_info=Info}=State) ->
     {ok, NewInfo} = watts_userinfo:update_iss_sub(Issuer, Subject, Info),
     {reply, ok, State#state{user_info=NewInfo}, MA};
+handle_call({set_iss_id, IssuerId}, _From,
+            #state{max_age=MA}=State) ->
+    {reply, ok, State#state{issuer_id=IssuerId}, MA};
 handle_call({set_token, Token}, _From,
             #state{user_info=Info, max_age=MA}=State) ->
     IdInfo = maps:get(user_info, Token, undefined),

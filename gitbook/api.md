@@ -39,9 +39,9 @@ Provider, the `id` is the internal id for that OpenId Provider in the WaTTS, the
 in the `desc` field and `ready` indicates whether the provider is ready to be used.
 
 ## List Services
-To get the list of services for a user, a GET request against the `/api/v2/service`
-path is performed.  Authorization is needed for this request. Please refer to
-`Authorization Header` for more details.
+To get the list of services for a user, a GET request against the `/api/v2/<provider id>/service`
+path is performed. Replace `<provider id>` with the id of the provider, see 'ListProvider'.
+Authorization is needed for this request. Please refer to `Authorization Header` for more details.
 
 An example request is:
 
@@ -320,15 +320,9 @@ And the result would be a status response.
 ```
 
 ## Authorization Header
-To get the request authorized, two header fields need to be set.
-The first header is the `Authorization` header. Following the OAuth2.0 spec, the
-access token will be added into the authorization header as a bearer token:
+To get the request authorized, the `Authorization` header needs to be set.
+Following the OAuth2.0 spec, the access token will be added into the authorization
+header as a bearer token:
 ```
 Authorization: Bearer ya29.[...]uMUchM
-```
-
-The second header field is the `X-OpenId-Connect-Issuer` header, which must
-include the issuer URL of the provider:
-```
-X-OpenId-Connect-Issuer: https://provider.example.com
 ```

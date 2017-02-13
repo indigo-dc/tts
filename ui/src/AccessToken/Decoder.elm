@@ -12,3 +12,6 @@ decodeAccessToken : Decoder AccessToken.Model
 decodeAccessToken =
     decode AccessToken.Model
         |> required "access_token" string
+        |> required "issuer" string
+        |> required "issuer_id" string
+        |> required "subject" string

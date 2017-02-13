@@ -39,7 +39,7 @@ view context =
             , class "btn btn-default"
             , onClick Messages.RetrieveAccessToken
             ]
-            [ text "show access token" ]
+            [ text "show iss/sub and token" ]
         , AccessToken.view context.accessToken
         , Secret.view context.progressing_title context.secret
         , Service.advancedView context.service

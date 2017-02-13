@@ -34,6 +34,8 @@
 
          get_access_token_for/1,
          get_display_name_for/1,
+         get_iss_sub_for/1,
+         get_iss_id_sub_for/1,
 
          store_temp_cred/2,
          get_temp_cred/2,
@@ -200,8 +202,20 @@ get_access_token_for(Session) ->
     {ok, AccessToken}.
 
 get_display_name_for(Session) ->
-    {ok, Name} = watts_session:get_display_name(Session),
-    {ok, Name}.
+    case watts_session:get_display_name(Session) of
+        {ok, Name} -> {ok, Name};
+        _ -> {ok, <<"">>}
+    end.
+
+get_iss_sub_for(Session) ->
+    {ok, Iss, _, Sub} = get_iss_id_sub_for(Session),
+    {ok, Iss, Sub}.
+
+get_iss_id_sub_for(Session) ->
+    {ok, UserInfo} = watts_session:get_user_info(Session),
+    {ok, IssId} = watts_session:get_iss_id(Session),
+    {ok, Iss, Sub} = watts_userinfo:return(issuer_subject, UserInfo),
+    {ok, Iss, IssId, Sub}.
 
 store_temp_cred(Credential, Session) ->
     {ok, UserId} = watts_session:get_userid(Session),
@@ -243,9 +257,12 @@ update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, SessId} = watts_session:get_id(SessionPid),
     {ok, SessToken} = watts_session:get_sess_token(SessionPid),
     ok = watts_session:set_token(Token, SessionPid),
+    {ok, Provider} = oidcc:find_openid_provider(Issuer),
+    {ok, #{id := IssId}} = oidcc:get_openid_provider_info(Provider),
     ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
+    ok = watts_session:set_iss_id(IssId, SessionPid),
     true = watts_session:is_logged_in(SessionPid),
-    {ok, DisplayName} = watts_session:get_display_name(SessionPid),
+    {ok, DisplayName} = get_display_name_for(SessionPid),
     lager:info("SESS~p logged in as ~p [~p at ~p]",
                [SessId, DisplayName, Subject, Issuer]),
 

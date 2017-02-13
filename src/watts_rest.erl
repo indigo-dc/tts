@@ -19,8 +19,6 @@
 -include("watts.hrl").
 
 
--export([dispatch_mapping/1]).
-
 -export([init/3]).
 -export([rest_init/2]).
 -export([allowed_methods/2]).
@@ -33,16 +31,6 @@
 -export([get_json/2]).
 -export([post_json/2]).
 -export([delete_resource/2]).
-
-dispatch_mapping(InBasePath) ->
-    BasePath = case binary:last(InBasePath) of
-                   $/ ->
-                       Len = byte_size(InBasePath),
-                       binary:part(InBasePath, 0, Len-1);
-                   _ ->
-                       InBasePath
-               end,
-    << BasePath/binary, <<"/:version/:type/[:id]">>/binary >>.
 
 %%
 %% REST implementation
@@ -90,28 +78,45 @@ malformed_request(Req, State) ->
     CookieName = watts_http_util:cookie_name(),
     {CookieSessionToken, Req2} = cowboy_req:cookie(CookieName, Req),
     CookieSession = watts_session_mgr:get_session(CookieSessionToken),
-    {InVersion, Req3} = cowboy_req:binding(version, Req2, no_version),
-    {InType, Req4} = cowboy_req:binding(type, Req3),
-    {InId, Req5} = cowboy_req:binding(id, Req4, undefined),
-    {InToken, Req6} = cowboy_req:header(<<"authorization">>, Req5),
-    {InIssuer, Req7} = cowboy_req:header(<<"x-openid-connect-issuer">>,
-                                         Req6),
-    {Res, ContentType, Req8} = cowboy_req:parse_header(<<"content-type">>,
-                                                       Req7),
-    {Method, Req9} = cowboy_req:method(Req8),
-    {ok, InBody, Req10} = cowboy_req:body(Req9),
+
+    {PathInfo, Req3} = cowboy_req:path_info(Req2),
+    {InToken, Req4} = cowboy_req:header(<<"authorization">>, Req3),
+    {HIssuer, Req5} = cowboy_req:header(<<"x-openid-connect-issuer">>,
+                                         Req4),
+    {InVersion, InIssuer, InType, InId, HeaderUsed} =
+        case {PathInfo, HIssuer} of
+            {[V, Iss, T, Id], undefined} ->
+                {V, Iss, T, Id, false};
+            {[V, Iss, T], undefined} ->
+                {V, Iss, T, undefined, false};
+            {[V, T], undefined} ->
+                {V, undefined, T, undefined, false};
+            {_, undefined} ->
+                {no_version, undefined, undefined, undefined, false};
+            {[V, T], Iss} ->
+                {V, Iss, T, undefined, true};
+            {[V, T, Id], Iss} ->
+                {V, Iss, T, Id, true};
+            _ ->
+                {no_version, undefined, undefined, undefined, false}
+        end,
+    {Res, ContentType, Req6} = cowboy_req:parse_header(<<"content-type">>,
+                                                       Req5),
+    {Method, Req7} = cowboy_req:method(Req6),
+    {ok, InBody, Req8} = cowboy_req:body(Req7),
 
     {Result, NewState} = is_malformed(Method, {Res, ContentType}, InVersion,
                                       InType , InId, InBody, InToken,
-                                      InIssuer, CookieSession , State),
+                                      InIssuer, HeaderUsed, CookieSession,
+                                      State),
     Req99 =
         case Result of
             true ->
                 Msg = <<"Bad request, please check all parameter">>,
                 Body = jsone:encode(#{result => error, user_msg => Msg}),
-                cowboy_req:set_resp_body(Body, Req10);
+                cowboy_req:set_resp_body(Body, Req8);
             false ->
-                Req10
+                Req8
         end,
     {Result, Req99, NewState}.
 
@@ -244,15 +249,15 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
-    {LoggedIn, DName, Error}  =
+    {LoggedIn, DName, IssId, Error}  =
         case is_pid(Session) of
-            false -> {false, <<"">>, <<"">>};
-            true -> Name = case watts_session:get_display_name(Session) of
-                               {ok, N} -> N;
-                               _ -> <<"">>
-                           end,
-                    {ok, Err} = watts_session:get_error(Session),
-                    {watts_session:is_logged_in(Session), Name, Err}
+            false ->
+                {false, <<"">>, <<"">>, <<"">>};
+            true ->
+                {ok, Name} = watts:get_display_name_for(Session),
+                {ok, _Iss, Id, _Sub} = watts:get_iss_id_sub_for(Session),
+                {ok, Err} = watts_session:get_error(Session),
+                {watts_session:is_logged_in(Session), Name, Id, Err}
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
@@ -260,7 +265,8 @@ perform_get(info, undefined, Session, _) ->
              redirect_path => list_to_binary(Redirect),
              error => Error,
              logged_in => LoggedIn,
-             display_name => DName
+             display_name => DName,
+             issuer_id => IssId
             },
     jsone:encode(Info);
 perform_get(logout, undefined, undefined, _) ->
@@ -270,7 +276,12 @@ perform_get(logout, undefined, Session, _) ->
     jsone:encode(#{result => ok});
 perform_get(access_token, undefined, Session, _) ->
     {ok, AccessToken} = watts:get_access_token_for(Session),
-    jsone:encode(#{access_token => AccessToken});
+    {ok, Iss, Id, Sub} = watts:get_iss_id_sub_for(Session),
+    jsone:encode(#{access_token => AccessToken,
+                   issuer => Iss,
+                   subject => Sub,
+                   issuer_id => Id
+                  });
 perform_get(credential, undefined, Session, Version) ->
     {ok, CredList} = watts:get_credential_list_for(Session),
     return_json_credential_list(CredList, Version);
@@ -293,7 +304,8 @@ perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
     case  watts:request_credential_for(ServiceId, Session, Params, IFace) of
         {ok, CredData} ->
             {ok, Id} = watts:store_temp_cred(CredData, Session),
-            Url = id_to_url(Id, Ver),
+            {ok, _Iss, IssuerId, _Sub} = watts:get_iss_id_sub_for(Session),
+            Url = id_to_url(Id, IssuerId, Ver),
             {Req, {true, Url}};
         {error, ErrorInfo} ->
             Body = jsone:encode(ErrorInfo),
@@ -356,7 +368,7 @@ return_json_credential_list(Credentials, Version)->
     jsone:encode(#{credential_list => List}).
 
 is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
-             InIssuer, InCookieSession, State) ->
+             InIssuer, HeaderUsed, InCookieSession, State) ->
     Version = verify_version(InVersion),
     Type = verify_type(InType),
     Id = verify_id(InId),
@@ -366,11 +378,12 @@ is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
     Method = verify_method(InMethod),
     ContentType = verify_content_type(InContentType),
     Body = verify_body(InBody),
-    case is_bad_version(Version) of
+    case is_bad_version(Version, HeaderUsed) of
         true -> {true, State#state{method=Method, version=Version, type=Type,
                                    id=Id, token=Token, issuer=Issuer,
                                    session_pid=CookieSession, json=Body}};
-        false -> Result = is_malformed(Method, ContentType, Type, Id, Body),
+        false -> Result = is_malformed(Method, ContentType, Type, Id, Issuer,
+                                       Body),
                  {Result, State#state{method=Method, version=Version, type=Type,
                                       id=Id, token=Token, issuer=Issuer,
                                       session_pid=CookieSession, json=Body,
@@ -463,10 +476,14 @@ safe_binary_to_integer(Version) ->
                        {<<"credential_data">>, cred_data }
                       ]).
 
-id_to_url(Id, ApiVersion) ->
+id_to_url(Id, _IssuerId, 1) ->
+    ApiBase = watts_http_util:relative_path("api"),
+    Path = << <<"/v1/credential_data/">>/binary, Id/binary >>,
+    << ApiBase/binary, Path/binary>>;
+id_to_url(Id, IssuerId, ApiVersion) ->
     ApiBase = watts_http_util:relative_path("api"),
     Version = list_to_binary(io_lib:format("v~p", [ApiVersion])),
-    PathElements =[Version, <<"credential_data">>, Id],
+    PathElements =[Version, IssuerId, <<"credential_data">>, Id],
     Concat = fun(Element, Path) ->
                      Sep = <<"/">>,
                      << Path/binary, Sep/binary, Element/binary >>
@@ -484,30 +501,39 @@ verify_type(Type) ->
 verify_id(Id) ->
     Id.
 
-is_malformed(get, _, oidcp, undefined, undefined) ->
+is_malformed(get, _, oidcp, undefined, _, undefined) ->
     false;
-is_malformed(get, _, info, undefined, undefined) ->
+is_malformed(get, _, info, undefined, _, undefined) ->
     false;
-is_malformed(get, _, logout, undefined, undefined) ->
+is_malformed(get, _, logout, undefined, _, undefined) ->
     false;
-is_malformed(get, _, service, undefined, undefined) ->
+is_malformed(get, _, service, undefined, Iss, undefined)
+  when is_binary(Iss)  ->
     false;
-is_malformed(get, _, credential, undefined, undefined) ->
+is_malformed(get, _, credential, undefined, Iss, undefined)
+  when is_binary(Iss) ->
     false;
-is_malformed(get, _, access_token, undefined, undefined) ->
+is_malformed(get, _, access_token, undefined, _, undefined) ->
     false;
-is_malformed(get, _, cred_data, Id, undefined) ->
+is_malformed(get, _, cred_data, Id, Iss, undefined)
+  when is_binary(Iss) ->
     not is_binary(Id);
-is_malformed(post, json, credential, undefined, #{service_id:=Id}) ->
+is_malformed(post, json, credential, undefined, Iss, #{service_id:=Id})
+  when is_binary(Iss) ->
     not is_binary(Id);
-is_malformed(delete, _, credential, Id, undefined) ->
+is_malformed(delete, _, credential, Id, Iss, undefined)
+  when is_binary(Iss) ->
     not is_binary(Id);
-is_malformed(_, _, _, _, _) ->
+is_malformed(_, _, _, _, _, _) ->
     true.
 
-is_bad_version(Version) when is_integer(Version) ->
+is_bad_version(1, true) ->
+    false;
+is_bad_version(_, true) ->
+    true;
+is_bad_version(Version, _) when is_integer(Version) ->
    (Version =< 0) or (Version > ?LATEST_VERSION);
-is_bad_version(_) ->
+is_bad_version(_, _) ->
     true.
 
 end_session_if_rest(#state{session_pid = Session, cookie_based = false}) ->

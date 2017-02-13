@@ -153,6 +153,7 @@ python2_check(_Config) ->
 rest_communication_v1(_Config) ->
     rest_communication(1).
 
+
 rest_communication_v2(_Config) ->
     {ok, Info} = perform_rest_request("info", 2),
     true = is_valid_info(Info),
@@ -253,7 +254,11 @@ perform_rest_request(Params, ProtVer) ->
                       1 -> " --json -p 1 "
                   end,
     Exec = "/tmp/watts_common_test/wattson/wattson",
-    Cmd = "export WATTSON_TOKEN=MockToken && export WATTSON_ISSUER=https://accounts.google.com && export WATTSON_URL=http://localhost:8080 && "++Exec++ExtraParams++Params,
+    Issuer = case ProtVer of
+                 1 -> "https://accounts.google.com";
+                 _ -> "google"
+             end,
+    Cmd = "export WATTSON_TOKEN=MockToken && export WATTSON_ISSUER="++Issuer++" && export WATTSON_URL=http://localhost:8080 && "++Exec++ExtraParams++Params,
     Result = os:cmd(Cmd),
     ct:log("executed '~s ~s ~s' with result ~p~n",[Exec, ExtraParams, Params, Result]),
     case jsone:try_decode(list_to_binary(Result), [{keys, attempt_atom}, {object_format, map}]) of

@@ -184,9 +184,8 @@ start_web_interface() ->
     oidcc_client:register(watts_oidc_client),
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
-    EpApiBase = watts_http_util:relative_path("api"),
     EpStatic = watts_http_util:relative_path("static/[...]"),
-    EpApi = watts_rest:dispatch_mapping(EpApiBase),
+    EpApi = watts_http_util:relative_path("api/[...]"),
     Dispatch = cowboy_router:compile(
                  [{'_', [{EpStatic, cowboy_static,
                           {priv_dir, ?APPLICATION, "http_static"}
