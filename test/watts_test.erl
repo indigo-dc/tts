@@ -25,7 +25,7 @@ login_and_out_test() ->
     {error, bad_token} = watts:login_with_access_token(BadAccessToken, Issuer),
     {ok, #{session_pid := Pid1}} = watts:login_with_oidcc(GoodOidcToken),
     {ok, #{session_pid := Pid2}} = watts:login_with_access_token(GoodAccessToken,
-                                                               Issuer),
+                                                                 Issuer),
 
     ok = watts:logout(Pid1),
     ok = watts:logout(Pid2),
@@ -91,9 +91,11 @@ start_meck() ->
                                {ok, #{sub => <<"sub">>}}
                        end,
     ProviderInfo = fun(_Pid) ->
-                             {ok, #{description => <<"info">>,
-                                     ready => false,
-                                     issuer => ?ISSUER_URL}}
+                             {ok, #{
+                                id => <<"ID1">>,
+                                description => <<"info">>,
+                                ready => false,
+                                issuer => ?ISSUER_URL}}
                      end,
     FindProvider = fun(_Issuer) ->
                            {ok, provider_pid}
