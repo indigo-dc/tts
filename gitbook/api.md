@@ -46,7 +46,7 @@ Authorization is needed for this request. Please refer to `Authorization Header`
 An example request is:
 
 ```
-GET /api/v2/service HTTP/1.1
+GET /api/v2/iam/service HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
@@ -87,12 +87,12 @@ Important for requesting a credential is the `id`.
 
 ## List Credentials
 Retrieving the list of credentials currently owned by the user is done by performing a
-GET request at the `/api/v2/credenial` path.
+GET request at the `/api/v2/<provider id>/credential` path.
 Authorization is needed for this request, please refer to `Authorization Header` for details.
 
 An example request is:
 ```
-GET /api/v2/credential HTTP/1.1
+GET /api/v2/iam/credential HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
@@ -123,7 +123,7 @@ revoking a credential, only the id of the credential, `cred_id`,  is needed.
 
 ## Request Credential
 The creation of the credential is triggered by a POST request to
-`/api/v2/credential`, with the `service_id` as value in a `json` object.
+`/api/v2/<provider id>/credential`, with the `service_id` as value in a `json` object.
 Authorization is needed for this request, please refer to the `Authorization Header` for details.
 It is important to include the *Content-Type* header with the value `application/json`, else
 the request will fail with a *BAD REQUEST*.
@@ -140,7 +140,7 @@ of the following is true:
 
 An example would be:
 ```
-POST /api/v2/credential HTTP/1.1
+POST /api/v2/iam/credential HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
@@ -209,12 +209,12 @@ The response of WaTTS is a redirection:
 HTTP/1.1 303 See Other
 content-length: 0
 content-type: application/json
-location: /api/v2/credential_data/rwwwNYX-LaBL0dvZ7wq44g
+location: /api/v2/iam/credential_data/rwwwNYX-LaBL0dvZ7wq44g
 ```
 This is a redirection to the location of the actual credential data.
 Following the redirection, the credential data are returned by WaTTS:
 ```
-GET /api/v2/credential_data/rwwwNYX-LaBL0dvZ7wq44g HTTP/1.1
+GET /api/v2/iam/credential_data/rwwwNYX-LaBL0dvZ7wq44g HTTP/1.1
 Host: localhost
 Accept: */*
 ```
@@ -301,12 +301,12 @@ The meaning of these entries depend on the service/plugin being used.
 
 ## Revoke Credential
 To revoke a credential, a DELETE request for that credential is needed. The path of a credential is
-`/api/v2/credential/<credential id>`.
+`/api/v2/<provider id>/credential/<credential id>`.
 Authorization is needed for this request, please refer to `Authorization Header` for details.
 
 A revocation of a credential might look like:
 ```
-DELETE /api/v2/credential/qO10bfakPev2sbW5NWJuCdFKhzG4FmqV HTTP/1.1
+DELETE /api/v2/iam/credential/qO10bfakPev2sbW5NWJuCdFKhzG4FmqV HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
