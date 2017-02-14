@@ -50,7 +50,6 @@ GET /api/v2/iam/service HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
-X-OpenId-Connect-Issuer: https://provider.example.com/
 ```
 And the response is similar to:
 ```
@@ -96,7 +95,6 @@ GET /api/v2/iam/credential HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
-X-OpenId-Connect-Issuer: https://provider.example.com
 ```
 The corresponding response might be:
 ```
@@ -144,7 +142,6 @@ POST /api/v2/iam/credential HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
-X-OpenId-Connect-Issuer: https://provider.example.com
 Content-Type: application/json
 Content-Length: 24
 
@@ -310,7 +307,6 @@ DELETE /api/v2/iam/credential/qO10bfakPev2sbW5NWJuCdFKhzG4FmqV HTTP/1.1
 Host: localhost
 Accept: */*
 Authorization: Bearer ya29.[...]MUchM
-X-OpenId-Connect-Issuer: https://provider.example.com
 ```
 And the result would be a status response.
 ```
