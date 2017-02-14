@@ -98,6 +98,7 @@ init_watts() ->
                {ok, V} -> V
            end,
     ok = ?SETCONFIG(vsn, Vsn),
+    lager:info("Init: WaTTS version ~p", [Vsn]),
     ok = enforce_security(),
     lager:debug("Init: config = ~p", [?ALLCONFIG]),
     ok.
@@ -111,7 +112,23 @@ enforce_security() ->
                    _ ->
                        Hostname0
                end,
+    case Hostname == Hostname0 of
+        false ->
+            lager:warning("Init: SSL is not configured; change hostname to ~p",
+                          [Hostname]);
+        true -> ok
+    end,
     ?SETCONFIG(hostname, Hostname),
+    Uid = list_to_integer(remove_newline(os:cmd("id -u"))),
+    User = remove_newline(os:cmd("id -un")),
+    ok = case (Uid == 0) or (User == "root") of
+             true ->
+                 lager:critical("Init: do not run WaTTS as root, stopping"),
+                 error;
+             false ->
+                 lager:info("Init: running as user ~p [~p]", [User, Uid]),
+                 ok
+         end,
     ok.
 
 
@@ -142,15 +159,15 @@ add_openid_provider() ->
 add_openid_provider([#{id := Id,
                        config_endpoint := ConfigEndpoint} = Config0 | T],
                     LocalEndpoint) ->
-        lager:debug("Init: adding provider ~p", [Id]),
     try
         Config = maps:remove(config_endpoint, Config0),
         {ok, _InternalId, _Pid} =
         oidcc:add_openid_provider(ConfigEndpoint, LocalEndpoint, Config),
+        lager:info("Init: added OpenId Connect provider ~p", [Id]),
         add_openid_provider(T, LocalEndpoint)
     catch Error:Reason ->
-            lager:critical("error occured OpenId Connect provider ~p: '~p' ~p",
-                           [Id, Error, Reason])
+            Msg = "Init: error occured OpenId Connect provider ~p: '~p' ~p",
+            lager:critical(Msg, [Id, Error, Reason])
     end;
 add_openid_provider([], _) ->
     ok.
@@ -221,6 +238,7 @@ start_web_interface() ->
                                           , [{env, [{dispatch, Dispatch}]}]
                                         );
         false ->
+            lager:warning("Init: listening only at 127.0.0.1"),
             {ok, _} = cowboy:start_http( http_handler
                                          , 100
                                          , [ {port, ListenPort},
@@ -259,3 +277,11 @@ stop() ->
     lager:info("Init: done"),
     lager:info("WaTTS ready"),
     stop(self()).
+
+remove_newline(List) ->
+    Filter = fun($\n) ->
+                     false;
+                (_) ->
+                     true
+             end,
+    lists:filter(Filter, List).
