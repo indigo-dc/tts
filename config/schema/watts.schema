@@ -71,6 +71,20 @@
           {datatype, {enum, [true, false]}}
           ]}.
 
+{translation, "watts.ssl",
+ fun(Conf) ->
+         SSL = cuttlefish:conf_get("ssl", Conf),
+         HostName = cuttlefish:conf_get("hostname", Conf),
+         Localhost = (HostName == "localhost"),
+         case SSL or Localhost of
+             true ->
+                 SSL;
+             false ->
+                 Msg = "only localhost supports non SSL setup",
+                 cuttlefish:invalid(Msg)
+         end
+ end}.
+
 
 %% @doc The CA chain  file to use for ssl
 {mapping, "cachain_file", "watts.cachain_file", [
