@@ -24,7 +24,7 @@
        {ref,"6f3645afb43c7c57d61b54ef59aecab288ce1013"}},
   1},
  {<<"quickrand">>,{pkg,<<"quickrand">>,<<"1.5.4">>},1},
- {<<"ranch">>,{pkg,<<"ranch">>,<<"1.2.1">>},1},
+ {<<"ranch">>,{pkg,<<"ranch">>,<<"1.3.2">>},1},
  {<<"uuid">>,{pkg,<<"uuid_erl">>,<<"1.5.4">>},0}]}.
 [
 {pkg_hash,[
@@ -41,6 +41,6 @@
  {<<"oidcc">>, <<"D17F8B359AACF6F8D73167D382AB32F9D3E123E7A37122B861C9967C3CE05D58">>},
  {<<"oidcc_cowboy">>, <<"2707851A01F543993DD956B08485D23099F54EEAFBB7D522C1C357D81F99B1A2">>},
  {<<"quickrand">>, <<"47ADD4755CC5F209CBEFFD6F47C84061196CD7FAD99FD8FD12418EB0D06B939D">>},
- {<<"ranch">>, <<"A6FB992C10F2187B46FFD17CE398DDF8A54F691B81768F9EF5F461EA7E28C762">>},
+ {<<"ranch">>, <<"E4965A144DC9FBE70E5C077C65E73C57165416A901BD02EA899CFD95AA890986">>},
  {<<"uuid">>, <<"06240EFF3EAF013CC22274689B0C1FF6345645EE5D47A9E4ED7545EEB7698B23">>}]}
 ].
