@@ -150,10 +150,13 @@ start_database() ->
 
 add_openid_provider() ->
     lager:info("Init: adding openid provider"),
+    %% force only one try
+    application:set_env(oidcc, provider_max_tries, 1),
     LocalEndpoint = local_endpoint(),
     lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
+    wait_and_log_provider_results(),
     ok.
 
 add_openid_provider([#{id := Id,
@@ -171,6 +174,36 @@ add_openid_provider([#{id := Id,
     end;
 add_openid_provider([], _) ->
     ok.
+
+
+wait_and_log_provider_results() ->
+    {ok, List} = oidcc:get_openid_provider_list(),
+    ok = wait_and_log_provider_results(List, []),
+    ok.
+
+wait_and_log_provider_results([], []) ->
+    ok;
+wait_and_log_provider_results([], List) ->
+    timer:sleep(200),
+    wait_and_log_provider_results(List, []);
+wait_and_log_provider_results([{Id, Pid} = H | T], List) ->
+    {ok, #{ready := Ready}} = oidcc_openid_provider:get_config(Pid),
+    {ok, Error} = oidcc_openid_provider:get_error(Pid),
+    IsError = (Error /= undefined),
+    NewList =
+        case {Ready, IsError} of
+            {true, _} ->
+                lager:info("Init: OpenId Connect provider ~p ready", [Id]),
+                List;
+            {_, true} ->
+                lager:warning("Init: OpenId Connect provider ~p has error ~p",
+                              [Id, Error]),
+                List;
+            _ ->
+                [ H | List ]
+        end,
+    wait_and_log_provider_results(T, NewList).
+
 
 
 add_services() ->

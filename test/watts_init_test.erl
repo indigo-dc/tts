@@ -61,6 +61,21 @@ start_meck() ->
     AddProvider = fun(_, _, _) ->
                           {ok, id, pid}
                   end,
+    GetProviderList = fun() ->
+                          {ok, [{id1, pid1}, {id2, pid2}]}
+                  end,
+    GetProviderConf = fun(Pid) ->
+                              case Pid of
+                                  pid1 -> {ok, #{ready => true}};
+                                  _ -> {ok, #{ready => false}}
+                              end
+                      end,
+    GetProviderError = fun(Pid) ->
+                               case Pid of
+                                   pid1 -> {ok, undefined};
+                                   _ -> {ok, {error, something}}
+                               end
+                       end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(watts_data_sqlite, reconfigure, Reconfigure),
     ok = meck:expect(watts_data_sqlite, is_ready, Reconfigure),
@@ -68,6 +83,9 @@ start_meck() ->
     ok = meck:expect(watts_service, update_params, UpdateParams),
     ok = meck:expect(oidcc_client, register, RegisterClient),
     ok = meck:expect(oidcc, add_openid_provider, AddProvider),
+    ok = meck:expect(oidcc, get_openid_provider_list, GetProviderList),
+    ok = meck:expect(oidcc_openid_provider, get_config, GetProviderConf),
+    ok = meck:expect(oidcc_openid_provider, get_error, GetProviderError),
     ok = meck:expect(cowboy, start_http, StartHttp),
     ok = meck:expect(cowboy, start_https, StartHttp),
     {ok, {MeckModules}}.
