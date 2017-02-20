@@ -16,11 +16,13 @@ error_session_test() ->
 
 login_and_out_test() ->
     {ok, Meck} = start_meck(),
-    BadOidcToken = #{},
-    GoodOidcToken = #{id => #{claims => #{sub => <<"sub">>, iss => <<"iss">>}}},
-    BadAccessToken = "token",
-    GoodAccessToken = <<"accesstoken">>,
     Issuer = ?ISSUER_URL,
+    GoodAccessToken = <<"accesstoken">>,
+    BadAccessToken = "token",
+    BadOidcToken = #{},
+    GoodOidcToken = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
+                      access => #{token => GoodAccessToken}
+                     },
     {error, bad_token} = watts:login_with_oidcc(BadOidcToken),
     {error, bad_token} = watts:login_with_access_token(BadAccessToken, Issuer),
     {ok, #{session_pid := Pid1}} = watts:login_with_oidcc(GoodOidcToken),
@@ -87,7 +89,7 @@ start_meck() ->
                              {ok, [ {<<"id">>, pid1} ]}
                      end,
 
-    RetrieveUserInfo = fun(_, _) ->
+    RetrieveUserInfo = fun(_, _, _) ->
                                {ok, #{sub => <<"sub">>}}
                        end,
     ProviderInfo = fun(_Pid) ->
