@@ -61,7 +61,7 @@
 {mapping, "oidc.retrieve_userinfo", "oidcc.retrieve_userinfo",
  [
   {datatype ,    {enum ,  [true, false]}},
-  {default, true},
+  {default, false},
   hidden
  ]
 }.
