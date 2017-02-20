@@ -40,7 +40,6 @@
          store_temp_cred/2,
          get_temp_cred/2,
 
-         start_full_debug/0,
          start_debug/1,
          start_debug/2,
          stop_debug/0
@@ -69,14 +68,7 @@ do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
     SessionId = watts_session:get_id(SessPid),
     try
-        Result = case Subject0 of
-                     undefined ->
-                         %% logged in with access token
-                         get_subject_update_token(Issuer, Token0);
-                     _ ->
-                         %% logged in via auth code flow
-                         {ok, Subject0, Token0}
-                 end,
+        Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
         case Result of
             {ok, Subject, Token} ->
                 update_session(Issuer, Subject, Token, SessPid);
@@ -226,20 +218,6 @@ get_temp_cred(Id, Session) ->
     {ok, UserId} = watts_session:get_userid(Session),
     watts_temp_cred:get_cred(Id, UserId).
 
-start_full_debug() ->
-    %debug these modules
-    ListOfModules = [ "watts_http",
-                      "watts_rest",
-                      "watts_oidc_client",
-                      "watts_rest_cred",
-                      "watts_session",
-                      "watts_session_mgr",
-                      "watts_service",
-                      "watts_plugin",
-                      "watts_plugin_runner"
-                    ],
-    start_debug(ListOfModules).
-
 start_debug(ListOfModules) ->
     %debug for an hour or 10000 messages
     Options = [{time, 3600000}, {msgs, 10000}],
@@ -251,7 +229,6 @@ start_debug(ListOfModules, Options) ->
 
 stop_debug() ->
     redbug:stop().
-
 
 update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, SessId} = watts_session:get_id(SessionPid),
@@ -269,31 +246,93 @@ update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, #{session_id => SessId, session_token => SessToken,
            session_pid => SessionPid}}.
 
-get_subject_update_token(Issuer, AccessToken)  ->
+
+retrieve_information(Issuer, Subject, Token, Session) ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
-    {ok, #{issuer := Issuer}} = oidcc:get_openid_provider_info(ProviderPid),
-    case
-        oidcc:retrieve_user_info(AccessToken, ProviderPid) of
+    {ok, #{issuer := Issuer} = Config} =
+        oidcc:get_openid_provider_info(ProviderPid),
+    UserInfoResult = oidcc:retrieve_user_info(Token, ProviderPid, Subject),
+    UserInfo = extract_userinfo(UserInfoResult),
+    TokenInfo = introspect_token_if_possible(Token, Config, Session),
+    create_information_result(UserInfo, TokenInfo, Token).
 
-        {ok, #{sub := Subject} = OidcInfo} ->
 
-            Token = #{access => #{token => AccessToken}, user_info => OidcInfo},
-            {ok, Subject, Token};
-        {error, {bad_status, #{body := Body}}} ->
-            case jsone:try_decode(Body, [{object_format, map},
-                                         {keys, attempt_atom}]) of
-                {ok, #{error := Reason, error_description:=Desc}, _} ->
-                    Msg = io_lib:format("~s: ~s", [binary_to_list(Reason),
-                                                  binary_to_list(Desc)]),
-                    {error, list_to_binary(Msg)};
-                {ok, #{error_description := Reason}, _} ->
-                    {error, Reason};
-                {ok, #{error := Reason}, _} ->
-                    {error, Reason};
-                _ ->
-                    {error,  Body}
-            end
-    end.
+extract_userinfo({ok, #{sub := Subject} = OidcInfo}) ->
+    {ok, Subject, OidcInfo};
+extract_userinfo({error, {bad_status, #{body := Body}}}) ->
+    case jsone:try_decode(Body, [{object_format, map},
+                                 {keys, attempt_atom}]) of
+        {ok, #{error := Reason, error_description:=Desc}, _} ->
+            Msg = io_lib:format("~s: ~s", [binary_to_list(Reason),
+                                           binary_to_list(Desc)]),
+            {error, list_to_binary(Msg)};
+        {ok, #{error_description := Reason}, _} ->
+            {error, Reason};
+        {ok, #{error := Reason}, _} ->
+            {error, Reason};
+        _ ->
+            {error,  Body}
+    end;
+extract_userinfo({error, Reason}) ->
+    {error, Reason};
+extract_userinfo(Unknown) ->
+    {error, io_lib:format("unknown result: ~p", [Unknown])}.
+
+introspect_token_if_possible(Token, #{introspection_endpoint := _,
+                                      id := Id} = Config, Session) ->
+    case oidcc:introspect_token(Token, Config) of
+        {ok, #{active := true} = TokenInfo} ->
+            lager:debug("SESS ~p: Token Introspection ~p", [Session,
+                                                            TokenInfo]),
+            {ok, TokenInfo};
+        {ok, #{active := _} = TokenInfo} ->
+            lager:warning("SESS ~p: Token Introspection ~p not active",
+                          [Session, TokenInfo]),
+            {error, token_not_active};
+        {error, {bad_status, #{status := 403}}} ->
+            lager:info("SESS~p provider ~p: token introspection denied",
+                          [Session, Id]);
+        {error, Reason} ->
+            lager:warning("SESS~p error at token introspection: ~p", [Session,
+                                                                      Reason]),
+            {ok, #{}}
+    end ;
+introspect_token_if_possible(_, #{id := Id}, Session) ->
+    lager:debug("SESS~p provider ~p does not support token introspection",
+               [Session, Id]),
+    {ok, #{}}.
+
+
+
+create_information_result({ok, Subject, OidcInfo}, TokenResult, TokenMap)
+  when is_map(TokenMap) ->
+    TokenInfo =
+        case TokenResult of
+            {ok, Info} ->
+                Info;
+            {error, _} ->
+                #{}
+        end,
+    Update = #{user_info => OidcInfo, token_info => TokenInfo},
+    {ok, Subject, maps:merge(TokenMap, Update)};
+create_information_result({ok, Subject, OidcInfo}, TokenResult, AccessToken)
+  when is_binary(AccessToken) ->
+    TokenInfo =
+        case TokenResult of
+            {ok, Info} ->
+                Info;
+            {error, _Error} ->
+                #{}
+        end,
+    TokenMap = #{access_token => #{token => AccessToken},
+                 user_info => OidcInfo, token_info => TokenInfo},
+    {ok, Subject, TokenMap};
+create_information_result({error, Reason} , _, _) ->
+    {error, Reason};
+create_information_result(_, {error, Reason}, _) ->
+    {error, Reason}.
+
+
 
 get_user_msg(#{user_msg := Msg}) when is_list(Msg) ->
     list_to_binary(Msg);

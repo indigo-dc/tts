@@ -6,6 +6,7 @@
          update_id_token/2,
          update_access_token/2,
          update_id_info/2,
+         update_token_info/2,
          return/2
         ]).
 
@@ -15,7 +16,8 @@
           id_token = #{},
           id_info = #{},
           access_token = #{},
-          plugin_info = #{}
+          plugin_info = #{},
+          token_info = #{}
          }).
 
 new() ->
@@ -65,6 +67,17 @@ update_id_info(IdInfo, #user_info{subject=Subject}=Info) ->
             {ok, update_plugin_info(Info#user_info{id_info=IdInfo})};
         undefined ->
             {ok, update_plugin_info(Info#user_info{id_info=IdInfo})};
+        _ ->
+            {error, not_match}
+    end.
+
+update_token_info(TokenInfo, #user_info{subject=Subject}=Info) ->
+    Sub = maps:get(sub, TokenInfo, undefined),
+    case Sub of
+        Subject ->
+            {ok, update_plugin_info(Info#user_info{token_info=TokenInfo})};
+        undefined ->
+            {ok, update_plugin_info(Info#user_info{token_info=TokenInfo})};
         _ ->
             {error, not_match}
     end.
@@ -128,13 +141,19 @@ access_token(_) ->
 
 
 update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken,
+                              token_info=TokenInfo,
                               issuer=Issuer, subject=Subject} = UserInfo) ->
     RemoveClaims = [aud, exp, nbf, iat, jti, azp, kid, aud, auth_time, at_hash,
                     c_hash],
     ReducedClaims = maps:without(RemoveClaims, maps:get(claims, IdToken, #{})),
+    RemoveTokenInfo = [active, aud, sub, iss, client_id, token_type, exp, iat,
+                       nbf, jti],
+    ReducedTokenInfo = maps:without(RemoveTokenInfo, TokenInfo),
     IssSubUpdate = #{iss => Issuer, sub=> Subject},
-    PluginInfo = maps:merge( maps:merge(IdInfo, ReducedClaims), IssSubUpdate),
-    UserInfo#user_info{plugin_info=PluginInfo}.
+    PluginInfo1 = maps:merge(IdInfo, ReducedClaims),
+    PluginInfo2 = maps:merge(PluginInfo1, ReducedTokenInfo),
+    PluginInfo3 = maps:merge(PluginInfo2, IssSubUpdate),
+    UserInfo#user_info{plugin_info=PluginInfo3}.
 
 maybe_to_atom(Bin) ->
     try
