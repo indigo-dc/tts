@@ -178,6 +178,7 @@ handle_call({set_token, Token}, _From,
     IdInfo = maps:get(user_info, Token, undefined),
     IdToken = maps:get(id, Token, undefined),
     AccToken = maps:get(access, Token, undefined),
+    TokenInfo = maps:get(token_info, Token, undefined),
 
     Info1 =
         case IdToken of
@@ -204,7 +205,16 @@ handle_call({set_token, Token}, _From,
                                                                 Info2),
                 Inf3
         end,
-    {reply, ok, State#state{user_info=Info3}, MA};
+    Info4 =
+        case TokenInfo of
+            undefined ->
+                Info3;
+            _ ->
+                {ok, Inf4} = watts_userinfo:update_token_info(TokenInfo,
+                                                                Info3),
+                Inf4
+        end,
+    {reply, ok, State#state{user_info=Info4}, MA};
 handle_call({set_error, Error}, _From, #state{max_age=MA}=State) ->
     {reply, ok, State#state{error=Error}, MA};
 handle_call(get_error, _From, #state{max_age=MA, error=Error}=State) ->
