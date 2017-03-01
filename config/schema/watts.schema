@@ -163,8 +163,7 @@
           {default, false}
           ]}.
 
-%% @doc publish documentation at ./docs if a directory containing the docs
-%% is given
+%% @doc publish documentation at ./docs if enabled
 {mapping, "enable_docs", "watts.enable_docs", [
           {datatype ,    {enum ,  [true, false]}},
           {commented, true},
