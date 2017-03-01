@@ -21,7 +21,7 @@ update_iss_sub_test() ->
     Sub = <<"sub">>,
     {ok, Info} = watts_userinfo:new(),
     {ok, undefined, undefined} = watts_userinfo:return(issuer_subject, Info),
-    {ok, _} = watts_userinfo:update_iss_sub(Issuer, undefined, Info),
+    {error, bad_iss_sub} = watts_userinfo:update_iss_sub(Issuer, undefined, Info),
     {ok, Info2} = watts_userinfo:update_iss_sub(Issuer, Sub, Info),
     {ok, Issuer, Sub} = watts_userinfo:return(issuer_subject, Info2),
     {ok, Info2} = watts_userinfo:update_iss_sub(Issuer, Sub, Info2),
@@ -87,15 +87,15 @@ update_id_info_test() ->
     Sub = <<"sub">>,
     IdInfo1 = #{sub => Sub, name => Joe},
     IdInfo2 = #{sub => <<"s">>, name => Joe},
+    IdToken = #{claims => #{sub => Sub, iss => Iss}},
     {ok, Info1} = watts_userinfo:update_iss_sub(Iss, Sub, Info),
     {ok, Info2} = watts_userinfo:update_id_info(IdInfo1, Info1),
     {error, _} = watts_userinfo:update_id_info(IdInfo2, Info1),
 
     {ok, Joe} = watts_userinfo:return(display_name, Info2),
 
-    {ok, Info3} = watts_userinfo:update_id_info(IdInfo1, Info),
-    {ok, Info4} = watts_userinfo:update_id_info(IdInfo2, Info),
-    {error, not_set} = watts_userinfo:return(display_name, Info3),
-    {error, not_set} = watts_userinfo:return(display_name, Info4),
+    {error, not_match} = watts_userinfo:update_id_info(IdInfo2, Info),
+    {ok, Info3} = watts_userinfo:update_id_token(IdToken, Info),
+    {ok, <<"sub@iss">>} = watts_userinfo:return(display_name, Info3),
 
     ok.
