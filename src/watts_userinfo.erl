@@ -30,10 +30,21 @@ update_iss_sub(Issuer, Subject,
 update_iss_sub(undefined, Subject, #user_info{subject=Subject} = Info)
   when is_binary(Subject)->
     {ok, Info};
+update_iss_sub(Issuer, undefined, #user_info{issuer=Issuer} = Info)
+  when is_binary(Issuer)->
+    {ok, Info};
 update_iss_sub(Issuer, Subject,
                #user_info{issuer=undefined, subject=undefined} = Info)
   when is_binary(Issuer), is_binary(Subject)->
     {ok, update_plugin_info(Info#user_info{issuer=Issuer, subject=Subject})};
+update_iss_sub(undefined, Subject,
+               #user_info{subject=undefined} = Info)
+  when is_binary(Subject)->
+    {ok, update_plugin_info(Info#user_info{subject=Subject})};
+update_iss_sub(Issuer, undefined,
+               #user_info{subject=undefined} = Info)
+  when is_binary(Issuer)->
+    {ok, update_plugin_info(Info#user_info{issuer=Issuer})};
 update_iss_sub(_Issuer, _Subject, _Info) ->
     {error, bad_iss_sub}.
 
