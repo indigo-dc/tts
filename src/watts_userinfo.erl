@@ -23,6 +23,8 @@
 new() ->
     {ok, #user_info{}}.
 
+update_iss_sub(undefined, undefined, Info) ->
+    {ok, Info};
 update_iss_sub(Issuer, Subject,
                #user_info{issuer=Issuer, subject=Subject} = Info)
   when is_binary(Issuer), is_binary(Subject)->

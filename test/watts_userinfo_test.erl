@@ -21,7 +21,7 @@ update_iss_sub_test() ->
     Sub = <<"sub">>,
     {ok, Info} = watts_userinfo:new(),
     {ok, undefined, undefined} = watts_userinfo:return(issuer_subject, Info),
-    {error, _} = watts_userinfo:update_iss_sub(Issuer, undefined, Info),
+    {ok, _} = watts_userinfo:update_iss_sub(Issuer, undefined, Info),
     {ok, Info2} = watts_userinfo:update_iss_sub(Issuer, Sub, Info),
     {ok, Issuer, Sub} = watts_userinfo:return(issuer_subject, Info2),
     {ok, Info2} = watts_userinfo:update_iss_sub(Issuer, Sub, Info2),
