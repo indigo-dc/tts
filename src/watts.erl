@@ -292,11 +292,12 @@ introspect_token_if_possible(Token, #{introspection_endpoint := _,
             {error, token_not_active};
         {error, {bad_status, #{status := 403}}} ->
             lager:info("SESS~p provider ~p: token introspection denied",
-                          [Session, Id]);
+                          [Session, Id]),
+            {error, forbidden};
         {error, Reason} ->
             lager:warning("SESS~p error at token introspection: ~p", [Session,
                                                                       Reason]),
-            {ok, #{}}
+            {error, Reason}
     end ;
 introspect_token_if_possible(_, #{id := Id}, Session) ->
     lager:debug("SESS~p provider ~p does not support token introspection",
