@@ -237,9 +237,9 @@ update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, #{id := IssId}} = oidcc:get_openid_provider_info(Provider),
 
     ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
+    true = watts_session:is_logged_in(SessionPid),
     ok = watts_session:set_iss_id(IssId, SessionPid),
     ok = watts_session:set_token(Token, SessionPid),
-    true = watts_session:is_logged_in(SessionPid),
     {ok, DisplayName} = get_display_name_for(SessionPid),
     lager:info("SESS~p logged in as ~p [~p at ~p]",
                [SessId, DisplayName, Subject, Issuer]),
