@@ -236,17 +236,31 @@ start_web_interface() ->
     EpOidc = watts_http_util:relative_path("oidc"),
     EpStatic = watts_http_util:relative_path("static/[...]"),
     EpApi = watts_http_util:relative_path("api/[...]"),
-    Dispatch = cowboy_router:compile(
-                 [{'_', [{EpStatic, cowboy_static,
-                          {priv_dir, ?APPLICATION, "http_static"}
-                         },
-                         {EpApi, watts_rest, []},
-                         {EpMain, cowboy_static,
-                          {priv_file, ?APPLICATION, "http_static/index.html"}},
-                         {EpOidc, oidcc_cowboy, []}
-                        ]
-                  }]
-                ),
+
+    BaseDispatchList = [{EpStatic, cowboy_static,
+                         {priv_dir, ?APPLICATION, "http_static"}
+                        },
+                        {EpApi, watts_rest, []},
+                        {EpMain, cowboy_static,
+                         {priv_file, ?APPLICATION, "http_static/index.html"}},
+                        {EpOidc, oidcc_cowboy, []}
+                       ],
+
+    %% the documentation
+    EpDocsIndex = watts_http_util:relative_path("docs/"),
+    EpDocs = watts_http_util:relative_path("docs/[...]"),
+    EnableDocs = ?CONFIG(enable_docs),
+    DispatchList = case EnableDocs of
+                       false ->
+                           BaseDispatchList;
+                       _ ->
+                           [ {EpDocsIndex, cowboy_static,
+                              {priv_file, ?APPLICATION, "docs/index.html"}},
+                             {EpDocs, cowboy_static,
+                              {priv_dir, ?APPLICATION, "docs"} }
+                           ] ++ BaseDispatchList
+                   end,
+    Dispatch = cowboy_router:compile([{'_', DispatchList}]),
     SSL = ?CONFIG(ssl),
     ListenPort = ?CONFIG(listen_port),
     case SSL of

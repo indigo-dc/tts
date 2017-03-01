@@ -1,0 +1,366 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>User Guide · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="admin.html" />
+    
+    
+    <link rel="prev" href="./" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.2" data-path="user.html">
+            
+                <a href="user.html">
+            
+                    
+                    User Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="admin.html">
+            
+                <a href="admin.html">
+            
+                    
+                    Deployment And Administration Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="config.html">
+            
+                <a href="config.html">
+            
+                    
+                    Configuration Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="developer.html">
+            
+                <a href="developer.html">
+            
+                    
+                    Developer Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="api.html">
+            
+                <a href="api.html">
+            
+                    
+                    REST Api
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="service_ref_card.html">
+            
+                <a href="service_ref_card.html">
+            
+                    
+                    WaTTS - Service Reference Card
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >User Guide</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="user-guide">User Guide</h1>
+<p>Using the web interface of WaTTS is quite simple. Basically, the only thing
+one needs to do is to press certain buttons and follow the instructions.</p>
+<h2 id="login-and-logout">Login and Logout</h2>
+<h3 id="login">Login</h3>
+<p>Open the Token Translation Service web-interface in the browser. You will see a
+page which contains a drop down field and a <code>Login</code> button.</p>
+<p>Select your OpenId Connect Provider in the drop down field and press the <code>Login</code>
+button. This will redirect the browser to the selected Provider.</p>
+<p>Login into your account at the provider page. If this is the first time
+connecting to the WaTTS instance, you will be asked for permission to
+forward the information to WaTTS.
+After logging in at your provider, you will be sent back to WaTTS and
+automatically recognized as a user.</p>
+<p>If you see the login page again, your login has failed or you are not allowed to use
+the WaTTS.</p>
+<h3 id="logout">Logout</h3>
+<!-- After using WaTTS you should logout, so that no one else can create credentials using -->
+<!-- your computer. -->
+<p>For security considerations, one should always logout from the WaTTS when not used.
+To logout, simply press the <code>Logout</code> button at the lower border of the page.
+After a successful logout you will see the login page again.</p>
+<h2 id="creating-and-revoking-credentials">Creating And Revoking Credentials</h2>
+<p>Once logged in, you will see one or two tables:</p>
+<ul>
+<li><em>Services table</em>, which is always visible.</li>
+<li><em>Credentials table</em>, which may be hidden, if you have no credentials.</li>
+</ul>
+<h3 id="creating-credentials">Creating Credentials</h3>
+<p>In the <em>Services table</em> each line represents a service for which one can request a
+<a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a>.
+You request a <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> by simply pressing the <code>Request</code> button. The service might
+be disabled for you, then the service is grey and the <code>Request</code> button disabled.</p>
+<p>If the <code>Advanced</code> button is enabled it means that the service accepts parameter.
+Pressing the button opens a dialog where information can be entered. If there are
+more than one configuration possibility, arrows are shown to change the configuration.
+One example using the <code>Advanced</code> button is deployment of ssh keys, where you can paste your
+public key when using the <code>Advanced</code> button.</p>
+<p>If the request was successful, a dialog will pop up with all the relevant information
+of the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> and how to use it.
+Once you close this dialog, all information is gone! WaTTS does <strong>not</strong> store
+the credentials. It only stores a reference to the credentials you created so
+that they can be removed, if needed.</p>
+<h3 id="revoking-credentials">Revoking Credentials</h3>
+<p>If you have created credentials before, you will see the <em>Credentials table</em>.
+Each line represents a <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a>.
+By simply clicking the <code>Revoke</code> button, WaTTS revokes your <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> and
+removes it from the list of credentials.</p>
+<h2 id="additional-information">Additional Information</h2>
+<h3 id="show-access-token">Show Access Token</h3>
+<p>After pressing the <code>Show Access Token</code> button a dialog appears. This dialog
+contains the so-called OpenId Connect AccessToken, which can be used to act upon
+your behalf. It is e.g. used to request credentials using the REST API.</p>
+<p>In general, there is no need to use it, unless doing development work.</p>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="./" class="navigation navigation-prev " aria-label="Previous page: Introduction">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="admin.html" class="navigation navigation-next " aria-label="Next page: Deployment And Administration Guide">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"User Guide","level":"1.2","depth":1,"next":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"previous":{"title":"Introduction","level":"1.1","depth":1,"path":"README.md","ref":"README.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"user.md","mtime":"2017-02-08T09:25:59.814Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-01T08:44:13.957Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

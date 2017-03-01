@@ -163,6 +163,13 @@
           {default, false}
           ]}.
 
+%% @doc publish documentation at ./docs if enabled
+{mapping, "enable_docs", "watts.enable_docs", [
+          {datatype ,    {enum ,  [true, false]}},
+          {commented, true},
+          {default, false}
+          ]}.
+
 {mapping, "erlang.smp", "vm_args.-smp", [
         {default , enable},
         {datatype ,    {enum ,    [enable , auto , disable]}},
