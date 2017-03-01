@@ -24,13 +24,21 @@ new() ->
     {ok, #user_info{}}.
 
 update_iss_sub(Issuer, Subject,
-               #user_info{issuer=Issuer, subject=Subject} = Info)
-  when is_binary(Issuer), is_binary(Subject)->
-    {ok, Info};
-update_iss_sub(Issuer, Subject,
                #user_info{issuer=undefined, subject=undefined} = Info)
   when is_binary(Issuer), is_binary(Subject)->
     {ok, update_plugin_info(Info#user_info{issuer=Issuer, subject=Subject})};
+update_iss_sub(Issuer, Subject,
+               #user_info{issuer=Issuer, subject=Subject} = Info)
+  when is_binary(Issuer), is_binary(Subject)->
+    {ok, Info};
+update_iss_sub(undefined, Subject, #user_info{subject=Subject} = Info)
+  when is_binary(Subject)->
+    {ok, Info};
+update_iss_sub(Issuer, undefined, #user_info{issuer=Issuer} = Info)
+  when is_binary(Issuer)->
+    {ok, Info};
+update_iss_sub(undefined, undefined, Info) ->
+    {ok, Info};
 update_iss_sub(_Issuer, _Subject, _Info) ->
     {error, bad_iss_sub}.
 
@@ -60,25 +68,23 @@ update_access_token(#{token := Token} = AccessToken,
             {error, not_match}
     end.
 
-update_id_info(IdInfo, #user_info{subject=Subject}=Info) ->
+update_id_info(IdInfo, Info) ->
     Sub = maps:get(sub, IdInfo),
-    case Subject of
-        Sub ->
-            {ok, update_plugin_info(Info#user_info{id_info=IdInfo})};
-        undefined ->
-            {ok, update_plugin_info(Info#user_info{id_info=IdInfo})};
-        _ ->
+    Iss = undefined,
+    case update_iss_sub(Iss, Sub, Info) of
+        {ok, NewInfo} ->
+            {ok, update_plugin_info(NewInfo#user_info{id_info=IdInfo})};
+        {error, bad_iss_sub} ->
             {error, not_match}
     end.
 
-update_token_info(TokenInfo, #user_info{subject=Subject}=Info) ->
+update_token_info(TokenInfo, Info) ->
     Sub = maps:get(sub, TokenInfo, undefined),
-    case Sub of
-        Subject ->
-            {ok, update_plugin_info(Info#user_info{token_info=TokenInfo})};
-        undefined ->
-            {ok, update_plugin_info(Info#user_info{token_info=TokenInfo})};
-        _ ->
+    Iss = undefined,
+    case update_iss_sub(Iss, Sub, Info) of
+        {ok, NewInfo} ->
+            {ok, update_plugin_info(NewInfo#user_info{token_info=TokenInfo})};
+        {error, bad_iss_sub} ->
             {error, not_match}
     end.
 
