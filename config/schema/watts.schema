@@ -163,6 +163,14 @@
           {default, false}
           ]}.
 
+%% @doc publish documentation at ./docs if a directory containing the docs
+%% is given
+{mapping, "docs_path", "watts.docs_path", [
+          {datatype,  [string, {atom, undefined}]},
+          {commented, "/var/lib/watts/docs/"},
+          {default, undefined}
+          ]}.
+
 {mapping, "erlang.smp", "vm_args.-smp", [
         {default , enable},
         {datatype ,    {enum ,    [enable , auto , disable]}},
