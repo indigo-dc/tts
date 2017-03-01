@@ -5,6 +5,7 @@ relx
 deps/
 _rel/
 _build/
+_book/
 doc/
 .erlang.mk/
 .tts.plt
