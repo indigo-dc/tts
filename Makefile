@@ -20,6 +20,7 @@ clean: check
 	rm -rf _build/default/plugins
 	rm -rf _build/default/bin
 	rm -rf _build/test
+	rm -rf _book
 
 eunit: check
 	$(REBAR) do eunit,cover -v
@@ -39,6 +40,12 @@ elvis: check
 
 compile: check
 	$(REBAR) compile
+
+docs:
+	gitbook build
+	rm -rf priv/docs
+	mkdir -p priv/docs
+	cp -r _book/* priv/docs
 
 rel: check
 	cat ./config/vars.config > ./config/vars_gen.config
