@@ -90,12 +90,24 @@
  ]
 }.
 
+%% @doc the path to the file containing all trusted root CAs
+%% this is usually on Debian/Ubunut the file
+%%    /etc/ssl/certs/ca-certificates.crt
+%% and on CentOs is is usually
+%%    /etc/ssl/certs/ca-bundle.crt
+%% These certificates are used to verify the certificate chain
+%% of the OpenID Connect provider.
 {mapping, "oidc.cacertfile", "oidcc.cacertfile",
  [
-  {datatype , string}
+  {datatype , string},
+  {commented, "path_to_trusted_cas_file"}
  ]
 }.
 
+%% @doc the number of allowed intermediate certificates
+%% between the root CA and the certificate of the
+%% OpenID Connect Provider. If a verification of a provider
+%% fails increasing this slightly may fix the issue.
 {mapping, "oidc.cert_depth", "oidcc.cert_depth",
  [
   {datatype , integer},

@@ -10,6 +10,13 @@ WaTTS creates credentials for these services by using plugins. Plugins are scrip
 that can be adapted by a site-administrator.
 
 ## Quickstart
+WaTTS has nightly builds for packages for
+[centos](https://jenkins.indigo-datacloud.eu:8080/job/tts-packaging/platform=bcentos7/) and
+[Ubuntu/Debian](https://jenkins.indigo-datacloud.eu:8080/job/tts-packaging/platform=bubuntu14/).
+Download and install the package on your system and start configuring and using it, following
+the [WaTTS Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details)
+
+## Quickstart Using Source
 WaTTS requires [Erlang](http://www.erlang.org/) OTP 18.1 or newer to run (due to a bug in the
 cover compiler, OTP 18.3 or newer is needed to run the tests). For configuration, WaTTS uses
 [cuttlefish](https://github.com/basho/cuttlefish), which needs to be installed in the Erlang
@@ -39,7 +46,9 @@ changing the configuration , execute:
 ```
 make run
 ```
-In browser, open local WaTTS instance on [localhost:8080](http://localhost:8080)
+In browser, open local WaTTS instance on [localhost:8080](http://localhost:8080).
+The documentation is at [localhost:8080/docs/](http://localhost:8080/docs/).
+
 
 In order to stop WaTTS, type the following in the console
 (the '.' at the end is important):
@@ -55,5 +64,6 @@ Modifying the configuration is described in the [Configuration Guide](https://in
 
 
 ## Documentation
-Further documentation for WaTTS can be found in the [WaTTS Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details)
+Further documentation for WaTTS can be found in the
+[WaTTS Documentation](https://www.gitbook.com/book/indigo-dc/token-translation-service/details)
 GitBook.
