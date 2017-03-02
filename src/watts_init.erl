@@ -247,16 +247,13 @@ start_web_interface() ->
                        ],
 
     %% the documentation
-    EpDocsIndex = watts_http_util:relative_path("docs/"),
     EpDocs = watts_http_util:relative_path("docs/[...]"),
     EnableDocs = ?CONFIG(enable_docs),
     DispatchList = case EnableDocs of
                        false ->
                            BaseDispatchList;
                        _ ->
-                           [ {EpDocsIndex, cowboy_static,
-                              {priv_file, ?APPLICATION, "docs/index.html"}},
-                             {EpDocs, cowboy_static,
+                           [ {EpDocs, cowboy_static,
                               {priv_dir, ?APPLICATION, "docs"} }
                            ] ++ BaseDispatchList
                    end,
