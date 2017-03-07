@@ -29,6 +29,7 @@ decodeService =
 decodeParam : Decoder Service.Param
 decodeParam =
     decode Service.Param
+        |> required "key" string
         |> required "name" string
         |> required "description" string
         |> required "type" string
