@@ -150,9 +150,9 @@ fulfills_paramset(Params, [#{key := Key, mandatory := Mandatory} | ParamSet]) ->
     case { lists:member(Key, Params), Mandatory }  of
         {true, _} ->
             fulfills_paramset(lists:delete(Key, Params), ParamSet);
-        {false, true} ->
-            fulfills_paramset(lists:delete(Key, Params), ParamSet);
         {false, false} ->
+            fulfills_paramset(lists:delete(Key, Params), ParamSet);
+        {false, true} ->
             false
     end.
 
