@@ -23,19 +23,18 @@ view service =
         advancedDisabled =
             serviceDisabled || not (Service.hasAdvanced service)
 
-        rowattrs =
+        serviceTitle =
             if service.authorized && (not service.enabled) then
-                [ disabled serviceDisabled
-                , title "Sorry, this service is disabled"
-                ]
+                [ title "Sorry, this service is disabled" ]
             else if service.authorized && service.limitReached then
-                [ disabled serviceDisabled
-                , title "The credential limit for this service is reached"
-                ]
+                [ title "The credential limit for this service is reached" ]
+            else if (not service.authorized) then
+                [ title service.tooltip ]
             else
-                [ disabled serviceDisabled
-                , title service.tooltip
-                ]
+                []
+
+        rowattrs =
+            [ disabled serviceDisabled ] ++ serviceTitle
 
         color =
             if serviceDisabled then
