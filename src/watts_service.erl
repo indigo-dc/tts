@@ -26,6 +26,7 @@
 -export([exists/1]).
 -export([is_enabled/1]).
 -export([is_allowed/2]).
+-export([are_params_valid/2]).
 -export([allows_same_state/1]).
 -export([get_credential_limit/1]).
 -export([get_queue/1]).
@@ -113,6 +114,50 @@ is_allowed(UserInfo, ServiceId) ->
 
 is_allowed(ServiceId, UserInfo, AuthzConf) ->
     watts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
+
+
+are_params_valid(Params, #{params := ParamSets})
+  when is_map(Params) ->
+    ParamList = maps:keys(Params),
+    ExistsMatching = fun(ParamSet, Current) ->
+                             Current or fulfills_paramset(ParamList, ParamSet)
+                     end,
+    lists:foldl(ExistsMatching, false, ParamSets);
+are_params_valid(Params, ServiceId)
+  when is_map(Params), is_binary(ServiceId) ->
+    case get_info(ServiceId) of
+        {ok, ServiceConfig} ->
+            are_params_valid(Params, ServiceConfig);
+        _ ->
+            false
+    end;
+are_params_valid(_Params, _Service) ->
+    false.
+
+
+fulfills_paramset([], []) ->
+    true;
+fulfills_paramset(_, []) ->
+    false;
+fulfills_paramset([], List) ->
+    OnlyNonMandatory = fun(#{mandatory := true}, _) ->
+                               false;
+                          (#{mandatory := false}, Cur) ->
+                                  Cur
+                          end,
+    lists:foldl(OnlyNonMandatory, true, List);
+fulfills_paramset(Params, [#{key := Key, mandatory := Mandatory} | ParamSet]) ->
+    case { lists:member(Key, Params), Mandatory }  of
+        {true, _} ->
+            fulfills_paramset(lists:delete(Key, Params), ParamSet);
+        {false, true} ->
+            fulfills_paramset(lists:delete(Key, Params), ParamSet);
+        {false, false} ->
+            false
+    end.
+
+
+
 
 
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
@@ -255,13 +300,14 @@ validate_call_parameter_sets([ H | T ], #{id := Id} = Info, _) ->
 
 
 validate_call_parameter_set(Set, Info) ->
-    validate_call_parameter_set(Set, Info, [], true).
-validate_call_parameter_set([], #{params := Params} = Info, ParamSet, Result)->
+    validate_call_parameter_set(Set, Info, [], [], true).
+validate_call_parameter_set([], #{params := Params} = Info, ParamSet,
+                            _Keys, Result)->
     NewParams = [ParamSet | Params ],
     NewInfo = maps:put(params, NewParams, Info),
     {Result, NewInfo};
-validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Current)
-  when is_map(Param) ->
+validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Keys,
+                            Current) when is_map(Param) ->
     RequiredKeys = [description, name, key, type],
     MissingKeys = RequiredKeys -- maps:keys(Param),
     case MissingKeys of
@@ -271,24 +317,28 @@ validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Current)
                description := Desc,
                type:= Type} = Param,
             SpaceMatch = binary:match(Key, <<" ">>),
-            {Result, NewParamSet}=validate_call_parameter(Key, SpaceMatch, Name,
+            KeyExists = lists:member(Key, Keys),
+            {Result, NewParamSet}=validate_call_parameter(Key, SpaceMatch,
+                                                          KeyExists, Name,
                                                           Desc, Type, Param, Id,
                                                           ParamSet),
-            validate_call_parameter_set(T, Info, NewParamSet,
+            validate_call_parameter_set(T, Info, NewParamSet, Keys,
                                         Current and Result);
         _ ->
             EMsg = "service ~p: request parameter ~p is missing keys ~p",
             lager:error(EMsg, [Id, Param, MissingKeys]),
-            validate_call_parameter_set(T, Info, ParamSet, false)
+            validate_call_parameter_set(T, Info, ParamSet, Keys, false)
     end;
-validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet, _Current) ->
+validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet,
+                            Keys, _Current) ->
     EMsg = "service ~p: bad request parameter ~p (from plugin)",
     lager:error(EMsg, [Id, H]),
-    validate_call_parameter_set(T, Info, ParamSet, false).
+    validate_call_parameter_set(T, Info, ParamSet, Keys, false).
 
 
-validate_call_parameter(Key, nomatch, Name, Desc, Type, Param, Id, ParamSet)
-  when is_binary(Key), is_binary(Name), is_binary(Desc) ->
+validate_call_parameter(Key, nomatch, false, Name, Desc, Type, Param, Id,
+                        ParamSet) when is_binary(Key), is_binary(Name),
+                                       is_binary(Desc) ->
     EMsg = "service ~p: parameter ~p: bad type ~p (from plugin)",
     WMsg = "service ~p: parameter ~p:bad mandatory value ~p, using false",
     Mdtory = maps:get(mandatory, Param, false),
@@ -314,11 +364,15 @@ validate_call_parameter(Key, nomatch, Name, Desc, Type, Param, Id, ParamSet)
                          } | ParamSet]}
         end,
     {Result, NewParamSet };
-validate_call_parameter(Key, {_, _},  _N, _D, _T, Param, Id, ParamSet) ->
+validate_call_parameter(Key, {_, _}, false,  _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: key ~p of parameter contains spaces: ~p",
     lager:error(EMsg, [Id, Key, Param]),
     {false, ParamSet};
-validate_call_parameter(_Key,  _,  _N, _D, _T, Param, Id, ParamSet) ->
+validate_call_parameter(Key, _, true,  _N, _D, _T, Param, Id, ParamSet) ->
+    EMsg = "service ~p: key ~p exists multiple times: ~p",
+    lager:error(EMsg, [Id, Key, Param]),
+    {false, ParamSet};
+validate_call_parameter(_,  nomatch, false,  _, _, _, Param, Id, ParamSet) ->
     EMsg = "service ~p: bad request parameter values ~p (not strings)",
     lager:error(EMsg, [Id, Param]),
     {false, ParamSet}.
