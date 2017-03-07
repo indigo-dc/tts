@@ -428,7 +428,7 @@ verify_content_type(_) ->
 verify_issuer(undefined) ->
     undefined;
 verify_issuer(Issuer) when is_binary(Issuer) ->
-    case oidcc:get_openid_provider_info(Issuer) of
+    case watts:get_openid_provider_info(Issuer) of
         {ok, #{issuer := IssuerUrl}} ->
             IssuerUrl;
         _ ->
@@ -541,7 +541,7 @@ is_bad_version(1, true) ->
     false;
 is_bad_version(_, true) ->
     true;
-is_bad_version(Version, _) when is_integer(Version) ->
+is_bad_version(Version, false) when is_integer(Version) ->
    (Version =< 0) or (Version > ?LATEST_VERSION);
 is_bad_version(_, _) ->
     true.

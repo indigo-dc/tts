@@ -25,7 +25,9 @@ advanced_init_test() ->
                       config_endpoint => <<"https://some.config">>,
                       description => <<"a provider">>,
                       id => <<"oidc1">>,
-                      scopes => [<<"openid">>]}],
+                      scopes => [<<"openid">>],
+                      disable_login => false
+                     }],
     ?SETCONFIG( hostname, "localhost"),
     ?SETCONFIG( ssl, true),
     ?SETCONFIG( cert_file, "some_cert"),

@@ -27,6 +27,7 @@
          does_temp_cred_exist/2,
 
          get_openid_provider_list/0,
+         get_openid_provider_info/1,
          get_service_list_for/1,
          get_credential_list_for/1,
          request_credential_for/4,
@@ -47,13 +48,13 @@
 
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
 = TokenMap) ->
-    do_login(Issuer, Subject, TokenMap);
+    do_login_if_issuer_enabled(Issuer, Subject, TokenMap);
 login_with_oidcc(_BadToken) ->
     {error, bad_token}.
 
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
                                                   is_binary(Issuer) ->
-    do_login(Issuer, undefined, AccessToken);
+    do_login_if_issuer_enabled(Issuer, undefined, AccessToken);
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
 
@@ -62,6 +63,17 @@ session_with_error(Msg) ->
     ok = watts_session:set_error(Msg, SessPid),
     false = watts_session:is_logged_in(SessPid),
     {ok, SessPid}.
+
+do_login_if_issuer_enabled(Issuer, Subject, Token) ->
+    {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+    {ok, #{issuer := Issuer, id := Id}} =
+        oidcc:get_openid_provider_info(ProviderPid),
+    case is_provider_disabled(Id) of
+        false ->
+            do_login(Issuer, Subject, Token);
+        true ->
+            {error, login_disabled}
+    end.
 
 
 do_login(Issuer, Subject0, Token0) ->
@@ -108,11 +120,37 @@ get_openid_provider_list() ->
                                issuer := Issuer
                               }} =
                             oidcc:get_openid_provider_info(Pid),
-                        [ #{ id => Id, desc => Desc, ready => Ready,
-                             issuer => Issuer } | List]
+                        case is_provider_disabled(Id) of
+                            true ->
+                                List;
+                            false ->
+                                [ #{ id => Id, desc => Desc, ready => Ready,
+                                     issuer => Issuer } | List]
+                        end
                 end,
     OpList = lists:reverse(lists:foldl(ExtFields, [], OidcProvList)),
     {ok, OpList}.
+
+get_openid_provider_info(ProviderId) ->
+    case is_provider_disabled(ProviderId) of
+        false ->
+            oidcc:get_openid_provider_info(ProviderId);
+        true ->
+            {error, login_disabled}
+    end.
+
+
+is_provider_disabled(ProviderId) ->
+    ProviderList = ?CONFIG(provider_list),
+    ProviderDisabled = fun(#{id := Id, disable_login := Disable}, Current) ->
+                               case Id == ProviderId of
+                                   true ->
+                                       Disable;
+                                   false ->
+                                       Current
+                               end
+                       end,
+    lists:foldl(ProviderDisabled, false, ProviderList).
 
 
 get_service_list_for(Session) ->

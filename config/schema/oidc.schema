@@ -25,6 +25,10 @@
           {datatype, string}
           ]}.
 
+%% @doc wether the provider won't be used for login
+{mapping, "openid.$id.disable_login", "watts.provider_list.e", [
+          {datatype, {enum, [true, false]}}
+          ]}.
 
 {translation, "watts.provider_list",
     fun(Conf) ->
@@ -53,12 +57,17 @@
                                   Tokens = string:tokens("openid.$id.request_scopes", "."),
                                   cuttlefish_variable:is_fuzzy_match(K, Tokens)
                           end, Conf),
-
+            DisableList = lists:filter(
+                          fun({K, _V}) ->
+                                  Tokens = string:tokens("openid.$id.disable_login", "."),
+                                  cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                          end, Conf),
             Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
             CIds = [ {Id, CId} || {[_, Id, _], CId} <- CIdList ],
             Secrets = [ {Id, Sec} || {[_, Id, _], Sec} <- SecretList ],
             Configs = [ {Id, Conf} || {[_, Id, _], Conf} <- ConfigList ],
             Scopes = [ {Id, Scpe} || {[_, Id, _], Scpe} <- ScopeList ],
+            Disables = [ {Id, Hide} || {[_, Id, _], Hide} <- DisableList ],
 
             CreateSetting =
                 fun({Id, Desc}, Result) ->
@@ -91,6 +100,13 @@
                                                       trim_all]);
                                     _ -> undefined
                                 end,
+                        Disable = case lists:keyfind(Id, 1, Disables) of
+                                      {Id, true} ->
+                                          true;
+                                      {Id, "true"} ->
+                                          true;
+                                      _ -> false
+                                  end,
                         case (ClientId == undefined) or (Secret == undefined) or
                             (Config == undefined) or (Scope == undefined) or
                             (Desc == undefined) of
@@ -105,7 +121,9 @@
                                      client_id => ClientId,
                                      client_secret => Secret,
                                      config_endpoint => Config,
-                                     request_scopes => Scope },
+                                     request_scopes => Scope,
+                                     disable_login => Disable
+                                   },
                         [ Setting | Result]
                 end,
             lists:foldl(CreateSetting, [], Descs)
