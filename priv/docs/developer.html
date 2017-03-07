@@ -317,7 +317,7 @@ can be tracked. All entries are mandatory.</p>
 <h4 id="config-parameter-confparams">Config Parameter (conf_params)</h4>
 <p>Each config parameter consists of an <code>json</code> object with three key-value pairs:</p>
 <ul>
-<li><em>name</em>: the name of the parameter, MUST consists of only [a-zA-Z0-0_]</li>
+<li><em>name</em>: the name of the parameter, MUST consists of only [a-z0-9_]</li>
 <li><em>type</em>: the datatype of the parameter, currently supported are <code>boolean</code> and <code>string</code></li>
 <li><em>default</em>: the default value to use if not configured, please ensure safe defaults</li>
 </ul>
@@ -331,7 +331,7 @@ set exists. The <code>Request</code> button is enabled if either the empty set e
 or a set exists with no mandatory parameters.</p>
 <p>Each entry in a set is described with five key-value pairs:</p>
 <ul>
-<li><em>key</em>: a key used to pass the value, this is also the key to lookup the information when performing a request.</li>
+<li><em>key</em>: a key used to pass the value, this is also the key to lookup the information when performing a request, MUST consist only of [a-z0-9_].</li>
 <li><em>name</em>: a short nice name, displayed to the user</li>
 <li><em>description</em>: a longer description, also shown to the user</li>
 <li><em>type</em>: the input type to use, currently only supported <code>textarea</code></li>
@@ -507,7 +507,7 @@ username/password for ssh">credential</a> state from its database.</p>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Developer Guide","level":"1.5","depth":1,"next":{"title":"REST Api","level":"1.6","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer.md","mtime":"2017-02-08T09:25:59.814Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-02T07:48:46.672Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Developer Guide","level":"1.5","depth":1,"next":{"title":"REST Api","level":"1.6","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer.md","mtime":"2017-03-07T11:00:24.259Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-07T11:48:29.228Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
