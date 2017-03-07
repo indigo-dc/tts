@@ -69,7 +69,7 @@ can be tracked. All entries are mandatory.
 
 #### Config Parameter (conf_params)
 Each config parameter consists of an `json` object with three key-value pairs:
- - *name*: the name of the parameter, MUST consists of only [a-zA-Z0-0_]
+ - *name*: the name of the parameter, MUST consists of only [a-z0-9_]
  - *type*: the datatype of the parameter, currently supported are `boolean` and `string`
  - *default*: the default value to use if not configured, please ensure safe defaults
 
@@ -85,7 +85,7 @@ or a set exists with no mandatory parameters.
 
 Each entry in a set is described with five key-value pairs:
 
-- *key*: a key used to pass the value, this is also the key to lookup the information when performing a request.
+- *key*: a key used to pass the value, this is also the key to lookup the information when performing a request, MUST consist only of [a-z0-9_].
 - *name*: a short nice name, displayed to the user
 - *description*: a longer description, also shown to the user
 - *type*: the input type to use, currently only supported `textarea`

@@ -84,6 +84,26 @@ params_test() ->
     ok = stop_meck(Meck),
     ok.
 
+param_validation_test() ->
+    {ok, Meck} = start_meck(),
+    Params1 = #{ <<"uuid">> => <<"value">>},
+    Params2 = #{ <<"name">> => <<"value">>},
+    Params3 = #{ <<"name">> => <<"value">>, <<"uuid">> => <<"other value">>},
+    Params4 = #{},
+    ParamsSet = [[#{key => <<"xyz">>, mandatory => false},
+                  #{key => <<"uuid">>, mandatory => true},
+                   #{key => <<"name">>, mandatory => false}]],
+    ?assertEqual(true, watts_service:are_params_valid(#{}, <<"id1">>)),
+    ?assertEqual(false, watts_service:are_params_valid(#{}, <<"unknown id">>)),
+    ?assertEqual(false, watts_service:are_params_valid(anything, #{params => [[]]})),
+    ?assertEqual(true, watts_service:are_params_valid(#{}, #{params => [[]]})),
+    ?assertEqual(false, watts_service:are_params_valid(Params1, #{params => [[]]})),
+    ?assertEqual(true, watts_service:are_params_valid(Params1, #{ params => ParamsSet})),
+    ?assertEqual(false, watts_service:are_params_valid(Params2, #{ params => ParamsSet})),
+    ?assertEqual(true, watts_service:are_params_valid(Params3, #{ params => ParamsSet})),
+    ?assertEqual(false, watts_service:are_params_valid(Params4, #{ params => ParamsSet})),
+    ok = stop_meck(Meck),
+    ok.
 
 
 start_meck() ->
@@ -99,7 +119,8 @@ start_meck() ->
                      enabled => true,
                      allow_same_state => false,
                      parallel_runner => 2,
-                     queue => <<"ab">>
+                     queue => <<"ab">>,
+                     params => [[]]
                     },
                    #{id => <<"id2">>,
                      authz => #{ allow => [{<<"other">>, <<"sub">>, any, true}],
@@ -154,6 +175,10 @@ start_meck() ->
                                                        #{name => <<"string_test">>,
                                                          type => <<"string">>,
                                                          default => <<"false string">>
+                                                        },
+                                                       #{name => <<"abcdefghijklmnopqrstuvwxyz_0123456789">>,
+                                                         type => <<"string">>,
+                                                         default => <<"some string">>
                                                         }
                                                       ],
                                        request_params => [

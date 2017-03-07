@@ -24,12 +24,14 @@ view service =
             serviceDisabled || not (Service.hasAdvanced service)
 
         rowattrs =
-            if service.authorized && serviceDisabled then
+            if service.authorized && (not service.enabled) then
                 [ disabled serviceDisabled
                 , title "Sorry, this service is disabled"
                 ]
-            else if service.authorized then
-                [ disabled serviceDisabled ]
+            else if service.authorized && service.limitReached then
+                [ disabled serviceDisabled
+                , title "The credential limit for this service is reached"
+                ]
             else
                 [ disabled serviceDisabled
                 , title service.tooltip
@@ -233,7 +235,7 @@ viewParam param =
                 [ if param.type_ == "text" then
                     input [ type_ "text", class "form-control" ] []
                   else if param.type_ == "textarea" then
-                    textarea [ class "form-control", placeholder param.description, onInput (Messages.AdvancedChange param.name) ] []
+                    textarea [ class "form-control", placeholder param.description, onInput (Messages.AdvancedChange param.key) ] []
                   else
                     input [ type_ "text", placeholder param.description, class "form-control" ] []
                 ]

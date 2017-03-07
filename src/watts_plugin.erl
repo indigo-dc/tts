@@ -73,8 +73,9 @@ request(ServiceId, UserInfo, Interface, Params) ->
     {ok, Count} = get_credential_count(UserId, ServiceId),
     Enabled = watts_service:is_enabled(ServiceId),
     Allowed = watts_service:is_allowed(UserInfo, ServiceId),
-    case { Allowed, Enabled, Count < Limit } of
-        {true, true, true} ->
+    ParamsValid = watts_service:are_params_valid(Params, ServiceId),
+    case { Allowed, Enabled, ParamsValid, Count < Limit } of
+        {true, true, true, true} ->
             {ok, Pid} = watts_plugin_sup:new_worker(),
             Config = #{ action => request,
                         queue => QueueName,
@@ -84,11 +85,13 @@ request(ServiceId, UserInfo, Interface, Params) ->
                         params => Params},
             Result = watts_plugin_runner:request_action(Config, Pid),
             handle_result(Result, Config);
-        {false, _, _} ->
+        {false, _, _, _} ->
             {error, user_not_allowed};
-        {true, false, _} ->
+        {true, false, _, _} ->
             {error, service_disabled};
-        {true, true, false} ->
+        {true, true, false, _} ->
+            {error, invalid_params};
+        {true, true, true, false} ->
             {error, limit_reached}
     end.
 

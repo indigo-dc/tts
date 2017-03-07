@@ -303,7 +303,7 @@ update msg model =
             , Cmd.none
             )
 
-        Messages.AdvancedChange name value ->
+        Messages.AdvancedChange key value ->
             let
                 jsonValue =
                     Json.string value
@@ -311,10 +311,10 @@ update msg model =
                 newParams =
                     case model.current_param of
                         Just params ->
-                            Dict.insert name jsonValue params
+                            Dict.insert key jsonValue params
 
                         Nothing ->
-                            Dict.insert name jsonValue Dict.empty
+                            Dict.insert key jsonValue Dict.empty
             in
                 ( { model
                     | current_param = Just newParams
