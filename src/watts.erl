@@ -156,6 +156,8 @@ request_credential_for(ServiceId, Session, Params, Interface) ->
                           <<"you are not allowed to use this service">>;
                       service_disabled ->
                           <<"the service you tried to use is disabled">>;
+                      invalid_params ->
+                          <<"invalid parameter have been passed">>;
                       _ ->
                           <<"unknown error occured, please contact the admin">>
                   end,
