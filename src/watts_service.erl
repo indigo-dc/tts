@@ -230,10 +230,10 @@ validate_conf_parameter([ Entry | T ], #{ id:= Id, cmd:= Cmd} =Info, Current) ->
     case MissingKeys of
         [] ->
             #{name := Name, default := Def, type := Type} = Entry,
-            SpaceMatch = binary:match(Name, <<" ">>),
+            ValidName = is_valid_key(Name),
             AtomType = to_conf_type(Type),
             Default = convert_to_type(Def, AtomType),
-            {Res, NewInfo} = update_conf_parameter(Name, SpaceMatch, Default,
+            {Res, NewInfo} = update_conf_parameter(Name, ValidName, Default,
                                                    AtomType, Info),
             validate_conf_parameter(T, NewInfo, Res and Current);
         _ ->
@@ -246,11 +246,11 @@ validate_conf_parameter(_, #{id := Id, cmd := Cmd} = Info, _) ->
     {false, Info}.
 
 
-update_conf_parameter(Name, _Match, _Default, unknown, #{id := Id} = Info) ->
+update_conf_parameter(Name, _Valid, _Default, unknown, #{id := Id} = Info) ->
     Msg = "service ~p: unsupported datatype at conf parameter ~p (from plugin)",
     lager:error(Msg, [Id, Name]),
     {false, Info};
-update_conf_parameter(Name, nomatch, {ok, Default}, Type,
+update_conf_parameter(Name, true, {ok, Default}, Type,
                       #{id := Id, plugin_conf_config:=RawConf,
                         plugin_conf:= Conf} = Info) ->
     EMsg = "service ~p: bad configuration ~p: ~p, using default: ~p",
@@ -271,11 +271,11 @@ update_conf_parameter(Name, nomatch, {ok, Default}, Type,
         end,
     NewConf = maps:put(Name, Value, Conf),
     {true, maps:put(plugin_conf, NewConf, Info)};
-update_conf_parameter(Name, nomatch, _, _Type, #{id := Id} = Info) ->
+update_conf_parameter(Name, true, _, _Type, #{id := Id} = Info) ->
     lager:error("service ~p: bad default at conf parameter ~p (from plugin)",
                 [Id, Name]),
     {false, Info};
-update_conf_parameter(Name, {_, _}, _, _Type, #{id := Id} = Info) ->
+update_conf_parameter(Name, false, _, _Type, #{id := Id} = Info) ->
     lager:error("service ~p: bad config parameter name '~p' (from plugin)",
                 [Id, Name]),
     {false, Info}.
@@ -316,9 +316,9 @@ validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Keys,
                name := Name,
                description := Desc,
                type:= Type} = Param,
-            SpaceMatch = binary:match(Key, <<" ">>),
+            ValidKey = is_valid_key(Key),
             KeyExists = lists:member(Key, Keys),
-            {Result, NewParamSet}=validate_call_parameter(Key, SpaceMatch,
+            {Result, NewParamSet}=validate_call_parameter(Key, ValidKey,
                                                           KeyExists, Name,
                                                           Desc, Type, Param, Id,
                                                           ParamSet),
@@ -336,7 +336,7 @@ validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet,
     validate_call_parameter_set(T, Info, ParamSet, Keys, false).
 
 
-validate_call_parameter(Key, nomatch, false, Name, Desc, Type, Param, Id,
+validate_call_parameter(Key, true, false, Name, Desc, Type, Param, Id,
                         ParamSet) when is_binary(Key), is_binary(Name),
                                        is_binary(Desc) ->
     EMsg = "service ~p: parameter ~p: bad type ~p (from plugin)",
@@ -364,7 +364,7 @@ validate_call_parameter(Key, nomatch, false, Name, Desc, Type, Param, Id,
                          } | ParamSet]}
         end,
     {Result, NewParamSet };
-validate_call_parameter(Key, {_, _}, false,  _N, _D, _T, Param, Id, ParamSet) ->
+validate_call_parameter(Key, false, false,  _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: key ~p of parameter contains spaces: ~p",
     lager:error(EMsg, [Id, Key, Param]),
     {false, ParamSet};
@@ -372,7 +372,7 @@ validate_call_parameter(Key, _, true,  _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: key ~p exists multiple times: ~p",
     lager:error(EMsg, [Id, Key, Param]),
     {false, ParamSet};
-validate_call_parameter(_,  nomatch, false,  _, _, _, Param, Id, ParamSet) ->
+validate_call_parameter(_,  true, false,  _, _, _, Param, Id, ParamSet) ->
     EMsg = "service ~p: bad request parameter values ~p (not strings)",
     lager:error(EMsg, [Id, Param]),
     {false, ParamSet}.
@@ -475,3 +475,88 @@ gen_queue_name(Id) when is_binary(Id) ->
     Module = atom_to_binary(?MODULE, utf8),
     QueueName = << Module/binary, Dash/binary, Id/binary >>,
     binary_to_atom(QueueName, utf8).
+
+is_valid_key(Key) when is_binary(Key) ->
+    CharList = binary_to_list(Key),
+    IsValid = fun(Char, Current) ->
+                      is_valid_key_char(Char) and Current
+              end,
+    lists:foldl(IsValid, true, CharList).
+
+
+is_valid_key_char($a) ->
+    true;
+is_valid_key_char($b) ->
+    true;
+is_valid_key_char($c) ->
+    true;
+is_valid_key_char($d) ->
+    true;
+is_valid_key_char($e) ->
+    true;
+is_valid_key_char($f) ->
+    true;
+is_valid_key_char($g) ->
+    true;
+is_valid_key_char($h) ->
+    true;
+is_valid_key_char($i) ->
+    true;
+is_valid_key_char($j) ->
+    true;
+is_valid_key_char($k) ->
+    true;
+is_valid_key_char($l) ->
+    true;
+is_valid_key_char($m) ->
+    true;
+is_valid_key_char($n) ->
+    true;
+is_valid_key_char($o) ->
+    true;
+is_valid_key_char($p) ->
+    true;
+is_valid_key_char($q) ->
+    true;
+is_valid_key_char($r) ->
+    true;
+is_valid_key_char($s) ->
+    true;
+is_valid_key_char($t) ->
+    true;
+is_valid_key_char($u) ->
+    true;
+is_valid_key_char($v) ->
+    true;
+is_valid_key_char($w) ->
+    true;
+is_valid_key_char($x) ->
+    true;
+is_valid_key_char($y) ->
+    true;
+is_valid_key_char($z) ->
+    true;
+is_valid_key_char($0) ->
+    true;
+is_valid_key_char($1) ->
+    true;
+is_valid_key_char($2) ->
+    true;
+is_valid_key_char($3) ->
+    true;
+is_valid_key_char($4) ->
+    true;
+is_valid_key_char($5) ->
+    true;
+is_valid_key_char($6) ->
+    true;
+is_valid_key_char($7) ->
+    true;
+is_valid_key_char($8) ->
+    true;
+is_valid_key_char($9) ->
+    true;
+is_valid_key_char($_) ->
+    true;
+is_valid_key_char(_) ->
+    false.

@@ -175,6 +175,10 @@ start_meck() ->
                                                        #{name => <<"string_test">>,
                                                          type => <<"string">>,
                                                          default => <<"false string">>
+                                                        },
+                                                       #{name => <<"abcdefghijklmnopqrstuvwxyz_0123456789">>,
+                                                         type => <<"string">>,
+                                                         default => <<"some string">>
                                                         }
                                                       ],
                                        request_params => [
