@@ -327,6 +327,7 @@ start_meck() ->
     ok = meck:expect(watts_service, get_credential_limit, CredLimit),
     ok = meck:expect(watts_service, allows_same_state, AllowSame),
     ok = meck:expect(watts_service, exists, Exists),
+    ok = meck:expect(watts_service, are_params_valid, fun(_, _) -> true end),
     {ok, {MeckModules}}.
 
 
