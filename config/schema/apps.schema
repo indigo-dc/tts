@@ -98,6 +98,13 @@
  ]
 }.
 
+{mapping, "oidc.add_cookies", "oidcc.add_cookies",
+ [
+  {datatype ,    {enum ,  [true, false]}},
+  {default, true},
+  hidden
+ ]
+}.
 %% @doc the path to the file containing all trusted root CAs
 %% this is usually on Debian/Ubunut the file
 %%    /etc/ssl/certs/ca-certificates.crt
