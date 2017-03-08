@@ -236,6 +236,13 @@ start_web_interface() ->
     EpOidc = watts_http_util:relative_path("oidc"),
     EpStatic = watts_http_util:relative_path("static/[...]"),
     EpApi = watts_http_util:relative_path("api/[...]"),
+    EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
+    PrivacyFile = case ?CONFIG(privacy_doc) of
+                      undefined ->
+                          {priv_file, ?APPLICATION, "no_privacy.html"};
+                      File ->
+                          {file ,File}
+                  end,
 
     BaseDispatchList = [{EpStatic, cowboy_static,
                          {priv_dir, ?APPLICATION, "http_static"}
@@ -243,6 +250,7 @@ start_web_interface() ->
                         {EpApi, watts_rest, []},
                         {EpMain, cowboy_static,
                          {priv_file, ?APPLICATION, "http_static/index.html"}},
+                        {EpPrivacy, cowboy_static, PrivacyFile},
                         {EpOidc, oidcc_cowboy, []}
                        ],
 

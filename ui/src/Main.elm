@@ -399,6 +399,9 @@ view model =
                             [ text "INDIGO DataCloud Project" ]
                         , text " under grant agreement RIA 653549"
                         ]
+                    , small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
+                        [ a [ href "privacystatement.html" ] [ text "Privacy Statement" ]
+                        ]
                     ]
                 , div
                     [ style
