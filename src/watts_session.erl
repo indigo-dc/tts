@@ -31,6 +31,8 @@
 -export([set_max_age/2]).
 
 -export([set_token/2]).
+-export([set_type/2]).
+-export([get_type/1]).
 
 -export([set_error/2]).
 -export([get_error/1]).
@@ -76,6 +78,18 @@ get_sess_token(undefined) ->
     {ok, undefined};
 get_sess_token(Pid) ->
     gen_server:call(Pid, get_sess_token).
+
+-spec set_type(Type :: atom(), Pid :: pid()) -> ok.
+set_type(_, undefined) ->
+    ok;
+set_type(Type, Pid) ->
+    gen_server:call(Pid, {set_type, Type}).
+
+-spec get_type(Pid :: pid()) -> {ok, atom()}.
+get_type(undefined) ->
+    {ok, undefined};
+get_type(Pid) ->
+    gen_server:call(Pid, get_type).
 
 -spec get_userid(Pid :: pid()) -> {ok, ID::binary()}.
 get_userid(Pid) ->
@@ -135,6 +149,7 @@ is_same_ip(IP, Pid) ->
 -include("watts.hrl").
 -record(state, {
           id = unkonwn,
+          type = undefined,
           issuer_id = undefined,
           sess_token = undefined,
           user_agent = undefined,
@@ -166,6 +181,13 @@ handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
     {reply, ok, State#state{max_age=MA}, MA};
+handle_call(get_type, _From,#state{type = Type, max_age=MA} = State) ->
+    {reply, {ok, Type}, State, MA};
+handle_call({set_type, Type}, _From,#state{type = undefined,
+                                           max_age=MA} = State) ->
+    {reply, ok, State#state{type = Type}, MA};
+handle_call({set_type, _Type}, _From,#state{max_age=MA} = State) ->
+    {reply, ok, State, MA};
 handle_call({set_iss_sub, Issuer, Subject}, _From,
             #state{max_age=MA, user_info=Info}=State) ->
     {ok, NewInfo} = watts_userinfo:update_iss_sub(Issuer, Subject, Info),
