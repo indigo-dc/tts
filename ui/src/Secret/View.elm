@@ -36,10 +36,16 @@ view progress_title scrt =
                         , footer = Nothing
                         }
 
-                ( Just secret, progressing ) ->
+                ( Just secret, _ ) ->
                     let
                         isCredential =
                             (secret.result == "ok")
+
+                        isOidcRedirect =
+                            (secret.result == "oidc_login")
+
+                        isError =
+                            (not isCredential) && (not isOidcRedirect)
 
                         cred =
                             secret.credential
@@ -48,11 +54,14 @@ view progress_title scrt =
                             secret.error
 
                         title =
-                            case isCredential of
-                                True ->
+                            case ( isCredential, isOidcRedirect ) of
+                                ( True, _ ) ->
                                     "Your Credential"
 
-                                False ->
+                                ( _, True ) ->
+                                    "A login is required"
+
+                                _ ->
                                     "An Error Occured"
 
                         footer =
@@ -79,8 +88,12 @@ view progress_title scrt =
                                                     (List.map viewEntry cred.entries)
                                                 ]
                                             ]
-                                        , div [ hidden isCredential ]
-                                            [ p [] [ text error ] ]
+                                        , div [ hidden (not isOidcRedirect) ]
+                                            [ p [] [ text secret.oidc_login.msg ]
+                                            ]
+                                        , div [ hidden (not isError) ]
+                                            [ p [] [ text error ]
+                                            ]
                                         ]
                                     )
                             , footer =
@@ -88,13 +101,30 @@ view progress_title scrt =
                                     (div []
                                         [ div [ style [ ( "float", "left" ), ( "color", "#737373" ) ] ]
                                             [ small [] [ text footer ] ]
-                                        , div [ style [ ( "float", "right" ) ] ]
+                                        , div [ style [ ( "float", "right" ) ], hidden isOidcRedirect ]
                                             [ button
                                                 [ type_ "button"
                                                 , class "btn btn-default"
                                                 , onClick Messages.HideSecret
                                                 ]
                                                 [ text "Close" ]
+                                            ]
+                                        , div
+                                            [ style [ ( "float", "right" ) ]
+                                            , hidden (not isOidcRedirect)
+                                            ]
+                                            [ button
+                                                [ type_ "button"
+                                                , class "btn btn-primary"
+                                                , onClick Messages.HideSecret
+                                                ]
+                                                [ text "Okay" ]
+                                            , button
+                                                [ type_ "button"
+                                                , class "btn btn-default"
+                                                , onClick Messages.HideSecret
+                                                ]
+                                                [ text "Cancel" ]
                                             ]
                                         ]
                                     )

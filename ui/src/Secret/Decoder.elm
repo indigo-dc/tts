@@ -13,6 +13,7 @@ decodeSecret =
     decode Secret.Model
         |> required "result" string
         |> optional "credential" decodeCredential { id = "", entries = [] }
+        |> optional "oidc_login" decodeLogin { provider = "", msg = "" }
         |> optional "user_msg" string ""
 
 
@@ -21,6 +22,13 @@ decodeCredential =
     decode Secret.Credential
         |> required "id" string
         |> required "entries" (list decodeEntry)
+
+
+decodeLogin : Decoder Secret.OidcLogin
+decodeLogin =
+    decode Secret.OidcLogin
+        |> required "provider" string
+        |> required "msg" string
 
 
 decodeEntry : Decoder Secret.Entry

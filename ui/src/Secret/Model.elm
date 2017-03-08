@@ -4,6 +4,7 @@ module Secret.Model exposing (..)
 type alias Model =
     { result : String
     , credential : Credential
+    , oidc_login : OidcLogin
     , error : String
     }
 
@@ -14,9 +15,29 @@ type alias Credential =
     }
 
 
+type alias OidcLogin =
+    { provider : String
+    , msg : String
+    }
+
+
+error_credential : String -> Model
+error_credential err_msg =
+    { result = "error"
+    , credential = empty_credential
+    , oidc_login = empty_login
+    , error = err_msg
+    }
+
+
 empty_credential : Credential
 empty_credential =
     { id = "", entries = [] }
+
+
+empty_login : OidcLogin
+empty_login =
+    { provider = "", msg = "" }
 
 
 type alias Entry =
