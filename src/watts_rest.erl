@@ -255,6 +255,7 @@ perform_get(info, undefined, Session, _) ->
                 {ok, _Iss, Id, _Sub} = watts:get_iss_id_sub_for(Session),
                 {ok, Err} = watts_session:get_error(Session),
                 %% TODO: add a field, which specifies the new credential
+                %% better: an endpoint to request to wait for it ...
                 {watts_session:is_logged_in(Session), Name, Id, Err}
         end,
     {ok, Version} = ?CONFIG_(vsn),
@@ -296,10 +297,6 @@ perform_get(cred_data, Id, Session, Version) ->
 
 perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
              Session, Ver) ->
-    %% IFace =  case CookieBased of
-    %%              false -> <<"REST interface">>;
-    %%              true ->  <<"Web App">>
-    %%          end,
     Params = maps:get(params, Data, #{}),
     case  watts:request_credential_for(ServiceId, Session, Params) of
         {ok, CredData} ->

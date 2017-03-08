@@ -200,8 +200,8 @@ handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     lager:info("SESS~p got credential ~p for ~p",
                [SessionId, CredId, ServiceId]),
     {ok, #{result => ok, credential => Credential}};
-handle_credential_result({oidc_login, #{provider := Provider}}, ServiceId,
-                         Session, _Params) ->
+handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
+                         ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     Msg = <<"OpenID Connect Login error, please contact the admin">>,
     case oidcc:get_openid_provider_info(Provider) of
@@ -211,14 +211,21 @@ handle_credential_result({oidc_login, #{provider := Provider}}, ServiceId,
             % todo: add information about current plugin into session
             % todo: tell UI to go to a certain url
             % todo: tell pure REST that user needs to login with browser
-            UrlInfo = #{name => <<"url to redirect to">>,
-                        value => Provider,
-                        type => <<"text">>},
-            Credential = [UrlInfo],
-            {ok, #{result => ok,
-                   credential => #{
-                     id => <<"someid">>,
-                     entries =>  Credential}}};
+            %% UrlInfo = #{name => <<"url to redirect to">>,
+            %%             value => Provider,
+            %%             type => <<"text">>},
+            %% MsgInfo = #{name => <<"message to user">>,
+            %%             value => UsrMsg,
+            %%             type => <<"text">>},
+            %% Credential = [UrlInfo, MsgInfo],
+            %% {ok, #{result => ok,
+            %%        credential => #{
+            %%          id => <<"someid">>,
+            %%          entries =>  Credential}}};
+            {ok, #{result => oidc_login,
+                   oidc_login => #{ provider => Provider,
+                                   msg => UsrMsg} }
+            };
         _ ->
             WMsg = "SESS~p login request for ~p failed: ~s",
             lager:warning(WMsg, [SessionId, ServiceId, Provider]),

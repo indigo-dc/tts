@@ -181,10 +181,10 @@ handle_result(ok, Map, Log, #{action := request}) ->
     LogMsg = io_lib:format("bad response to a request: ~p [~p]", [Map, Log]),
     UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
-handle_result(oidc_login, #{provider := ProviderId}, _Log,
+handle_result(oidc_login, #{provider := ProviderId, msg := Msg}, _Log,
               #{action := request} = _Info) ->
     %% an OpenId Connect login request
-    return(oidc_login, #{provider => ProviderId});
+    return(oidc_login, #{provider => ProviderId, msg => Msg});
 handle_result(oidc_login, Map, Log, #{action := request}) ->
     %% a bad OpenID Connect login request
     LogMsg = io_lib:format("bad response to a request: ~p [~p]", [Map, Log]),
