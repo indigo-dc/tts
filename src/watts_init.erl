@@ -241,7 +241,7 @@ start_web_interface() ->
                       undefined ->
                           {priv_file, ?APPLICATION, "no_privacy.html"};
                       File ->
-                          {file ,File}
+                          {file, File}
                   end,
 
     BaseDispatchList = [{EpStatic, cowboy_static,
