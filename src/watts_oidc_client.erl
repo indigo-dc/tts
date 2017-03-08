@@ -40,12 +40,11 @@ bin_error_msg(Reason, Details) ->
 error_msg(login, _) ->
     "sorry, an internal error occured, please try again";
 error_msg(internal,
-          {token_invalid, {error, {required_fields_missing, [nonce] } } }) ->
-    M1 = "The token returned from the provider is missing the 'nonce' field. ",
-    M2 = "WaTTS adds the nonce to increase the security and it must be ",
-    M3 = "returned by the provider according to the specification. ",
-    M4 = "Please contact your identity provider.",
-    io_lib:format("~s~s~s~s", [M1, M2, M3, M4]);
+          {token_invalid, {error, {required_fields_missing, [Field] } } }) ->
+    M1 = io_lib:format("The token returned from your IdP is not sending a '~p'",
+                       [Field]),
+    M2 = ". Please contact your IdP.",
+    io_lib:format("~s~s", [M1, M2]);
 error_msg(internal, {token_invalid, _}) ->
     "the returned token was invalid, the error has been logged";
 error_msg(internal, {bad_user_agent, _}) ->
