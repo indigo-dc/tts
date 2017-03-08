@@ -58,8 +58,7 @@ init(_, _Req, _Opts) ->
           token = undefined,
           issuer = undefined,
           json = undefined,
-          session_pid = undefined,
-          cookie_based = false
+          session_pid = undefined
          }).
 
 rest_init(Req, _Opts) ->
@@ -225,10 +224,8 @@ get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
 
 
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
-                      session_pid=Session, json=Json,
-                      cookie_based=CookieBased} = State) ->
-    {Req1, Result} = perform_post(Req, Type, Id, Json, Session, CookieBased,
-                                  Version),
+                      session_pid=Session, json=Json} = State) ->
+    {Req1, Result} = perform_post(Req, Type, Id, Json, Session, Version),
     ok = end_session_if_rest(State),
     {ok, Req2} = update_cookie_if_used(Req1, State),
     {Result, Req2, State#state{session_pid=undefined}}.
@@ -257,6 +254,7 @@ perform_get(info, undefined, Session, _) ->
                 {ok, Name} = watts:get_display_name_for(Session),
                 {ok, _Iss, Id, _Sub} = watts:get_iss_id_sub_for(Session),
                 {ok, Err} = watts_session:get_error(Session),
+                %% TODO: add a field, which specifies the new credential
                 {watts_session:is_logged_in(Session), Name, Id, Err}
         end,
     {ok, Version} = ?CONFIG_(vsn),
@@ -297,13 +295,13 @@ perform_get(cred_data, Id, Session, Version) ->
     end.
 
 perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
-             Session, CookieBased, Ver) ->
-    IFace =  case CookieBased of
-                 false -> <<"REST interface">>;
-                 true ->  <<"Web App">>
-             end,
+             Session, Ver) ->
+    %% IFace =  case CookieBased of
+    %%              false -> <<"REST interface">>;
+    %%              true ->  <<"Web App">>
+    %%          end,
     Params = maps:get(params, Data, #{}),
-    case  watts:request_credential_for(ServiceId, Session, Params, IFace) of
+    case  watts:request_credential_for(ServiceId, Session, Params) of
         {ok, CredData} ->
             {ok, Id} = watts:store_temp_cred(CredData, Session),
             {ok, _Iss, IssuerId, _Sub} = watts:get_iss_id_sub_for(Session),
@@ -396,8 +394,7 @@ is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
                                        Body),
                  {Result, State#state{method=Method, version=Version, type=Type,
                                       id=Id, token=Token, issuer=Issuer,
-                                      session_pid=CookieSession, json=Body,
-                                      cookie_based = is_pid(CookieSession) }}
+                                      session_pid=CookieSession, json=Body}}
     end.
 
 verify_version(<<"latest">>) ->
@@ -546,14 +543,20 @@ is_bad_version(Version, false) when is_integer(Version) ->
 is_bad_version(_, _) ->
     true.
 
-end_session_if_rest(#state{session_pid = Session, cookie_based = false}) ->
-    perform_logout(Session);
-end_session_if_rest(_) ->
-    ok.
+end_session_if_rest(#state{session_pid = Session}) ->
+    case watts_session:get_type(Session) of
+        {ok, rest} -> perform_logout(Session);
+        _ -> ok
+    end.
 
-update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
+update_cookie_if_used(Req, #state{ session_pid = Session, type=RequestType})->
+    Oidc = ({ok, oidc} == watts_session:get_type(Session)),
+    Logout = (RequestType == logout),
+    update_cookie_if_used(Oidc, Logout, Session, Req).
+
+update_cookie_if_used(true, true, _Session, Req) ->
     watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
-update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
+update_cookie_if_used(true, false, Session, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
             {ok, Max} = watts_session:get_max_age(Session),
@@ -563,7 +566,7 @@ update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
             perform_logout(Session),
             watts_http_util:perform_cookie_action(clear, 0, deleted, Req)
     end;
-update_cookie_if_used(Req, #state{cookie_based = _}) ->
+update_cookie_if_used(_, _, _, Req) ->
     {ok, Req}.
 
 
