@@ -163,6 +163,12 @@
           {default, false}
           ]}.
 
+%% @doc the privacy document to be shown
+{mapping, "privacy_doc", "watts.privacy_doc", [
+          {datatype ,    string},
+          {commented, "/path/to/privacy_document.html"}
+          ]}.
+
 %% @doc publish documentation at ./docs/ if enabled
 {mapping, "enable_docs", "watts.enable_docs", [
           {datatype ,    {enum ,  [true, false]}},
