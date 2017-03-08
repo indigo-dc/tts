@@ -8,7 +8,7 @@
          whole_url/1
         ]).
 
--define(COOKIE, <<"tts_session">>).
+-define(COOKIE, <<"watts_session">>).
 
 perform_cookie_action(clear, _MaxAge, _Value, Req) ->
     Opts = create_cookie_opts(0),
