@@ -153,6 +153,7 @@ add_openid_provider() ->
     %% force only one try
     application:set_env(oidcc, provider_max_tries, 1),
     LocalEndpoint = local_endpoint(),
+    ?SETCONFIG(local_endpoint, LocalEndpoint),
     lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
