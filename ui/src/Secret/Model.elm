@@ -17,6 +17,7 @@ type alias Credential =
 
 type alias OidcLogin =
     { provider : String
+    , url : String
     , msg : String
     }
 
@@ -37,7 +38,7 @@ empty_credential =
 
 empty_login : OidcLogin
 empty_login =
-    { provider = "", msg = "" }
+    { provider = "", url = "", msg = "" }
 
 
 type alias Entry =

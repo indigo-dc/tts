@@ -2,7 +2,7 @@ module Secret.View exposing (..)
 
 import Dialog
 import Html exposing (Html, span, a, br, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
-import Html.Attributes exposing (title, href, downloadAs, class, value, type_, readonly, rows, cols, style, hidden)
+import Html.Attributes exposing (title, href, downloadAs, class, value, type_, readonly, rows, cols, style, hidden, action, method, name)
 import Html.Events exposing (onClick)
 import Http exposing (encodeUri)
 import Messages exposing (Msg)
@@ -52,6 +52,12 @@ view progress_title scrt =
 
                         error =
                             secret.error
+
+                        provider =
+                            secret.oidc_login.provider
+
+                        oidc_url =
+                            secret.oidc_login.url
 
                         title =
                             case ( isCredential, isOidcRedirect ) of
@@ -113,12 +119,19 @@ view progress_title scrt =
                                             [ style [ ( "float", "right" ) ]
                                             , hidden (not isOidcRedirect)
                                             ]
-                                            [ button
-                                                [ type_ "button"
-                                                , class "btn btn-primary"
-                                                , onClick Messages.HideSecret
+                                            [ form [ method "post", action oidc_url ]
+                                                [ input
+                                                    [ type_ "hidden"
+                                                    , name "provider"
+                                                    , value provider
+                                                    ]
+                                                    []
+                                                , button
+                                                    [ type_ "submit"
+                                                    , class "btn btn-primary"
+                                                    ]
+                                                    [ text "Okay" ]
                                                 ]
-                                                [ text "Okay" ]
                                             , button
                                                 [ type_ "button"
                                                 , class "btn btn-default"
