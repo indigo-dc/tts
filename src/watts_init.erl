@@ -276,6 +276,7 @@ start_web_interface() ->
     ListenPort = ?CONFIG(listen_port),
     case SSL of
         true ->
+            CAMsg = "Init: no ca-chain-file configured [cachain_file]!",
             CertFile = ?CONFIG(cert_file),
             KeyFile = ?CONFIG(key_file),
             BasicOptions =
@@ -288,7 +289,6 @@ start_web_interface() ->
                     {ok, CaChainFile} ->
                         [ {cacertfile, CaChainFile} | BasicOptions ];
                     _ ->
-                        CAMsg = "Init: no ca-chain-file configured!",
                         lager:warning(CAMsg),
                         BasicOptions
                 end,
