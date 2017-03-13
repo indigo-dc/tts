@@ -97,7 +97,7 @@ do_login(Issuer, Subject0, Token0) ->
     try
         Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
         case Result of
-            {ok, Subject, Token} ->
+            {ok, Subject, _IssuerId, Token} ->
                 update_session(Issuer, Subject, Token, SessPid);
             {error, ErrReason} ->
                 logout(SessPid),
@@ -113,12 +113,34 @@ do_login(Issuer, Subject0, Token0) ->
             {error, internal}
     end.
 
-do_additional_login(Issuer, Subject, _Token, SessionPid) ->
-    lager:info("SESS~p: additional login as ~p @ ~p",
-               [SessionPid, Subject, Issuer]),
-    %% TODO: fetch additional information and store them in the session
-    %% TODO: automatically re-trigger the previous plugin
-    return_session_info(SessionPid).
+do_additional_login(Issuer, Subject0, Token0, SessPid) ->
+    {ok, SessionId} = watts_session:get_id(SessPid),
+    lager:info("SESS~p: additional login as ~p at ~p",
+               [SessionId, Subject0, Issuer]),
+    try
+        Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
+        case Result of
+            {ok, _Subject, IssuerId, Token} ->
+                %% TODO: automatically re-trigger the previous plugin
+                %% TODO: tell UI to request a certain endpoint ... maybe new one
+                ok = watts_session:add_additional_login(IssuerId, Token,
+                                                       SessPid),
+
+                return_session_info(SessPid);
+            {error, ErrReason} ->
+                %% TODO: show error to user
+                ok = watts_session:clear_redirection(SessPid),
+                lager:error("SESS~p additional login failed due to ~p",
+                            [SessionId, ErrReason]),
+                return_session_info(SessPid)
+        end
+    catch Error:Reason ->
+            %% TODO: show error to user
+            StackTrace = erlang:get_stacktrace(),
+            lager:error("SESS~p additional login failed due to ~p:~p at ~p",
+                        [SessionId, Error, Reason, StackTrace]),
+            return_session_info(SessPid)
+    end.
 
 
 logout(Session) ->
@@ -203,24 +225,31 @@ handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
                [SessionId, CredId, ServiceId]),
     {ok, #{result => ok, credential => Credential}};
 handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
-                         ServiceId, Session, _Params) ->
+                         ServiceId, Session, Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     Msg = <<"OpenID Connect Login error, please contact the admin">>,
+    DoneMsg = <<"the plugin required a login that has already been performed">>,
+    OffMsg = <<"login is required, yet the needed provider is not ready">>,
     RestMsg = <<"login is required, please use the web interface">>,
     ProviderResult = oidcc:get_openid_provider_info(Provider),
     {ok, SessionType} = watts_session:get_type(Session),
-    case {ProviderResult, SessionType}  of
-        {{ok, _Config}, oidc} ->
-            %% start the redirection
-            % todo: add redirection into session ... not really - or?
-            % todo: add information about current plugin into session
+    {ok, UserInfo} = watts_session:get_user_info(Session),
+    Exists = watts_userinfo:has_additional_login(ServiceId, Provider, UserInfo),
+    case {ProviderResult, SessionType, Exists}  of
+        {{ok, #{ready := true}}, oidc, false} ->
+            ok = watts_session:set_redirection(ServiceId, Params, Provider,
+                                               Session),
             Url = ?CONFIG(local_endpoint),
             {ok, #{result => oidc_login,
                    oidc_login => #{ provider => Provider,
                                     url => Url,
                                    msg => UsrMsg} }
             };
-        {{ok, _}, rest} ->
+        {{ok, _}, oidc, true} ->
+            {error, #{result => error, user_msg => DoneMsg}};
+        {{ok, _}, oidc, _} ->
+            {error, #{result => error, user_msg => OffMsg}};
+        {{ok, _}, rest, _} ->
             {error, #{result => error, user_msg => RestMsg}};
         _ ->
             WMsg = "SESS~p additional login request for ~p failed: ~s",
@@ -347,12 +376,12 @@ return_session_info(SessionPid) ->
 
 retrieve_information(Issuer, Subject, Token, Session) ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
-    {ok, #{issuer := Issuer} = Config} =
+    {ok, #{id := IssuerId, issuer := Issuer} = Config} =
         oidcc:get_openid_provider_info(ProviderPid),
     UserInfoResult = oidcc:retrieve_user_info(Token, ProviderPid, Subject),
     UserInfo = extract_userinfo(UserInfoResult),
     TokenInfo = introspect_token_if_possible(Token, Config, Session),
-    create_information_result(UserInfo, TokenInfo, Token).
+    create_information_result(UserInfo, TokenInfo, Token, IssuerId).
 
 
 extract_userinfo({ok, #{sub := Subject} = OidcInfo}) ->
@@ -403,7 +432,8 @@ introspect_token_if_possible(_, #{id := Id}, Session) ->
 
 
 
-create_information_result({ok, Subject, OidcInfo}, TokenResult, TokenMap)
+create_information_result({ok, Subject, OidcInfo}, TokenResult,
+                          TokenMap, IssuerId)
   when is_map(TokenMap) ->
     TokenInfo =
         case TokenResult of
@@ -413,8 +443,9 @@ create_information_result({ok, Subject, OidcInfo}, TokenResult, TokenMap)
                 #{}
         end,
     Update = #{user_info => OidcInfo, token_info => TokenInfo},
-    {ok, Subject, maps:merge(TokenMap, Update)};
-create_information_result({ok, Subject, OidcInfo}, TokenResult, AccessToken)
+    {ok, Subject, IssuerId, maps:merge(TokenMap, Update)};
+create_information_result({ok, Subject, OidcInfo}, TokenResult,
+                          AccessToken, IssuerId)
   when is_binary(AccessToken) ->
     TokenInfo =
         case TokenResult of
@@ -425,10 +456,10 @@ create_information_result({ok, Subject, OidcInfo}, TokenResult, AccessToken)
         end,
     TokenMap = #{access_token => #{token => AccessToken},
                  user_info => OidcInfo, token_info => TokenInfo},
-    {ok, Subject, TokenMap};
-create_information_result({error, Reason} , _, _) ->
+    {ok, Subject, IssuerId, TokenMap};
+create_information_result({error, Reason} , _, _, _) ->
     {error, Reason};
-create_information_result(_, {error, Reason}, _) ->
+create_information_result(_, {error, Reason}, _, _) ->
     {error, Reason}.
 
 

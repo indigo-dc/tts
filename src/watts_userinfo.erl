@@ -2,11 +2,14 @@
 
 -export([
          new/0,
+         update_with_token/2,
          update_iss_sub/3,
          update_id_token/2,
          update_access_token/2,
          update_id_info/2,
          update_token_info/2,
+         add_additional_login/4,
+         has_additional_login/3,
          return/2
         ]).
 
@@ -17,11 +20,54 @@
           id_info = #{},
           access_token = #{},
           plugin_info = #{},
-          token_info = #{}
+          token_info = #{},
+          additional_logins = []
          }).
 
 new() ->
     {ok, #user_info{}}.
+
+
+update_with_token(Token, UserInfo) ->
+    IdInfo = maps:get(user_info, Token, undefined),
+    IdToken = maps:get(id, Token, undefined),
+    AccToken = maps:get(access, Token, undefined),
+    TokenInfo = maps:get(token_info, Token, undefined),
+
+    Info1 =
+        case IdToken of
+            undefined ->
+                UserInfo;
+            _ ->
+                {ok, Inf1} = update_id_token(IdToken, UserInfo),
+                Inf1
+        end,
+    Info2 =
+        case IdInfo of
+            undefined ->
+                Info1;
+            _ ->
+                {ok, Inf2} = update_id_info(IdInfo, Info1),
+                Inf2
+        end,
+    Info3 =
+        case AccToken of
+            undefined ->
+                Info2;
+            _ ->
+                {ok, Inf3} = update_access_token(AccToken, Info2),
+                Inf3
+        end,
+    Info4 =
+        case TokenInfo of
+            undefined ->
+                Info3;
+            _ ->
+                {ok, Inf4} = update_token_info(TokenInfo, Info3),
+                Inf4
+        end,
+    {ok, Info4}.
+
 
 update_iss_sub(Issuer, Subject,
                #user_info{issuer=undefined, subject=undefined} = Info)
@@ -88,6 +134,26 @@ update_token_info(TokenInfo, Info) ->
             {error, not_match}
     end.
 
+
+add_additional_login(ServiceId, IssuerId, Token,
+                     #user_info{additional_logins=AddLogins} = Info) ->
+    {ok, EmptyInfo} = new(),
+    {ok, UserInfo} = update_with_token(Token, EmptyInfo),
+    NewEntry = {{ServiceId, IssuerId}, UserInfo},
+    NewAddLogins = [ NewEntry |
+                     lists:keydelete({ServiceId, IssuerId}, 1, AddLogins)],
+    Info#user_info{additional_logins = NewAddLogins}.
+
+
+has_additional_login(ServiceId, IssuerId,
+                     #user_info{additional_logins=AddLogins}) ->
+    case lists:keyfind({ServiceId, IssuerId}, 1, AddLogins) of
+        false ->
+            false;
+        _ ->
+            true
+    end.
+
 return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     Key = maybe_to_atom(Key0),
     case maps:is_key(Key, PluginInfo) of
@@ -98,6 +164,16 @@ return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     end;
 return(plugin_info, #user_info{plugin_info=PluginInfo}) ->
     {ok, PluginInfo};
+return({plugin_info, ServiceId},
+       #user_info{plugin_info=PluginInfo, additional_logins = AddLogins}) ->
+    Extract = fun({{SrvId, _}, Info}, List) when SrvId == ServiceId ->
+                      {ok, PInfo} = return(plugin_info, Info),
+                      [ PInfo | List];
+                 (_, List) ->
+                         List
+                 end,
+    AddLoginInfo = lists:foldl(Extract, [], AddLogins),
+    {ok, maps:put(additional_logins, AddLoginInfo, PluginInfo)};
 return(issuer_subject, Info) ->
     {ok, Issuer} = return(issuer, Info),
     {ok, Subject} = return(subject, Info),

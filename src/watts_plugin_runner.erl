@@ -222,6 +222,7 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
        cred_state = CredState
       } = State,
     ConfParams = maps:get(plugin_conf, ServiceInfo, #{}),
+    ServiceId = maps:get(id, ServiceInfo),
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
     AddAccessToken = maps:get(pass_access_token, ServiceInfo, false),
     ConnType = maps:get(type, ConnInfo, local),
@@ -240,7 +241,7 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
                         cred_state => CredState
                       }, ParamUpdate),
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo,
-                                           AddAccessToken),
+                                           ServiceId, AddAccessToken),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
     lager:debug("runner ~p: will execute ~p with parameter ~p",
                 [self(), Cmd, ScriptParam]),
@@ -250,16 +251,17 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
     {ok, State#state{cmd_line=CmdLine,
                      connection = Connection, con_type = ConnType}}.
 
-add_user_info_if_present(ScriptParam, undefined, _) ->
+add_user_info_if_present(ScriptParam, undefined, _, _) ->
     ScriptParam;
-add_user_info_if_present(ScriptParam, UserInfo, true) ->
+add_user_info_if_present(ScriptParam, UserInfo, ServiceId, true) ->
     {ok, AccessToken} = watts_userinfo:return(access_token, UserInfo),
     Update = #{access_token => AccessToken},
     NewParams = maps:merge(ScriptParam, Update),
-    add_user_info_if_present(NewParams, UserInfo, false);
-add_user_info_if_present(ScriptParam, UserInfo, _) ->
+    add_user_info_if_present(NewParams, UserInfo, ServiceId, false);
+add_user_info_if_present(ScriptParam, UserInfo, ServiceId, _) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
-    {ok, PluginUserInfo} = watts_userinfo:return(plugin_info, UserInfo),
+    {ok, PluginUserInfo} = watts_userinfo:return({plugin_info, ServiceId},
+                                                 UserInfo),
     Update = #{watts_userid => UserId, user_info => PluginUserInfo},
     maps:merge(ScriptParam, Update).
 
