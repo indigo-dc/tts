@@ -113,7 +113,9 @@ do_login(Issuer, Subject0, Token0) ->
             {error, internal}
     end.
 
-do_additional_login(_Issuer, _Subject, _Token, SessionPid) ->
+do_additional_login(Issuer, Subject, _Token, SessionPid) ->
+    lager:info("SESS~p: additional login as ~p @ ~p",
+               [SessionPid, Subject, Issuer]),
     %% TODO: fetch additional information and store them in the session
     %% TODO: automatically re-trigger the previous plugin
     return_session_info(SessionPid).
@@ -204,30 +206,24 @@ handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
                          ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     Msg = <<"OpenID Connect Login error, please contact the admin">>,
-    case oidcc:get_openid_provider_info(Provider) of
-        {ok, _Config} ->
+    RestMsg = <<"login is required, please use the web interface">>,
+    ProviderResult = oidcc:get_openid_provider_info(Provider),
+    {ok, SessionType} = watts_session:get_type(Session),
+    case {ProviderResult, SessionType}  of
+        {{ok, _Config}, oidc} ->
             %% start the redirection
             % todo: add redirection into session ... not really - or?
             % todo: add information about current plugin into session
-            % todo: tell UI to go to a certain url
-            % todo: tell pure REST that user needs to login with browser
-            %% UrlInfo = #{name => <<"url to redirect to">>,
-            %%             value => Provider,
-            %%             type => <<"text">>},
-            %% MsgInfo = #{name => <<"message to user">>,
-            %%             value => UsrMsg,
-            %%             type => <<"text">>},
-            %% Credential = [UrlInfo, MsgInfo],
-            %% {ok, #{result => ok,
-            %%        credential => #{
-            %%          id => <<"someid">>,
-            %%          entries =>  Credential}}};
+            Url = ?CONFIG(local_endpoint),
             {ok, #{result => oidc_login,
                    oidc_login => #{ provider => Provider,
+                                    url => Url,
                                    msg => UsrMsg} }
             };
+        {{ok, _}, rest} ->
+            {error, #{result => error, user_msg => RestMsg}};
         _ ->
-            WMsg = "SESS~p login request for ~p failed: ~s",
+            WMsg = "SESS~p additional login request for ~p failed: ~s",
             lager:warning(WMsg, [SessionId, ServiceId, Provider]),
             {error, #{result => error, user_msg => Msg}}
     end;
