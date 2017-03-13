@@ -118,7 +118,12 @@ is_allowed(ServiceId, UserInfo, AuthzConf) ->
 
 are_params_valid(Params, #{params := ParamSets})
   when is_map(Params) ->
-    ParamList = maps:keys(Params),
+    ToBinary = fun(Key, List) when is_binary(Key) ->
+                       [ Key | List ];
+                 (Atom, List) when is_atom(Atom) ->
+                       [ atom_to_binary(Atom, utf8) | List ]
+               end,
+    ParamList = lists:foldl(ToBinary, [], maps:keys(Params)),
     ExistsMatching = fun(ParamSet, Current) ->
                              Current or fulfills_paramset(ParamList, ParamSet)
                      end,
