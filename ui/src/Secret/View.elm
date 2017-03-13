@@ -131,13 +131,13 @@ view progress_title scrt =
                                                     , class "btn btn-primary"
                                                     ]
                                                     [ text "Okay" ]
+                                                , button
+                                                    [ type_ "button"
+                                                    , class "btn btn-default"
+                                                    , onClick Messages.HideSecret
+                                                    ]
+                                                    [ text "Cancel" ]
                                                 ]
-                                            , button
-                                                [ type_ "button"
-                                                , class "btn btn-default"
-                                                , onClick Messages.HideSecret
-                                                ]
-                                                [ text "Cancel" ]
                                             ]
                                         ]
                                     )
