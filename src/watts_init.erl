@@ -232,6 +232,8 @@ add_services([]) ->
 start_web_interface() ->
     lager:info("Init: starting web interface"),
     oidcc_client:register(watts_oidc_client),
+    PrivWarn = "Init: The privacy statement is not configured [~p]",
+    PrivInfo = "Init: Using privacy statement ~p",
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
     EpStatic = watts_http_util:relative_path("static/[...]"),
@@ -239,8 +241,10 @@ start_web_interface() ->
     EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
     PrivacyFile = case ?CONFIG(privacy_doc) of
                       undefined ->
+                          lager:warning(PrivWarn, [privacy_doc]),
                           {priv_file, ?APPLICATION, "no_privacy.html"};
                       File ->
+                          lager:info(PrivInfo, [File]),
                           {file, File}
                   end,
 
@@ -257,10 +261,12 @@ start_web_interface() ->
     %% the documentation
     EpDocs = watts_http_util:relative_path("docs/[...]"),
     EnableDocs = ?CONFIG(enable_docs),
+    DocInfo = "Init: publishing documentation at /docs/",
     DispatchList = case EnableDocs of
                        false ->
                            BaseDispatchList;
                        _ ->
+                           lager:info(DocInfo),
                            [ {EpDocs, cowboy_static,
                               {priv_dir, ?APPLICATION, "docs"} }
                            ] ++ BaseDispatchList
@@ -282,6 +288,8 @@ start_web_interface() ->
                     {ok, CaChainFile} ->
                         [ {cacertfile, CaChainFile} | BasicOptions ];
                     _ ->
+                        CAMsg = "Init: no ca-chain-file configured!",
+                        lager:warning(CAMsg),
                         BasicOptions
                 end,
             {ok, _} = cowboy:start_https( http_handler
