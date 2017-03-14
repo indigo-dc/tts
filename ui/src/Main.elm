@@ -64,6 +64,7 @@ type alias Model =
     , displayName : String
     , current_service : Maybe Service.Model
     , current_param : Maybe (Dict String Json.Value)
+    , current_serviceid : Maybe String
     , request_progressing : Bool
     , docs_enabled : Bool
     , progressing_title : Maybe String
@@ -86,6 +87,14 @@ update msg model =
 
                             False ->
                                 ( Login, retrieveProviderList model.url model.restVersion )
+
+                    ( curService, curServiceParam ) =
+                        case info.service_request of
+                            Nothing ->
+                                ( Nothing, Nothing )
+
+                            Just request ->
+                                ( Just request.service_id, Just request.params )
                 in
                     ( { model
                         | serverVersion = info.version
@@ -96,6 +105,8 @@ update msg model =
                         , activePage = nextPage
                         , issuer_id = info.issuer_id
                         , docs_enabled = info.docs_enabled
+                        , current_serviceid = curService
+                        , current_param = curServiceParam
                       }
                     , nextCmd
                     )
@@ -132,11 +143,27 @@ update msg model =
                 ( model, Cmd.none )
 
             Messages.CredentialList (Ok credentiallist) ->
-                ( { model
-                    | credentialList = credentiallist
-                  }
-                , Cmd.none
-                )
+                let
+                    ( isProgressing, progTitle, nextCmd ) =
+                        case model.current_serviceid of
+                            Nothing ->
+                                ( False, Nothing, Cmd.none )
+
+                            Just id ->
+                                ( True
+                                , Just "Requesting Credential ..."
+                                , request model.url model.restVersion model.issuer_id id model.current_param
+                                )
+                in
+                    ( { model
+                        | credentialList = credentiallist
+                        , request_progressing = isProgressing
+                        , progressing_title = progTitle
+                        , current_serviceid = Nothing
+                        , current_param = Nothing
+                      }
+                    , nextCmd
+                    )
 
             Messages.CredentialList (Err info) ->
                 ( model, Cmd.none )
@@ -493,6 +520,7 @@ initModel baseUrl restVersion =
       , displayName = "unknown"
       , issuer_id = "unknown"
       , current_service = Nothing
+      , current_serviceid = Nothing
       , current_param = Nothing
       , request_progressing = False
       , docs_enabled = False
