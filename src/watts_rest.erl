@@ -545,7 +545,8 @@ is_bad_version(Version, false) when is_integer(Version) ->
 is_bad_version(_, _) ->
     true.
 
-update_cookie_or_end_session(Req, #state{ session_pid = Session, type=RequestType}) ->
+update_cookie_or_end_session(Req, #state{session_pid = Session,
+                                          type=RequestType}) ->
     Oidc = ({ok, oidc} == watts_session:get_type(Session)),
     Logout = (RequestType == logout),
     update_cookie_or_end_session(Oidc, Logout, Session, Req).
