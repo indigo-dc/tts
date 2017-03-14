@@ -451,7 +451,7 @@ create_information_result({ok, Subject, OidcInfo}, TokenResult,
             {error, _Error} ->
                 #{}
         end,
-    TokenMap = #{access_token => #{token => AccessToken},
+    TokenMap = #{access => #{token => AccessToken},
                  user_info => OidcInfo, token_info => TokenInfo},
     {ok, Subject, IssuerId, TokenMap};
 create_information_result({error, Reason} , _, _, _) ->

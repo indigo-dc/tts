@@ -67,6 +67,7 @@ init_per_suite(Conf) ->
                    description => <<"Google">>,
                    config_endpoint=> <<"https://accounts.google.com/.well-known/openid-configuration">>,
                    id => <<"google">>,
+                   disable_login => false,
                    scopes => [<<"openid">>,<<"profile">>]}],
     ?SETCONFIG(service_list, ServiceList),
     ?SETCONFIG(provider_list, ProviderList),

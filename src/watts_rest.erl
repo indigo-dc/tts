@@ -211,23 +211,21 @@ delete_resource(Req, #state{type=credential,
                 Req1 = cowboy_req:set_resp_body(Body, Req),
                 {false, Req1}
         end,
-    ok = end_session_if_rest(State),
-    {Result, Req2, State#state{session_pid=undefined}}.
+    {ok, Req3} = update_cookie_or_end_session(Req2, State),
+    {Result, Req3, State#state{session_pid=undefined}}.
 
 
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
                      session_pid=Session} = State) ->
     Result = perform_get(Type, Id, Session, Version),
-    ok = end_session_if_rest(State),
-    {ok, Req2} = update_cookie_if_used(Req, State),
+    {ok, Req2} = update_cookie_or_end_session(Req, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
 
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
                       session_pid=Session, json=Json} = State) ->
     {Req1, Result} = perform_post(Req, Type, Id, Json, Session, Version),
-    ok = end_session_if_rest(State),
-    {ok, Req2} = update_cookie_if_used(Req1, State),
+    {ok, Req2} = update_cookie_or_end_session(Req1, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
 perform_get(service, undefined, Session, Version) ->
@@ -547,20 +545,14 @@ is_bad_version(Version, false) when is_integer(Version) ->
 is_bad_version(_, _) ->
     true.
 
-end_session_if_rest(#state{session_pid = Session}) ->
-    case watts_session:get_type(Session) of
-        {ok, rest} -> perform_logout(Session);
-        _ -> ok
-    end.
-
-update_cookie_if_used(Req, #state{ session_pid = Session, type=RequestType})->
+update_cookie_or_end_session(Req, #state{ session_pid = Session, type=RequestType}) ->
     Oidc = ({ok, oidc} == watts_session:get_type(Session)),
     Logout = (RequestType == logout),
-    update_cookie_if_used(Oidc, Logout, Session, Req).
+    update_cookie_or_end_session(Oidc, Logout, Session, Req).
 
-update_cookie_if_used(true, true, _Session, Req) ->
+update_cookie_or_end_session(true, true, _Session, Req) ->
     watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
-update_cookie_if_used(true, false, Session, Req) ->
+update_cookie_or_end_session(true, false, Session, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
             {ok, Max} = watts_session:get_max_age(Session),
@@ -570,7 +562,10 @@ update_cookie_if_used(true, false, Session, Req) ->
             perform_logout(Session),
             watts_http_util:perform_cookie_action(clear, 0, deleted, Req)
     end;
-update_cookie_if_used(_, _, _, Req) ->
+update_cookie_or_end_session(false, _, Session, Req) ->
+    perform_logout(Session),
+    {ok, Req};
+update_cookie_or_end_session(_, _, _, Req) ->
     {ok, Req}.
 
 
