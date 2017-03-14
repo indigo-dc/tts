@@ -246,22 +246,22 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
-    {LoggedIn, DName, IssId, Error}  =
+    {LoggedIn, DName, IssId, Error, AutoService}  =
         case is_pid(Session) of
             false ->
-                {false, <<"">>, <<"">>, <<"">>};
+                {false, <<"">>, <<"">>, <<"">>, undefined};
             true ->
                 {ok, Name} = watts:get_display_name_for(Session),
                 {ok, _Iss, Id, _Sub} = watts:get_iss_id_sub_for(Session),
                 {ok, Err} = watts_session:get_error(Session),
-                %% TODO: add a field, which specifies the new credential
-                %% better: an endpoint to request to wait for it ...
-                {watts_session:is_logged_in(Session), Name, Id, Err}
+                {ok, Redir} = watts_session:get_redirection(Session),
+                ok = watts_session:clear_redirection(Session),
+                {watts_session:is_logged_in(Session), Name, Id, Err, Redir}
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
     EnableDocs = ?CONFIG(enable_docs),
-    Info = #{version => list_to_binary(Version),
+    Info0 = #{version => list_to_binary(Version),
              redirect_path => list_to_binary(Redirect),
              error => Error,
              logged_in => LoggedIn,
@@ -269,6 +269,13 @@ perform_get(info, undefined, Session, _) ->
              issuer_id => IssId,
              documentation => EnableDocs
             },
+    Info = case AutoService of
+               undefined  -> Info0;
+               _ ->
+                   SuppKeys = [service, params],
+                   maps:put(service_request, maps:with(SuppKeys, AutoService),
+                            Info0)
+           end,
     jsone:encode(Info);
 perform_get(logout, undefined, undefined, _) ->
     jsone:encode(#{result => ok});
