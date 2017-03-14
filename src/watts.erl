@@ -115,7 +115,7 @@ do_login(Issuer, Subject0, Token0) ->
 
 do_additional_login(Issuer, Subject0, Token0, SessPid) ->
     {ok, SessionId} = watts_session:get_id(SessPid),
-    lager:info("SESS~p: additional login as ~p at ~p",
+    lager:info("SESS~p additional login as ~p at ~p",
                [SessionId, Subject0, Issuer]),
     try
         Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
