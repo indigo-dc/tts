@@ -164,16 +164,26 @@ return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     end;
 return(plugin_info, #user_info{plugin_info=PluginInfo}) ->
     {ok, PluginInfo};
-return({plugin_info, ServiceId},
-       #user_info{plugin_info=PluginInfo, additional_logins = AddLogins}) ->
+return({additional_logins, ServiceId, AddAccessToken},
+       #user_info{additional_logins = AddLogins}) ->
     Extract = fun({{SrvId, _}, Info}, List) when SrvId == ServiceId ->
-                      {ok, PInfo} = return(plugin_info, Info),
-                      [ PInfo | List];
+                      {ok, UInfo} = return(plugin_info, Info),
+                      {ok, PAccT} = return(access_token, Info),
+                      Base = #{user_info => UInfo},
+                      Update =
+                          case AddAccessToken of
+                              true ->
+                                  #{access_token => PAccT};
+                              false ->
+                                  #{}
+                          end,
+
+                      [ maps:merge(Base, Update) | List];
                  (_, List) ->
-                         List
-                 end,
+                      List
+              end,
     AddLoginInfo = lists:foldl(Extract, [], AddLogins),
-    {ok, maps:put(additional_logins, AddLoginInfo, PluginInfo)};
+    {ok, AddLoginInfo};
 return(issuer_subject, Info) ->
     {ok, Issuer} = return(issuer, Info),
     {ok, Subject} = return(subject, Info),
