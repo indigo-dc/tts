@@ -253,16 +253,20 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
 
 add_user_info_if_present(ScriptParam, undefined, _, _) ->
     ScriptParam;
-add_user_info_if_present(ScriptParam, UserInfo, ServiceId, true) ->
+add_user_info_if_present(ScriptParam, UserInfo, ServiceId, AddAccessToken) ->
     {ok, AccessToken} = watts_userinfo:return(access_token, UserInfo),
-    Update = #{access_token => AccessToken},
-    NewParams = maps:merge(ScriptParam, Update),
-    add_user_info_if_present(NewParams, UserInfo, ServiceId, false);
-add_user_info_if_present(ScriptParam, UserInfo, ServiceId, _) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
-    {ok, PluginUserInfo} = watts_userinfo:return({plugin_info, ServiceId},
-                                                 UserInfo),
-    Update = #{watts_userid => UserId, user_info => PluginUserInfo},
+    {ok, PluginUserInfo} = watts_userinfo:return(plugin_info, UserInfo),
+    {ok, AdditionalInfo} = watts_userinfo:return({additional_logins, ServiceId,
+                                                  AddAccessToken}, UserInfo),
+    BaseUpdate = #{watts_userid => UserId, user_info => PluginUserInfo,
+                  additional_logins => AdditionalInfo},
+    Update = case AddAccessToken of
+                 true ->
+                     maps:merge(BaseUpdate, #{access_token => AccessToken});
+                 false ->
+                     BaseUpdate
+             end,
     maps:merge(ScriptParam, Update).
 
 execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
