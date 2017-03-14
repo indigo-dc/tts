@@ -121,11 +121,8 @@ do_additional_login(Issuer, Subject0, Token0, SessPid) ->
         Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
         case Result of
             {ok, _Subject, IssuerId, Token} ->
-                %% TODO: automatically re-trigger the previous plugin
-                %% TODO: tell UI to request a certain endpoint ... maybe new one
                 ok = watts_session:add_additional_login(IssuerId, Token,
                                                        SessPid),
-
                 return_session_info(SessPid);
             {error, ErrReason} ->
                 %% TODO: show error to user
