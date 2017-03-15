@@ -90,6 +90,14 @@
  ]
 }.
 
+{mapping, "oidc.support_none_algorithm", "oidcc.support_none_algorithm",
+ [
+  {datatype ,    {enum ,  [true, false]}},
+  {default, false},
+  hidden
+ ]
+}.
+
 %% @doc the path to the file containing all trusted root CAs
 %% this is usually on Debian/Ubunut the file
 %%    /etc/ssl/certs/ca-certificates.crt
