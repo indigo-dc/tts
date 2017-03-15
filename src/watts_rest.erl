@@ -548,8 +548,8 @@ update_cookie_or_end_session(Req, #state{session_pid = Session,
     Logout = (RequestType == logout),
     update_cookie_or_end_session(Oidc, Logout, Session, Req).
 
-update_cookie_or_end_session(true, true, _Session, Req) ->
-    watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
+update_cookie_or_end_session(true, true, Session, Req) ->
+    perform_logout(true, Session, Req);
 update_cookie_or_end_session(true, false, Session, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
@@ -557,11 +557,20 @@ update_cookie_or_end_session(true, false, Session, Req) ->
             {ok, Token} = watts_session:get_sess_token(Session),
             watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
-            watts:logout(Session),
-            watts_http_util:perform_cookie_action(clear, 0, deleted, Req)
+            perform_logout(true, Session, Req)
     end;
 update_cookie_or_end_session(false, _, Session, Req) ->
-    watts:logout(Session),
-    {ok, Req};
+    perform_logout(false, Session, Req);
 update_cookie_or_end_session(_, _, _, Req) ->
     {ok, Req}.
+
+perform_logout(CookieBased, Session, Req) ->
+    Result =
+        case CookieBased of
+            true ->
+                watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
+            _ ->
+                {ok, Req}
+        end,
+    watts:logout(Session),
+    Result.
