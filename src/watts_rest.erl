@@ -1,6 +1,6 @@
 -module(watts_rest).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016 - 2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -275,10 +275,7 @@ perform_get(info, undefined, Session, _) ->
                             Info0)
            end,
     jsone:encode(Info);
-perform_get(logout, undefined, undefined, _) ->
-    jsone:encode(#{result => ok});
-perform_get(logout, undefined, Session, _) ->
-    ok = perform_logout(Session),
+perform_get(logout, undefined, _, _) ->
     jsone:encode(#{result => ok});
 perform_get(access_token, undefined, Session, _) ->
     {ok, AccessToken} = watts:get_access_token_for(Session),
@@ -560,15 +557,11 @@ update_cookie_or_end_session(true, false, Session, Req) ->
             {ok, Token} = watts_session:get_sess_token(Session),
             watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
-            perform_logout(Session),
+            watts:logout(Session),
             watts_http_util:perform_cookie_action(clear, 0, deleted, Req)
     end;
 update_cookie_or_end_session(false, _, Session, Req) ->
-    perform_logout(Session),
+    watts:logout(Session),
     {ok, Req};
 update_cookie_or_end_session(_, _, _, Req) ->
     {ok, Req}.
-
-
-perform_logout(Session) ->
-    watts:logout(Session).
