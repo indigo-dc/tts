@@ -41,9 +41,9 @@ error_msg(login, _) ->
     "sorry, an internal error occured, please try again";
 error_msg(internal,
           {token_invalid, {error, {required_fields_missing, [Field] } } }) ->
-    M1 = io_lib:format("The id-token returned from your IdP is missing the '~p'",
+    M1 = "The id-token returned from your IdP is missing the ",
+    M2 = io_lib:format("required field '~p'. Please contact your IdP.",
                        [Field]),
-    M2 = ". Please contact your IdP.",
     io_lib:format("~s~s", [M1, M2]);
 error_msg(internal, {token_invalid, {error, no_id_token}}) ->
     "The token from your IdP is missing an id-token. Please contact your IdP";
