@@ -45,8 +45,10 @@ error_msg(internal,
                        [Field]),
     M2 = ". Please contact your IdP.",
     io_lib:format("~s~s", [M1, M2]);
+error_msg(internal, {token_invalid, {error, no_id_token}}) ->
+    "The token from your IdP is missing an id-token. Please contact your IdP";
 error_msg(internal, {token_invalid, _}) ->
-    "the returned token was invalid, the error has been logged";
+    "The token returned from your IdP was invalid, the error has been logged";
 error_msg(internal, {bad_user_agent, _}) ->
     "you are not who you was before, incident has been logged";
 error_msg(internal, {bad_peer_ip, _}) ->

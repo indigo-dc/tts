@@ -8,7 +8,7 @@ The communication between WaTTS and the *plugin* is done by passing one argument
 to the script and parsing the `stdout` of the script.
 
 ### Plugin Input
-The parameter coming from the TTS is a `base64` encoded `json` object.
+The parameter coming from the TTS is a `base64url` encoded `json` object.
 
 The decoded `json` object has the following format:
 ```
@@ -26,7 +26,7 @@ The decoded `json` object has the following format:
         "name": "Max Mustermann",
         "sub": "12345678"
     },
-    "watts_userid": "base64 encoded json object, containing subject and issuer"
+    "watts_userid": "base64url encoded json object, containing subject and issuer"
 }
 ```
 The items of the object are:
@@ -39,7 +39,7 @@ The items of the object are:
 | params |  These are parameters entered upon request |
 | cred_state | This is only valid when revoking, it is the credential state returned when creating the credential |
 | user_info  | The user info contains information about the user gathered using OpenId Connect |
-| watts_userid | This is the dynamically generated unique *id* used within WaTTS for the current user. It is also a `base64` encoded `json` object containing *issuer* and *subject* |
+| watts_userid | This is the dynamically generated unique *id* used within WaTTS for the current user. It is also a `base64url` encoded `json` object containing *issuer* and *subject* |
 
 ### Listing The Supported Parameter
 WaTTS requests the supported parameter of the *plugin* by setting the `action` to `parameter`.

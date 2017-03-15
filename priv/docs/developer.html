@@ -233,7 +233,7 @@ e.g. due to different local policies.</p>
 <p>The communication between WaTTS and the <em>plugin</em> is done by passing one argument
 to the script and parsing the <code>stdout</code> of the script.</p>
 <h3 id="plugin-input">Plugin Input</h3>
-<p>The parameter coming from the <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> is a <code>base64</code> encoded <code>json</code> object.</p>
+<p>The parameter coming from the <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> is a <code>base64url</code> encoded <code>json</code> object.</p>
 <p>The decoded <code>json</code> object has the following format:</p>
 <pre><code>{
     &quot;watts_version&quot;: &quot;1.0.0&quot;,
@@ -249,7 +249,7 @@ to the script and parsing the <code>stdout</code> of the script.</p>
         &quot;name&quot;: &quot;Max Mustermann&quot;,
         &quot;sub&quot;: &quot;12345678&quot;
     },
-    &quot;watts_userid&quot;: &quot;base64 encoded json object, containing subject and issuer&quot;
+    &quot;watts_userid&quot;: &quot;base64url encoded json object, containing subject and issuer&quot;
 }
 </code></pre><p>The items of the object are:</p>
 <table>
@@ -288,7 +288,7 @@ username/password for ssh">credential</a></td>
 </tr>
 <tr>
 <td>watts_userid</td>
-<td>This is the dynamically generated unique <em>id</em> used within WaTTS for the current user. It is also a <code>base64</code> encoded <code>json</code> object containing <em>issuer</em> and <em>subject</em></td>
+<td>This is the dynamically generated unique <em>id</em> used within WaTTS for the current user. It is also a <code>base64url</code> encoded <code>json</code> object containing <em>issuer</em> and <em>subject</em></td>
 </tr>
 </tbody>
 </table>
@@ -507,7 +507,7 @@ username/password for ssh">credential</a> state from its database.</p>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Developer Guide","level":"1.5","depth":1,"next":{"title":"REST Api","level":"1.6","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer.md","mtime":"2017-03-07T11:00:24.259Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-07T11:48:29.228Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Developer Guide","level":"1.5","depth":1,"next":{"title":"REST Api","level":"1.6","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer.md","mtime":"2017-03-15T13:37:11.907Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-15T13:39:43.574Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
