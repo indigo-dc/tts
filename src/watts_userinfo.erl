@@ -24,6 +24,7 @@
          update_id_info/2,
          update_token_info/2,
          add_additional_login/4,
+         clear_additional_logins/2,
          has_additional_login/3,
          return/2
         ]).
@@ -159,6 +160,13 @@ add_additional_login(ServiceId, IssuerId, Token,
                      lists:keydelete({ServiceId, IssuerId}, 1, AddLogins)],
     Info#user_info{additional_logins = NewAddLogins}.
 
+clear_additional_logins(ServiceId,
+                       #user_info{additional_logins=AddLogins} = Info) ->
+    Filter = fun({{Id, _}, _}) ->
+                     Id /= ServiceId
+             end,
+    NewAddLogins = lists:filter(Filter, AddLogins),
+    Info#user_info{additional_logins = NewAddLogins}.
 
 has_additional_login(ServiceId, IssuerId,
                      #user_info{additional_logins=AddLogins}) ->

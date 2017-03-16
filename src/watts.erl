@@ -217,6 +217,7 @@ request_credential_for(ServiceId, Session, Params) ->
 
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
+    ok = watts_session:clear_additional_logins(ServiceId, Session),
     #{id := CredId} = Credential,
     lager:info("SESS~p got credential ~p for ~p",
                [SessionId, CredId, ServiceId]),
@@ -256,6 +257,7 @@ handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
 handle_credential_result({error, Map}, ServiceId, Session, _Params)
   when is_map(Map) ->
     {ok, SessionId} = watts_session:get_id(Session),
+    ok = watts_session:clear_additional_logins(ServiceId, Session),
     UserMsg = get_user_msg(Map),
     LogMsg = maps:get(log_msg, Map),
     WMsg = "SESS~p credential request for ~p failed: ~s",
@@ -264,6 +266,7 @@ handle_credential_result({error, Map}, ServiceId, Session, _Params)
     {error, BadCred};
 handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
+    ok = watts_session:clear_additional_logins(ServiceId, Session),
     Msg = case Reason of
               limit_reached ->
                   <<"the credential limit has been reached">>;

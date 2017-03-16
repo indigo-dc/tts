@@ -39,6 +39,7 @@
 -export([get_redirection/1]).
 -export([clear_redirection/1]).
 -export([add_additional_login/3]).
+-export([clear_additional_logins/2]).
 
 
 -export([set_error/2]).
@@ -115,6 +116,10 @@ clear_redirection(Pid) ->
                            Pid :: pid()) -> ok.
 add_additional_login(IssuerId, Token, Pid) ->
     gen_server:call(Pid, {add_additional_login, IssuerId, Token}).
+
+-spec clear_additional_logins(ServiceId :: binary(), Pid :: pid()) -> ok.
+clear_additional_logins(ServiceId, Pid) ->
+    gen_server:call(Pid, {clear_additional_logins, ServiceId}).
 
 -spec get_userid(Pid :: pid()) -> {ok, ID::binary()}.
 get_userid(Pid) ->
@@ -233,6 +238,10 @@ handle_call({add_additional_login, IssuerId, Token}, _From,
                    max_age=MA} = State) ->
     NewUserInfo = watts_userinfo:add_additional_login(ServiceId, IssuerId,
                                                       Token, UserInfo),
+    {reply, ok, State#state{user_info = NewUserInfo}, MA};
+handle_call({clear_additional_logins, ServiceId}, _From,
+            #state{user_info = UserInfo, max_age=MA} = State) ->
+    NewUserInfo = watts_userinfo:clear_additional_logins(ServiceId, UserInfo),
     {reply, ok, State#state{user_info = NewUserInfo}, MA};
 handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
     {reply, ok, State, MA};
