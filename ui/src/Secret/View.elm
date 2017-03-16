@@ -7,7 +7,6 @@ import Html.Events exposing (onClick)
 import Http exposing (encodeUri)
 import Messages exposing (Msg)
 import Secret.Model as Secret exposing (Model, Entry)
-import String exposing (words, join)
 
 
 view : Maybe String -> Maybe Secret.Model -> Html Msg
@@ -108,19 +107,21 @@ viewEntry : Secret.Entry -> Html Msg
 viewEntry entry =
     let
         name_col =
-            if entry.type_ == "textfile" || entry.type_ == "textarea" then
-                div []
-                    [ text entry.name
-                    , a
-                        [ class "btn btn-default pull-right"
-                        , downloadAs ((join "_" (words entry.name)) ++ ".txt")
-                        , href ("data:text/plain;charset=utf8," ++ (encodeUri entry.value))
-                        , title "Download as File"
+            case entry.saveas of
+                Nothing ->
+                    text entry.name
+
+                Just filename ->
+                    div []
+                        [ text entry.name
+                        , a
+                            [ class "btn btn-default pull-right"
+                            , downloadAs (filename)
+                            , href ("data:text/plain;charset=utf8," ++ (encodeUri entry.value))
+                            , title "Download as File"
+                            ]
+                            [ span [ class "glyphicon glyphicon glyphicon-download-alt" ] [] ]
                         ]
-                        [ span [ class "glyphicon glyphicon glyphicon-download-alt" ] [] ]
-                    ]
-            else
-                text entry.name
 
         value_col =
             if entry.type_ == "text" then
