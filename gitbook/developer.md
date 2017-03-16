@@ -136,6 +136,7 @@ The entries in the credential object (part of the list in 'credential' above) ar
 | rows  | The number of rows for the `textarea` in case the type is `textfile`, else ignored                                        |
 | cols  | The number of columns for the `textarea` when using `textfile`, else ignored                                          |
 | value | The value of the credential part, e.g. the password or the username itself                                         |
+| save_as | the name of the file, the value can be stored as. If this is set a download button appears.|
 
 
 ### Performing a Revoke

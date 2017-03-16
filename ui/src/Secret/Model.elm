@@ -25,4 +25,5 @@ type alias Entry =
     , value : String
     , rows : Int
     , cols : Int
+    , saveas : Maybe String
     }
