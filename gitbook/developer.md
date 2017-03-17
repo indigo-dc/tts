@@ -18,6 +18,7 @@ The decoded `json` object has the following format:
     "conf_params": {},
     "params": {},
     "cred_state": "undefined",
+    "access_token":"opaque access token (this is optional)",
     "user_info": {
         "family_name": "Mustermann",
         "gender": "male",
@@ -38,6 +39,7 @@ The items of the object are:
 | conf_params| These are parameters that are set in the configuration file |
 | params |  These are parameters entered upon request |
 | cred_state | This is only valid when revoking, it is the credential state returned when creating the credential |
+| access_token  | The access token from the user, this will only be passed if enabled at WaTTS. |
 | user_info  | The user info contains information about the user gathered using OpenId Connect |
 | watts_userid | This is the dynamically generated unique *id* used within WaTTS for the current user. It is also a `base64url` encoded `json` object containing *issuer* and *subject* |
 
