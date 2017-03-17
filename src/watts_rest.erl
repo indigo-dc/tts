@@ -319,9 +319,17 @@ perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
     end.
 
 return_json_service_list(Services, Keys) ->
-    Extract = fun(Map, List) ->
+    Extract = fun(Map0, List) ->
+                      CredLimit = case maps:get(cred_limit, Map0) of
+                                      infinite ->
+                                          -1;
+                                      Num when is_integer(Num), Num >= 0 ->
+                                          Num;
+                                      _ -> 0
+                                  end,
                       Update = #{type => none, host => localhost,
                                 port => <<"1234">>},
+                      Map = maps:put(cred_limit, CredLimit, Map0),
                       [ maps:with(Keys, maps:merge(Update, Map)) | List]
               end,
     List = lists:reverse(lists:foldl(Extract, [], Services)),
