@@ -178,7 +178,7 @@
                                          Msg = io_lib:format("the credential limit '~p' of ~p must be a positive integer or 'infinite'", [BadLimit, Id]),
                                          cuttlefish:invalid(Msg);
                                      _ ->
-                                         undefined
+                                         infinite
                                  end,
                      ParaRunner = case lists:keyfind(Id, 1, Runners) of
                                      {Id, NumRun}
