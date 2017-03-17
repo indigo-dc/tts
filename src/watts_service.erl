@@ -59,7 +59,11 @@ get_list(UserInfo) ->
                       {false, true} ->
                           List;
                       _ ->
-                          [ maps:merge(Service, Update) | List]
+                          Keys = [id, description, type, host, port, enabled,
+                                  cred_count, cred_limit, limit_reached, params,
+                                  authorized, authz_tooltip, pass_access_token],
+                          Entry = maps:with(Keys, maps:merge(Service, Update)),
+                          [ Entry | List]
                   end
           end,
     {ok, lists:reverse(lists:foldl(UpdateLimit, [], ServiceList))}.
