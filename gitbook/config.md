@@ -258,7 +258,7 @@ you want to give to the service.
 | :---: | --- | :---: | :---: |
 | description | A description of the service for the user | string | yes |
 | cmd | The command to execute after connecting, needs to be executable/readable by the user WaTTS is running as | string | yes |
-| credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | yes |
+| credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | no (infinite) |
 | parallel_runner | The number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
 | allow_same_state | Whether the plugin is allowed to return the same state more than once | boolean | no, (false) |
 | plugin_timeout | The time after which WaTTS won't wait for the result of the plugin execution anymore | duration or 'infinity' | no (infinity) |
