@@ -17,3 +17,4 @@ decodeInfo =
         |> Json.Decode.Pipeline.required "display_name" (Json.Decode.string)
         |> Json.Decode.Pipeline.required "error" (Json.Decode.string)
         |> Json.Decode.Pipeline.required "issuer_id" (Json.Decode.string)
+        |> Json.Decode.Pipeline.required "documentation" (Json.Decode.bool)

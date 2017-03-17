@@ -65,6 +65,7 @@ type alias Model =
     , current_service : Maybe Service.Model
     , current_param : Maybe (Dict String Json.Value)
     , request_progressing : Bool
+    , docs_enabled : Bool
     , progressing_title : Maybe String
     }
 
@@ -90,6 +91,7 @@ update msg model =
                     , displayName = info.displayName
                     , activePage = nextPage
                     , issuer_id = info.issuer_id
+                    , docs_enabled = info.docs_enabled
                   }
                 , nextCmd
                 )
@@ -377,6 +379,17 @@ view model =
 
                 _ ->
                     False
+
+        docu =
+            case model.docs_enabled of
+                True ->
+                    [ small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
+                        [ a [ href "docs/index.html" ] [ text "Documentation" ]
+                        ]
+                    ]
+
+                False ->
+                    []
     in
         div []
             [ div [ class "container" ]
@@ -393,16 +406,18 @@ view model =
                 ]
             , div [ class "footer" ]
                 [ div [ style [ ( "text-align", "center" ) ] ]
-                    [ small [ style [ ( "color", "#808080" ) ] ]
+                    ([ small [ style [ ( "color", "#808080" ) ] ]
                         [ text "This work was partially funded by the "
                         , a [ href "https://www.indigo-datacloud.eu" ]
                             [ text "INDIGO DataCloud Project" ]
                         , text " under grant agreement RIA 653549"
                         ]
-                    , small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
+                     , small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
                         [ a [ href "privacystatement.html" ] [ text "Privacy Statement" ]
                         ]
-                    ]
+                     ]
+                        ++ docu
+                    )
                 , div
                     [ style
                         [ ( "position", "absolute" )
@@ -498,6 +513,7 @@ initModel baseUrl restVersion =
       , current_service = Nothing
       , current_param = Nothing
       , request_progressing = False
+      , docs_enabled = False
       , progressing_title = Nothing
       }
     , retrieveInfo baseUrl restVersion
