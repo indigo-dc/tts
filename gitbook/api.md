@@ -64,6 +64,7 @@ And the response is similar to:
       "enabled": true,
       "id": "info",
       "limit_reached": false,
+      "pass_access_token": false,
       "params": [
         []
       ]
@@ -82,6 +83,7 @@ Important for requesting a credential is the `id`.
  - *enabled*: whether this service is actually enabled
  - *id*: the id of the service, used to perform requests
  - *limit_reached*: whether the credential limit is reached
+ - *pass_access_token*: whether the access token of the user is made available to the service
  - *params*: parameter sets, allowed to pass parameter to requests
 
 ## List Credentials
