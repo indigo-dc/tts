@@ -10,6 +10,7 @@ type alias Model =
     , limitReached : Bool
     , authorized : Bool
     , tooltip : String
+    , pass_access_token : Bool
     , parameter_sets : List Set
     , has_empty_set : Maybe Bool
     , has_non_empty_sets : Maybe Bool

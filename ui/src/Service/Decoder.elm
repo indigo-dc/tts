@@ -19,6 +19,7 @@ decodeService =
         |> required "limit_reached" bool
         |> required "authorized" bool
         |> required "authz_tooltip" string
+        |> required "pass_access_token" bool
         |> optional "params" (list (list decodeParam)) [ [] ]
         |> hardcoded Nothing
         |> hardcoded Nothing
