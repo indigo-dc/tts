@@ -225,7 +225,7 @@ update msg model =
         Messages.Revoke credId ->
             ( { model
                 | request_progressing = True
-                , progressing_title = Just "Revoking Credential ..."
+                , progressing_title = Just "Removing Credential ..."
               }
             , revoke model.url model.restVersion model.issuer_id credId
             )
