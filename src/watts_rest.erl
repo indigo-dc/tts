@@ -261,12 +261,14 @@ perform_get(info, undefined, Session, _) ->
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
+    EnableDocs = ?CONFIG(enable_docs),
     Info = #{version => list_to_binary(Version),
              redirect_path => list_to_binary(Redirect),
              error => Error,
              logged_in => LoggedIn,
              display_name => DName,
-             issuer_id => IssId
+             issuer_id => IssId,
+             documentation => EnableDocs
             },
     jsone:encode(Info);
 perform_get(logout, undefined, undefined, _) ->
