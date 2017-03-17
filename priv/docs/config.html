@@ -624,25 +624,25 @@ you want to give to the service.</p>
 </tr>
 <tr>
 <td style="text-align:center">parallel_runner</td>
-<td>the number of parallel runs of the plugin for the service</td>
+<td>The number of parallel runs of the plugin for the service</td>
 <td style="text-align:center">integer or &apos;infinite&apos;</td>
 <td style="text-align:center">no, (1)</td>
 </tr>
 <tr>
 <td style="text-align:center">allow_same_state</td>
-<td>whether the plugin is allowed to return the same state more than once</td>
+<td>Whether the plugin is allowed to return the same state more than once</td>
 <td style="text-align:center">boolean</td>
 <td style="text-align:center">no, (false)</td>
 </tr>
 <tr>
 <td style="text-align:center">plugin_timeout</td>
-<td>the time after which WaTTS won&apos;t wait for the result of the plugin execution anymore</td>
+<td>The time after which WaTTS won&apos;t wait for the result of the plugin execution anymore</td>
 <td style="text-align:center">duration or &apos;infinity&apos;</td>
 <td style="text-align:center">no (infinity)</td>
 </tr>
 <tr>
 <td style="text-align:center">pass_access_token</td>
-<td>whether the  access token should be passed to the plugin</td>
+<td>Whether the  access token should be passed to the plugin. Enabling this is adding a security risk!</td>
 <td style="text-align:center">boolean</td>
 <td style="text-align:center">no (false)</td>
 </tr>
@@ -654,67 +654,67 @@ you want to give to the service.</p>
 </tr>
 <tr>
 <td style="text-align:center">connection.user</td>
-<td>the user name to use when connecting e.g. with ssh</td>
+<td>The user name to use when connecting e.g. with ssh</td>
 <td style="text-align:center">string</td>
 <td style="text-align:center">no</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.password</td>
-<td>the password to use when connecting e.g. with ssh</td>
+<td>The password to use when connecting e.g. with ssh</td>
 <td style="text-align:center">string</td>
 <td style="text-align:center">no</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.host</td>
-<td>the hostname to connect to e.g. with ssh</td>
+<td>The hostname to connect to e.g. with ssh</td>
 <td style="text-align:center">host</td>
 <td style="text-align:center">no</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.port</td>
-<td>the port number to connect to e.g. with ssh</td>
+<td>The port number to connect to e.g. with ssh</td>
 <td style="text-align:center">port</td>
 <td style="text-align:center">no</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.ssh_dir</td>
-<td>the ssh_dir to use with ssh</td>
+<td>The ssh_dir to use with ssh</td>
 <td style="text-align:center">port</td>
 <td style="text-align:center">no</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.ssh_key_pass</td>
-<td>the password of the private key to use with ssh</td>
+<td>The password of the private key to use with ssh</td>
 <td style="text-align:center">string</td>
 <td style="text-align:center">no</td>
 </tr>
 <tr>
 <td style="text-align:center">plugin.<code>key</code></td>
-<td>a setting to send to the plugin, the name of the parameter will be <code>key</code>. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs</td>
+<td>A setting to send to the plugin, the name of the parameter will be <code>key</code>. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs</td>
 <td style="text-align:center">any</td>
 <td style="text-align:center">no</td>
 </tr>
 <tr>
 <td style="text-align:center">authz.allow.<code>p</code>.<code>k</code>.<code>o</code></td>
-<td>see the Authorization section</td>
+<td>See the Authorization section</td>
 <td style="text-align:center">other</td>
 <td style="text-align:center">no ([])</td>
 </tr>
 <tr>
 <td style="text-align:center">authz.forbid.<code>p</code>.<code>k</code>.<code>o</code></td>
-<td>see the Authorization section</td>
+<td>See the Authorization section</td>
 <td style="text-align:center">other</td>
 <td style="text-align:center">no ([])</td>
 </tr>
 <tr>
 <td style="text-align:center">authz.hide</td>
-<td>hide the service if the user is not allowed</td>
+<td>Hide the service if the user is not allowed</td>
 <td style="text-align:center">boolean</td>
 <td style="text-align:center">no (false)</td>
 </tr>
 <tr>
 <td style="text-align:center">authz.tooltip</td>
-<td>message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service</td>
+<td>Message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service</td>
 <td style="text-align:center">boolean</td>
 <td style="text-align:center">no (false)</td>
 </tr>
@@ -904,7 +904,7 @@ situation described above will happen.</li>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-03-07T06:51:53.681Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-16T13:55:54.749Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-03-17T07:42:49.583Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-17T08:00:56.745Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>

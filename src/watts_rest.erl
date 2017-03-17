@@ -233,15 +233,15 @@ post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
     {ok, Req2} = update_cookie_if_used(Req1, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
-perform_get(service, undefined, Session, 1) ->
+perform_get(service, undefined, Session, Version) ->
     {ok, ServiceList} = watts:get_service_list_for(Session),
-    return_json_service_list(ServiceList, [id, type, host, port]);
-perform_get(service, undefined, Session, _) ->
-    {ok, ServiceList} = watts:get_service_list_for(Session),
-    return_json_service_list(ServiceList, [id, description,
-                                           enabled, cred_count, cred_limit,
-                                           limit_reached, params, authorized,
-                                           authz_tooltip] );
+    Keys = case Version of
+               1 -> [id, type, host, port];
+               _ -> [id, description, enabled, cred_count, cred_limit,
+                     limit_reached, params, authorized, authz_tooltip,
+                     pass_access_token]
+           end,
+    return_json_service_list(ServiceList, Keys);
 perform_get(oidcp, _, _, 1) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     return_json_oidc_list(OIDCList);

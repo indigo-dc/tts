@@ -259,22 +259,22 @@ you want to give to the service.
 | description | A description of the service for the user | string | yes |
 | cmd | The command to execute after connecting, needs to be executable/readable by the user WaTTS is running as | string | yes |
 | credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | yes |
-| parallel_runner | the number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
-| allow_same_state | whether the plugin is allowed to return the same state more than once | boolean | no, (false) |
-| plugin_timeout | the time after which WaTTS won't wait for the result of the plugin execution anymore | duration or 'infinity' | no (infinity) |
-| pass_access_token | whether the  access token should be passed to the plugin | boolean | no (false) |
+| parallel_runner | The number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
+| allow_same_state | Whether the plugin is allowed to return the same state more than once | boolean | no, (false) |
+| plugin_timeout | The time after which WaTTS won't wait for the result of the plugin execution anymore | duration or 'infinity' | no (infinity) |
+| pass_access_token | Whether the  access token should be passed to the plugin. Enabling this is adding a security risk! | boolean | no (false) |
 | connection.type | Either local or ssh | 'local' or 'ssh' | yes |
-| connection.user | the user name to use when connecting e.g. with ssh | string | no |
-| connection.password | the password to use when connecting e.g. with ssh | string | no |
-| connection.host | the hostname to connect to e.g. with ssh | host | no |
-| connection.port | the port number to connect to e.g. with ssh | port | no |
-| connection.ssh_dir | the ssh_dir to use with ssh | port | no |
-| connection.ssh_key_pass | the password of the private key to use with ssh | string | no |
-| plugin.`key` | a setting to send to the plugin, the name of the parameter will be `key`. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs | any | no |
-| authz.allow.`p`.`k`.`o` | see the Authorization section | other | no ([])|
-| authz.forbid.`p`.`k`.`o` | see the Authorization section | other | no ([]) |
-| authz.hide | hide the service if the user is not allowed | boolean | no (false) |
-| authz.tooltip | message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
+| connection.user | The user name to use when connecting e.g. with ssh | string | no |
+| connection.password | The password to use when connecting e.g. with ssh | string | no |
+| connection.host | The hostname to connect to e.g. with ssh | host | no |
+| connection.port | The port number to connect to e.g. with ssh | port | no |
+| connection.ssh_dir | The ssh_dir to use with ssh | port | no |
+| connection.ssh_key_pass | The password of the private key to use with ssh | string | no |
+| plugin.`key` | A setting to send to the plugin, the name of the parameter will be `key`. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs | any | no |
+| authz.allow.`p`.`k`.`o` | See the Authorization section | other | no ([])|
+| authz.forbid.`p`.`k`.`o` | See the Authorization section | other | no ([]) |
+| authz.hide | Hide the service if the user is not allowed | boolean | no (false) |
+| authz.tooltip | Message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
 
 
 
