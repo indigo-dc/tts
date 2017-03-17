@@ -241,7 +241,7 @@ get_json_test() ->
                         id = undefined,
                         session_pid = pid1,
                         method = get
-                       }, <<"{\"service_list\":[{}]}">> },
+                       }, <<"{\"service_list\":[{\"cred_limit\":1}]}">> },
                 {#state{version = latest,
                         type = service,
                         id = undefined,
@@ -425,7 +425,7 @@ start_meck() ->
                   end,
     GetServiceList = fun(SessionPid) ->
                           case SessionPid of
-                              pid1 -> {ok, [#{}]};
+                              pid1 -> {ok, [#{cred_limit => 1}]};
                               _ -> {ok, []}
                           end
                   end,
