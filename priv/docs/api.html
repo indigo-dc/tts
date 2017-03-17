@@ -276,6 +276,7 @@ Authorization: Bearer ya29.[...]MUchM
       &quot;enabled&quot;: true,
       &quot;id&quot;: &quot;info&quot;,
       &quot;limit_reached&quot;: false,
+      &quot;pass_access_token&quot;: false,
       &quot;params&quot;: [
         []
       ]
@@ -296,6 +297,7 @@ username/password for ssh">credential</a> is the <code>id</code>.</p>
 <li><em>id</em>: the id of the service, used to perform requests</li>
 <li><em>limit_reached</em>: whether the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
 username/password for ssh">credential</a> limit is reached</li>
+<li><em>pass_access_token</em>: whether the access token of the user is made available to the service</li>
 <li><em>params</em>: parameter sets, allowed to pass parameter to requests</li>
 </ul>
 <h2 id="list-credentials">List Credentials</h2>
@@ -554,7 +556,7 @@ header as a bearer token:</p>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"REST Api","level":"1.6","depth":1,"next":{"title":"WaTTS - Service Reference Card","level":"1.7","depth":1,"path":"service_ref_card.md","ref":"service_ref_card.md","articles":[]},"previous":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"api.md","mtime":"2017-02-16T06:55:21.781Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-17T08:00:56.745Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"REST Api","level":"1.6","depth":1,"next":{"title":"WaTTS - Service Reference Card","level":"1.7","depth":1,"path":"service_ref_card.md","ref":"service_ref_card.md","articles":[]},"previous":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"api.md","mtime":"2017-03-17T08:37:32.584Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-17T08:51:05.654Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
