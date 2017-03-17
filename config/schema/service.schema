@@ -168,13 +168,17 @@
                                _ -> undefined
                            end,
                      CredLimit = case lists:keyfind(Id, 1, CredLimits) of
+                                     {Id, infinite}
+                                            -> infinite;
                                      {Id, Limit}
-                                       when is_integer(Limit), Limit > 0
+                                       when is_integer(Limit), Limit >= 0
                                             -> Limit;
-                                     {Id, Atom}
-                                       when is_atom(Atom)
-                                            -> Atom;
-                                     _ -> undefined
+                                     {Id, BadLimit}
+                                            ->
+                                         Msg = io_lib:format("the credential limit '~p' of ~p must be a positive integer or 'infinite'", [BadLimit, Id]),
+                                         cuttlefish:invalid(Msg);
+                                     _ ->
+                                         undefined
                                  end,
                      ParaRunner = case lists:keyfind(Id, 1, Runners) of
                                      {Id, NumRun}
