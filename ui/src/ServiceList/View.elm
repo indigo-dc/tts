@@ -30,7 +30,7 @@ view model =
                             [ th [] [ text "Id" ]
                             , th [] [ text "Description" ]
                             , th [] [ text "#Credentials" ]
-                            , th [] [ text "Icons" ]
+                            , th [] [ text "Info" ]
                             , th [] [ text "Action" ]
                             ]
                         ]

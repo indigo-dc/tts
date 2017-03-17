@@ -8,4 +8,5 @@ type alias Model =
     , displayName : String
     , error : String
     , issuer_id : String
+    , docs_enabled : Bool
     }

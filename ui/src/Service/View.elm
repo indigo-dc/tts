@@ -12,7 +12,12 @@ view : Service.Model -> Html Msg
 view service =
     let
         credText =
-            (toString service.credCount) ++ " / " ++ (toString service.credLimit)
+            case service.credLimit >= 0 of
+                True ->
+                    (toString service.credCount) ++ " / " ++ (toString service.credLimit)
+
+                False ->
+                    (toString service.credCount)
 
         serviceDisabled =
             service.limitReached || (not service.enabled) || (not service.authorized)

@@ -3,7 +3,7 @@
 
 module Service.Decoder exposing (..)
 
-import Json.Decode exposing (Decoder, string, bool, int, list)
+import Json.Decode exposing (Decoder, maybe, nullable, string, bool, int, list)
 import Json.Decode.Pipeline exposing (decode, required, optional, hardcoded)
 import Service.Model as Service exposing (Model, Param)
 

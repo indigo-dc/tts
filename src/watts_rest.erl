@@ -261,12 +261,14 @@ perform_get(info, undefined, Session, _) ->
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
+    EnableDocs = ?CONFIG(enable_docs),
     Info = #{version => list_to_binary(Version),
              redirect_path => list_to_binary(Redirect),
              error => Error,
              logged_in => LoggedIn,
              display_name => DName,
-             issuer_id => IssId
+             issuer_id => IssId,
+             documentation => EnableDocs
             },
     jsone:encode(Info);
 perform_get(logout, undefined, undefined, _) ->
@@ -319,9 +321,17 @@ perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
     end.
 
 return_json_service_list(Services, Keys) ->
-    Extract = fun(Map, List) ->
+    Extract = fun(Map0, List) ->
+                      CredLimit = case maps:get(cred_limit, Map0) of
+                                      infinite ->
+                                          -1;
+                                      Num when is_integer(Num), Num >= 0 ->
+                                          Num;
+                                      _ -> 0
+                                  end,
                       Update = #{type => none, host => localhost,
                                 port => <<"1234">>},
+                      Map = maps:put(cred_limit, CredLimit, Map0),
                       [ maps:with(Keys, maps:merge(Update, Map)) | List]
               end,
     List = lists:reverse(lists:foldl(Extract, [], Services)),

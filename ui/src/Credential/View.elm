@@ -16,6 +16,6 @@ view credential =
         , td []
             [ button
                 [ class "btn btn-default", onClick (Messages.Revoke credential.id) ]
-                [ text "Revoke" ]
+                [ text "Remove" ]
             ]
         ]
