@@ -78,7 +78,7 @@ Important for requesting a credential is the `id`.
  - *authorized*: whether the user is allowed to use this service
  - *authz_tooltip*: information on how the user might get the authorization
  - *cred_count*: the number of credentials for this service
- - *cred_limit*: how many credentials are allowed
+ - *cred_limit*: how many credentials are allowed, '-1' means unlimited
  - *description*: a textual description of the service
  - *enabled*: whether this service is actually enabled
  - *id*: the id of the service, used to perform requests
