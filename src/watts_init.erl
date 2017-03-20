@@ -1,6 +1,6 @@
 -module(watts_init).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016 - 2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -153,6 +153,7 @@ add_openid_provider() ->
     %% force only one try
     application:set_env(oidcc, provider_max_tries, 1),
     LocalEndpoint = local_endpoint(),
+    ?SETCONFIG(local_endpoint, LocalEndpoint),
     lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
@@ -160,13 +161,20 @@ add_openid_provider() ->
     ok.
 
 add_openid_provider([#{id := Id,
-                       config_endpoint := ConfigEndpoint} = Config0 | T],
+                       config_endpoint := ConfigEndpoint,
+                       disable_login := Disable} = Config0 | T],
                     LocalEndpoint) ->
     try
         Config = maps:remove(config_endpoint, Config0),
         {ok, _InternalId, _Pid} =
         oidcc:add_openid_provider(ConfigEndpoint, LocalEndpoint, Config),
         lager:info("Init: added OpenId Connect provider ~p", [Id]),
+        case Disable of
+            true ->
+                lager:info("Init: ~p will not be used for login", [Id]);
+            false ->
+                ok
+        end,
         add_openid_provider(T, LocalEndpoint)
     catch Error:Reason ->
             Msg = "Init: error occured OpenId Connect provider ~p: '~p' ~p",

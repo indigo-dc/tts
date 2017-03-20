@@ -1,6 +1,6 @@
 -module(watts_plugin_runner).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016 - 2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -222,6 +222,7 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
        cred_state = CredState
       } = State,
     ConfParams = maps:get(plugin_conf, ServiceInfo, #{}),
+    ServiceId = maps:get(id, ServiceInfo),
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
     AddAccessToken = maps:get(pass_access_token, ServiceInfo, false),
     ConnType = maps:get(type, ConnInfo, local),
@@ -240,7 +241,7 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
                         cred_state => CredState
                       }, ParamUpdate),
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo,
-                                           AddAccessToken),
+                                           ServiceId, AddAccessToken),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
     lager:debug("runner ~p: will execute ~p with parameter ~p",
                 [self(), Cmd, ScriptParam]),
@@ -250,17 +251,22 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
     {ok, State#state{cmd_line=CmdLine,
                      connection = Connection, con_type = ConnType}}.
 
-add_user_info_if_present(ScriptParam, undefined, _) ->
+add_user_info_if_present(ScriptParam, undefined, _, _) ->
     ScriptParam;
-add_user_info_if_present(ScriptParam, UserInfo, true) ->
+add_user_info_if_present(ScriptParam, UserInfo, ServiceId, AddAccessToken) ->
     {ok, AccessToken} = watts_userinfo:return(access_token, UserInfo),
-    Update = #{access_token => AccessToken},
-    NewParams = maps:merge(ScriptParam, Update),
-    add_user_info_if_present(NewParams, UserInfo, false);
-add_user_info_if_present(ScriptParam, UserInfo, _) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     {ok, PluginUserInfo} = watts_userinfo:return(plugin_info, UserInfo),
-    Update = #{watts_userid => UserId, user_info => PluginUserInfo},
+    {ok, AdditionalInfo} = watts_userinfo:return({additional_logins, ServiceId,
+                                                  AddAccessToken}, UserInfo),
+    BaseUpdate = #{watts_userid => UserId, user_info => PluginUserInfo,
+                  additional_logins => AdditionalInfo},
+    Update = case AddAccessToken of
+                 true ->
+                     maps:merge(BaseUpdate, #{access_token => AccessToken});
+                 false ->
+                     BaseUpdate
+             end,
     maps:merge(ScriptParam, Update).
 
 execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->

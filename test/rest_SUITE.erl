@@ -16,6 +16,7 @@
          python2_check/1,
          service_config/1,
          provider_config/1,
+         wattson_version/1,
          init_done/1,
          %% provider_list/0,
          rest_communication_v1/1,
@@ -27,6 +28,7 @@ all() ->
      init_done,
      python2_check,
      provider_config,
+     wattson_version,
      service_config,
      rest_communication_v2,
      rest_communication_v1
@@ -67,6 +69,7 @@ init_per_suite(Conf) ->
                    description => <<"Google">>,
                    config_endpoint=> <<"https://accounts.google.com/.well-known/openid-configuration">>,
                    id => <<"google">>,
+                   disable_login => false,
                    scopes => [<<"openid">>,<<"profile">>]}],
     ?SETCONFIG(service_list, ServiceList),
     ?SETCONFIG(provider_list, ProviderList),
@@ -148,7 +151,9 @@ python2_check(_Config) ->
          end,
     ok.
 
-
+wattson_version(_Config) ->
+    perform_rest_request("--version", 2),
+    ok.
 
 rest_communication_v1(_Config) ->
     rest_communication(1).

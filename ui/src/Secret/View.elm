@@ -2,7 +2,7 @@ module Secret.View exposing (..)
 
 import Dialog
 import Html exposing (Html, span, a, br, h4, div, p, small, text, input, button, tr, td, form, table, textarea, tbody)
-import Html.Attributes exposing (title, href, downloadAs, class, value, type_, readonly, rows, cols, style, hidden)
+import Html.Attributes exposing (title, href, downloadAs, class, value, type_, readonly, rows, cols, style, hidden, action, method, name)
 import Html.Events exposing (onClick)
 import Http exposing (encodeUri)
 import Messages exposing (Msg)
@@ -36,10 +36,16 @@ view progress_title scrt =
                         , footer = Nothing
                         }
 
-                ( Just secret, progressing ) ->
+                ( Just secret, _ ) ->
                     let
                         isCredential =
                             (secret.result == "ok")
+
+                        isOidcRedirect =
+                            (secret.result == "oidc_login")
+
+                        isError =
+                            (not isCredential) && (not isOidcRedirect)
 
                         cred =
                             secret.credential
@@ -47,12 +53,21 @@ view progress_title scrt =
                         error =
                             secret.error
 
+                        provider =
+                            secret.oidc_login.provider
+
+                        oidc_url =
+                            secret.oidc_login.url
+
                         title =
-                            case isCredential of
-                                True ->
+                            case ( isCredential, isOidcRedirect ) of
+                                ( True, _ ) ->
                                     "Your Credential"
 
-                                False ->
+                                ( _, True ) ->
+                                    "A login is required"
+
+                                _ ->
                                     "An Error Occured"
 
                         footer =
@@ -79,8 +94,12 @@ view progress_title scrt =
                                                     (List.map viewEntry cred.entries)
                                                 ]
                                             ]
-                                        , div [ hidden isCredential ]
-                                            [ p [] [ text error ] ]
+                                        , div [ hidden (not isOidcRedirect) ]
+                                            [ p [] [ text secret.oidc_login.msg ]
+                                            ]
+                                        , div [ hidden (not isError) ]
+                                            [ p [] [ text error ]
+                                            ]
                                         ]
                                     )
                             , footer =
@@ -88,13 +107,37 @@ view progress_title scrt =
                                     (div []
                                         [ div [ style [ ( "float", "left" ), ( "color", "#737373" ) ] ]
                                             [ small [] [ text footer ] ]
-                                        , div [ style [ ( "float", "right" ) ] ]
+                                        , div [ style [ ( "float", "right" ) ], hidden isOidcRedirect ]
                                             [ button
                                                 [ type_ "button"
                                                 , class "btn btn-default"
                                                 , onClick Messages.HideSecret
                                                 ]
                                                 [ text "Close" ]
+                                            ]
+                                        , div
+                                            [ style [ ( "float", "right" ) ]
+                                            , hidden (not isOidcRedirect)
+                                            ]
+                                            [ form [ method "post", action oidc_url ]
+                                                [ input
+                                                    [ type_ "hidden"
+                                                    , name "provider"
+                                                    , value provider
+                                                    ]
+                                                    []
+                                                , button
+                                                    [ type_ "submit"
+                                                    , class "btn btn-primary"
+                                                    ]
+                                                    [ text "Okay" ]
+                                                , button
+                                                    [ type_ "button"
+                                                    , class "btn btn-default"
+                                                    , onClick Messages.HideSecret
+                                                    ]
+                                                    [ text "Cancel" ]
+                                                ]
                                             ]
                                         ]
                                     )

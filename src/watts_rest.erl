@@ -1,6 +1,6 @@
 -module(watts_rest).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016 - 2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -58,8 +58,7 @@ init(_, _Req, _Opts) ->
           token = undefined,
           issuer = undefined,
           json = undefined,
-          session_pid = undefined,
-          cookie_based = false
+          session_pid = undefined
          }).
 
 rest_init(Req, _Opts) ->
@@ -212,25 +211,21 @@ delete_resource(Req, #state{type=credential,
                 Req1 = cowboy_req:set_resp_body(Body, Req),
                 {false, Req1}
         end,
-    ok = end_session_if_rest(State),
-    {Result, Req2, State#state{session_pid=undefined}}.
+    {ok, Req3} = update_cookie_or_end_session(Req2, State),
+    {Result, Req3, State#state{session_pid=undefined}}.
 
 
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
                      session_pid=Session} = State) ->
     Result = perform_get(Type, Id, Session, Version),
-    ok = end_session_if_rest(State),
-    {ok, Req2} = update_cookie_if_used(Req, State),
+    {ok, Req2} = update_cookie_or_end_session(Req, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
 
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
-                      session_pid=Session, json=Json,
-                      cookie_based=CookieBased} = State) ->
-    {Req1, Result} = perform_post(Req, Type, Id, Json, Session, CookieBased,
-                                  Version),
-    ok = end_session_if_rest(State),
-    {ok, Req2} = update_cookie_if_used(Req1, State),
+                      session_pid=Session, json=Json} = State) ->
+    {Req1, Result} = perform_post(Req, Type, Id, Json, Session, Version),
+    {ok, Req2} = update_cookie_or_end_session(Req1, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
 perform_get(service, undefined, Session, Version) ->
@@ -249,20 +244,22 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
-    {LoggedIn, DName, IssId, Error}  =
+    {LoggedIn, DName, IssId, Error, AutoService}  =
         case is_pid(Session) of
             false ->
-                {false, <<"">>, <<"">>, <<"">>};
+                {false, <<"">>, <<"">>, <<"">>, undefined};
             true ->
                 {ok, Name} = watts:get_display_name_for(Session),
                 {ok, _Iss, Id, _Sub} = watts:get_iss_id_sub_for(Session),
                 {ok, Err} = watts_session:get_error(Session),
-                {watts_session:is_logged_in(Session), Name, Id, Err}
+                {ok, Redir} = watts_session:get_redirection(Session),
+                ok = watts_session:clear_redirection(Session),
+                {watts_session:is_logged_in(Session), Name, Id, Err, Redir}
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
     EnableDocs = ?CONFIG(enable_docs),
-    Info = #{version => list_to_binary(Version),
+    Info0 = #{version => list_to_binary(Version),
              redirect_path => list_to_binary(Redirect),
              error => Error,
              logged_in => LoggedIn,
@@ -270,11 +267,15 @@ perform_get(info, undefined, Session, _) ->
              issuer_id => IssId,
              documentation => EnableDocs
             },
+    Info = case AutoService of
+               undefined  -> Info0;
+               _ ->
+                   SuppKeys = [service, params],
+                   maps:put(service_request, maps:with(SuppKeys, AutoService),
+                            Info0)
+           end,
     jsone:encode(Info);
-perform_get(logout, undefined, undefined, _) ->
-    jsone:encode(#{result => ok});
-perform_get(logout, undefined, Session, _) ->
-    ok = perform_logout(Session),
+perform_get(logout, undefined, _, _) ->
     jsone:encode(#{result => ok});
 perform_get(access_token, undefined, Session, _) ->
     {ok, AccessToken} = watts:get_access_token_for(Session),
@@ -297,13 +298,9 @@ perform_get(cred_data, Id, Session, Version) ->
     end.
 
 perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
-             Session, CookieBased, Ver) ->
-    IFace =  case CookieBased of
-                 false -> <<"REST interface">>;
-                 true ->  <<"Web App">>
-             end,
+             Session, Ver) ->
     Params = maps:get(params, Data, #{}),
-    case  watts:request_credential_for(ServiceId, Session, Params, IFace) of
+    case  watts:request_credential_for(ServiceId, Session, Params) of
         {ok, CredData} ->
             {ok, Id} = watts:store_temp_cred(CredData, Session),
             {ok, _Iss, IssuerId, _Sub} = watts:get_iss_id_sub_for(Session),
@@ -396,8 +393,7 @@ is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
                                        Body),
                  {Result, State#state{method=Method, version=Version, type=Type,
                                       id=Id, token=Token, issuer=Issuer,
-                                      session_pid=CookieSession, json=Body,
-                                      cookie_based = is_pid(CookieSession) }}
+                                      session_pid=CookieSession, json=Body}}
     end.
 
 verify_version(<<"latest">>) ->
@@ -428,7 +424,7 @@ verify_content_type(_) ->
 verify_issuer(undefined) ->
     undefined;
 verify_issuer(Issuer) when is_binary(Issuer) ->
-    case oidcc:get_openid_provider_info(Issuer) of
+    case watts:get_openid_provider_info(Issuer) of
         {ok, #{issuer := IssuerUrl}} ->
             IssuerUrl;
         _ ->
@@ -541,31 +537,40 @@ is_bad_version(1, true) ->
     false;
 is_bad_version(_, true) ->
     true;
-is_bad_version(Version, _) when is_integer(Version) ->
+is_bad_version(Version, false) when is_integer(Version) ->
    (Version =< 0) or (Version > ?LATEST_VERSION);
 is_bad_version(_, _) ->
     true.
 
-end_session_if_rest(#state{session_pid = Session, cookie_based = false}) ->
-    perform_logout(Session);
-end_session_if_rest(_) ->
-    ok.
+update_cookie_or_end_session(Req, #state{session_pid = Session,
+                                          type=RequestType}) ->
+    Oidc = ({ok, oidc} == watts_session:get_type(Session)),
+    Logout = (RequestType == logout),
+    update_cookie_or_end_session(Oidc, Logout, Session, Req).
 
-update_cookie_if_used(Req, #state{cookie_based = true, type=logout})->
-    watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
-update_cookie_if_used(Req, #state{cookie_based = true, session_pid=Session}) ->
+update_cookie_or_end_session(true, true, Session, Req) ->
+    perform_logout(true, Session, Req);
+update_cookie_or_end_session(true, false, Session, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
             {ok, Max} = watts_session:get_max_age(Session),
             {ok, Token} = watts_session:get_sess_token(Session),
             watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
-            perform_logout(Session),
-            watts_http_util:perform_cookie_action(clear, 0, deleted, Req)
+            perform_logout(true, Session, Req)
     end;
-update_cookie_if_used(Req, #state{cookie_based = _}) ->
+update_cookie_or_end_session(false, _, Session, Req) ->
+    perform_logout(false, Session, Req);
+update_cookie_or_end_session(_, _, _, Req) ->
     {ok, Req}.
 
-
-perform_logout(Session) ->
-    watts:logout(Session).
+perform_logout(CookieBased, Session, Req) ->
+    Result =
+        case CookieBased of
+            true ->
+                watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
+            _ ->
+                {ok, Req}
+        end,
+    watts:logout(Session),
+    Result.

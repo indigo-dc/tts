@@ -1,6 +1,6 @@
 -module(watts_session).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016 - 2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -31,6 +31,16 @@
 -export([set_max_age/2]).
 
 -export([set_token/2]).
+-export([set_type/2]).
+-export([get_type/1]).
+
+
+-export([set_redirection/4]).
+-export([get_redirection/1]).
+-export([clear_redirection/1]).
+-export([add_additional_login/3]).
+-export([clear_additional_logins/2]).
+
 
 -export([set_error/2]).
 -export([get_error/1]).
@@ -76,6 +86,40 @@ get_sess_token(undefined) ->
     {ok, undefined};
 get_sess_token(Pid) ->
     gen_server:call(Pid, get_sess_token).
+
+-spec set_type(Type :: atom(), Pid :: pid()) -> ok.
+set_type(_, undefined) ->
+    ok;
+set_type(Type, Pid) ->
+    gen_server:call(Pid, {set_type, Type}).
+
+-spec get_type(Pid :: pid()) -> {ok, atom()}.
+get_type(undefined) ->
+    {ok, undefined};
+get_type(Pid) ->
+    gen_server:call(Pid, get_type).
+
+-spec set_redirection(ServiceId :: binary(), Params :: list(),
+                      ProviderId :: binary(), Pid :: pid()) -> ok.
+set_redirection(ServiceId, Params, ProviderId, Pid) ->
+    gen_server:call(Pid, {set_redirection, ServiceId, Params, ProviderId}).
+
+-spec get_redirection(Pid :: pid()) -> {ok, Redirection :: map()}.
+get_redirection(Pid) ->
+    gen_server:call(Pid, get_redirection).
+
+-spec clear_redirection(Pid :: pid()) -> ok.
+clear_redirection(Pid) ->
+    gen_server:call(Pid, clear_redirection).
+
+-spec add_additional_login(IssuerId :: binary(), Token :: map(),
+                           Pid :: pid()) -> ok.
+add_additional_login(IssuerId, Token, Pid) ->
+    gen_server:call(Pid, {add_additional_login, IssuerId, Token}).
+
+-spec clear_additional_logins(ServiceId :: binary(), Pid :: pid()) -> ok.
+clear_additional_logins(ServiceId, Pid) ->
+    gen_server:call(Pid, {clear_additional_logins, ServiceId}).
 
 -spec get_userid(Pid :: pid()) -> {ok, ID::binary()}.
 get_userid(Pid) ->
@@ -135,13 +179,15 @@ is_same_ip(IP, Pid) ->
 -include("watts.hrl").
 -record(state, {
           id = unkonwn,
+          type = undefined,
           issuer_id = undefined,
           sess_token = undefined,
           user_agent = undefined,
           ip = undefined,
           error = <<"">>,
           user_info = undefined,
-          max_age = 10
+          max_age = 10,
+          redirection = undefined
          }).
 
 
@@ -166,6 +212,39 @@ handle_call(get_max_age, _From, #state{max_age=MA}=State) ->
     {reply, {ok, MA}, State, MA};
 handle_call({set_max_age, MA}, _From, State) ->
     {reply, ok, State#state{max_age=MA}, MA};
+handle_call(get_type, _From, #state{type = Type, max_age=MA} = State) ->
+    {reply, {ok, Type}, State, MA};
+handle_call({set_type, Type}, _From, #state{type = undefined,
+                                           max_age=MA} = State) ->
+    {reply, ok, State#state{type = Type}, MA};
+handle_call({set_redirection, ServiceId, Params, ProviderId}, _From,
+            #state{max_age=MA} = State) ->
+    Redirection = #{provider => ProviderId, params => Params,
+                    service => ServiceId},
+    {reply, ok, State#state{redirection = Redirection}, MA};
+handle_call(get_redirection, _From, #state{redirection=Redirection,
+                                           max_age=MA} = State) ->
+    {reply, {ok, Redirection}, State#state{redirection = Redirection}, MA};
+handle_call(clear_redirection, _From, #state{max_age=MA} = State) ->
+    {reply, ok, State#state{redirection = undefined}, MA};
+handle_call({add_additional_login, _IssuerId, _Token}, _From,
+            #state{redirection = undefined, max_age=MA} = State) ->
+    {reply, ok, State, MA};
+handle_call({add_additional_login, IssuerId, Token}, _From,
+            #state{user_info = UserInfo,
+                   redirection = #{provider := IssuerId,
+                                   service := ServiceId
+                                  },
+                   max_age=MA} = State) ->
+    NewUserInfo = watts_userinfo:add_additional_login(ServiceId, IssuerId,
+                                                      Token, UserInfo),
+    {reply, ok, State#state{user_info = NewUserInfo}, MA};
+handle_call({clear_additional_logins, ServiceId}, _From,
+            #state{user_info = UserInfo, max_age=MA} = State) ->
+    NewUserInfo = watts_userinfo:clear_additional_logins(ServiceId, UserInfo),
+    {reply, ok, State#state{user_info = NewUserInfo}, MA};
+handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
+    {reply, ok, State, MA};
 handle_call({set_iss_sub, Issuer, Subject}, _From,
             #state{max_age=MA, user_info=Info}=State) ->
     {ok, NewInfo} = watts_userinfo:update_iss_sub(Issuer, Subject, Info),
@@ -174,53 +253,28 @@ handle_call({set_iss_id, IssuerId}, _From,
             #state{max_age=MA}=State) ->
     {reply, ok, State#state{issuer_id=IssuerId}, MA};
 handle_call({set_token, Token}, _From,
-            #state{user_info=Info, max_age=MA}=State) ->
-    IdInfo = maps:get(user_info, Token, undefined),
-    IdToken = maps:get(id, Token, undefined),
-    AccToken = maps:get(access, Token, undefined),
-    TokenInfo = maps:get(token_info, Token, undefined),
-
-    Info1 =
-        case IdToken of
-            undefined ->
-                Info;
-            _ ->
-                {ok, Inf1} = watts_userinfo:update_id_token(IdToken, Info),
-                Inf1
-        end,
-    Info2 =
-        case IdInfo of
-            undefined ->
-                Info1;
-            _ ->
-                {ok, Inf2} = watts_userinfo:update_id_info(IdInfo, Info1),
-                Inf2
-        end,
-    Info3 =
-        case AccToken of
-            undefined ->
-                Info2;
-            _ ->
-                {ok, Inf3} = watts_userinfo:update_access_token(AccToken,
-                                                                Info2),
-                Inf3
-        end,
-    Info4 =
-        case TokenInfo of
-            undefined ->
-                Info3;
-            _ ->
-                {ok, Inf4} = watts_userinfo:update_token_info(TokenInfo,
-                                                                Info3),
-                Inf4
-        end,
-    {reply, ok, State#state{user_info=Info4}, MA};
+            #state{user_info=UserInfo, max_age=MA}=State) ->
+    {ok, NewUserInfo} = watts_userinfo:update_with_token(Token, UserInfo),
+    {reply, ok, State#state{user_info=NewUserInfo}, MA};
 handle_call({set_error, Error}, _From, #state{max_age=MA}=State) ->
     {reply, ok, State#state{error=Error}, MA};
 handle_call(get_error, _From, #state{max_age=MA, error=Error}=State) ->
     {reply, {ok, Error}, State, MA};
-handle_call(get_user_info, _From, #state{max_age=MA, user_info=Info} =State) ->
-    {reply, {ok, Info}, State, MA};
+handle_call(get_user_info, _From,
+            #state{max_age=MA, user_info=UserInfo} = State) ->
+    {reply, {ok, UserInfo}, State, MA};
+%% handle_call({get_user_info, ServiceId}, _From,
+%%             #state{max_age=MA, user_info=UserInfo,
+%%                    additional_logins=AddLogins} =State) ->
+%%     Extract = fun({{ServId, _}, Inf0}, List) when ServId == ServiceId ->
+%%                       {ok, Inf} = get_user_info(Inf0),
+%%                       [Inf | List];
+%%                  (_, List) ->
+%%                       List
+%%               end,
+%%     AddInfo =  lists:foldl(Extract, [], AddLogins),
+%%     ExtInfo = maps:put(additional_logins, AddInfo, UserInfo),
+%%     {reply, {ok, ExtInfo}, State, MA};
 handle_call(get_display_name, _Frm, #state{max_age=MA, user_info=Info}=State) ->
     Result = watts_userinfo:return(display_name, Info),
     {reply, Result, State, MA};

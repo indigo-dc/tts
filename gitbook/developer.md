@@ -27,6 +27,7 @@ The decoded `json` object has the following format:
         "name": "Max Mustermann",
         "sub": "12345678"
     },
+    "additional_logins": [],
     "watts_userid": "base64url encoded json object, containing subject and issuer"
 }
 ```
@@ -41,6 +42,7 @@ The items of the object are:
 | cred_state | This is only valid when revoking, it is the credential state returned when creating the credential |
 | access_token  | The access token from the user, this will only be passed if enabled at WaTTS. |
 | user_info  | The user info contains information about the user gathered using OpenId Connect |
+| additional_logins  | A list of object, each at least containing 'user_info' with information about the user gathered at another provider, after requesting a redirection. |
 | watts_userid | This is the dynamically generated unique *id* used within WaTTS for the current user. It is also a `base64url` encoded `json` object containing *issuer* and *subject* |
 
 ### Listing The Supported Parameter
@@ -100,7 +102,7 @@ user's behalf wants to create a credential.
 The *plugin* should perform any necessary action to create the credential for the user and print
 a `json` object on `stdout`.
 
-The expected format of the `json` object is:
+The expected format of the `json` object for a credential is:
 
 ```
 {
@@ -109,7 +111,18 @@ The expected format of the `json` object is:
 	"state":"state description"
 }
 ```
-or in case of an error:
+The expected format of a request to perform an additional login is:
+
+```
+{
+	"result":"oidc_login",
+    "provider":"<id of provider>",
+	"msg":"message to tell the user why an additional login is required"
+}
+```
+please keep in mind that the user may deny the request.
+
+In case of an error, the expected json is:
 
 ```
 {
@@ -122,9 +135,11 @@ or in case of an error:
 
 | Key        | Description                                                                                    |
 |------------|------------------------------------------------------------------------------------------------|
-| result | The result of the request, currently *ok* and *error* are supported |
+| result | The result of the request, currently *ok*, *oidc_login* and *error* are supported |
 | credential | A list of objects, each representing one part of the credentials. This will be shown to the user |
 | state      | A state to keep track of the credential; it MUST NOT contain sensitive information              |
+| provider | The id of the provider to redirect to for an additional login |
+| msg | a message to display to the user on a request to trigger an aditional login |
 | user_msg  | If the result is an error, this message will be shown to the user        |
 | log_msg  | If the result is an error, this message will be logged        |
 

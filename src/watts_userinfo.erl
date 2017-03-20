@@ -1,12 +1,31 @@
 -module(watts_userinfo).
+%%
+%% Copyright 2016 - 2017 SCC/KIT
+%%
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%%
+%% http://www.apache.org/licenses/LICENSE-2.0 (see also the LICENSE file)
+%%
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
+%%
 
 -export([
          new/0,
+         update_with_token/2,
          update_iss_sub/3,
          update_id_token/2,
          update_access_token/2,
          update_id_info/2,
          update_token_info/2,
+         add_additional_login/4,
+         clear_additional_logins/2,
+         has_additional_login/3,
          return/2
         ]).
 
@@ -17,11 +36,54 @@
           id_info = #{},
           access_token = #{},
           plugin_info = #{},
-          token_info = #{}
+          token_info = #{},
+          additional_logins = []
          }).
 
 new() ->
     {ok, #user_info{}}.
+
+
+update_with_token(Token, UserInfo) ->
+    IdInfo = maps:get(user_info, Token, undefined),
+    IdToken = maps:get(id, Token, undefined),
+    AccToken = maps:get(access, Token, undefined),
+    TokenInfo = maps:get(token_info, Token, undefined),
+
+    Info1 =
+        case IdToken of
+            undefined ->
+                UserInfo;
+            _ ->
+                {ok, Inf1} = update_id_token(IdToken, UserInfo),
+                Inf1
+        end,
+    Info2 =
+        case IdInfo of
+            undefined ->
+                Info1;
+            _ ->
+                {ok, Inf2} = update_id_info(IdInfo, Info1),
+                Inf2
+        end,
+    Info3 =
+        case AccToken of
+            undefined ->
+                Info2;
+            _ ->
+                {ok, Inf3} = update_access_token(AccToken, Info2),
+                Inf3
+        end,
+    Info4 =
+        case TokenInfo of
+            undefined ->
+                Info3;
+            _ ->
+                {ok, Inf4} = update_token_info(TokenInfo, Info3),
+                Inf4
+        end,
+    {ok, Info4}.
+
 
 update_iss_sub(Issuer, Subject,
                #user_info{issuer=undefined, subject=undefined} = Info)
@@ -88,6 +150,33 @@ update_token_info(TokenInfo, Info) ->
             {error, not_match}
     end.
 
+
+add_additional_login(ServiceId, IssuerId, Token,
+                     #user_info{additional_logins=AddLogins} = Info) ->
+    {ok, EmptyInfo} = new(),
+    {ok, UserInfo} = update_with_token(Token, EmptyInfo),
+    NewEntry = {{ServiceId, IssuerId}, UserInfo},
+    NewAddLogins = [ NewEntry |
+                     lists:keydelete({ServiceId, IssuerId}, 1, AddLogins)],
+    Info#user_info{additional_logins = NewAddLogins}.
+
+clear_additional_logins(ServiceId,
+                       #user_info{additional_logins=AddLogins} = Info) ->
+    Filter = fun({{Id, _}, _}) ->
+                     Id /= ServiceId
+             end,
+    NewAddLogins = lists:filter(Filter, AddLogins),
+    Info#user_info{additional_logins = NewAddLogins}.
+
+has_additional_login(ServiceId, IssuerId,
+                     #user_info{additional_logins=AddLogins}) ->
+    case lists:keyfind({ServiceId, IssuerId}, 1, AddLogins) of
+        false ->
+            false;
+        _ ->
+            true
+    end.
+
 return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     Key = maybe_to_atom(Key0),
     case maps:is_key(Key, PluginInfo) of
@@ -98,6 +187,26 @@ return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     end;
 return(plugin_info, #user_info{plugin_info=PluginInfo}) ->
     {ok, PluginInfo};
+return({additional_logins, ServiceId, AddAccessToken},
+       #user_info{additional_logins = AddLogins}) ->
+    Extract = fun({{SrvId, _}, Info}, List) when SrvId == ServiceId ->
+                      {ok, UInfo} = return(plugin_info, Info),
+                      {ok, PAccT} = return(access_token, Info),
+                      Base = #{user_info => UInfo},
+                      Update =
+                          case AddAccessToken of
+                              true ->
+                                  #{access_token => PAccT};
+                              false ->
+                                  #{}
+                          end,
+
+                      [ maps:merge(Base, Update) | List];
+                 (_, List) ->
+                      List
+              end,
+    AddLoginInfo = lists:foldl(Extract, [], AddLogins),
+    {ok, AddLoginInfo};
 return(issuer_subject, Info) ->
     {ok, Issuer} = return(issuer, Info),
     {ok, Subject} = return(subject, Info),

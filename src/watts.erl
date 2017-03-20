@@ -1,6 +1,6 @@
 -module(watts).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016 - 2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -27,9 +27,10 @@
          does_temp_cred_exist/2,
 
          get_openid_provider_list/0,
+         get_openid_provider_info/1,
          get_service_list_for/1,
          get_credential_list_for/1,
-         request_credential_for/4,
+         request_credential_for/3,
          revoke_credential_for/2,
 
          get_access_token_for/1,
@@ -45,15 +46,25 @@
          stop_debug/0
         ]).
 
-login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
-= TokenMap) ->
-    do_login(Issuer, Subject, TokenMap);
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
+                   cookies := Cookies} = TokenMap0) ->
+    Cookie = case lists:keyfind(watts_http_util:cookie_name(), 1, Cookies) of
+                 false -> undefined;
+                 {_, Data} -> Data
+             end,
+    TokenMap = maps:remove(cookies, TokenMap0),
+    case watts_session_mgr:get_session(Cookie) of
+        {ok, SessionPid} when is_pid(SessionPid) ->
+            do_additional_login(Issuer, Subject, TokenMap, SessionPid);
+        _ ->
+            do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
+    end;
 login_with_oidcc(_BadToken) ->
     {error, bad_token}.
 
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
                                                   is_binary(Issuer) ->
-    do_login(Issuer, undefined, AccessToken);
+    do_login_if_issuer_enabled(Issuer, undefined, AccessToken);
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
 
@@ -63,14 +74,30 @@ session_with_error(Msg) ->
     false = watts_session:is_logged_in(SessPid),
     {ok, SessPid}.
 
+do_login_if_issuer_enabled(Issuer, Subject, Token) ->
+    {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+    {ok, #{issuer := Issuer, id := Id}} =
+        oidcc:get_openid_provider_info(ProviderPid),
+    case is_provider_disabled(Id) of
+        false ->
+            do_login(Issuer, Subject, Token);
+        true ->
+            {error, login_disabled}
+    end.
+
 
 do_login(Issuer, Subject0, Token0) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
     SessionId = watts_session:get_id(SessPid),
+    SessionType = case Subject0 of
+                      undefined -> rest;
+                      _ -> oidc
+                  end,
+    ok = watts_session:set_type(SessionType, SessPid),
     try
         Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
         case Result of
-            {ok, Subject, Token} ->
+            {ok, Subject, _IssuerId, Token} ->
                 update_session(Issuer, Subject, Token, SessPid);
             {error, ErrReason} ->
                 logout(SessPid),
@@ -84,6 +111,32 @@ do_login(Issuer, Subject0, Token0) ->
             lager:error("SESS~p login failed due to ~p:~p at ~p",
                         [SessionId, Error, Reason, StackTrace]),
             {error, internal}
+    end.
+
+do_additional_login(Issuer, Subject0, Token0, SessPid) ->
+    {ok, SessionId} = watts_session:get_id(SessPid),
+    lager:info("SESS~p additional login as ~p at ~p",
+               [SessionId, Subject0, Issuer]),
+    try
+        Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
+        case Result of
+            {ok, _Subject, IssuerId, Token} ->
+                ok = watts_session:add_additional_login(IssuerId, Token,
+                                                       SessPid),
+                return_session_info(SessPid);
+            {error, ErrReason} ->
+                %% TODO: show error to user
+                ok = watts_session:clear_redirection(SessPid),
+                lager:error("SESS~p additional login failed due to ~p",
+                            [SessionId, ErrReason]),
+                return_session_info(SessPid)
+        end
+    catch Error:Reason ->
+            %% TODO: show error to user
+            StackTrace = erlang:get_stacktrace(),
+            lager:error("SESS~p additional login failed due to ~p:~p at ~p",
+                        [SessionId, Error, Reason, StackTrace]),
+            return_session_info(SessPid)
     end.
 
 
@@ -108,11 +161,37 @@ get_openid_provider_list() ->
                                issuer := Issuer
                               }} =
                             oidcc:get_openid_provider_info(Pid),
-                        [ #{ id => Id, desc => Desc, ready => Ready,
-                             issuer => Issuer } | List]
+                        case is_provider_disabled(Id) of
+                            true ->
+                                List;
+                            false ->
+                                [ #{ id => Id, desc => Desc, ready => Ready,
+                                     issuer => Issuer } | List]
+                        end
                 end,
     OpList = lists:reverse(lists:foldl(ExtFields, [], OidcProvList)),
     {ok, OpList}.
+
+get_openid_provider_info(ProviderId) ->
+    case is_provider_disabled(ProviderId) of
+        false ->
+            oidcc:get_openid_provider_info(ProviderId);
+        true ->
+            {error, login_disabled}
+    end.
+
+
+is_provider_disabled(ProviderId) ->
+    ProviderList = ?CONFIG(provider_list),
+    ProviderDisabled = fun(#{id := Id, disable_login := Disable}, Current) ->
+                               case Id == ProviderId of
+                                   true ->
+                                       Disable;
+                                   false ->
+                                       Current
+                               end
+                       end,
+    lists:foldl(ProviderDisabled, false, ProviderList).
 
 
 get_service_list_for(Session) ->
@@ -126,45 +205,86 @@ get_credential_list_for(Session) ->
     {ok, CredentialList}.
 
 
-request_credential_for(ServiceId, Session, Params, Interface) ->
+request_credential_for(ServiceId, Session, Params) ->
+    IFace =  case watts_session:get_type(Session) of
+                 {ok, rest} -> <<"REST interface">>;
+                 {ok, oidc} ->  <<"Web App">>
+             end,
     {ok, UserInfo} = watts_session:get_user_info(Session),
-    {ok, SessionId} = watts_session:get_id(Session),
     true = watts_service:is_enabled(ServiceId),
-    case watts_plugin:request(ServiceId, UserInfo, Interface, Params) of
-        {ok, Credential} ->
-            #{id := CredId} = Credential,
-            lager:info("SESS~p got credential ~p for ~p",
-                       [SessionId, CredId, ServiceId]),
-            {ok, #{result => ok, credential => Credential}};
-        {error, Map}
-          when is_map(Map)->
-            case maps:get(log_msg, Map, undefined) of
-                undefined ->
-                    ok;
-                LogMsg ->
-                    WMsg = "SESS~p credential request for ~p failed: ~s",
-                    lager:warning(WMsg, [SessionId, ServiceId, LogMsg])
-            end,
-            UserMsg = get_user_msg(Map),
-            BadCred = #{result => error, user_msg => UserMsg},
-            {error, BadCred};
-        {error, Reason} ->
-            Msg = case Reason of
-                      limit_reached ->
-                          <<"the credential limit has been reached">>;
-                      user_not_allowed ->
-                          <<"you are not allowed to use this service">>;
-                      service_disabled ->
-                          <<"the service you tried to use is disabled">>;
-                      invalid_params ->
-                          <<"invalid parameter have been passed">>;
-                      _ ->
-                          <<"unknown error occured, please contact the admin">>
-                  end,
-            WMsg = "SESS~p credential request for ~p failed: ~p",
-            lager:warning(WMsg, [SessionId, ServiceId, Reason]),
+    Result = watts_plugin:request(ServiceId, UserInfo, IFace, Params),
+    handle_credential_result(Result, ServiceId, Session, Params).
+
+handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
+    {ok, SessionId} = watts_session:get_id(Session),
+    ok = watts_session:clear_additional_logins(ServiceId, Session),
+    #{id := CredId} = Credential,
+    lager:info("SESS~p got credential ~p for ~p",
+               [SessionId, CredId, ServiceId]),
+    {ok, #{result => ok, credential => Credential}};
+handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
+                         ServiceId, Session, Params) ->
+    {ok, SessionId} = watts_session:get_id(Session),
+    Msg = <<"OpenID Connect Login error, please contact the admin">>,
+    DoneMsg = <<"the plugin required a login that has already been performed">>,
+    OffMsg = <<"login is required, yet the needed provider is not ready">>,
+    RestMsg = <<"login is required, please use the web interface">>,
+    ProviderResult = oidcc:get_openid_provider_info(Provider),
+    {ok, SessionType} = watts_session:get_type(Session),
+    {ok, UserInfo} = watts_session:get_user_info(Session),
+    Exists = watts_userinfo:has_additional_login(ServiceId, Provider, UserInfo),
+    case {ProviderResult, SessionType, Exists}  of
+        {{ok, #{ready := true}}, oidc, false} ->
+            ok = watts_session:set_redirection(ServiceId, Params, Provider,
+                                               Session),
+            Url = ?CONFIG(local_endpoint),
+            {ok, #{result => oidc_login,
+                   oidc_login => #{ provider => Provider,
+                                    url => Url,
+                                   msg => UsrMsg} }
+            };
+        {{ok, _}, oidc, true} ->
+            {error, #{result => error, user_msg => DoneMsg}};
+        {{ok, _}, oidc, _} ->
+            {error, #{result => error, user_msg => OffMsg}};
+        {{ok, _}, rest, _} ->
+            {error, #{result => error, user_msg => RestMsg}};
+        _ ->
+            WMsg = "SESS~p additional login request for ~p failed: ~s",
+            lager:warning(WMsg, [SessionId, ServiceId, Provider]),
             {error, #{result => error, user_msg => Msg}}
-    end.
+    end;
+handle_credential_result({error, Map}, ServiceId, Session, _Params)
+  when is_map(Map) ->
+    {ok, SessionId} = watts_session:get_id(Session),
+    ok = watts_session:clear_additional_logins(ServiceId, Session),
+    UserMsg = get_user_msg(Map),
+    LogMsg = maps:get(log_msg, Map),
+    WMsg = "SESS~p credential request for ~p failed: ~s",
+    lager:warning(WMsg, [SessionId, ServiceId, LogMsg]),
+    BadCred = #{result => error, user_msg => UserMsg},
+    {error, BadCred};
+handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
+    {ok, SessionId} = watts_session:get_id(Session),
+    ok = watts_session:clear_additional_logins(ServiceId, Session),
+    Msg = case Reason of
+              limit_reached ->
+                  <<"the credential limit has been reached">>;
+              user_not_allowed ->
+                  <<"you are not allowed to use this service">>;
+              service_disabled ->
+                  <<"the service you tried to use is disabled">>;
+              invalid_params ->
+                  <<"invalid parameter have been passed">>;
+              _ ->
+                  <<"unknown error occured, please contact the admin">>
+          end,
+    WMsg = "SESS~p credential request for ~p failed: ~p",
+    lager:warning(WMsg, [SessionId, ServiceId, Reason]),
+    {error, #{result => error, user_msg => Msg}}.
+
+
+
 
 
 revoke_credential_for(CredId, Session) ->
@@ -233,8 +353,6 @@ stop_debug() ->
     redbug:stop().
 
 update_session(Issuer, Subject, Token, SessionPid) ->
-    {ok, SessId} = watts_session:get_id(SessionPid),
-    {ok, SessToken} = watts_session:get_sess_token(SessionPid),
     {ok, Provider} = oidcc:find_openid_provider(Issuer),
     {ok, #{id := IssId}} = oidcc:get_openid_provider_info(Provider),
 
@@ -242,22 +360,28 @@ update_session(Issuer, Subject, Token, SessionPid) ->
     true = watts_session:is_logged_in(SessionPid),
     ok = watts_session:set_iss_id(IssId, SessionPid),
     ok = watts_session:set_token(Token, SessionPid),
+    {ok, SessId} = watts_session:get_id(SessionPid),
     {ok, DisplayName} = get_display_name_for(SessionPid),
     lager:info("SESS~p logged in as ~p [~p at ~p]",
                [SessId, DisplayName, Subject, Issuer]),
+    return_session_info(SessionPid).
 
+
+return_session_info(SessionPid) ->
+    {ok, SessId} = watts_session:get_id(SessionPid),
+    {ok, SessToken} = watts_session:get_sess_token(SessionPid),
     {ok, #{session_id => SessId, session_token => SessToken,
            session_pid => SessionPid}}.
 
 
 retrieve_information(Issuer, Subject, Token, Session) ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
-    {ok, #{issuer := Issuer} = Config} =
+    {ok, #{id := IssuerId, issuer := Issuer} = Config} =
         oidcc:get_openid_provider_info(ProviderPid),
     UserInfoResult = oidcc:retrieve_user_info(Token, ProviderPid, Subject),
     UserInfo = extract_userinfo(UserInfoResult),
     TokenInfo = introspect_token_if_possible(Token, Config, Session),
-    create_information_result(UserInfo, TokenInfo, Token).
+    create_information_result(UserInfo, TokenInfo, Token, IssuerId).
 
 
 extract_userinfo({ok, #{sub := Subject} = OidcInfo}) ->
@@ -308,7 +432,8 @@ introspect_token_if_possible(_, #{id := Id}, Session) ->
 
 
 
-create_information_result({ok, Subject, OidcInfo}, TokenResult, TokenMap)
+create_information_result({ok, Subject, OidcInfo}, TokenResult,
+                          TokenMap, IssuerId)
   when is_map(TokenMap) ->
     TokenInfo =
         case TokenResult of
@@ -318,8 +443,9 @@ create_information_result({ok, Subject, OidcInfo}, TokenResult, TokenMap)
                 #{}
         end,
     Update = #{user_info => OidcInfo, token_info => TokenInfo},
-    {ok, Subject, maps:merge(TokenMap, Update)};
-create_information_result({ok, Subject, OidcInfo}, TokenResult, AccessToken)
+    {ok, Subject, IssuerId, maps:merge(TokenMap, Update)};
+create_information_result({ok, Subject, OidcInfo}, TokenResult,
+                          AccessToken, IssuerId)
   when is_binary(AccessToken) ->
     TokenInfo =
         case TokenResult of
@@ -328,12 +454,12 @@ create_information_result({ok, Subject, OidcInfo}, TokenResult, AccessToken)
             {error, _Error} ->
                 #{}
         end,
-    TokenMap = #{access_token => #{token => AccessToken},
+    TokenMap = #{access => #{token => AccessToken},
                  user_info => OidcInfo, token_info => TokenInfo},
-    {ok, Subject, TokenMap};
-create_information_result({error, Reason} , _, _) ->
+    {ok, Subject, IssuerId, TokenMap};
+create_information_result({error, Reason} , _, _, _) ->
     {error, Reason};
-create_information_result(_, {error, Reason}, _) ->
+create_information_result(_, {error, Reason}, _, _) ->
     {error, Reason}.
 
 
@@ -343,6 +469,4 @@ get_user_msg(#{user_msg := Msg}) when is_list(Msg) ->
 get_user_msg(#{user_msg := Msg}) when is_binary(Msg) ->
     Msg;
 get_user_msg(#{user_msg := Msg}) ->
-    list_to_binary(io_lib:format("~p", [Msg]));
-get_user_msg(_) ->
-    <<>>.
+    list_to_binary(io_lib:format("~p", [Msg])).

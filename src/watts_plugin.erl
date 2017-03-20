@@ -1,6 +1,6 @@
 -module(watts_plugin).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016 - 2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -181,6 +181,15 @@ handle_result(ok, Map, Log, #{action := request}) ->
     LogMsg = io_lib:format("bad response to a request: ~p [~p]", [Map, Log]),
     UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
+handle_result(oidc_login, #{provider := ProviderId, msg := Msg}, _Log,
+              #{action := request} = _Info) ->
+    %% an OpenId Connect login request
+    return(oidc_login, #{provider => ProviderId, msg => Msg});
+handle_result(oidc_login, Map, Log, #{action := request}) ->
+    %% a bad OpenID Connect login request
+    LogMsg = io_lib:format("bad response to a request: ~p [~p]", [Map, Log]),
+    UMsg = "the plugin returned a bad result, please contact the administrator",
+    return(error, #{user_msg => UMsg, log_msg => LogMsg});
 handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := request} ) ->
     %% a valid error response
     LogMsg = log_msg(Map, UMsg),
@@ -248,6 +257,8 @@ log_msg(Map, UMsg) ->
 
 return(result, Result) ->
     {ok, Result};
+return(oidc_login, Result) ->
+    {oidc_login, Result};
 return(error, Data) ->
     {error, Data}.
 
