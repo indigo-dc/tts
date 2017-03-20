@@ -267,21 +267,34 @@ handle_credential_result({error, Map}, ServiceId, Session, _Params)
 handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
-    Msg = case Reason of
+    BaseWMsg = "SESS~p credential request for ~p failed: ~p",
+    {UMsg, WMsg}
+        = case Reason of
               limit_reached ->
-                  <<"the credential limit has been reached">>;
+                  {<<"the credential limit has been reached">>,
+                   BaseWMsg};
               user_not_allowed ->
-                  <<"you are not allowed to use this service">>;
+                  {<<"you are not allowed to use this service">>,
+                   BaseWMsg};
               service_disabled ->
-                  <<"the service you tried to use is disabled">>;
+                  {<<"the service you tried to use is disabled">>,
+                   BaseWMsg};
               invalid_params ->
-                  <<"invalid parameter have been passed">>;
+                  {<<"invalid parameter have been passed">>,
+                   BaseWMsg};
+              {storing, {error, not_unique_state}} ->
+                  {list_to_binary(
+                     io_lib:format("~s ~s",
+                                   ["the service did not return a unique",
+                                    "state, contact the administrator"])),
+                   <<"SESS~p identical state in request ~p: ~p">>
+                  };
               _ ->
-                  <<"unknown error occured, please contact the admin">>
+                  {<<"unknown error occured, please contact the admin">>,
+                   BaseWMsg}
           end,
-    WMsg = "SESS~p credential request for ~p failed: ~p",
     lager:warning(WMsg, [SessionId, ServiceId, Reason]),
-    {error, #{result => error, user_msg => Msg}}.
+    {error, #{result => error, user_msg => UMsg}}.
 
 
 
