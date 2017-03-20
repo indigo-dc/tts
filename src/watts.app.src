@@ -1,6 +1,6 @@
 {application, watts, [
                     {description, ""},
-                    {vsn, "1.0.0"},
+                    {vsn, "semver"},
                     {modules, []},
                     {registered, [watts_sup]},
                     {applications, [
