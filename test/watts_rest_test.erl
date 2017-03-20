@@ -20,8 +20,7 @@ init_test() ->
           token = undefined,
           issuer = undefined,
           json = undefined,
-          session_pid = undefined,
-          cookie_based = false
+          session_pid = undefined
          }).
 
 rest_init_test() ->
@@ -459,7 +458,7 @@ start_meck() ->
                              {error, not_found}
                      end
              end,
-    CredRequest = fun(_ServiceId, SessionPid, _Params, _IFace) ->
+    CredRequest = fun(_ServiceId, SessionPid, _Params) ->
                         case SessionPid of
                             pid1 -> {ok, #{}};
                             _ -> {error, internal}
@@ -472,6 +471,12 @@ start_meck() ->
                             end
                     end,
 
+    SessionType = fun(SessionPid) ->
+                          case SessionPid of
+                              pid1 -> oidcc;
+                              _ -> rest
+                          end
+                  end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(cowboy_req, cookie, GetCookie),
     ok = meck:expect(cowboy_req, header, Header),
@@ -495,6 +500,7 @@ start_meck() ->
     ok = meck:expect(watts, request_credential_for, CredRequest),
     ok = meck:expect(watts, store_temp_cred, StoreTempCred),
     ok = meck:expect(watts_session, is_logged_in, fun(_) -> false end),
+    ok = meck:expect(watts_session, get_type, SessionType),
     {ok, {MeckModules}}.
 
 stop_meck({MeckModules}) ->

@@ -21,7 +21,8 @@ login_and_out_test() ->
     BadAccessToken = "token",
     BadOidcToken = #{},
     GoodOidcToken = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
-                      access => #{token => GoodAccessToken}
+                      access => #{token => GoodAccessToken},
+                      cookies => []
                      },
     {error, bad_token} = watts:login_with_oidcc(BadOidcToken),
     {error, bad_token} = watts:login_with_access_token(BadAccessToken, Issuer),
@@ -58,9 +59,9 @@ proxy_function_test() ->
 
 request_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
-    {ok, _} = watts:request_credential_for(<<"service">>, Session, [], <<"test interface">>),
-    {error, _} = watts:request_credential_for(<<"error">>, Session, [], <<"test interface">>),
-    {error, _} = watts:request_credential_for(<<"bad">>, Session, [], <<"test interface">>),
+    {ok, _} = watts:request_credential_for(<<"service">>, Session, []),
+    {error, _} = watts:request_credential_for(<<"error">>, Session, []),
+    {error, _} = watts:request_credential_for(<<"bad">>, Session, []),
     stop_meck(Meck),
     ok.
 
@@ -85,6 +86,7 @@ start_meck() ->
                   #{name => <<"password">>, type => text, value => <<"secret">>}]
                  },
 
+    ErrMsg = #{user_msg => <<"msg1">>, log_msg => <<"msg2">>},
     ProviderList = fun() ->
                              {ok, [ {<<"id">>, pid1} ]}
                      end,
@@ -116,7 +118,7 @@ start_meck() ->
                                     <<"service">> ->
                                         {ok, Credential};
                                     <<"error">> ->
-                                        {error, Credential};
+                                        {error, ErrMsg};
                                     _ ->
                                         {error, internal}
                                 end
@@ -126,7 +128,7 @@ start_meck() ->
                                     CredId ->
                                         {ok, #{}};
                                     _ ->
-                                        {error, #{log_msg => <<"logging">>}}
+                                        {error, ErrMsg}
                                 end
                            end,
     TempCredAdd = fun(_Cred, _UserId) ->
@@ -141,9 +143,15 @@ start_meck() ->
     ServiceEnabled = fun(_Uid) ->
                              true
                      end,
+    GetSession = fun(Id) ->
+                         case Id of
+                             undefined -> {ok, Id}
+                         end
+                 end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(watts_session_mgr, new_session, NewSession),
     ok = meck:expect(watts_session_mgr, session_terminating, fun(_) -> ok end),
+    ok = meck:expect(watts_session_mgr, get_session, GetSession),
     ok = meck:expect(oidcc, get_openid_provider_list, ProviderList),
     ok = meck:expect(oidcc, retrieve_user_info, RetrieveUserInfo),
     ok = meck:expect(oidcc, get_openid_provider_info, ProviderInfo),
@@ -168,6 +176,7 @@ start_meck() ->
              },
     ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
     ok = watts_session:set_token(Token, SessionPid),
+    ok = watts_session:set_type(oidc, SessionPid),
     {ok, {SessionPid, MeckModules}}.
 
 
