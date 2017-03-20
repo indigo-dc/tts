@@ -24,8 +24,12 @@ redirect_test() ->
                             {error, not_a_redirection}
                     end
             end,
+    Path = fun(Req) ->
+                   {<<"/">>, Req}
+           end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(cowboy_req, reply, Reply),
+    ok = meck:expect(cowboy_req, path, Path),
     set_needed_env(),
     {ok, req2, []} = watts_redirection:handle(req, ignored),
     unset_env(),
