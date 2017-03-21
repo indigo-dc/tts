@@ -393,7 +393,12 @@ retrieve_information(Issuer, Subject, Token, Session) ->
         oidcc:get_openid_provider_info(ProviderPid),
     UserInfoResult = oidcc:retrieve_user_info(Token, ProviderPid, Subject),
     UserInfo = extract_userinfo(UserInfoResult),
-    TokenInfo = introspect_token_if_possible(Token, Config, Session),
+    HasScope = case is_map(Token) of
+                   false -> false;
+                   true ->
+                       maps:is_key(scope, Token)
+               end,
+    TokenInfo = introspect_token_if_needed(HasScope, Token, Config, Session),
     create_information_result(UserInfo, TokenInfo, Token, IssuerId).
 
 
@@ -418,12 +423,12 @@ extract_userinfo({error, Reason}) ->
 extract_userinfo(Unknown) ->
     {error, io_lib:format("unknown result: ~p", [Unknown])}.
 
-introspect_token_if_possible(Token, #{introspection_endpoint := _,
+introspect_token_if_needed(true, _, _, _) ->
+    {ok, #{}};
+introspect_token_if_needed(false, Token, #{introspection_endpoint := _,
                                       id := Id} = Config, Session) ->
     case oidcc:introspect_token(Token, Config) of
         {ok, #{active := true} = TokenInfo} ->
-            lager:debug("SESS ~p: Token Introspection ~p", [Session,
-                                                            TokenInfo]),
             {ok, TokenInfo};
         {ok, #{active := _} = TokenInfo} ->
             lager:warning("SESS ~p: Token Introspection ~p not active",
@@ -438,7 +443,7 @@ introspect_token_if_possible(Token, #{introspection_endpoint := _,
                                                                       Reason]),
             {error, Reason}
     end ;
-introspect_token_if_possible(_, #{id := Id}, Session) ->
+introspect_token_if_needed(false, _, #{id := Id}, Session) ->
     lager:debug("SESS~p provider ~p does not support token introspection",
                [Session, Id]),
     {ok, #{}}.
