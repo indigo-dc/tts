@@ -37,7 +37,8 @@
           access_token = #{},
           plugin_info = #{},
           token_info = #{},
-          additional_logins = []
+          additional_logins = [],
+          scope = #{}
          }).
 
 new() ->
@@ -48,6 +49,7 @@ update_with_token(Token, UserInfo) ->
     IdInfo = maps:get(user_info, Token, undefined),
     IdToken = maps:get(id, Token, undefined),
     AccToken = maps:get(access, Token, undefined),
+    Scope = maps:get(scope, Token, undefined),
     TokenInfo = maps:get(token_info, Token, undefined),
 
     Info1 =
@@ -82,7 +84,15 @@ update_with_token(Token, UserInfo) ->
                 {ok, Inf4} = update_token_info(TokenInfo, Info3),
                 Inf4
         end,
-    {ok, Info4}.
+    Info5 =
+        case Scope of
+            undefined ->
+                Info4;
+            _ ->
+                {ok, Inf5} = update_scope(Scope, Info4),
+                Inf5
+        end,
+    {ok, Info5}.
 
 
 update_iss_sub(Issuer, Subject,
@@ -145,11 +155,18 @@ update_token_info(TokenInfo, Info) ->
     Iss = undefined,
     case update_iss_sub(Iss, Sub, Info) of
         {ok, NewInfo} ->
-            {ok, update_plugin_info(NewInfo#user_info{token_info=TokenInfo})};
+            {ok, update_plugin_info(
+                   set_scope_if_empty(
+                     NewInfo#user_info{token_info=TokenInfo}
+                    )
+                  )
+            };
         {error, bad_iss_sub} ->
             {error, not_match}
     end.
 
+update_scope(#{scope := _, list := _} =Scope, Info) ->
+    {ok, update_plugin_info(Info#user_info{scope=Scope})}.
 
 add_additional_login(ServiceId, IssuerId, Token,
                      #user_info{additional_logins=AddLogins} = Info) ->
@@ -254,21 +271,39 @@ access_token(#user_info{access_token=#{token := AccessToken}}) ->
 access_token(_) ->
     {error, not_set}.
 
+set_scope_if_empty(#user_info{token_info=TokenInfo, scope= ScopeMap} = Info) ->
+    case maps:is_key(scope, ScopeMap) of
+        true ->
+            Info;
+        false ->
+            Empty = #{scope => <<"">>, list => []},
+            Info#user_info{scope = maps:get(scope, TokenInfo, Empty)}
+    end.
 
 update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken,
                               token_info=TokenInfo,
-                              issuer=Issuer, subject=Subject} = UserInfo) ->
+                              issuer=Issuer, subject=Subject,
+                              scope= ScopeMap
+                             } = UserInfo) ->
     RemoveClaims = [aud, exp, nbf, iat, jti, azp, kid, aud, auth_time, at_hash,
                     c_hash],
     ReducedClaims = maps:without(RemoveClaims, maps:get(claims, IdToken, #{})),
     RemoveTokenInfo = [active, aud, sub, iss, client_id, token_type, exp, iat,
-                       nbf, jti],
+                       nbf, jti, scope],
     ReducedTokenInfo = maps:without(RemoveTokenInfo, TokenInfo),
+    ScopeInfo = case maps:get(scope, ScopeMap, undefined) of
+                    undefined ->
+                        #{};
+                    Scope ->
+                        ScopeList = maps:get(list, ScopeMap),
+                        #{scope_list => ScopeList, scope => Scope}
+                end,
     IssSubUpdate = #{iss => Issuer, sub=> Subject},
     PluginInfo1 = maps:merge(IdInfo, ReducedClaims),
     PluginInfo2 = maps:merge(PluginInfo1, ReducedTokenInfo),
-    PluginInfo3 = maps:merge(PluginInfo2, IssSubUpdate),
-    UserInfo#user_info{plugin_info=PluginInfo3}.
+    PluginInfo3 = maps:merge(PluginInfo2, ScopeInfo),
+    PluginInfo9 = maps:merge(PluginInfo3, IssSubUpdate),
+    UserInfo#user_info{plugin_info=PluginInfo9}.
 
 maybe_to_atom(Bin) ->
     try
