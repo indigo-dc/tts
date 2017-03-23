@@ -105,6 +105,23 @@
   hidden
  ]
 }.
+
+{mapping, "oidc.cache_duration", "oidcc.http_cache_duration",
+ [
+  {datatype ,    integer},
+  {default, 90},
+  hidden
+ ]
+}.
+
+{mapping, "oidc.cache_clean", "oidcc.http_cache_clean",
+ [
+  {datatype ,    integer},
+  {default, 300},
+  hidden
+ ]
+}.
+
 %% @doc the path to the file containing all trusted root CAs
 %% this is usually on Debian/Ubunut the file
 %%    /etc/ssl/certs/ca-certificates.crt
