@@ -250,6 +250,7 @@ to the script and parsing the <code>stdout</code> of the script.</p>
         &quot;name&quot;: &quot;Max Mustermann&quot;,
         &quot;sub&quot;: &quot;12345678&quot;
     },
+    &quot;additional_logins&quot;: [],
     &quot;watts_userid&quot;: &quot;base64url encoded json object, containing subject and issuer&quot;
 }
 </code></pre><p>The items of the object are:</p>
@@ -290,6 +291,10 @@ username/password for ssh">credential</a></td>
 <tr>
 <td>user_info</td>
 <td>The user info contains information about the user gathered using OpenId Connect</td>
+</tr>
+<tr>
+<td>additional_logins</td>
+<td>A list of object, each at least containing &apos;user_info&apos; with information about the user gathered at another provider, after requesting a redirection.</td>
 </tr>
 <tr>
 <td>watts_userid</td>
@@ -349,13 +354,21 @@ username/password for ssh">credential</a>.
 The <em>plugin</em> should perform any necessary action to create the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
 username/password for ssh">credential</a> for the user and print
 a <code>json</code> object on <code>stdout</code>.</p>
-<p>The expected format of the <code>json</code> object is:</p>
+<p>The expected format of the <code>json</code> object for a <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> is:</p>
 <pre><code>{
     &quot;result&quot;:&quot;ok&quot;,
     &quot;credential&quot;: [{&quot;name&quot;:&quot;some name&quot;, &quot;type&quot;:&quot;text&quot;, &quot;value&quot;:&quot;secret&quot;}],
     &quot;state&quot;:&quot;state description&quot;
 }
-</code></pre><p>or in case of an error:</p>
+</code></pre><p>The expected format of a request to perform an additional login is:</p>
+<pre><code>{
+    &quot;result&quot;:&quot;oidc_login&quot;,
+    &quot;provider&quot;:&quot;&lt;id of provider&gt;&quot;,
+    &quot;msg&quot;:&quot;message to tell the user why an additional login is required&quot;
+}
+</code></pre><p>please keep in mind that the user may deny the request.</p>
+<p>In case of an error, the expected json is:</p>
 <pre><code>{
     &quot;result&quot;:&quot;error&quot;,
     &quot;user_msg&quot;:&quot;Sorry, you are not allowed to use this service&quot;,
@@ -371,7 +384,7 @@ a <code>json</code> object on <code>stdout</code>.</p>
 <tbody>
 <tr>
 <td>result</td>
-<td>The result of the request, currently <em>ok</em> and <em>error</em> are supported</td>
+<td>The result of the request, currently <em>ok</em>, <em>oidc_login</em> and <em>error</em> are supported</td>
 </tr>
 <tr>
 <td><a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
@@ -382,6 +395,14 @@ username/password for ssh">credential</a></td>
 <td>state</td>
 <td>A state to keep track of the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
 username/password for ssh">credential</a>; it MUST NOT contain sensitive information</td>
+</tr>
+<tr>
+<td>provider</td>
+<td>The id of the provider to redirect to for an additional login</td>
+</tr>
+<tr>
+<td>msg</td>
+<td>a message to display to the user on a request to trigger an aditional login</td>
 </tr>
 <tr>
 <td>user_msg</td>
@@ -516,7 +537,7 @@ username/password for ssh">credential</a> state from its database.</p>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Developer Guide","level":"1.5","depth":1,"next":{"title":"REST Api","level":"1.6","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer.md","mtime":"2017-03-17T11:56:11.300Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-17T13:28:35.554Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Developer Guide","level":"1.5","depth":1,"next":{"title":"REST Api","level":"1.6","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer.md","mtime":"2017-03-24T13:15:18.754Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-24T13:25:55.862Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
