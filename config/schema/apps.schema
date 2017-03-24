@@ -122,6 +122,14 @@
  ]
 }.
 
+{mapping, "oidc.request_timeout", "oidcc.http_request_timeout",
+ [
+  {datatype ,    integer},
+  {default, 300},
+  hidden
+ ]
+}.
+
 %% @doc the path to the file containing all trusted root CAs
 %% this is usually on Debian/Ubunut the file
 %%    /etc/ssl/certs/ca-certificates.crt

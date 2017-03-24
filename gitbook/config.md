@@ -188,6 +188,9 @@ CA and intermediate CAs to have before reaching the server certificate.
 | :---: | --- | :---: | :---: |
 | oidc.cacertfile | The file containing all trusted CAs | file | none |
 | oidc.cert_depth | The number of intermediate CAs allowd | integer | 1 |
+| oidc.cache_duration | The time, in seconds, http request to userinfo/tokeninfo are allowed to get cacheed. The purpose is to keep high load from the OpenId Connect Provider. Yet this also means that there is a 90 second window in which a user might still be allowed to perform actions although he has been blocked at the IdP | integer, 'none' | 90 |
+| oidc.cache_clean | The amount of time (in seconds) to wait before cleaning up the cache | integer | 300 |
+| oidc.request_timeout | The number of seconds an http request is allowed to take | integer | 300 |
 | oidc.use_cookie | If cookies should be used to identify the user during login | boolean | true |
 | oidc.check_user_agent| Wether the user agent identifier should be verified  | boolean | true |
 | oidc.check_peer_ip | Should the remote IP be checked when logging in the user | boolean | true |
