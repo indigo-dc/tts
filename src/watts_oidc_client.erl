@@ -46,7 +46,7 @@ error_msg(internal,
                        [Field]),
     io_lib:format("~s~s", [M1, M2]);
 error_msg(oidc_provider_error, Error) ->
-    M1 = io_lib:format("Your IdP returned you with the error '~p'.", [Error]),
+    M1 = io_lib:format("Your IdP returned you with the error ~p.", [Error]),
     M2 = "Please contact your IdP.",
     io_lib:format("~s ~s", [M1, M2]);
 error_msg(internal, {token_invalid, {error, no_id_token}}) ->
