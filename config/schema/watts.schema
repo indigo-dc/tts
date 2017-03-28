@@ -106,11 +106,18 @@
           {datatype, file}
           ]}.
 
-%% @doc The duration of a web-session when using a web browser
+%% @doc The inactive duration of a web-session when using a web browser
 {mapping, "session_timeout", "watts.session_timeout", [
           {default, "15m"},
           {commented, "15m"},
           {datatype, {duration, ms}}
+          ]}.
+
+%% @doc The maximum duration of a web-session when using a web browser
+{mapping, "session_max_duration", "watts.session_max_duration", [
+          {default, "30m"},
+          {commented, "30m"},
+          {datatype, {duration, s}}
           ]}.
 
 %% @doc The path to the sqlite database file

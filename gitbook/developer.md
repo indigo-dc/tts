@@ -18,7 +18,7 @@ The decoded `json` object has the following format:
     "conf_params": {},
     "params": {},
     "cred_state": "undefined",
-    "access_token":"opaque access token (this is optional)",
+    "access_token":"opaque access token (needs to be enabled)",
     "user_info": {
         "family_name": "Mustermann",
         "gender": "male",
@@ -27,7 +27,18 @@ The decoded `json` object has the following format:
         "name": "Max Mustermann",
         "sub": "12345678"
     },
-    "additional_logins": [],
+    "additional_logins":
+        [
+            {
+                "user_info": {
+                    "iss":"https://otherprovider.com",
+                    "sub":"123sub456there",
+                    "name":"Rumpelstiltskin"
+                },
+                "access_token":"access token of otherprovider (needs to be enabled)"
+            }
+
+        ],
     "watts_userid": "base64url encoded json object, containing subject and issuer"
 }
 ```
@@ -42,7 +53,7 @@ The items of the object are:
 | cred_state | This is only valid when revoking, it is the credential state returned when creating the credential |
 | access_token  | The access token from the user, this will only be passed if enabled at WaTTS. |
 | user_info  | The user info contains information about the user gathered using OpenId Connect |
-| additional_logins  | A list of object, each at least containing 'user_info' with information about the user gathered at another provider, after requesting a redirection. |
+| additional_logins  | A list of objects, each at least containing 'user_info' with information about the user gathered at another provider, after requesting a redirection. |
 | watts_userid | This is the dynamically generated unique *id* used within WaTTS for the current user. It is also a `base64url` encoded `json` object containing *issuer* and *subject* |
 
 ### Listing The Supported Parameter
