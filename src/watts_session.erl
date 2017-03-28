@@ -179,6 +179,7 @@ is_same_ip(IP, Pid) ->
 -include("watts.hrl").
 -record(state, {
           id = unkonwn,
+          creation = undefined,
           type = undefined,
           issuer_id = undefined,
           sess_token = undefined,
@@ -196,7 +197,9 @@ init([Token]) ->
     lager:info("SESS~p starting", [Id]),
     MaxAge = ?CONFIG(session_timeout, 10000),
     {ok, UserInfo} = watts_userinfo:new(),
-    {ok, #state{id = Id, sess_token=Token, max_age=MaxAge, user_info=UserInfo}}.
+    Now = erlang:system_time(seconds),
+    {ok, #state{id = Id, sess_token=Token, max_age=MaxAge, user_info=UserInfo,
+                creation = Now}}.
 
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
     {reply, {ok, Id}, State, MA};
@@ -263,23 +266,16 @@ handle_call(get_error, _From, #state{max_age=MA, error=Error}=State) ->
 handle_call(get_user_info, _From,
             #state{max_age=MA, user_info=UserInfo} = State) ->
     {reply, {ok, UserInfo}, State, MA};
-%% handle_call({get_user_info, ServiceId}, _From,
-%%             #state{max_age=MA, user_info=UserInfo,
-%%                    additional_logins=AddLogins} =State) ->
-%%     Extract = fun({{ServId, _}, Inf0}, List) when ServId == ServiceId ->
-%%                       {ok, Inf} = get_user_info(Inf0),
-%%                       [Inf | List];
-%%                  (_, List) ->
-%%                       List
-%%               end,
-%%     AddInfo =  lists:foldl(Extract, [], AddLogins),
-%%     ExtInfo = maps:put(additional_logins, AddInfo, UserInfo),
-%%     {reply, {ok, ExtInfo}, State, MA};
 handle_call(get_display_name, _Frm, #state{max_age=MA, user_info=Info}=State) ->
     Result = watts_userinfo:return(display_name, Info),
     {reply, Result, State, MA};
-handle_call(is_logged_in, _From, #state{user_info=Info, max_age=MA}=State) ->
-    Result = watts_userinfo:return(logged_in, Info),
+handle_call(is_logged_in, _From, #state{user_info=Info, max_age=MA,
+                                        creation=Creation}=State) ->
+    LoggedIn = watts_userinfo:return(logged_in, Info),
+    MaxLifetime = ?CONFIG(session_max_duration, 1800),
+    Now = erlang:system_time(seconds),
+    StillValid = ((Creation + MaxLifetime) > Now),
+    Result = StillValid and LoggedIn,
     {reply, Result, State, MA};
 handle_call({is_user_agent, UserAgent}, _From,
             #state{user_agent=undefined, max_age=MA}=State) ->

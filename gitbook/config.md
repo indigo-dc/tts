@@ -76,7 +76,8 @@ And for production use:
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
 | key_file | Path to the private key file | file | /etc/watts/watts.key |
-| session_timeout | The duration for which a session at the web-app is valid | duration | 15m |
+| session_timeout | The duration for which a session at the web-app is valid during inactivity | duration | 15m |
+| session_max_duration | The maximum duration of a session at the web interface, even if active. After this time an additional Login is required | duration | 30m |
 | sqlite_file | Path to the sqlite database | file | /etc/watts/watts.db |
 | redirection.enable | Whether redirection should be enabled | boolean | false |
 | redirection.listen_port | The port to listen on for browsers to redirect | port | 8080 |
