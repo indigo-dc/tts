@@ -99,6 +99,7 @@ start_meck() ->
                                 id => <<"ID1">>,
                                 description => <<"info">>,
                                 ready => false,
+                                extra_config => #{priority => 5},
                                 issuer => ?ISSUER_URL}}
                      end,
     FindProvider = fun(_Issuer) ->

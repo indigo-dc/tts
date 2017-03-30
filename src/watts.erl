@@ -160,8 +160,7 @@ get_openid_provider_list() ->
                                extra_config := #{priority := Priority},
                                ready := Ready,
                                issuer := Issuer
-                              }} =
-                            oidcc:get_openid_provider_info(Pid),
+                              }} = oidcc:get_openid_provider_info(Pid),
                         case is_provider_disabled(Id) of
                             true ->
                                 List;
