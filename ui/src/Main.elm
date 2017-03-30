@@ -426,6 +426,10 @@ view model =
                         ]
                      ]
                         ++ docu
+                        ++ [ small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
+                                [ a [ href "https://github.com/indigo-dc/tts" ] [ text "GitHub" ]
+                                ]
+                           ]
                     )
                 , div
                     [ style
