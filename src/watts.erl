@@ -157,15 +157,16 @@ get_openid_provider_list() ->
     {ok, OidcProvList} = oidcc:get_openid_provider_list(),
     ExtFields = fun({Id, Pid}, List) ->
                         {ok, #{description := Desc,
+                               extra_config := #{priority := Priority},
                                ready := Ready,
                                issuer := Issuer
-                              }} =
-                            oidcc:get_openid_provider_info(Pid),
+                              }} = oidcc:get_openid_provider_info(Pid),
                         case is_provider_disabled(Id) of
                             true ->
                                 List;
                             false ->
-                                [ #{ id => Id, desc => Desc, ready => Ready,
+                                [ #{ id => Id, desc => Desc,
+                                     priority => Priority, ready => Ready,
                                      issuer => Issuer } | List]
                         end
                 end,

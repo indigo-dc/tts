@@ -27,6 +27,15 @@ hasReadyEntries model =
         List.foldl (oneReady) False model.provider
 
 
+sort : Model -> Model
+sort model =
+    let
+        priority provider =
+            provider.priority
+    in
+        { model | provider = List.reverse (List.sortBy priority model.provider) }
+
+
 
 -- initModel =
 --     { provider =

@@ -120,7 +120,7 @@ update msg model =
 
             Messages.ProviderList (Ok providerlist) ->
                 ( { model
-                    | providerList = providerlist
+                    | providerList = ProviderList.sort providerlist
                   }
                 , Cmd.none
                 )

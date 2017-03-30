@@ -165,7 +165,9 @@ add_openid_provider([#{id := Id,
                        disable_login := Disable} = Config0 | T],
                     LocalEndpoint) ->
     try
-        Config = maps:remove(config_endpoint, Config0),
+        Priority = length(T),
+        Config = maps:put(priority, Priority,
+                          maps:remove(config_endpoint, Config0)),
         {ok, _InternalId, _Pid} =
         oidcc:add_openid_provider(ConfigEndpoint, LocalEndpoint, Config),
         lager:info("Init: added OpenId Connect provider ~p", [Id]),
