@@ -106,6 +106,15 @@
           {datatype, file}
           ]}.
 
+
+%% @doc The path to the file containing the Diffie-Hellman parameter, for ssl
+{mapping, "dh_file", "watts.dh_file", [
+          {default, none},
+          {commented, "{{platform_etc_dir}}/watts_dh.pem"},
+          {datatype, [{atom, none}, file]}
+          ]}.
+
+
 %% @doc The inactive duration of a web-session when using a web browser
 {mapping, "session_timeout", "watts.session_timeout", [
           {default, "15m"},

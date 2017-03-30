@@ -312,6 +312,7 @@ ports, hostname and SSL.</p>
 <ul>
 <li><code>ssl</code>, set to &apos;true&apos;</li>
 <li><code>cachain_file</code>, set to the path to the file</li>
+<li><code>dh_file</code>, set to the path to the file</li>
 <li><code>cert_file</code>, set to the path to the file</li>
 <li><code>key_file</code>, set to the path to the file</li>
 </ul>
@@ -367,6 +368,12 @@ ports, hostname and SSL.</p>
 <td>Path to the private key file</td>
 <td style="text-align:center">file</td>
 <td style="text-align:center">/etc/watts/watts.key</td>
+</tr>
+<tr>
+<td style="text-align:center">dh_file</td>
+<td>Path to the file containing the diffie hellman parameter. To generate it simply run <code>openssl dhparam -out watts_dh.pem 2048</code></td>
+<td style="text-align:center">file</td>
+<td style="text-align:center">none</td>
 </tr>
 <tr>
 <td style="text-align:center">session_timeout</td>
@@ -928,7 +935,7 @@ situation described above will happen.</li>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-03-28T08:36:06.440Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-28T08:43:17.063Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-03-30T10:47:20.502Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-30T10:47:29.606Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>

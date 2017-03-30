@@ -286,7 +286,6 @@ start_web_interface() ->
     ListenPort = ?CONFIG(listen_port),
     case SSL of
         true ->
-            CAMsg = "Init: no ca-chain-file configured [cachain_file]!",
             CertFile = ?CONFIG(cert_file),
             KeyFile = ?CONFIG(key_file),
             BasicOptions =
@@ -294,14 +293,8 @@ start_web_interface() ->
                   {certfile, CertFile},
                   {keyfile, KeyFile}
                 ],
-            Options =
-                case ?CONFIG_(cachain_file) of
-                    {ok, CaChainFile} ->
-                        [ {cacertfile, CaChainFile} | BasicOptions ];
-                    _ ->
-                        lager:warning(CAMsg),
-                        BasicOptions
-                end,
+            Options = add_options(BasicOptions, ?CONFIG_(cachain_file),
+                                  ?CONFIG_(dh_file)),
             {ok, _} = cowboy:start_https( http_handler
                                           , 100
                                           , Options
@@ -337,6 +330,27 @@ start_web_interface() ->
     end,
 
     ok.
+
+add_options(Options, {ok, CaChainFile}, DhFile) ->
+    NewOptions = [ {cacertfile, CaChainFile} | Options ],
+    add_options(NewOptions, ok, DhFile);
+add_options(Options, undefined, DhFile) ->
+    lager:warning("Init: no ca-chain-file configured [cachain_file]!"),
+    add_options(Options, ok, DhFile);
+add_options(Options, CaChainFile,  {ok, none}) ->
+    lager:warning("Init: no dh-file configured [dh_file]!"),
+    add_options(Options, CaChainFile, ok);
+add_options(Options, CaChainFile,  undefined) ->
+    lager:warning("Init: no dh-file configured [dh_file]!"),
+    add_options(Options, CaChainFile, ok);
+add_options(Options, CaChainFile, {ok, DhFile}) ->
+    NewOptions = [ {dhfile, DhFile} | Options ],
+    add_options(NewOptions, CaChainFile, ok);
+add_options(Options, _, _) ->
+    Options.
+
+
+
 
 
 local_endpoint() ->
