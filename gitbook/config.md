@@ -85,6 +85,8 @@ And for production use:
 | redirection.listen_port | The port to listen on for browsers to redirect | port | 8080 |
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
 | enable_docs | Whether the documentation is reachable at /docs/ | boolean | false |
+| log_dir | The path where the log files will be put | path | /var/log/watts |
+| syslog_facility | The facility to use for syslog | 'daemon','local0'-'local7'  | 'daemon' |
 
 
 

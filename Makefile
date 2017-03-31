@@ -25,7 +25,7 @@ clean: check
 eunit: check
 	$(REBAR) do eunit,cover -v
 
-ct: check
+ct: compile
 	./utils/setup_ct.sh
 	$(REBAR) do ct,cover -v
 
@@ -40,6 +40,9 @@ elvis: check
 
 compile: check
 	$(REBAR) compile
+	# workaround to ensure syslog gets build
+	cd _build/default/lib/syslog && ./rebar compile
+
 
 docs:
 	gitbook build
@@ -47,7 +50,7 @@ docs:
 	mkdir -p priv/docs
 	cp -r _book/* priv/docs
 
-rel: check
+rel: compile
 	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
 	cat $(OVERLAY_VARS) >> ./config/vars_gen.config
