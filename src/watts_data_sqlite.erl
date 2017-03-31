@@ -16,6 +16,7 @@
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
+-behaviour(watts_persistent).
 -include("watts.hrl").
 
 %% API.
