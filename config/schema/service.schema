@@ -161,8 +161,44 @@
          AuthzAllows = TypeIdValue("service.$id.authz.allow.$provider.$oidckey.$operation", authz),
          AuthzForbids = TypeIdValue("service.$id.authz.forbid.$provider.$oidckey.$operation", authz),
 
+
+         AddIfNotExists =
+             fun(Id, List) ->
+                     case lists:member(Id, List) of
+                         true -> List;
+                         false -> [ Id | List ]
+                     end
+             end,
+
+         ExtractId
+             = fun({Id, _}, List) ->
+                       AddIfNotExists(Id, List);
+                  ({Id, _, _}, List) ->
+                       AddIfNotExists(Id, List);
+                  ({Id, _, _, _, _}, List) ->
+                       AddIfNotExists(Id, List)
+               end,
+
+         ExtractIds
+             = fun(List, Ids) ->
+                       lists:foldl(ExtractId, Ids, List)
+               end,
+
+         Ids = lists:foldl(ExtractIds, [], [Descs, Cmds, CredLimits, Runners,
+                                            SameStates, Timeouts, PassAccTokens,
+                                            ConnTypes, ConnUsers, ConnPasswds,
+                                            ConnHosts, ConnPorts, ConnDirs,
+                                            ConnKeyPasses, PluginConfs,
+                                            AuthzHides, AuthzTooltips,
+                                            AuthzAllows, AuthzForbids
+                                           ]),
+
          CreateSetting =
-             fun({Id, Desc}, Result) ->
+             fun(Id, Result) ->
+                     Desc = case lists:keyfind(Id, 1, Descs) of
+                               {Id, D} -> D;
+                               _ -> undefined
+                           end,
                      Cmd = case lists:keyfind(Id, 1, Cmds) of
                                {Id, C} -> C;
                                _ -> undefined
@@ -342,8 +378,8 @@
                                     tooltip => AuthzTooltip
                                   },
 
-                     case (Cmd == undefined) or (CredLimit == undefined) or
-                         (ConnType == undefined) or
+                     case (Desc == undefined) or (Cmd == undefined) or
+                         (CredLimit == undefined) or (ConnType == undefined) or
                          ( (ConnType == ssh) and ( (ConnHost == undefined)
                                                    or ( ConnPort == undefined)
                                                    or ( ConnUser == undefined) )
@@ -377,5 +413,5 @@
                                   },
                      [ Setting | Result]
              end,
-         lists:foldl(CreateSetting, [], Descs)
+         lists:foldl(CreateSetting, [], Ids)
     end}.
