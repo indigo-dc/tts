@@ -16,6 +16,7 @@
                                     oidcc,
                                     oidcc_cowboy,
                                     lager,
+                                    lager_syslog,
                                     uuid,
                                     jobs,
                                     eper
