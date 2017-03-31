@@ -11,9 +11,9 @@
 %%     ]}
 
 
+%% the path to store the log files
 {mapping, "log_dir", "lager.log_root", [
           {default, "{{runner_log_dir}}"},
-          hidden
           ]}.
 
 {mapping, "debug_mode", "lager.handlers", [
@@ -22,13 +22,23 @@
           {default, false}
           ]}.
 
+
+%% the facility to use for syslog
+{mapping, "syslog_facility", "lager.handlers", [
+          {datatype ,    {enum ,  [kern, user, mail, daemon, auth, syslog, lpr, news, uucp, cron, authpriv, ftp, netinfo, remoteauth, install, ras, local0, local1, local2, local3, local4, local5, local6, local7]}},
+          {default, daemon}
+          ]}.
+
+
 {translation, "lager.handlers",
  fun(Conf) ->
          DebugMode = cuttlefish:conf_get("debug_mode", Conf),
+         Facility = cuttlefish:conf_get("syslog_facility", Conf),
          Default =
              [
               {lager_file_backend, [{file, "error.log"}, {level, error}]},
-              {lager_file_backend, [{file, "info.log"}, {level, info}]}
+              {lager_file_backend, [{file, "info.log"}, {level, info}]},
+              {lager_syslog_backend, ["WaTTS", Facility, info]}
              ],
 
          HostName = cuttlefish:conf_get("hostname", Conf),
