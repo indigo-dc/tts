@@ -25,7 +25,7 @@ clean: check
 eunit: check
 	$(REBAR) do eunit,cover -v
 
-ct: check
+ct: compile
 	./utils/setup_ct.sh
 	$(REBAR) do ct,cover -v
 
