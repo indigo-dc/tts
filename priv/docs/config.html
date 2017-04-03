@@ -273,6 +273,10 @@ seen in the following table.</p>
 <td>an absolute path to a file</td>
 </tr>
 <tr>
+<td style="text-align:center">dir</td>
+<td>an absolute path to a directory</td>
+</tr>
+<tr>
 <td style="text-align:center">duration</td>
 <td>a timespan given by an integer and a unit, the unit can be ms, s, m, h</td>
 </tr>
@@ -388,10 +392,22 @@ ports, hostname and SSL.</p>
 <td style="text-align:center">30m</td>
 </tr>
 <tr>
+<td style="text-align:center">database_type</td>
+<td>The type of database to user</td>
+<td style="text-align:center">&apos;sqlite&apos;, &apos;mnesia&apos;</td>
+<td style="text-align:center">&apos;sqlite&apos;</td>
+</tr>
+<tr>
 <td style="text-align:center">sqlite_file</td>
-<td>Path to the sqlite database</td>
+<td>Path to the sqlite database, used if database_type is &apos;sqlite&apos;</td>
 <td style="text-align:center">file</td>
 <td style="text-align:center">/etc/watts/watts.db</td>
+</tr>
+<tr>
+<td style="text-align:center">mnesia_dir</td>
+<td>Base directory of the mnesia database, used if database_type is &apos;mnesia&apos;</td>
+<td style="text-align:center">dir</td>
+<td style="text-align:center">/etc/watts/mnesia</td>
 </tr>
 <tr>
 <td style="text-align:center">redirection.enable</td>
@@ -947,7 +963,7 @@ situation described above will happen.</li>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-03-31T07:20:58.132Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-03-31T07:29:45.141Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-04-03T13:05:21.587Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-04-03T13:10:52.585Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
