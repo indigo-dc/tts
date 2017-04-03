@@ -10,11 +10,12 @@
          SSL = cuttlefish:conf_get("ssl", Conf),
          HostName = cuttlefish:conf_get("hostname", Conf),
          Localhost = (HostName == "localhost"),
-         case SSL or Localhost of
+         Onion = lists:suffix(".onion", HostName),
+         case SSL or Localhost or Onion of
              true ->
                  HostName;
              false ->
-                 Msg = "only localhost supports non SSL setup",
+                 Msg = "only localhost and .onion support non SSL setup",
                  cuttlefish:invalid(Msg)
          end
  end}.
@@ -76,11 +77,12 @@
          SSL = cuttlefish:conf_get("ssl", Conf),
          HostName = cuttlefish:conf_get("hostname", Conf),
          Localhost = (HostName == "localhost"),
-         case SSL or Localhost of
+         Onion = lists:suffix(".onion", HostName),
+         case SSL or Localhost or Onion of
              true ->
                  SSL;
              false ->
-                 Msg = "only localhost supports non SSL setup",
+                 Msg = "only localhost and .onion support non SSL setup",
                  cuttlefish:invalid(Msg)
          end
  end}.

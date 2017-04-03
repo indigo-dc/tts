@@ -106,7 +106,8 @@ init_watts() ->
 enforce_security() ->
     SSL = ?CONFIG(ssl),
     Hostname0 = ?CONFIG(hostname),
-    Hostname = case SSL of
+    Onion = lists:suffix(".onion", Hostname0),
+    Hostname = case SSL or Onion of
                    false ->
                        "localhost";
                    _ ->
@@ -347,8 +348,8 @@ add_options(Options, CaChainFile, {ok, DhFile}, Hostname) ->
     add_options(NewOptions, CaChainFile, ok, Hostname);
 add_options(Options, CaChainFile, DhFile, {ok, Hostname}) ->
     NewOptions =
-        case lists:nthtail(6, Hostname) of
-            ".onion" ->
+        case lists:suffix(".onion", Hostname) of
+            true ->
                 lager:info("Init: listening only at 127.0.0.1 (onion)"),
                 [ {ip, {127, 0, 0, 1}} | Options ];
             _ ->
