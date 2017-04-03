@@ -3,13 +3,13 @@
 -include("watts.hrl").
 
 -export([all/0,
-         %% groups/0,
+         groups/0,
          %% group/1,
          %% suite/0,
          init_per_suite/1,
          end_per_suite/1,
-         %% init_per_group/2,
-         %% end_per_group/2,
+         init_per_group/2,
+         end_per_group/2,
          %% init_per_testcase/2,
          %% end_per_testcase/2,
 
@@ -25,17 +25,36 @@
 
 all() ->
     [
+     {group, sqlite},
+     {group, mnesia}
+     %% init_done,
+     %% python2_check,
+     %% provider_config,
+     %% wattson_version,
+     %% service_config,
+     %% rest_communication_v2,
+     %% rest_communication_v1
+    ].
+
+groups() ->
+    [{sqlite, [sequence],[
      init_done,
      python2_check,
      provider_config,
      wattson_version,
      service_config,
      rest_communication_v2,
-     rest_communication_v1
-    ].
+     rest_communication_v1]},
+    {mnesia, [sequence],[
+     init_done,
+     python2_check,
+     provider_config,
+     wattson_version,
+     service_config,
+     rest_communication_v2,
+     rest_communication_v1]}
+     ].
 
-%% groups() ->
-%%     [].
 %%
 %% group(_) ->
 %%     [].
@@ -44,6 +63,38 @@ all() ->
 %%     [].
 
 init_per_suite(Conf) ->
+    Conf.
+
+
+
+
+end_per_suite(Conf) ->
+    Conf.
+
+init_per_group(Group, Conf) ->
+    setup_group(Group),
+    Conf.
+
+end_per_group(_Group, Conf) ->
+    ok = application:stop(watts),
+    ok = application:stop(jobs),
+    ok = application:stop(ranch),
+    ok = application:stop(cowboy),
+    ok = application:stop(oidcc),
+    ok = application:stop(oidcc_cowboy),
+    Conf.
+
+%% init_per_testcase(_TestCase, Conf) ->
+%%      mock_oidcc(),
+%%      Conf.
+%%
+%% end_per_testcase(_TestCase, Conf) ->
+%%     unmock_oidcc(),
+%%     Conf.
+
+
+setup_group(DbType) ->
+    config_db(DbType),
     ServiceList = [#{allow_same_state => false,
                   authz => #{allow => [{any,<<"sub">>,any,true}],
                     forbid => [],
@@ -74,7 +125,6 @@ init_per_suite(Conf) ->
     ?SETCONFIG(service_list, ServiceList),
     ?SETCONFIG(provider_list, ProviderList),
     ?SETCONFIG(session_timeout, 90000),
-    ?SETCONFIG(sqlite_db, "/tmp/watts_common_test/watts_ct.db"),
     ?SETCONFIG(allow_dropping_credentials, true),
     ?SETCONFIG(redirection_enable, false),
     ?SETCONFIG(redirection_port, 8080),
@@ -86,27 +136,17 @@ init_per_suite(Conf) ->
     application:set_env(oidcc, cert_depth, 5),
     application:set_env(oidcc, cacertfile, "/etc/ssl/certs/ca-certificates.crt"),
     {ok, _} = application:ensure_all_started(watts),
-    Conf.
-
-end_per_suite(Conf) ->
-    ok = application:stop(watts),
-    Conf.
-
-%% init_per_group(_Group, Conf) ->
-%%     Conf.
-%%
-%% end_per_group(_Group, Conf) ->
-%%     Conf.
-%%
-%% init_per_testcase(_TestCase, Conf) ->
-%%      mock_oidcc(),
-%%      Conf.
-%%
-%% end_per_testcase(_TestCase, Conf) ->
-%%     unmock_oidcc(),
-%%     Conf.
+    ok.
 
 
+config_db(sqlite) ->
+    ?SETCONFIG(database_type, sqlite),
+    ?SETCONFIG(persistent_module, watts_data_sqlite),
+    ?SETCONFIG(sqlite_db, "/tmp/watts_common_test/watts_ct.db");
+config_db(mnesia) ->
+    ?SETCONFIG(database_type, mnesia),
+    ?SETCONFIG(persistent_module, watts_data_mnesia),
+    ?SETCONFIG(mnesia_dir, "/tmp/watts_common_test/mnesia").
 service_config(_Config) ->
     {ok, Services} = watts_service:get_list(),
     ct:log("service configs:~n~p~n", [Services]),
