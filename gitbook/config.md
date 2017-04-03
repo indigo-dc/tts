@@ -38,6 +38,7 @@ seen in the following table.
 | port | an integer within the valid range for TCP ports |
 | boolean | either 'true' or 'false' |
 | file | an absolute path to a file |
+| dir | an absolute path to a directory |
 | duration | a timespan given by an integer and a unit, the unit can be ms, s, m, h |
 | string | just the string value |
 | integer | an integer value, i.e. a number |
@@ -80,7 +81,9 @@ And for production use:
 | dh_file | Path to the file containing the diffie hellman parameter. To generate it simply run `openssl dhparam -out watts_dh.pem 2048` | file | none |
 | session_timeout | The duration for which a session at the web-app is valid during inactivity | duration | 15m |
 | session_max_duration | The maximum duration of a session at the web interface, even if active. After this time an additional Login is required | duration | 30m |
-| sqlite_file | Path to the sqlite database | file | /etc/watts/watts.db |
+| database_type | The type of database to user | 'sqlite', 'mnesia' | 'sqlite' |
+| sqlite_file | Path to the sqlite database, used if database_type is 'sqlite' | file | /etc/watts/watts.db |
+| mnesia_dir | Base directory of the mnesia database, used if database_type is 'mnesia' | dir | /etc/watts/mnesia |
 | redirection.enable | Whether redirection should be enabled | boolean | false |
 | redirection.listen_port | The port to listen on for browsers to redirect | port | 8080 |
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |

@@ -9,6 +9,7 @@
                                     cowboy,
                                     crypto,
                                     ssh,
+                                    mnesia,
                                     econfig,
                                     jsone,
                                     esqlite,

@@ -136,12 +136,11 @@ enforce_security() ->
 start_database() ->
     lager:info("Init: starting ets database"),
     ok = watts_data:init(),
-    lager:info("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
-    ok = watts_data_sqlite:reconfigure(),
-    case watts_data_sqlite:is_ready() of
+    ok = watts_persistent:init(),
+    case watts_persistent:is_ready() of
         ok -> ok;
-        {error, Reason} ->
-            Msg = io_lib:format("unable to start sqlite-db: ~p", [Reason]),
+        {error, R} ->
+            Msg = io_lib:format("unable to start persistence layer: ~p", [R]),
             lager:critical(Msg),
             erlang:error(no_database)
     end,

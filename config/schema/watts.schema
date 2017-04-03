@@ -129,6 +129,49 @@
           {datatype, {duration, s}}
           ]}.
 
+%% @doc the database to use
+{mapping, "database_type", "watts.persistent_module", [
+          {default, sqlite},
+          {commented, sqlite},
+          {datatype, {enum, [sqlite, mnesia]}}
+          ]}.
+
+{translation, "watts.persistent_module",
+ fun(Conf) ->
+         Type = cuttlefish:conf_get("database_type", Conf),
+         case Type of
+             mnesia ->
+                 watts_data_mnesia;
+             sqlite ->
+                 watts_data_sqlite;
+             _ ->
+                 cuttlefish:error("unknown database type")
+         end
+ end}.
+
+%% @doc the mnesia directory to use
+{mapping, "mnesia_dir", "watts.mnesia_dir", [
+          {default, "{{platform_data_dir}}/mnesia/"},
+          {commented, "{{platform_data_dir}}/mnesia/"},
+          {datatype, string}
+          ]}.
+
+{translation, "watts.mnesia_dir",
+ fun(Conf) ->
+         BaseDir = cuttlefish:conf_get("mnesia_dir", Conf),
+         case file:make_dir(BaseDir) of
+             ok ->
+                 ok;
+             {error, eexist} ->
+                 ok;
+             {error, Error} ->
+                 Msg = io_lib:format("unable to create mnesia base directory: ~p", [Error]),
+                 cuttlefish:error(Msg)
+         end,
+         Node = cuttlefish:conf_get("erlang.name", Conf),
+         filename:join(BaseDir, Node)
+ end}.
+
 %% @doc The path to the sqlite database file
 {mapping, "sqlite_file", "watts.sqlite_db", [
           {default, "{{platform_data_dir}}/watts.db"},

@@ -321,21 +321,21 @@ get_credential(UserId, CredentialId) ->
 
 % functions with data access
 get_credential_count(UserId, ServiceId) ->
-    watts_data_sqlite:credential_get_count(UserId, ServiceId).
+    watts_persistent:credential_service_count(UserId, ServiceId).
 
 get_credential(CredId) ->
-    watts_data_sqlite:credential_get(CredId).
+    watts_persistent:credential_fetch(CredId).
 
 get_credential_list(UserId) ->
-    watts_data_sqlite:credential_get_list(UserId).
+    watts_persistent:credential_fetch_list(UserId).
 
 store_credential(UserId, ServiceId, Interface, CredentialState) ->
     SameStateAllowed = watts_service:allows_same_state(ServiceId),
-    watts_data_sqlite:credential_add(UserId, ServiceId, Interface,
+    watts_persistent:credential_store(UserId, ServiceId, Interface,
                                    CredentialState, SameStateAllowed).
 
 remove_credential(UserId, CredentialId) ->
-    case watts_data_sqlite:credential_remove(UserId, CredentialId) of
+    case watts_persistent:credential_delete(UserId, CredentialId) of
         ok ->
             return(result, #{});
         Error ->

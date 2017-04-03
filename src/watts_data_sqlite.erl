@@ -16,10 +16,12 @@
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
+-behaviour(watts_persistent).
 -include("watts.hrl").
 
 %% API.
 -export([start_link/0]).
+-export([initialize/0]).
 -export([reconfigure/0]).
 -export([credential_add/5]).
 -export([credential_get/1]).
@@ -48,6 +50,11 @@
 -spec start_link() -> {ok, pid()}.
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+
+initialize() ->
+    lager:info("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
+    reconfigure().
 
 -spec reconfigure() -> ok.
 reconfigure() ->
