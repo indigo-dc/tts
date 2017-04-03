@@ -293,7 +293,7 @@ start_web_interface() ->
                   {keyfile, KeyFile}
                 ],
             Options = add_options(BasicOptions, ?CONFIG_(cachain_file),
-                                  ?CONFIG_(dh_file)),
+                                  ?CONFIG_(dh_file), ?CONFIG_(hostname)),
             {ok, _} = cowboy:start_https( http_handler
                                           , 100
                                           , Options
@@ -330,22 +330,32 @@ start_web_interface() ->
 
     ok.
 
-add_options(Options, {ok, CaChainFile}, DhFile) ->
+add_options(Options, {ok, CaChainFile}, DhFile, Hostname) ->
     NewOptions = [ {cacertfile, CaChainFile} | Options ],
-    add_options(NewOptions, ok, DhFile);
-add_options(Options, undefined, DhFile) ->
+    add_options(NewOptions, ok, DhFile, Hostname);
+add_options(Options, undefined, DhFile, Hostname) ->
     lager:warning("Init: no ca-chain-file configured [cachain_file]!"),
-    add_options(Options, ok, DhFile);
-add_options(Options, CaChainFile,  {ok, none}) ->
+    add_options(Options, ok, DhFile, Hostname);
+add_options(Options, CaChainFile,  {ok, none}, Hostname) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
-    add_options(Options, CaChainFile, ok);
-add_options(Options, CaChainFile,  undefined) ->
+    add_options(Options, CaChainFile, ok, Hostname);
+add_options(Options, CaChainFile,  undefined, Hostname) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
-    add_options(Options, CaChainFile, ok);
-add_options(Options, CaChainFile, {ok, DhFile}) ->
+    add_options(Options, CaChainFile, ok, Hostname);
+add_options(Options, CaChainFile, {ok, DhFile}, Hostname) ->
     NewOptions = [ {dhfile, DhFile} | Options ],
-    add_options(NewOptions, CaChainFile, ok);
-add_options(Options, _, _) ->
+    add_options(NewOptions, CaChainFile, ok, Hostname);
+add_options(Options, CaChainFile, DhFile, {ok, Hostname}) ->
+    NewOptions =
+        case lists:nthtail(6, Hostname) of
+            ".onion" ->
+                lager:info("Init: listening only at 127.0.0.1 (onion)"),
+                [ {ip, {127, 0, 0, 1}} | Options ];
+            _ ->
+                Options
+        end,
+    add_options(NewOptions, CaChainFile, DhFile, ok);
+add_options(Options, _, _, _) ->
     Options.
 
 
