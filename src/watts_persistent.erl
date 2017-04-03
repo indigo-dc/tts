@@ -26,9 +26,10 @@
 -export([credential_delete/2]).
 -export([is_ready/0]).
 
--define(MOD, module_persistent).
+-define(MOD, persistent_module).
 
 %% API.
+-callback initialize() -> ok | {error, Reason :: atom()}.
 -callback credential_add(UserId::binary(), ServiceId::binary(),
                      Interface ::binary(), CredState :: any(),
                      AllowNonUniqueStates::boolean()) ->
@@ -51,10 +52,8 @@
 
 
 init() ->
-    ?SETCONFIG(?MOD, watts_data_sqlite),
-    lager:info("Init: starting sqlite database ~p", [?CONFIG(sqlite_db)]),
-    ok = watts_data_sqlite:reconfigure(),
-    ok.
+    Mod = mod(),
+    Mod:initialize().
 
 credential_store(UserId, ServiceId, Interface, CredState,
                  AllowNonUniqueStates) ->
