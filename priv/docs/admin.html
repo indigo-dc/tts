@@ -264,14 +264,13 @@ make package
 </ul>
 <p>The package can be found in <code>./package/packages</code>.</p>
 <h2 id="upgrade-watts">Upgrade WaTTS</h2>
-<h3 id="v022-to-v040-called-tts">v0.2.2 to v0.4.0 (called TTS)</h3>
-<p>Upgrading the <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> from version 0.2.2 to 0.4.0 is straightforward.
-As the configuration files are compatible the only actions to do are:</p>
+<h3 id="v100-to-v110">v1.0.0 to v1.1.0</h3>
+<p>Only two new settings are needed in the watts.conf:</p>
 <ul>
-<li>stop the <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> <code>tts stop</code></li>
-<li>install the new package</li>
-<li>start the newly installed <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> <code>tts start</code></li>
+<li>nodename: <code>nodename = watts@127.0.0.1</code></li>
+<li>distributed_cookie: <code>distributed_cookie = watts</code></li>
 </ul>
+<p>Add these settings to your watts.conf and then restart WaTTs.</p>
 <h3 id="v041-to-v100">v0.4.1 to v1.0.0</h3>
 <p>Upgrading from <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> to WaTTS is <strong>not</strong> straightforward as both the configuration
 file and the plugin API have changed.
@@ -289,6 +288,14 @@ You can not reuse any old configuration or plugins.
 <li>a plugin using the same data does exist for WaTTS 1.0</li>
 <li>you configure your newly set up WaTTS to use the existing <em>sqlite db</em></li>
 <li>you configure the plugin to use the existing data</li>
+</ul>
+<h3 id="v022-to-v040-called-tts">v0.2.2 to v0.4.0 (called TTS)</h3>
+<p>Upgrading the <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> from version 0.2.2 to 0.4.0 is straightforward.
+As the configuration files are compatible the only actions to do are:</p>
+<ul>
+<li>stop the <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> <code>tts stop</code></li>
+<li>install the new package</li>
+<li>start the newly installed <a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">TTS</a> <code>tts start</code></li>
 </ul>
 
                                 
@@ -333,7 +340,7 @@ You can not reuse any old configuration or plugins.
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"next":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"previous":{"title":"User Guide","level":"1.2","depth":1,"path":"user.md","ref":"user.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"admin.md","mtime":"2017-02-08T09:25:59.814Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-04-03T13:10:52.585Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"next":{"title":"Configuration Guide","level":"1.4","depth":1,"path":"config.md","ref":"config.md","articles":[]},"previous":{"title":"User Guide","level":"1.2","depth":1,"path":"user.md","ref":"user.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"admin.md","mtime":"2017-04-04T07:56:53.433Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-04-04T07:57:13.973Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>

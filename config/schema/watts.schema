@@ -170,7 +170,7 @@
                  Msg = io_lib:format("unable to create mnesia base directory: ~p", [Error]),
                  cuttlefish:error(Msg)
          end,
-         Node = cuttlefish:conf_get("erlang.name", Conf),
+         Node = cuttlefish:conf_get("nodename", Conf),
          filename:join(BaseDir, Node)
  end}.
 
@@ -237,24 +237,31 @@
           {default, false}
           ]}.
 
-{mapping, "erlang.smp", "vm_args.-smp", [
-        {default , enable},
-        {datatype ,    {enum ,    [enable , auto , disable]}},
-        hidden
-        ]}.
+%% @doc Name of the Erlang node, only change if you know what you are doing.
+{mapping, "nodename", "vm_args.-name", [
+  {default, "{{node}}"}
+]}.
 
-{mapping, "erlang.mode", "vm_args.-mode", [
-        {default , embedded},
-        {datatype ,    {enum ,    [embedded]}},
-        hidden
-        ]}.
 
-{mapping, "erlang.name", "vm_args.-name", [
-        {default , "tts@127.0.0.1"},
-        hidden
-        ]}.
+%% @doc Cookie for distributed node communication.  All nodes in the
+%% same cluster should use the same cookie or they will not be able to
+%% communicate.
+{mapping, "distributed_cookie", "vm_args.-setcookie",
+ [
+  {default, "watts"}
+]}.
 
-{mapping, "erlang.cookie", "vm_args.-setcookie", [
-        {default , "tts"},
-        hidden
-        ]}.
+
+{mapping, "erlang.smp", "vm_args.-smp",
+ [
+  {default, enable},
+  {datatype, {enum, [enable, auto, disable]}},
+  hidden
+]}.
+
+{mapping, "erlang.mode", "vm_args.-mode",
+ [
+  {default , embedded},
+  {datatype ,    {enum ,    [embedded]}},
+  hidden
+ ]}.
