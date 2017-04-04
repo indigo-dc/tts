@@ -23,7 +23,9 @@ echo
 echo
 echo "*** configuring WaTTS ***"
 echo
-echo "hostname = localhost" > watts.conf
+echo "nodename = watts-dev@127.0.0.1" > watts.conf
+echo "distributed_cookie = wattsdev" >> watts.conf
+echo "hostname = localhost" >> watts.conf
 echo "port = 8080" >> watts.conf
 echo "ssl = false" >> watts.conf
 echo "enable_docs = true" >> watts.conf
