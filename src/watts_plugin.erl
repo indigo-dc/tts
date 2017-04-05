@@ -374,13 +374,16 @@ validate_credential_values([Entry|T], ValCred) ->
 
 value_to_binary(Val) when is_binary(Val)->
     Val;
-value_to_binary(Val0) ->
-    list_to_binary(io_lib:format("~p", [Val0])).
+value_to_binary(Val) ->
+    list_to_binary(io_lib:format("~p", [Val])).
 
 value_to_file(Val) when is_binary(Val)->
     Val;
 value_to_file(Val) when is_list(Val)->
-    file_lines_to_binary(Val, <<>>).
+    file_lines_to_binary(Val, <<>>);
+value_to_file(Val) ->
+    list_to_binary(io_lib:format("~p", [Val])).
+
 
 file_lines_to_binary([], File) ->
     File;
