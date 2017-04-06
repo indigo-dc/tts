@@ -240,38 +240,54 @@ get_json_test() ->
                         id = undefined,
                         session_pid = pid1,
                         method = get
-                       }, <<"{\"service_list\":[{\"cred_limit\":1}]}">> },
+                       },
+                 #{<<"service_list">> => [#{<<"cred_limit">> => 1}]}
+                },
                 {#state{version = latest,
                         type = service,
                         id = undefined,
                         session_pid = pid2,
                         method = get
-                       }, <<"{\"service_list\":[]}">> },
+                       },
+                 #{<<"service_list">> => []}
+                },
                 {#state{version = latest,
                         type = oidcp,
                         id = undefined,
                         session_pid = undefined,
                         method = get
-                       },<<"{\"openid_provider_list\":[{\"id\":\"ID1\",\"issuer\":\"https:\\/\\/test.tts\",\"ready\":true},{\"id\":\"ID2\",\"issuer\":\"https:\\/\\/other.tts\",\"ready\":false}]}">>
+                       },
+                 #{<<"openid_provider_list">> =>
+                       [#{<<"id">> => <<"ID1">>,
+                          <<"issuer">> => <<"https://test.tts">>,
+                          <<"ready">> => true},
+                        #{<<"id">> => <<"ID2">>,
+                          <<"issuer">> => <<"https://other.tts">>,
+                          <<"ready">> => false}]}
                 },
                 {#state{version = latest,
                         type = cred_data,
                         id = <<"CRED1">>,
                         session_pid = pid1,
                         method = get
-                       },<<"{\"password\":\"secret\"}">> },
+                       },
+                 #{<<"password">> => <<"secret">>}
+                },
                 {#state{version = latest,
                         type = cred_data,
                         id = <<"CRED1">>,
                         session_pid = pid2,
                         method = get
-                       },<<"{\"result\":\"error\",\"user_msg\":\"Sorry, the requested data was not found\"}">> }
+                       },
+                 #{<<"result">> => <<"error">>,
+                   <<"user_msg">> => <<"Sorry, the requested data was not found">>}
+                }
                ],
 
     Test  = fun({State, ExpResult}, _) ->
                     io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
                     {Result, req, _NewState} = watts_rest:get_json(req, State),
-                    ?assertEqual(ExpResult, Result),
+                    ?assertEqual(ExpResult, jsone:decode(Result)),
                     ok
             end,
     ok = lists:foldl(Test,ok,Requests),
