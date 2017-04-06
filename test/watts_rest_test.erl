@@ -318,6 +318,13 @@ get_json_test() ->
                   <<"issuer">> => <<"https://other.tts">>,
                   <<"subject">> => <<"sub">>,
                   <<"issuer_id">> => <<"ID2">>}
+                },
+                {#state{version = latest,
+                        type = credential,
+                        id = undefined,
+                        session_pid = pid1,
+                        method = get},
+                 #{<<"credential_list">> => [<<"Cred1">>]}
                 }
                ],
 
