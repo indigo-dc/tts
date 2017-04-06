@@ -77,7 +77,7 @@ proxy_function_test() ->
     try
         ?assertEqual(true, watts:does_credential_exist(<<"id">>, Session)),
         ?assertEqual(true, watts:does_temp_cred_exist(<<"id">>, Session)),
-        {ok, [#{id := <<"id">>}]} = watts:get_openid_provider_list(),
+        {ok, [#{id := <<"id">>}|_]} = watts:get_openid_provider_list(),
         ?assertEqual({ok, []}, watts:get_service_list_for(Session)),
         ?assertEqual({ok, []}, watts:get_credential_list_for(Session)),
         ?assertEqual({ok, <<"accesstoken">>}, watts:get_access_token_for(Session)),
@@ -97,6 +97,9 @@ request_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
     try
         {ok, _} = watts:request_credential_for(<<"service">>, Session, []),
+        {error, _} = watts:request_credential_for(<<"other_service">>, Session, []),
+        {ok, #{result := oidc_login}} = watts:request_credential_for(
+                                          <<"yet_another_service">>, Session, []),
         {error, _} = watts:request_credential_for(<<"error">>, Session, []),
         {error, _} = watts:request_credential_for(<<"bad">>, Session, [])
     after
@@ -114,7 +117,20 @@ revoke_test() ->
     end,
     ok.
 
-
+get_provider_info_test() ->
+    {ok, Meck} = start_meck(),
+    try
+        ExpectedInfo = #{
+          id => <<"ID1">>,
+          description => <<"info">>,
+          ready => false,
+          extra_config => #{priority => 5},
+          issuer => ?ISSUER_URL
+         },
+        ?assertEqual({ok, ExpectedInfo}, watts:get_openid_provider_info("ID1"))
+    after
+        ok = stop_meck(Meck)
+    end.
 
 
 
@@ -134,13 +150,22 @@ start_meck() ->
     TestSession = watts_session:start_link(TestToken),
 
     ProviderList = fun() ->
-                             {ok, [ {<<"id">>, pid1} ]}
+                             {ok, [ {<<"id">>, pid1},
+                                    {<<"ID1">>, pid2},
+                                    {<<"ID2">>, pid3}]}
                      end,
 
     RetrieveUserInfo = fun(_, _, _) ->
                                {ok, #{sub => <<"sub">>}}
                        end,
-    ProviderInfo = fun(_Pid) ->
+    ProviderInfo = fun(<<"ID2">>) ->
+                           {ok, #{
+                                id => <<"ID2">>,
+                                description => <<"a ready provider">>,
+                                ready => true,
+                                extra_config => #{priority => 5},
+                                issuer => ?ISSUER_URL}};
+                      (_) ->
                              {ok, #{
                                 id => <<"ID1">>,
                                 description => <<"info">>,
@@ -166,6 +191,12 @@ start_meck() ->
                                         {ok, Credential};
                                     <<"error">> ->
                                         {error, ErrMsg};
+                                    <<"other_service">> ->
+                                        {oidc_login, #{provider => <<"ID1">>,
+                                                       msg => <<"Requires login">>}};
+                                    <<"yet_another_service">> ->
+                                        {oidc_login, #{provider => <<"ID2">>,
+                                                       msg => <<"Requires login">>}};
                                     _ ->
                                         {error, internal}
                                 end
