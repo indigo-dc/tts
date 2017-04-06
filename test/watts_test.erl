@@ -37,6 +37,31 @@ login_and_out_test() ->
     stop_meck(Meck),
     ok.
 
+additional_login_test() ->
+    %% TODO This test probably requires unmecked session mgmt to be meaningful
+    {ok, Meck} = start_meck(),
+    Issuer = ?ISSUER_URL,
+    OidcToken1 = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
+                   access => #{token => <<"accestoken">>},
+                   cookies => []
+                  },
+    {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken1),
+
+    {ok, Token} = watts_session:get_sess_token(Pid),
+    OidcToken2 = #{id => #{claims => #{sub => <<"othersub">>, iss => Issuer}},
+                   access => #{token => <<"accestoken">>},
+                   cookies => [{watts_http_util:cookie_name(), Token}]
+                  },
+    {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken2),
+
+    %%TODO true = watts_userinfo:has_additional_login(_, _, watts_session:get_user_info(Pid)),
+
+    ok = watts:logout(Pid),
+    test_util:wait_for_process_to_die(Pid, 100),
+    stop_meck(Meck),
+    ok.
+
+
 proxy_function_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
 
@@ -87,6 +112,10 @@ start_meck() ->
                  },
 
     ErrMsg = #{user_msg => <<"msg1">>, log_msg => <<"msg2">>},
+
+    TestToken = <<"some session token">>,
+    TestSession = watts_session:start_link(TestToken),
+
     ProviderList = fun() ->
                              {ok, [ {<<"id">>, pid1} ]}
                      end,
@@ -106,7 +135,7 @@ start_meck() ->
                            {ok, provider_pid}
                      end,
     NewSession = fun() ->
-                         watts_session:start_link(<<"some session token">>)
+                         TestSession
                  end,
     Exists = fun(_, _) ->
                      true
@@ -146,7 +175,8 @@ start_meck() ->
                      end,
     GetSession = fun(Id) ->
                          case Id of
-                             undefined -> {ok, Id}
+                             undefined -> {ok, Id};
+                             <<"some session token">> -> TestSession
                          end
                  end,
     ok = test_util:meck_new(MeckModules),
