@@ -233,6 +233,10 @@ resource_exists_test() ->
     ok.
 
 get_json_test() ->
+    ?SETCONFIG(ep_main, <<"/">>),
+    ?SETCONFIG(vsn, "latest"),
+    ?SETCONFIG(enable_docs, false),
+
     {ok, Meck} = start_meck(),
     Requests = [
                 {#state{version = latest,
@@ -281,6 +285,39 @@ get_json_test() ->
                        },
                  #{<<"result">> => <<"error">>,
                    <<"user_msg">> => <<"Sorry, the requested data was not found">>}
+                },
+                {#state{version = latest,
+                        type = logout,
+                        id = undefined,
+                        session_pid = pid1,
+                        method = get
+                       },
+                 #{<<"result">> => <<"ok">>}
+                },
+                {#state{version = latest,
+                        type = info,
+                        id = undefined,
+                        session_pid = pid1,
+                        method = get
+                   },
+                 #{<<"version">> => <<"latest">>,
+                   <<"redirect_path">> => <<"/oidc">>,
+                   <<"error">> => <<"">>,
+                   <<"logged_in">> => false,
+                   <<"display_name">> => <<"">>,
+                   <<"issuer_id">> => <<"">>,
+                   <<"documentation">> => false}
+                },
+                {#state{version = latest,
+                        type = access_token,
+                        id = undefined,
+                        session_pid = pid2,
+                        method = get
+                       },
+                 #{<<"access_token">> => <<"AT2">>,
+                  <<"issuer">> => <<"https://other.tts">>,
+                  <<"subject">> => <<"sub">>,
+                  <<"issuer_id">> => <<"ID2">>}
                 }
                ],
 
@@ -459,6 +496,13 @@ start_meck() ->
                               _ -> {error, not_found}
                           end
               end,
+    GetAT = fun(SessionPid) ->
+                    case SessionPid of
+                        pid1 -> {ok, <<"AT1">>};
+                        pid2 -> {ok, <<"AT2">>};
+                        _ -> {error, not_found}
+                    end
+            end,
     GetCred = fun(Id, SessionPid) ->
                           case {Id, SessionPid} of
                               {<<"CRED1">>, pid1} ->
@@ -511,6 +555,7 @@ start_meck() ->
     ok = meck:expect(watts, get_credential_list_for, GetCredList),
     ok = meck:expect(watts, get_temp_cred, GetCred),
     ok = meck:expect(watts, get_iss_id_sub_for, GetIssSub),
+    ok = meck:expect(watts, get_access_token_for, GetAT),
     ok = meck:expect(watts, revoke_credential_for, Revoke),
     ok = meck:expect(watts, logout, fun(_) -> ok end),
     ok = meck:expect(watts, request_credential_for, CredRequest),
