@@ -4,105 +4,125 @@
 -define(ISSUER, <<"https://iam.it">>).
 get_list_test() ->
     {ok, Meck} = start_meck(),
-    {ok, List} = watts_service:get_list(),
-    ?assertEqual(4, length(List)),
-    ok = stop_meck(Meck),
+    try
+        {ok, List} = watts_service:get_list(),
+        ?assertEqual(4, length(List))
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 
 get_list_for_user_test() ->
     {ok, Meck} = start_meck(),
-    {ok, Info0} = watts_userinfo:new(),
-    {ok, Info} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, Info0),
+    try
+        {ok, Info0} = watts_userinfo:new(),
+        {ok, Info} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, Info0),
 
 
-    {ok, List} = watts_service:get_list(Info),
-    ?assertEqual(3, length(List)),
-    ok = stop_meck(Meck),
+        {ok, List} = watts_service:get_list(Info),
+        ?assertEqual(3, length(List))
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 
 get_service_info_test() ->
     {ok, Meck} = start_meck(),
-    ServiceId = <<"id1">>,
-    {ok, _} = watts_service:get_info(ServiceId),
-    {error, not_found} = watts_service:get_info(some_other_service),
-    ok = stop_meck(Meck),
+    try
+        ServiceId = <<"id1">>,
+        {ok, _} = watts_service:get_info(ServiceId),
+        {error, not_found} = watts_service:get_info(some_other_service)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 proxy_function_test() ->
     {ok, Meck} = start_meck(),
-    Service1 = <<"id1">>,
-    Service2 = <<"id2">>,
-    Unknown = <<"idk">>,
-    {ok, UserInfo0} = watts_userinfo:new(),
-    {ok, UserInfo} = watts_userinfo:update_iss_sub(?ISSUER, <<"sub">>, UserInfo0),
-    io:format("using userinfo ~p~n",[UserInfo]),
+    try
+        Service1 = <<"id1">>,
+        Service2 = <<"id2">>,
+        Unknown = <<"idk">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo} = watts_userinfo:update_iss_sub(?ISSUER, <<"sub">>, UserInfo0),
+        io:format("using userinfo ~p~n",[UserInfo]),
 
-    ?assertEqual(true, watts_service:exists(Service1)),
-    ?assertEqual(true, watts_service:is_allowed(UserInfo, Service1)),
-    ?assertEqual({ok, 2}, watts_service:get_credential_limit(Service1)),
-    ?assertEqual(true, watts_service:is_enabled(Service1)),
-    ?assertEqual(false, watts_service:allows_same_state(Service1)),
-    {ok, Queue1} = watts_service:get_queue(Service1),
-    ?assertNotEqual(undefined, Queue1),
+        ?assertEqual(true, watts_service:exists(Service1)),
+        ?assertEqual(true, watts_service:is_allowed(UserInfo, Service1)),
+        ?assertEqual({ok, 2}, watts_service:get_credential_limit(Service1)),
+        ?assertEqual(true, watts_service:is_enabled(Service1)),
+        ?assertEqual(false, watts_service:allows_same_state(Service1)),
+        {ok, Queue1} = watts_service:get_queue(Service1),
+        ?assertNotEqual(undefined, Queue1),
 
-    ?assertEqual(true, watts_service:exists(Service2)),
-    ?assertEqual(false, watts_service:is_allowed(UserInfo, Service2)),
-    ?assertEqual({ok, 1}, watts_service:get_credential_limit(Service2)),
-    ?assertEqual(false, watts_service:is_enabled(Service2)),
-    ?assertEqual(true, watts_service:allows_same_state(Service2)),
-    ?assertEqual({ok, undefined}, watts_service:get_queue(Service2)),
+        ?assertEqual(true, watts_service:exists(Service2)),
+        ?assertEqual(false, watts_service:is_allowed(UserInfo, Service2)),
+        ?assertEqual({ok, 1}, watts_service:get_credential_limit(Service2)),
+        ?assertEqual(false, watts_service:is_enabled(Service2)),
+        ?assertEqual(true, watts_service:allows_same_state(Service2)),
+        ?assertEqual({ok, undefined}, watts_service:get_queue(Service2)),
 
-    ?assertEqual(false, watts_service:exists(Unknown)),
-    ?assertEqual(false, watts_service:is_allowed(UserInfo, Unknown)),
-    ?assertEqual({ok, 0}, watts_service:get_credential_limit(Unknown)),
-    ?assertEqual(false, watts_service:is_enabled(Unknown)),
-    ?assertEqual(false, watts_service:allows_same_state(Unknown)),
-    ?assertEqual({ok, undefined}, watts_service:get_queue(Unknown)),
-
-    ok = stop_meck(Meck),
+        ?assertEqual(false, watts_service:exists(Unknown)),
+        ?assertEqual(false, watts_service:is_allowed(UserInfo, Unknown)),
+        ?assertEqual({ok, 0}, watts_service:get_credential_limit(Unknown)),
+        ?assertEqual(false, watts_service:is_enabled(Unknown)),
+        ?assertEqual(false, watts_service:allows_same_state(Unknown)),
+        ?assertEqual({ok, undefined}, watts_service:get_queue(Unknown))
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 add_test() ->
     {ok, Meck} = start_meck(),
-    BasicId = <<"basic_id">>,
-    BasicService = #{id => BasicId},
-    ?assertEqual({ok, BasicId}, watts_service:add(BasicService)),
-    ?assertEqual({error, invalid_config}, watts_service:add(#{})),
-    ok = stop_meck(Meck),
+    try
+        BasicId = <<"basic_id">>,
+        BasicService = #{id => BasicId},
+        ?assertEqual({ok, BasicId}, watts_service:add(BasicService)),
+        ?assertEqual({error, invalid_config}, watts_service:add(#{}))
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 params_test() ->
     {ok, Meck} = start_meck(),
-    Params1 = <<"params1">>,
-    Params2 = <<"params2">>,
-    Unknown = <<"idk">>,
-    ?assertEqual({error, not_found}, watts_service:update_params(Unknown)),
-    ?assertEqual(ok, watts_service:update_params(Params1)),
-    ?assertEqual(ok, watts_service:update_params(Params2)),
-    ok = stop_meck(Meck),
+    try
+        Params1 = <<"params1">>,
+        Params2 = <<"params2">>,
+        Unknown = <<"idk">>,
+        ?assertEqual({error, not_found}, watts_service:update_params(Unknown)),
+        ?assertEqual(ok, watts_service:update_params(Params1)),
+        ?assertEqual(ok, watts_service:update_params(Params2))
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 param_validation_test() ->
     {ok, Meck} = start_meck(),
-    Params1 = #{ <<"uuid">> => <<"value">>},
-    Params2 = #{ <<"name">> => <<"value">>},
-    Params3 = #{ <<"name">> => <<"value">>, <<"uuid">> => <<"other value">>},
-    Params4 = #{},
-    ParamsSet = [[#{key => <<"xyz">>, mandatory => false},
-                  #{key => <<"uuid">>, mandatory => true},
-                   #{key => <<"name">>, mandatory => false}]],
-    ?assertEqual(true, watts_service:are_params_valid(#{}, <<"id1">>)),
-    ?assertEqual(false, watts_service:are_params_valid(#{}, <<"unknown id">>)),
-    ?assertEqual(false, watts_service:are_params_valid(anything, #{params => [[]]})),
-    ?assertEqual(true, watts_service:are_params_valid(#{}, #{params => [[]]})),
-    ?assertEqual(false, watts_service:are_params_valid(Params1, #{params => [[]]})),
-    ?assertEqual(true, watts_service:are_params_valid(Params1, #{ params => ParamsSet})),
-    ?assertEqual(false, watts_service:are_params_valid(Params2, #{ params => ParamsSet})),
-    ?assertEqual(true, watts_service:are_params_valid(Params3, #{ params => ParamsSet})),
-    ?assertEqual(false, watts_service:are_params_valid(Params4, #{ params => ParamsSet})),
-    ok = stop_meck(Meck),
+    try
+        Params1 = #{ <<"uuid">> => <<"value">>},
+        Params2 = #{ <<"name">> => <<"value">>},
+        Params3 = #{ <<"name">> => <<"value">>, <<"uuid">> => <<"other value">>},
+        Params4 = #{},
+        ParamsSet = [[#{key => <<"xyz">>, mandatory => false},
+                      #{key => <<"uuid">>, mandatory => true},
+                      #{key => <<"name">>, mandatory => false}]],
+        ?assertEqual(true, watts_service:are_params_valid(#{}, <<"id1">>)),
+        ?assertEqual(false, watts_service:are_params_valid(#{}, <<"unknown id">>)),
+        ?assertEqual(false, watts_service:are_params_valid(anything, #{params => [[]]})),
+        ?assertEqual(true, watts_service:are_params_valid(#{}, #{params => [[]]})),
+        ?assertEqual(false, watts_service:are_params_valid(Params1, #{params => [[]]})),
+        ?assertEqual(true, watts_service:are_params_valid(Params1, #{ params => ParamsSet})),
+        ?assertEqual(false, watts_service:are_params_valid(Params2, #{ params => ParamsSet})),
+        ?assertEqual(true, watts_service:are_params_valid(Params3, #{ params => ParamsSet})),
+        ?assertEqual(false, watts_service:are_params_valid(Params4, #{ params => ParamsSet}))
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 

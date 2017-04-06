@@ -6,95 +6,112 @@
 
 error_session_test() ->
     {ok, Meck} = start_meck(),
-    EMsg = <<"this is some error message">>,
-    {ok, Pid} = watts:session_with_error(EMsg),
-    watts_session:close(Pid),
-    test_util:wait_for_process_to_die(Pid, 100),
-    stop_meck(Meck),
+    try
+        EMsg = <<"this is some error message">>,
+        {ok, Pid} = watts:session_with_error(EMsg),
+        watts_session:close(Pid),
+        test_util:wait_for_process_to_die(Pid, 100)
+    after
+        stop_meck(Meck)
+    end,
     ok.
 
 
 login_and_out_test() ->
     {ok, Meck} = start_meck(),
-    Issuer = ?ISSUER_URL,
-    GoodAccessToken = <<"accesstoken">>,
-    BadAccessToken = "token",
-    BadOidcToken = #{},
-    GoodOidcToken = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
-                      access => #{token => GoodAccessToken},
-                      cookies => []
-                     },
-    {error, bad_token} = watts:login_with_oidcc(BadOidcToken),
-    {error, bad_token} = watts:login_with_access_token(BadAccessToken, Issuer),
-    {ok, #{session_pid := Pid1}} = watts:login_with_oidcc(GoodOidcToken),
-    {ok, #{session_pid := Pid2}} = watts:login_with_access_token(GoodAccessToken,
-                                                                 Issuer),
+    try
+        Issuer = ?ISSUER_URL,
+        GoodAccessToken = <<"accesstoken">>,
+        BadAccessToken = "token",
+        BadOidcToken = #{},
+        GoodOidcToken = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
+                          access => #{token => GoodAccessToken},
+                          cookies => []
+                         },
+        {error, bad_token} = watts:login_with_oidcc(BadOidcToken),
+        {error, bad_token} = watts:login_with_access_token(BadAccessToken, Issuer),
+        {ok, #{session_pid := Pid1}} = watts:login_with_oidcc(GoodOidcToken),
+        {ok, #{session_pid := Pid2}} = watts:login_with_access_token(GoodAccessToken,
+                                                                     Issuer),
 
-    ok = watts:logout(Pid1),
-    ok = watts:logout(Pid2),
-    test_util:wait_for_process_to_die(Pid1, 100),
-    test_util:wait_for_process_to_die(Pid2, 100),
-    stop_meck(Meck),
+        ok = watts:logout(Pid1),
+        ok = watts:logout(Pid2),
+        test_util:wait_for_process_to_die(Pid1, 100),
+        test_util:wait_for_process_to_die(Pid2, 100)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 additional_login_test() ->
     %% TODO This test probably requires unmecked session mgmt to be meaningful
     {ok, Meck} = start_meck(),
-    Issuer = ?ISSUER_URL,
-    OidcToken1 = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
-                   access => #{token => <<"accestoken">>},
-                   cookies => []
-                  },
-    {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken1),
+    try
+        Issuer = ?ISSUER_URL,
+        OidcToken1 = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
+                       access => #{token => <<"accestoken">>},
+                       cookies => []
+                      },
+        {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken1),
 
-    {ok, Token} = watts_session:get_sess_token(Pid),
-    OidcToken2 = #{id => #{claims => #{sub => <<"othersub">>, iss => Issuer}},
-                   access => #{token => <<"accestoken">>},
-                   cookies => [{watts_http_util:cookie_name(), Token}]
-                  },
-    {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken2),
+        {ok, Token} = watts_session:get_sess_token(Pid),
+        OidcToken2 = #{id => #{claims => #{sub => <<"othersub">>, iss => Issuer}},
+                       access => #{token => <<"accestoken">>},
+                       cookies => [{watts_http_util:cookie_name(), Token}]
+                      },
+        {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken2),
 
-    %%TODO true = watts_userinfo:has_additional_login(_, _, watts_session:get_user_info(Pid)),
+        %%TODO true = watts_userinfo:has_additional_login(_, _, watts_session:get_user_info(Pid)),
 
-    ok = watts:logout(Pid),
-    test_util:wait_for_process_to_die(Pid, 100),
-    stop_meck(Meck),
+        ok = watts:logout(Pid),
+        test_util:wait_for_process_to_die(Pid, 100)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 
 proxy_function_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
 
-    ?assertEqual(true, watts:does_credential_exist(<<"id">>, Session)),
-    ?assertEqual(true, watts:does_temp_cred_exist(<<"id">>, Session)),
-    {ok, [#{id := <<"id">>}]} = watts:get_openid_provider_list(),
-    ?assertEqual({ok, []}, watts:get_service_list_for(Session)),
-    ?assertEqual({ok, []}, watts:get_credential_list_for(Session)),
-    ?assertEqual({ok, <<"accesstoken">>}, watts:get_access_token_for(Session)),
-    ?assertEqual({ok, <<"Nice Name">>}, watts:get_display_name_for(Session)),
-    ?assertEqual({ok, <<"TempCredId">>}, watts:store_temp_cred(<<"credential">>,
-                                                             Session)),
-    ?assertEqual({ok, <<"credential">>}, watts:get_temp_cred(<<"TempCredId">>,
-                                                             Session)),
-
-    stop_meck(Meck),
+    try
+        ?assertEqual(true, watts:does_credential_exist(<<"id">>, Session)),
+        ?assertEqual(true, watts:does_temp_cred_exist(<<"id">>, Session)),
+        {ok, [#{id := <<"id">>}]} = watts:get_openid_provider_list(),
+        ?assertEqual({ok, []}, watts:get_service_list_for(Session)),
+        ?assertEqual({ok, []}, watts:get_credential_list_for(Session)),
+        ?assertEqual({ok, <<"accesstoken">>}, watts:get_access_token_for(Session)),
+        ?assertEqual({ok, <<"Nice Name">>}, watts:get_display_name_for(Session)),
+        ?assertEqual({ok, <<"TempCredId">>}, watts:store_temp_cred(<<"credential">>,
+                                                                   Session)),
+        ?assertEqual({ok, <<"credential">>}, watts:get_temp_cred(<<"TempCredId">>,
+                                                                 Session))
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 
 
 request_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
-    {ok, _} = watts:request_credential_for(<<"service">>, Session, []),
-    {error, _} = watts:request_credential_for(<<"error">>, Session, []),
-    {error, _} = watts:request_credential_for(<<"bad">>, Session, []),
-    stop_meck(Meck),
+    try
+        {ok, _} = watts:request_credential_for(<<"service">>, Session, []),
+        {error, _} = watts:request_credential_for(<<"error">>, Session, []),
+        {error, _} = watts:request_credential_for(<<"bad">>, Session, [])
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 revoke_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
-    ok = watts:revoke_credential_for(<<"cred1">>, Session),
-    {error, _} = watts:revoke_credential_for(<<"cred2">>, Session),
-    stop_meck(Meck),
+    try
+        ok = watts:revoke_credential_for(<<"cred1">>, Session),
+        {error, _} = watts:revoke_credential_for(<<"cred2">>, Session)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 
