@@ -230,9 +230,6 @@ handle_call(get_redirection, _From, #state{redirection=Redirection,
     {reply, {ok, Redirection}, State#state{redirection = Redirection}, MA};
 handle_call(clear_redirection, _From, #state{max_age=MA} = State) ->
     {reply, ok, State#state{redirection = undefined}, MA};
-handle_call({add_additional_login, _IssuerId, _Token}, _From,
-            #state{redirection = undefined, max_age=MA} = State) ->
-    {reply, ok, State, MA};
 handle_call({add_additional_login, IssuerId, Token}, _From,
             #state{user_info = UserInfo,
                    redirection = #{provider := IssuerId,
@@ -241,7 +238,11 @@ handle_call({add_additional_login, IssuerId, Token}, _From,
                    max_age=MA} = State) ->
     NewUserInfo = watts_userinfo:add_additional_login(ServiceId, IssuerId,
                                                       Token, UserInfo),
-    {reply, ok, State#state{user_info = NewUserInfo}, MA};
+    {reply, ok, State#state{user_info = NewUserInfo,
+                            redirection = undefined}, MA};
+handle_call({add_additional_login, _IssuerId, _Token}, _From,
+            #state{max_age=MA} = State) ->
+    {reply, ok, State#state{redirection = undefined}, MA};
 handle_call({clear_additional_logins, ServiceId}, _From,
             #state{user_info = UserInfo, max_age=MA} = State) ->
     NewUserInfo = watts_userinfo:clear_additional_logins(ServiceId, UserInfo),
