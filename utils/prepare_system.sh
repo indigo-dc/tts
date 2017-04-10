@@ -15,6 +15,9 @@ case "$DISTRIBUTION_NAME" in
     *CentOS*)
         DISTRIBUTION="centos"
         ;;
+    *Arch\ Linux*)
+        DISTRIBUTION="archlinux"
+        ;;
 esac
 echo "preparing the system ..."
 echo "distribution: $DISTRIBUTION"
@@ -38,6 +41,9 @@ case "$DISTRIBUTION" in
         ;;
     centos)
         ./centos_install_packages.sh
+        ;;
+    archlinux)
+        ./archlinux_install_packages.sh
         ;;
 esac
 

@@ -5,7 +5,7 @@ wget http://erlang.org/download/otp_src_$VERSION.tar.gz
 tar -xzf otp_src_$VERSION.tar.gz
 rm otp_src_$VERSION.tar.gz
 cd otp_src_$VERSION
-./configure --with-ssl
+./configure --with-ssl --enable-builtin-zlib
 make
 sudo make install
 cd ..
