@@ -4,13 +4,16 @@
 
 perform_cookie_action_test() ->
     {ok, Meck} = start_meck(),
-    {ok, req2} = watts_http_util:perform_cookie_action(clear, ignored, ignored, req),
-    {ok, req2} = watts_http_util:perform_cookie_action(update, 0, ignored, req),
-    ?SETCONFIG(ssl, true),
-    {ok, req2} = watts_http_util:perform_cookie_action(update, ignored, deleted, req),
-    {ok, req2} = watts_http_util:perform_cookie_action(update, 10, <<"content">>, req),
-    ?UNSETCONFIG(ssl),
-    ok = stop_meck(Meck),
+    try
+        {ok, req2} = watts_http_util:perform_cookie_action(clear, ignored, ignored, req),
+        {ok, req2} = watts_http_util:perform_cookie_action(update, 0, ignored, req),
+        ?SETCONFIG(ssl, true),
+        {ok, req2} = watts_http_util:perform_cookie_action(update, ignored, deleted, req),
+        {ok, req2} = watts_http_util:perform_cookie_action(update, 10, <<"content">>, req),
+        ?UNSETCONFIG(ssl)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 

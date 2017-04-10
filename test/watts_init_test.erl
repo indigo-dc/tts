@@ -4,44 +4,50 @@
 
 basic_init_test() ->
     {ok, Meck} = start_meck(),
-    {ok, Pid} = watts_init:start_link(),
-    ?SETCONFIG( hostname, "localhost"),
-    ?SETCONFIG( ssl, false),
-    ?SETCONFIG( listen_port, 8080),
-    ?SETCONFIG( port, 8080),
-    ?SETCONFIG( redirection_enable, false),
-    ?SETCONFIG( redirection_port, 443),
-    ?SETCONFIG( persistent_module, watts_data_sqlite),
-    test_util:wait_for_process_to_die(Pid, 300),
-    ok = stop_meck(Meck),
+    try
+        {ok, Pid} = watts_init:start_link(),
+        ?SETCONFIG( hostname, "localhost"),
+        ?SETCONFIG( ssl, false),
+        ?SETCONFIG( listen_port, 8080),
+        ?SETCONFIG( port, 8080),
+        ?SETCONFIG( redirection_enable, false),
+        ?SETCONFIG( redirection_port, 443),
+        ?SETCONFIG( persistent_module, watts_data_sqlite),
+        test_util:wait_for_process_to_die(Pid, 300)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 
 advanced_init_test() ->
     {ok, Meck} = start_meck(),
-    {ok, Pid} = watts_init:start_link(),
-    ServiceList = [#{id => <<"info">>}, #{id => <<"ssh">>}],
-    ProviderList = [#{client_id => <<"1234">>,
-                      client_secret => <<"seCret">>,
-                      config_endpoint => <<"https://some.config">>,
-                      description => <<"a provider">>,
-                      id => <<"oidc1">>,
-                      scopes => [<<"openid">>],
-                      disable_login => false
-                     }],
-    ?SETCONFIG( hostname, "localhost"),
-    ?SETCONFIG( ssl, true),
-    ?SETCONFIG( cert_file, "some_cert"),
-    ?SETCONFIG( key_file, "some_key"),
-    ?SETCONFIG( listen_port, 8080),
-    ?SETCONFIG( port, 8080),
-    ?SETCONFIG( redirection_enable, true),
-    ?SETCONFIG( redirection_port, 443),
-    ?SETCONFIG( service_list, ServiceList),
-    ?SETCONFIG( provider_list, ProviderList),
-    ?SETCONFIG( persistent_module, watts_data_sqlite),
-    test_util:wait_for_process_to_die(Pid, 300),
-    ok = stop_meck(Meck),
+    try
+        {ok, Pid} = watts_init:start_link(),
+        ServiceList = [#{id => <<"info">>}, #{id => <<"ssh">>}],
+        ProviderList = [#{client_id => <<"1234">>,
+                          client_secret => <<"seCret">>,
+                          config_endpoint => <<"https://some.config">>,
+                          description => <<"a provider">>,
+                          id => <<"oidc1">>,
+                          scopes => [<<"openid">>],
+                          disable_login => false
+                         }],
+        ?SETCONFIG( hostname, "localhost"),
+        ?SETCONFIG( ssl, true),
+        ?SETCONFIG( cert_file, "some_cert"),
+        ?SETCONFIG( key_file, "some_key"),
+        ?SETCONFIG( listen_port, 8080),
+        ?SETCONFIG( port, 8080),
+        ?SETCONFIG( redirection_enable, true),
+        ?SETCONFIG( redirection_port, 443),
+        ?SETCONFIG( service_list, ServiceList),
+        ?SETCONFIG( provider_list, ProviderList),
+        ?SETCONFIG( persistent_module, watts_data_sqlite),
+        test_util:wait_for_process_to_die(Pid, 300)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 start_meck() ->

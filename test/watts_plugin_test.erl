@@ -19,24 +19,27 @@ garbage_test() ->
 
 get_list_test() ->
     {ok, Meck} = start_meck(),
-    ServiceId = <<"ssh1">>,
-    OtherId = <<"ssh2">>,
-    CredId1 = <<"some credential id1">>,
-    OtherCred = <<"cred2">>,
+    try
+        ServiceId = <<"ssh1">>,
+        OtherId = <<"ssh2">>,
+        CredId1 = <<"some credential id1">>,
+        OtherCred = <<"cred2">>,
 
-    {ok, UserInfo0} = watts_userinfo:new(),
-    {ok, UserInfo} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
-    {ok, Pid} = watts_plugin:start_link(),
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, Pid} = watts_plugin:start_link(),
 
-    ?assertEqual({ok, [#{service_id => ServiceId}]},
-                 watts_plugin:get_cred_list(UserInfo)),
-    ?assertEqual({ok, 1}, watts_plugin:get_count(UserInfo, ServiceId)),
-    ?assertEqual({ok, 0}, watts_plugin:get_count(UserInfo, OtherId)),
-    ?assertEqual(true, watts_plugin:exists(UserInfo, CredId1)),
-    ?assertEqual(false, watts_plugin:exists(UserInfo, OtherCred)),
-    ok = watts_plugin:stop(),
-    test_util:wait_for_process_to_die(Pid, 100),
-    ok = stop_meck(Meck),
+        ?assertEqual({ok, [#{service_id => ServiceId}]},
+                     watts_plugin:get_cred_list(UserInfo)),
+        ?assertEqual({ok, 1}, watts_plugin:get_count(UserInfo, ServiceId)),
+        ?assertEqual({ok, 0}, watts_plugin:get_count(UserInfo, OtherId)),
+        ?assertEqual(true, watts_plugin:exists(UserInfo, CredId1)),
+        ?assertEqual(false, watts_plugin:exists(UserInfo, OtherCred)),
+        ok = watts_plugin:stop(),
+        test_util:wait_for_process_to_die(Pid, 100)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 request_test() ->
@@ -56,81 +59,86 @@ request_test() ->
 
     {ok, Meck} = start_meck(),
 
-    {ok, UserInfo0} = watts_userinfo:new(),
-    {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
-    {ok, UserInfo2} = watts_userinfo:update_iss_sub(<<"iss">>, <<"su">>, UserInfo0),
-    {ok, UserInfo3} = watts_userinfo:update_iss_sub(<<"other">>, <<"sub">>, UserInfo0),
+    try
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, UserInfo2} = watts_userinfo:update_iss_sub(<<"iss">>, <<"su">>, UserInfo0),
+        {ok, UserInfo3} = watts_userinfo:update_iss_sub(<<"other">>, <<"sub">>, UserInfo0),
 
-    {ok, Pid} = watts_plugin:start_link(),
-    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred1]}},
-        watts_plugin:request(Service1, UserInfo1, Interface, Params)),
+        {ok, Pid} = watts_plugin:start_link(),
+        ?assertEqual({ok, #{id => <<"123">>, entries => [Cred1]}},
+                     watts_plugin:request(Service1, UserInfo1, Interface, Params)),
 
-    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred2]}},
-        watts_plugin:request(Service2, UserInfo1, Interface, Params)),
+        ?assertEqual({ok, #{id => <<"123">>, entries => [Cred2]}},
+                     watts_plugin:request(Service2, UserInfo1, Interface, Params)),
 
-    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred3]}},
-        watts_plugin:request(Service3, UserInfo1, Interface, Params)),
+        ?assertEqual({ok, #{id => <<"123">>, entries => [Cred3]}},
+                     watts_plugin:request(Service3, UserInfo1, Interface, Params)),
 
-    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred4]}},
-        watts_plugin:request(Service4, UserInfo1, Interface, Params)),
+        ?assertEqual({ok, #{id => <<"123">>, entries => [Cred4]}},
+                     watts_plugin:request(Service4, UserInfo1, Interface, Params)),
 
-    ?assertEqual({ok, #{id => <<"123">>, entries => [Cred5]}},
-        watts_plugin:request(Service5, UserInfo1, Interface, Params)),
+        ?assertEqual({ok, #{id => <<"123">>, entries => [Cred5]}},
+                     watts_plugin:request(Service5, UserInfo1, Interface, Params)),
 
-    ?assertEqual({error,#{log_msg => <<"logged">>,user_msg => <<"some message">>}},
-                 watts_plugin:request(Service1, UserInfo2, Interface, Params)),
+        ?assertEqual({error,#{log_msg => <<"logged">>,user_msg => <<"some message">>}},
+                     watts_plugin:request(Service1, UserInfo2, Interface, Params)),
 
-    ?assertEqual({error, limit_reached},
-                 watts_plugin:request(Service2, UserInfo2, Interface, Params)),
+        ?assertEqual({error, limit_reached},
+                     watts_plugin:request(Service2, UserInfo2, Interface, Params)),
 
-    {error, #{user_msg := _, log_msg := _}} =
-                 watts_plugin:request(Service3, UserInfo2, Interface, Params),
+        {error, #{user_msg := _, log_msg := _}} =
+            watts_plugin:request(Service3, UserInfo2, Interface, Params),
 
-    {error, #{user_msg := _, log_msg := _}} =
-                 watts_plugin:request(Service4, UserInfo2, Interface, Params),
+        {error, #{user_msg := _, log_msg := _}} =
+            watts_plugin:request(Service4, UserInfo2, Interface, Params),
 
-    {error, #{user_msg := _, log_msg := _}} =
-                 watts_plugin:request(Service5, UserInfo2, Interface, Params),
+        {error, #{user_msg := _, log_msg := _}} =
+            watts_plugin:request(Service5, UserInfo2, Interface, Params),
 
-    ?assertEqual({error, service_disabled},
-                 watts_plugin:request(Service6, UserInfo2, Interface, Params)),
-
-
-    ?assertEqual({error, user_not_allowed},
-                 watts_plugin:request(Service1, UserInfo3, Interface, Params)),
+        ?assertEqual({error, service_disabled},
+                     watts_plugin:request(Service6, UserInfo2, Interface, Params)),
 
 
-    ok = watts_plugin:stop(),
-    ok = test_util:wait_for_process_to_die(Pid,100),
+        ?assertEqual({error, user_not_allowed},
+                     watts_plugin:request(Service1, UserInfo3, Interface, Params)),
 
-    ok = stop_meck(Meck),
+
+        ok = watts_plugin:stop(),
+        ok = test_util:wait_for_process_to_die(Pid,100)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 revoke_test() ->
     {ok, Meck} = start_meck(),
-    {ok, UserInfo0} = watts_userinfo:new(),
-    {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
-    CredId1 = <<"some credential id1">>,
-    CredId2 = <<"some credential id2">>,
-    CredId3 = <<"some credential id3">>,
-    CredId6 = <<"some credential id6">>,
+    try
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        CredId1 = <<"some credential id1">>,
+        CredId2 = <<"some credential id2">>,
+        CredId3 = <<"some credential id3">>,
+        CredId6 = <<"some credential id6">>,
 
-    {ok, Pid} = watts_plugin:start_link(),
-    {ok, #{}} = watts_plugin:revoke(CredId1, UserInfo1),
-    {error, #{user_msg := _, log_msg := _}} =
-        watts_plugin:revoke(CredId2, UserInfo1),
-    {error, #{user_msg := _, log_msg := _}} =
-        watts_plugin:revoke(CredId3, UserInfo1),
-    ?UNSETCONFIG( allow_dropping_credentials),
-    {error, #{user_msg := _, log_msg := _}} =
-        watts_plugin:revoke(CredId6, UserInfo1),
-    ?SETCONFIG( allow_dropping_credentials, true),
-    {ok, #{}} =
-        watts_plugin:revoke(CredId6, UserInfo1),
-    ?UNSETCONFIG( allow_dropping_credentials),
-    ok = watts_plugin:stop(),
-    ok = test_util:wait_for_process_to_die(Pid,100),
-    ok = stop_meck(Meck),
+        {ok, Pid} = watts_plugin:start_link(),
+        {ok, #{}} = watts_plugin:revoke(CredId1, UserInfo1),
+        {error, #{user_msg := _, log_msg := _}} =
+            watts_plugin:revoke(CredId2, UserInfo1),
+        {error, #{user_msg := _, log_msg := _}} =
+            watts_plugin:revoke(CredId3, UserInfo1),
+        ?UNSETCONFIG( allow_dropping_credentials),
+        {error, #{user_msg := _, log_msg := _}} =
+            watts_plugin:revoke(CredId6, UserInfo1),
+        ?SETCONFIG( allow_dropping_credentials, true),
+        {ok, #{}} =
+            watts_plugin:revoke(CredId6, UserInfo1),
+        ?UNSETCONFIG( allow_dropping_credentials),
+        ok = watts_plugin:stop(),
+        ok = test_util:wait_for_process_to_die(Pid,100)
+    after
+        ok = stop_meck(Meck)
+    end,
     ok.
 
 start_meck() ->
