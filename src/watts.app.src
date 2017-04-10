@@ -10,7 +10,7 @@
                                     crypto,
                                     ssh,
                                     mnesia,
-                                    econfig,
+                                    erlexec,
                                     jsone,
                                     esqlite,
                                     base64url,
