@@ -336,7 +336,10 @@ get_json_test() ->
                             id = undefined,
                             session_pid = pid1,
                             method = get},
-                     #{<<"credential_list">> => [<<"Cred1">>]}
+                     #{<<"credential_list">> => [#{<<"cred_id">> => <<"CRED1">>,
+                                              <<"ctime">> => <<"now">>,
+                                              <<"interface">> => <<"test">>,
+                                              <<"service_id">> => <<"test1">>}]}
                     }
                    ],
 
@@ -508,7 +511,12 @@ start_meck() ->
                   end,
     GetCredList = fun(SessionPid) ->
                           case SessionPid of
-                              pid1 -> {ok, [<<"CredId">>]};
+                              pid1 -> {ok, [#{cred_id => <<"CRED1">>,
+                                              ctime => <<"now">>,
+                                              interface => <<"test">>,
+                                              service_id => <<"test1">>,
+                                              removed => true
+                                             }]};
                               _ -> {ok, []}
                           end
               end,
