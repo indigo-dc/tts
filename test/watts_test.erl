@@ -3,6 +3,7 @@
 
 
 -define(ISSUER_URL, <<"https:://issuer.sample">>).
+-define(ISSUER2_URL, <<"https:://issuer.other">>).
 
 error_session_test() ->
     {ok, Meck} = start_meck(),
@@ -44,10 +45,10 @@ login_and_out_test() ->
     ok.
 
 additional_login_test() ->
-    %% TODO This test probably requires unmecked session mgmt to be meaningful
     {ok, Meck} = start_meck(),
     try
         Issuer = ?ISSUER_URL,
+        Issuer2 = ?ISSUER2_URL,
         OidcToken1 = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
                        access => #{token => <<"accestoken">>},
                        cookies => []
@@ -55,13 +56,17 @@ additional_login_test() ->
         {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken1),
 
         {ok, Token} = watts_session:get_sess_token(Pid),
-        OidcToken2 = #{id => #{claims => #{sub => <<"othersub">>, iss => Issuer}},
+        OidcToken2 = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer2}},
                        access => #{token => <<"accestoken">>},
                        cookies => [{watts_http_util:cookie_name(), Token}]
                       },
+        Params = [],
+        ServiceId = <<"service0815">>,
+        Provider = <<"ID3">>,
+        ok = watts_session:set_redirection(ServiceId, Params, Provider, Pid),
         {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken2),
-
-        %%TODO true = watts_userinfo:has_additional_login(_, _, watts_session:get_user_info(Pid)),
+        {ok, UserInfo} = watts_session:get_user_info(Pid),
+        true = watts_userinfo:has_additional_login(ServiceId, Provider, UserInfo),
 
         ok = watts:logout(Pid),
         test_util:wait_for_process_to_die(Pid, 100)
@@ -152,7 +157,8 @@ start_meck() ->
     ProviderList = fun() ->
                              {ok, [ {<<"id">>, pid1},
                                     {<<"ID1">>, pid2},
-                                    {<<"ID2">>, pid3}]}
+                                    {<<"ID2">>, pid3},
+                                    {<<"ID3">>, pid4}]}
                      end,
 
     RetrieveUserInfo = fun(_, _, _) ->
@@ -165,6 +171,13 @@ start_meck() ->
                                 ready => true,
                                 extra_config => #{priority => 5},
                                 issuer => ?ISSUER_URL}};
+                      (<<"ID3">>) ->
+                           {ok, #{
+                                id => <<"ID3">>,
+                                description => <<"a second provider">>,
+                                ready => true,
+                                extra_config => #{priority => 5},
+                                issuer => ?ISSUER2_URL}};
                       (_) ->
                              {ok, #{
                                 id => <<"ID1">>,
@@ -173,9 +186,13 @@ start_meck() ->
                                 extra_config => #{priority => 5},
                                 issuer => ?ISSUER_URL}}
                      end,
-    FindProvider = fun(_Issuer) ->
-                           {ok, provider_pid}
-                     end,
+    FindProvider = fun(Issuer) ->
+                           case Issuer of
+                               ?ISSUER_URL -> {ok, provider_pid};
+                               ?ISSUER2_URL -> {ok, <<"ID3">>};
+                               _ -> {error, not_found}
+                           end
+                   end,
     NewSession = fun() ->
                          TestSession
                  end,
