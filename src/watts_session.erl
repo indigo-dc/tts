@@ -238,11 +238,10 @@ handle_call({add_additional_login, IssuerId, Token}, _From,
                    max_age=MA} = State) ->
     NewUserInfo = watts_userinfo:add_additional_login(ServiceId, IssuerId,
                                                       Token, UserInfo),
-    {reply, ok, State#state{user_info = NewUserInfo,
-                            redirection = undefined}, MA};
+    {reply, ok, State#state{user_info = NewUserInfo}, MA};
 handle_call({add_additional_login, _IssuerId, _Token}, _From,
             #state{max_age=MA} = State) ->
-    {reply, ok, State#state{redirection = undefined}, MA};
+    {reply, ok, State, MA};
 handle_call({clear_additional_logins, ServiceId}, _From,
             #state{user_info = UserInfo, max_age=MA} = State) ->
     NewUserInfo = watts_userinfo:clear_additional_logins(ServiceId, UserInfo),
