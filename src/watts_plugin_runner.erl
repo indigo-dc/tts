@@ -344,7 +344,11 @@ kill(#state{con_type = ssh, connection = Connection} = State) ->
 
 create_result(#{exit_status := 0, std_out := []} = Output) ->
     {error, no_json, Output};
-create_result(#{exit_status := 0, std_out := [Json|_]} = Output) ->
+create_result(#{exit_status := 0, std_out := StdOut} = Output) ->
+    Prepend = fun(Bin, Result) ->
+                     << Bin/binary, Result/binary>>
+             end,
+    Json = lists:foldl(Prepend, <<>>, StdOut),
     case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
         {ok, Map, _} -> {ok, Map, Output};
         {error, _} -> {error, bad_json_result, Output}
