@@ -174,6 +174,32 @@ request_timeout_test() ->
     end,
     ok.
 
+request_parts_test() ->
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
+    try
+        ServiceId = <<"local4">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
+        Params = [],
+        {ok, ReqPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, ReqPid},
+
+        ConfigReq = #{action => request,
+                      service_id => ServiceId,
+                      user_info => UserInfo,
+                      params => Params,
+                      queue => undefined},
+
+        {ok, Map, Output} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
+        io:format("output: ~p",[Output]),
+        ok = test_util:wait_for_process_to_die(ReqPid,100),
+        ?assertEqual(<<"ok">>, maps:get(result, Map, undefined))
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
+
 no_cmd_crash_test() ->
     {ok, Meck} = start_meck(),
     try
@@ -275,6 +301,21 @@ start_meck() ->
                        type => local,
                        user => undefined
                       }
+                   },
+                   #{id => <<"local4">>,
+                     plugin_timeout => 500,
+                     cmd => <<"parts">>,
+                     cmd_env_use => true,
+                     cmd_env_var => "WATTS_PARAMETER",
+                     connection => #{
+                       host => undefined,
+                       port => 22,
+                       passwd => undefined,
+                       ssh_dir => undefined,
+                       ssh_key_pass => undefined,
+                       type => local,
+                       user => undefined
+                      }
                    }
                   ],
     InfoFun = fun(Id) ->
@@ -295,13 +336,12 @@ start_meck() ->
 
                       receive
                           ssh_start ->
+                              Json = jsone:encode(JsonMap),
+                              Pid ! {ssh_cm, ssh, {data, ssh_channel, 0, Json}},
                               %% stdout
                               Pid ! {ssh_cm, ssh, {data, ssh_channel, 0, <<"working ...">>}},
                               %% stderr
                               Pid ! {ssh_cm, ssh, {data, ssh_channel, 1, <<"oops ...">>}},
-                              %% no more data going to be sent
-                              Json = jsone:encode(JsonMap),
-                              Pid ! {ssh_cm, ssh, {data, ssh_channel, 0, Json}},
                               %%
                               Pid ! {ssh_cm, ssh, {eof, ssh_channel}},
                               %% exit signal ... what ever that is ...
@@ -314,8 +354,8 @@ start_meck() ->
                               ok
                       end
               end,
-
     SshPid = spawn(SshSend),
+
     ExecSend = fun() ->
                       Pid = receive
                                 {pid, P} -> P
@@ -335,6 +375,11 @@ start_meck() ->
                               Pid ! {stdout, 123,  Json},
                               %% everything went well
                               Pid ! {'DOWN', 123, process, pid1, normal};
+                          exec_parts_start ->
+                              Pid ! {stdout, 345,  <<"{ \"result\": \"ok\",">>},
+                              Pid ! {stdout, 345,  <<"\"state\": \"test\",">>},
+                              Pid ! {stdout, 345,  <<"\"credential\": []}">>},
+                              Pid ! {'DOWN', 345, process, pid3, normal};
                           stop ->
                               ok
                       end
@@ -370,9 +415,12 @@ start_meck() ->
                                  {ok, pid1, 123};
                              "timeout" ->
                                  {ok, pid2, 234};
+                             "parts" ->
+                                 ExecPid ! exec_parts_start,
+                                 {ok, pid3, 345};
                              _ ->
                                  ExecPid ! exec_bad_start,
-                                 {ok, pid3, 456}
+                                 {ok, pid4, 456}
                          end
 
                  end,
