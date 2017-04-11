@@ -271,6 +271,8 @@ you want to give to the service.
 | :---: | --- | :---: | :---: |
 | description | A description of the service for the user | string | yes |
 | cmd | The command to execute after connecting, needs to be executable/readable by the user WaTTS is running as | string | yes |
+| cmd_env_use | The parameter will not be passed at the command line but put into an environment variable. The default is 'false'. | boolean | no |
+| cmd_env_var | The name of the environment variable containing the parameter, only used if `cmd_env_use` is true | string | no |
 | credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | no (infinite) |
 | parallel_runner | The number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
 | allow_same_state | Whether the plugin is allowed to return the same state more than once | boolean | no, (false) |
