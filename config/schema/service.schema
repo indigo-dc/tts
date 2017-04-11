@@ -9,13 +9,13 @@
           ]}.
 
 %% @doc wether the environment should be used to pass parameters. default is false.
-{mapping, "service.$id.env_use", "watts.service_list.b", [
+{mapping, "service.$id.cmd_env_use", "watts.service_list.b", [
           {datatype, {enum, [true, false]}}
           ]}.
 
 %% @doc the name of the environment variable to be used to pass parameter, defaults
 %% to 'WATTS_PARAMETER'
-{mapping, "service.$id.env_var", "watts.service_list.c", [
+{mapping, "service.$id.cmd_env_var", "watts.service_list.c", [
           {datatype, string}
           ]}.
 
@@ -153,8 +153,8 @@
 
          Descs = TypeIdValue("service.$id.description", three),
          Cmds = TypeIdValue("service.$id.cmd", three),
-         EnvUses = TypeIdValue("service.$id.env_user", three),
-         EnvVars = TypeIdValue("service.$id.env_var", three),
+         EnvUses = TypeIdValue("service.$id.cmd_env_use", three),
+         EnvVars = TypeIdValue("service.$id.cmd_env_var", three),
          CredLimits = TypeIdValue("service.$id.credential_limit", three),
          Runners = TypeIdValue("service.$id.parallel_runner", three),
          SameStates = TypeIdValue("service.$id.allow_same_state", three),
@@ -416,8 +416,8 @@
                                   authz => AuthzConf,
                                   description => list_to_binary(Desc),
                                   cmd => list_to_binary(Cmd),
-                                  env_use => EnvUse,
-                                  env_var => EnvVar,
+                                  cmd_env_use => EnvUse,
+                                  cmd_env_var => EnvVar,
                                   cred_limit => CredLimit,
                                   allow_same_state => SameState,
                                   plugin_conf_config => PluginConf,
