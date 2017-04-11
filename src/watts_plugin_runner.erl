@@ -75,6 +75,7 @@ request_action(#{action := Action, service_id := ServiceId} = ConfigIn, Pid) ->
         gen_server:call(Pid, {request_action,  Config}, Timeout)
     catch
         exit:{timeout, _} ->
+            gen_server:cast(Pid, kill),
             timeout_result(Action)
     end.
 
@@ -126,15 +127,27 @@ handle_cast(perform_action, State) ->
     {noreply, NewState};
 handle_cast(send_result, State) ->
     send_result(State);
+handle_cast(kill, State) ->
+    kill(State);
 handle_cast(stop, State) ->
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_info({ssh_cm, SshCon, SshMsg}
-            , #state{connection=SshCon,
+            , #state{connection = SshCon, con_type = ssh,
                      cmd_output = #{ channel_id := ChannelId}}=State) ->
     {ok, NewState} = handle_ssh_message(SshMsg, ChannelId, State),
+    {noreply, NewState};
+handle_info({Type, ProcessId, Msg}
+            , #state{ con_type = local,
+                 cmd_output = #{ process_id := ProcessId}}=State) ->
+    {ok, NewState} = handle_exec_message(Type, Msg, State),
+    {noreply, NewState};
+handle_info({'DOWN', ProcessId, process, _, Reason}
+            , #state{ con_type = local,
+                 cmd_output = #{ process_id := ProcessId}}=State) ->
+    {ok, NewState} = handle_exec_message(down, Reason, State),
     {noreply, NewState};
 handle_info(timeout, State) ->
     {ok, NewState} = send_reply({error, timeout}, State),
@@ -296,24 +309,16 @@ execute_command(Cmd, _Env, ssh, Connection, State) when is_list(Cmd) ->
     CmdOutput =  #{channel_id => ChannelId, cmd => Cmd},
     {ok, State#state{ cmd_output = CmdOutput }};
 execute_command(Cmd, Env, local, _Connection, State) when is_list(Cmd) ->
-    lager:debug("runner ~p: executing ~p", [self(), Cmd]),
-    {ok, ResultList} = exec:run(Cmd, [{env, Env}, sync, stdout, stderr]),
-    Result = extract_std_info(ResultList),
-    lager:debug("runner ~p: result ~p", [self(), Result]),
-    NewState = State#state{ cmd_output = maps:put(cmd, Cmd, Result)},
-    trigger_sending(),
+    lager:debug("runner ~p: executing ~p ~p", [self(), Cmd, Env]),
+    {ok, _Pid, Id} = exec:run(Cmd, [{env, Env}, stdout, stderr, monitor,
+                                    {kill_timeout, 1}]),
+    CmdOutput =  #{process_id => Id, cmd => Cmd, env => Env},
+    NewState = State#state{ cmd_output = CmdOutput},
     {ok, NewState};
 execute_command(Cmd, Env, ConType, Connection, State)
   when is_binary(Cmd) ->
     execute_command(binary_to_list(Cmd), Env, ConType, Connection, State).
 
-extract_std_info(List) ->
-    UpdateMap = fun ({stdout, Data}, Map) ->
-                        maps:put(std_out, Data, Map);
-                    ({stderr, Data}, Map) ->
-                        maps:put(std_err, Data, Map)
-                end,
-    lists:foldl(UpdateMap, #{std_out => [], std_err => []}, List).
 
 
 send_result(#state{ cmd_output = CmdOutput, connection = Connection,
@@ -324,6 +329,18 @@ send_result(#state{ cmd_output = CmdOutput, connection = Connection,
     lager:debug("runner ~p: sending result ~p", [self(), Result]),
     {ok, NewState} = send_reply(Result, State),
     {stop, normal, NewState}.
+
+
+kill(#state{con_type = local,
+            cmd_output = #{process_id := ProcessId}} = State) ->
+    ok = exec:stop(ProcessId),
+    {stop, normal, State#state{client = undefined}};
+kill(#state{con_type = ssh, connection = Connection} = State) ->
+    %% TODO: does it need to be killed somehow?
+    close_connection(Connection, ssh),
+    {stop, normal, State#state{client = undefined}}.
+
+
 
 create_result(#{exit_status := 0, std_out := []} = Output) ->
     {error, no_json, Output};
@@ -340,6 +357,22 @@ create_result(Output) ->
     create_result(maps:put(exit_status, -1, Output)).
 
 
+handle_exec_message(stdout, Data, State) ->
+    % data on std out
+    update_std_out_err(Data, <<>>, State);
+handle_exec_message(stderr, Data, State) ->
+    % data on std err
+    update_std_out_err(<<>>, Data, State);
+handle_exec_message(down, {status, Status}, State) ->
+    ExitStatus = case exec:status(Status) of
+                     {status, Num} -> Num;
+                     {signal, _, _} -> -999
+                 end,
+    update_exit_and_send(ExitStatus, State);
+handle_exec_message(down, normal, State) ->
+    update_exit_and_send(0, State);
+handle_exec_message(down, ExitStatus, State) ->
+    update_exit_and_send(ExitStatus, State).
 
 
 handle_ssh_message({data, ChannelId, 0, Data}, ChannelId, State) ->
@@ -358,11 +391,7 @@ handle_ssh_message({exit_signal, ChannelId, ExitSignal, ErrorMsg, Lang},
     NewState = State#state{ cmd_output = maps:merge(CmdOutput, Update) },
     {ok, NewState};
 handle_ssh_message({exit_status, ChannelId, ExitStatus}, ChannelId, State) ->
-    #state{ cmd_output = CmdOutput
-          } = State,
-    Update = #{exit_status => ExitStatus},
-    NewState = State#state{ cmd_output = maps:merge(CmdOutput, Update) },
-    {ok, NewState};
+    update_exit_status(ExitStatus, State);
 handle_ssh_message({closed, ChannelId}, ChannelId, State) ->
     #state{ cmd_output = CmdOutput} = State,
     lager:debug("runner ~p: result ~p", [self(), CmdOutput]),
@@ -376,6 +405,15 @@ update_std_out_err(Out, Err, #state{ cmd_output = CmdOutput } = State) ->
     NewState = State#state{ cmd_output = maps:merge(CmdOutput, Update) },
     {ok, NewState}.
 
+update_exit_status(ExitStatus, #state{ cmd_output = CmdOutput} = State) ->
+    Update = #{exit_status => ExitStatus},
+    NewState = State#state{ cmd_output = maps:merge(CmdOutput, Update) },
+    {ok, NewState}.
+
+update_exit_and_send(ExitStatus, State) ->
+    Result = update_exit_status(ExitStatus, State),
+    trigger_sending(),
+    Result.
 
 close_connection(Connection, ssh) ->
     ok = ssh:close(Connection);

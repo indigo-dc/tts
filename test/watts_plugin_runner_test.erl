@@ -18,7 +18,7 @@ garbage_test() ->
     ok.
 
 request_ssh_test() ->
-    {ok, {SshPid,_} = Meck } = start_meck(),
+    {ok, {SshPid,_, _} = Meck } = start_meck(),
     try
         ServiceId = <<"ssh1">>,
         {ok, UserInfo0} = watts_userinfo:new(),
@@ -47,7 +47,7 @@ request_ssh_test() ->
     ok.
 
 request_local_test() ->
-    {ok, Meck} = start_meck(),
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
     try
         ServiceId = <<"local1">>,
         {ok, UserInfo0} = watts_userinfo:new(),
@@ -55,6 +55,7 @@ request_local_test() ->
         {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
         Params = [],
         {ok, ReqPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, ReqPid},
 
         ConfigReq = #{action => request,
                       service_id => ServiceId,
@@ -62,11 +63,32 @@ request_local_test() ->
                       params => Params,
                       queue => undefined},
 
+
         {error, bad_json_result
         , _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
-        ok = test_util:wait_for_process_to_die(ReqPid,100),
+        ok = test_util:wait_for_process_to_die(ReqPid,100)
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
 
+revoke_local_test() ->
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
+    try
+        ServiceId = <<"local1">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
+        Params = [],
         {ok, RevPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, RevPid},
+
+        ConfigReq = #{action => request,
+                      service_id => ServiceId,
+                      user_info => UserInfo,
+                      params => Params,
+                      queue => undefined},
+
         ConfigRev = maps:merge(ConfigReq, #{action => revoke,
                                             cred_state => <<"credstate">>}),
         {error, bad_json_result
@@ -78,7 +100,7 @@ request_local_test() ->
     ok.
 
 request_env_test() ->
-    {ok, Meck} = start_meck(),
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
     try
         ServiceId = <<"local2">>,
         {ok, UserInfo0} = watts_userinfo:new(),
@@ -86,6 +108,57 @@ request_env_test() ->
         {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
         Params = [],
         {ok, ReqPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, ReqPid},
+
+        ConfigReq = #{action => request,
+                      service_id => ServiceId,
+                      user_info => UserInfo,
+                      params => Params,
+                      queue => undefined},
+        {ok, ReqMap, _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
+        ?assertEqual(<<"ok">>, maps:get(result, ReqMap, undefined)),
+        ok = test_util:wait_for_process_to_die(ReqPid,100)
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
+
+revoke_env_test() ->
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
+    try
+        ServiceId = <<"local2">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
+        Params = [],
+        {ok, RevPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, RevPid},
+
+        ConfigReq = #{action => request,
+                      service_id => ServiceId,
+                      user_info => UserInfo,
+                      params => Params,
+                      queue => undefined},
+        ConfigRev = maps:merge(ConfigReq, #{action => revoke,
+                                            cred_state => <<"credstate">>}),
+        {ok, RevMap, _} = watts_plugin_runner:request_action(ConfigRev, RevPid),
+        ?assertEqual(<<"ok">>, maps:get(result, RevMap, undefined)),
+        ok = test_util:wait_for_process_to_die(RevPid,100)
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
+
+request_timeout_test() ->
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
+    try
+        ServiceId = <<"local3">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
+        Params = [],
+        {ok, ReqPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, ReqPid},
 
         ConfigReq = #{action => request,
                       service_id => ServiceId,
@@ -93,16 +166,9 @@ request_env_test() ->
                       params => Params,
                       queue => undefined},
 
-        {ok, _
-        , _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
+        {ok, Map, _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
         ok = test_util:wait_for_process_to_die(ReqPid,100),
-
-        {ok, RevPid} = watts_plugin_runner:start(),
-        ConfigRev = maps:merge(ConfigReq, #{action => revoke,
-                                            cred_state => <<"credstate">>}),
-        {ok, _
-        , _} = watts_plugin_runner:request_action(ConfigRev, RevPid),
-        ok = test_util:wait_for_process_to_die(RevPid,100)
+        ?assertEqual(error, maps:get(result, Map, undefined))
     after
         ok = stop_meck(Meck)
     end,
@@ -142,7 +208,8 @@ start_meck() ->
     Credential = <<"secret">>,
     CredState = <<"internalState">>,
     JsonMap = #{ credential => Credential,
-                 state => CredState
+                 state => CredState,
+                 result => ok
                },
     ServiceList = [
                    #{id => <<"ssh1">>,
@@ -182,6 +249,21 @@ start_meck() ->
                    },
                    #{id => <<"local2">>,
                      cmd => <<"ls">>,
+                     cmd_env_use => true,
+                     cmd_env_var => "WATTS_PARAMETER",
+                     connection => #{
+                       host => undefined,
+                       port => 22,
+                       passwd => undefined,
+                       ssh_dir => undefined,
+                       ssh_key_pass => undefined,
+                       type => local,
+                       user => undefined
+                      }
+                   },
+                   #{id => <<"local3">>,
+                     plugin_timeout => 500,
+                     cmd => <<"timeout">>,
                      cmd_env_use => true,
                      cmd_env_var => "WATTS_PARAMETER",
                      connection => #{
@@ -234,6 +316,30 @@ start_meck() ->
               end,
 
     SshPid = spawn(SshSend),
+    ExecSend = fun() ->
+                      Pid = receive
+                                {pid, P} -> P
+                            end,
+
+                      receive
+                          exec_bad_start ->
+                              %% stdout
+                              Pid ! {stdout, 456,  <<"working ...">>},
+                              %% stderr
+                              Pid ! {stderr, 456, <<"oops ...">>},
+                              %% everything went well
+                              Pid ! {'DOWN', 456, process, pid2, normal};
+                          exec_good_start ->
+                              %% stdout
+                              Json = jsone:encode(JsonMap),
+                              Pid ! {stdout, 123,  Json},
+                              %% everything went well
+                              Pid ! {'DOWN', 123, process, pid1, normal};
+                          stop ->
+                              ok
+                      end
+              end,
+    ExecPid = spawn(ExecSend),
     ConnectFun = fun(H, P, _Options, _Timeout) ->
                          H = <<"localhost">>,
                          P = 22,
@@ -260,9 +366,13 @@ start_meck() ->
     ErlexecRun = fun(Cmd, _Params) ->
                          case Cmd of
                              "ls" ->
-                                 {ok, [{stdout, [<<"{\"result\":\"ok\", \"credentials\":[], \"state\":\"test\"}">>]}]};
+                                 ExecPid ! exec_good_start,
+                                 {ok, pid1, 123};
+                             "timeout" ->
+                                 {ok, pid2, 234};
                              _ ->
-                                 {ok, [{stdout, [<<"something else">>]}]}
+                                 ExecPid ! exec_bad_start,
+                                 {ok, pid3, 456}
                          end
 
                  end,
@@ -273,12 +383,14 @@ start_meck() ->
     ok = meck:expect(ssh_connection, session_channel, ChannelFun),
     ok = meck:expect(ssh_connection, exec, ExecFun),
     ok = meck:expect(exec, run, ErlexecRun),
+    ok = meck:expect(exec, stop, fun(_) -> ok end),
 
-    {ok, {SshPid, MeckModules}}.
+    {ok, {SshPid, ExecPid, MeckModules}}.
 
 
-stop_meck({SshPid, MeckModules}) ->
+stop_meck({SshPid, ExecPid, MeckModules}) ->
     SshPid ! stop,
+    ExecPid ! stop,
     ok = test_util:meck_done(MeckModules),
     ?UNSETCONFIG( vsn),
     ok.
