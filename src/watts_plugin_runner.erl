@@ -47,6 +47,7 @@
           connection = undefined,
           con_type = undefined,
           cmd_line = undefined,
+          cmd_env = [],
           cmd_output = undefined,
           error = undefined
          }).
@@ -154,10 +155,11 @@ code_change(_OldVsn, State, _Extra) ->
 execute_command(State) ->
     {ok, NewState} = prepare_action(State),
     #state{ cmd_line = Cmd,
+            cmd_env = Env,
             connection = Connection,
             con_type = ConType
           } = NewState,
-    execute_command(Cmd, ConType, Connection, NewState).
+    execute_command(Cmd, Env, ConType, Connection, NewState).
 
 
 prepare_action(State) ->
@@ -245,11 +247,29 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
     lager:debug("runner ~p: will execute ~p with parameter ~p",
                 [self(), Cmd, ScriptParam]),
-    CmdLine = << Cmd/binary, <<" ">>/binary, EncodedJson/binary >>,
+    EnvVar = get_env_var(ServiceInfo),
+    {CmdLine, Env} = create_cmd_and_env(Cmd, EncodedJson, EnvVar),
     lager:debug("runner ~p: the command line is (parameter in base64url): ~p",
                 [self(), CmdLine]),
-    {ok, State#state{cmd_line=CmdLine,
+    {ok, State#state{cmd_line=CmdLine, cmd_env = Env,
                      connection = Connection, con_type = ConnType}}.
+
+get_env_var(#{cmd_env_use := true, cmd_env_var := Var}) when is_list(Var) ->
+    Var;
+get_env_var(_) ->
+    undefined.
+
+
+
+
+create_cmd_and_env(Cmd, EncJson, undefined) ->
+    {<< Cmd/binary, <<" ">>/binary, EncJson/binary >>,
+     []};
+create_cmd_and_env(Cmd, Json, VarName) ->
+    {Cmd, [{VarName, binary_to_list(Json)}]}.
+
+
+
 
 add_user_info_if_present(ScriptParam, undefined, _, _) ->
     ScriptParam;
@@ -269,24 +289,31 @@ add_user_info_if_present(ScriptParam, UserInfo, ServiceId, AddAccessToken) ->
              end,
     maps:merge(ScriptParam, Update).
 
-execute_command(Cmd, ssh, Connection, State) when is_list(Cmd) ->
+execute_command(Cmd, _Env, ssh, Connection, State) when is_list(Cmd) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection, infinity),
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     success = ssh_connection:exec(Connection, ChannelId, Cmd, infinity),
     CmdOutput =  #{channel_id => ChannelId, cmd => Cmd},
     {ok, State#state{ cmd_output = CmdOutput }};
-execute_command(Cmd, local, _Connection, State) when is_list(Cmd) ->
+execute_command(Cmd, Env, local, _Connection, State) when is_list(Cmd) ->
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
-    StdOut = list_to_binary(os:cmd(Cmd)),
-    lager:debug("runner ~p: result ~p", [self(), StdOut]),
-    CmdOutput = #{std_out => [StdOut], cmd => Cmd, std_err => []},
-    NewState = State#state{ cmd_output = CmdOutput },
+    {ok, ResultList} = exec:run(Cmd, [{env, Env}, sync, stdout, stderr]),
+    Result = extract_std_info(ResultList),
+    lager:debug("runner ~p: result ~p", [self(), Result]),
+    NewState = State#state{ cmd_output = maps:put(cmd, Cmd, Result)},
     trigger_sending(),
     {ok, NewState};
-execute_command(Cmd, ConType, Connection, State)
+execute_command(Cmd, Env, ConType, Connection, State)
   when is_binary(Cmd) ->
-    execute_command(binary_to_list(Cmd), ConType, Connection, State).
+    execute_command(binary_to_list(Cmd), Env, ConType, Connection, State).
 
+extract_std_info(List) ->
+    UpdateMap = fun ({stdout, Data}, Map) ->
+                        maps:put(std_out, Data, Map);
+                    ({stderr, Data}, Map) ->
+                        maps:put(std_err, Data, Map)
+                end,
+    lists:foldl(UpdateMap, #{std_out => [], std_err => []}, List).
 
 
 send_result(#state{ cmd_output = CmdOutput, connection = Connection,

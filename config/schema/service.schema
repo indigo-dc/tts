@@ -8,75 +8,86 @@
           {datatype, string}
           ]}.
 
+%% @doc wether the environment should be used to pass parameters. default is false.
+{mapping, "service.$id.cmd_env_use", "watts.service_list.b", [
+          {datatype, {enum, [true, false]}}
+          ]}.
+
+%% @doc the name of the environment variable to be used to pass parameter, defaults
+%% to 'WATTS_PARAMETER'
+{mapping, "service.$id.cmd_env_var", "watts.service_list.c", [
+          {datatype, string}
+          ]}.
+
 %% @doc the credential limit for this service
-{mapping, "service.$id.credential_limit", "watts.service_list.b", [
+{mapping, "service.$id.credential_limit", "watts.service_list.d", [
           {datatype, [{atom, infinite}, integer]}
           ]}.
 
 %% @doc the max count of parallel running plugins for this service
-{mapping, "service.$id.parallel_runner", "watts.service_list.c", [
+{mapping, "service.$id.parallel_runner", "watts.service_list.e", [
           {datatype, [{atom, infinite}, integer]}
           ]}.
 
 %% @doc wether the plugin is allowed to return the same state
 %% more than once
-{mapping, "service.$id.allow_same_state", "watts.service_list.d", [
+{mapping, "service.$id.allow_same_state", "watts.service_list.f", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
 %% @doc the time after which the WATTS will stop waiting for a response
 %% from the plugin
-{mapping, "service.$id.plugin_timeout", "watts.service_list.e", [
+{mapping, "service.$id.plugin_timeout", "watts.service_list.g", [
           {datatype, [{duration, ms}, {atom, infinity}] }
           ]}.
 
 %% @doc if enabled the plugin will get the access token, use this
 %% option with caution! default is 'false'
-{mapping, "service.$id.pass_access_token", "watts.service_list.f", [
+{mapping, "service.$id.pass_access_token", "watts.service_list.h", [
           {datatype, [{atom, true}, {atom, false}]}
           ]}.
 
 %% @doc the way watts connects to the place where to start the plugin
 %% this can be either local or ssh
 %% @see service.$id.cmd
-{mapping, "service.$id.connection.type", "watts.service_list.g", [
+{mapping, "service.$id.connection.type", "watts.service_list.i", [
           {datatype, {enum, [local, ssh]}}
           ]}.
 
 %% @doc the username to use for the connection
-{mapping, "service.$id.connection.user", "watts.service_list.h", [
+{mapping, "service.$id.connection.user", "watts.service_list.j", [
           {datatype, string}
           ]}.
 
 %% @doc the password to use for the connection
-{mapping, "service.$id.connection.password", "watts.service_list.i", [
+{mapping, "service.$id.connection.password", "watts.service_list.k", [
           {datatype, string}
           ]}.
 
 %% @doc the host to connect to
-{mapping, "service.$id.connection.host", "watts.service_list.j", [
+{mapping, "service.$id.connection.host", "watts.service_list.l", [
           {datatype, string}
           ]}.
 
 %% @doc the port to connect to
-{mapping, "service.$id.connection.port", "watts.service_list.k", [
+{mapping, "service.$id.connection.port", "watts.service_list.m", [
           {datatype, integer}
           ]}.
 
 
 %% @doc the sshDir to use when connecting
-{mapping, "service.$id.connection.ssh_dir", "watts.service_list.l", [
+{mapping, "service.$id.connection.ssh_dir", "watts.service_list.n", [
           {datatype, string}
           ]}.
 
 
 %% @doc the password for the ssh private key
-{mapping, "service.$id.connection.ssh_key_pass", "watts.service_list.m", [
+{mapping, "service.$id.connection.ssh_key_pass", "watts.service_list.o", [
           {datatype, string}
           ]}.
 
 %% @doc the plugin configuration parameter
-{mapping, "service.$id.plugin.$key", "watts.service_list.n", [
+{mapping, "service.$id.plugin.$key", "watts.service_list.p", [
           {datatype, string}
           ]}.
 
@@ -142,6 +153,8 @@
 
          Descs = TypeIdValue("service.$id.description", three),
          Cmds = TypeIdValue("service.$id.cmd", three),
+         EnvUses = TypeIdValue("service.$id.cmd_env_use", three),
+         EnvVars = TypeIdValue("service.$id.cmd_env_var", three),
          CredLimits = TypeIdValue("service.$id.credential_limit", three),
          Runners = TypeIdValue("service.$id.parallel_runner", three),
          SameStates = TypeIdValue("service.$id.allow_same_state", three),
@@ -202,6 +215,14 @@
                      Cmd = case lists:keyfind(Id, 1, Cmds) of
                                {Id, C} -> C;
                                _ -> undefined
+                           end,
+                     EnvUse = case lists:keyfind(Id, 1, EnvUses) of
+                               {Id, U} -> U;
+                               _ -> false
+                           end,
+                     EnvVar = case lists:keyfind(Id, 1, EnvVars) of
+                               {Id, V} -> V;
+                               _ -> "WATTS_PARAMETER"
                            end,
                      CredLimit = case lists:keyfind(Id, 1, CredLimits) of
                                      {Id, infinite}
@@ -395,6 +416,8 @@
                                   authz => AuthzConf,
                                   description => list_to_binary(Desc),
                                   cmd => list_to_binary(Cmd),
+                                  cmd_env_use => EnvUse,
+                                  cmd_env_var => EnvVar,
                                   cred_limit => CredLimit,
                                   allow_same_state => SameState,
                                   plugin_conf_config => PluginConf,

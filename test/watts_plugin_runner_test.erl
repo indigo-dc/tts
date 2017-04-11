@@ -61,6 +61,7 @@ request_local_test() ->
                       user_info => UserInfo,
                       params => Params,
                       queue => undefined},
+
         {error, bad_json_result
         , _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
         ok = test_util:wait_for_process_to_die(ReqPid,100),
@@ -69,6 +70,37 @@ request_local_test() ->
         ConfigRev = maps:merge(ConfigReq, #{action => revoke,
                                             cred_state => <<"credstate">>}),
         {error, bad_json_result
+        , _} = watts_plugin_runner:request_action(ConfigRev, RevPid),
+        ok = test_util:wait_for_process_to_die(RevPid,100)
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
+
+request_env_test() ->
+    {ok, Meck} = start_meck(),
+    try
+        ServiceId = <<"local2">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
+        Params = [],
+        {ok, ReqPid} = watts_plugin_runner:start(),
+
+        ConfigReq = #{action => request,
+                      service_id => ServiceId,
+                      user_info => UserInfo,
+                      params => Params,
+                      queue => undefined},
+
+        {ok, _
+        , _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
+        ok = test_util:wait_for_process_to_die(ReqPid,100),
+
+        {ok, RevPid} = watts_plugin_runner:start(),
+        ConfigRev = maps:merge(ConfigReq, #{action => revoke,
+                                            cred_state => <<"credstate">>}),
+        {ok, _
         , _} = watts_plugin_runner:request_action(ConfigRev, RevPid),
         ok = test_util:wait_for_process_to_die(RevPid,100)
     after
@@ -103,7 +135,7 @@ no_cmd_crash_test() ->
 
 
 start_meck() ->
-    MeckModules = [watts_service, ssh, ssh_connection],
+    MeckModules = [watts_service, ssh, ssh_connection, exec],
     ok = test_util:meck_new(MeckModules),
     ?SETCONFIG( vsn, "eunit"),
     SShCmd = <<"create credential">>,
@@ -138,6 +170,20 @@ start_meck() ->
                    },
                    #{id => <<"local1">>,
                      cmd => <<"ls">>,
+                     connection => #{
+                       host => undefined,
+                       port => 22,
+                       passwd => undefined,
+                       ssh_dir => undefined,
+                       ssh_key_pass => undefined,
+                       type => local,
+                       user => undefined
+                      }
+                   },
+                   #{id => <<"local2">>,
+                     cmd => <<"ls">>,
+                     cmd_env_use => true,
+                     cmd_env_var => "WATTS_PARAMETER",
                      connection => #{
                        host => undefined,
                        port => 22,
@@ -211,11 +257,23 @@ start_meck() ->
                         SshPid ! ssh_start,
                         success
                  end,
-    ok = meck:expect(watts_service,get_info,InfoFun),
-    ok = meck:expect(ssh,connect,ConnectFun),
-    ok = meck:expect(ssh,close,CloseFun),
-    ok = meck:expect(ssh_connection,session_channel,ChannelFun),
-    ok = meck:expect(ssh_connection,exec,ExecFun),
+    ErlexecRun = fun(Cmd, _Params) ->
+                         case Cmd of
+                             "ls" ->
+                                 {ok, [{stdout, [<<"{\"result\":\"ok\", \"credentials\":[], \"state\":\"test\"}">>]}]};
+                             _ ->
+                                 {ok, [{stdout, [<<"something else">>]}]}
+                         end
+
+                 end,
+
+    ok = meck:expect(watts_service, get_info ,InfoFun),
+    ok = meck:expect(ssh, connect ,ConnectFun),
+    ok = meck:expect(ssh, close ,CloseFun),
+    ok = meck:expect(ssh_connection, session_channel, ChannelFun),
+    ok = meck:expect(ssh_connection, exec, ExecFun),
+    ok = meck:expect(exec, run, ErlexecRun),
+
     {ok, {SshPid, MeckModules}}.
 
 
