@@ -31,39 +31,49 @@ validate_jwt(#{ claims := #{iss := _Iss,
                             }} = Jwt, _JwtData) ->
     %TODO:
     % lookup client by issuer
+    %% PubKey = get_pubkey_of(Iss),
     % validate JWT
+    %% Jwt = erljwt:parse_jwt(JwtData, PubKey, <<"JWT">>),
     Jwt;
 validate_jwt(_, _) ->
     invalid.
 
 
 setup_session(#{ claims := Claims }, Req) ->
-    Issuer = maps:get(iss, Claims),
-    ServiceId = get_service_id(Claims),
-    Params = get_params(Claims),
-    Provider = get_provider(Claims),
-    Session = watts:session_for_direct(ServiceId, Params, Provider, Issuer),
-    execute_or_error(Session, Provider, Req);
+    ParameterSet = parameter_set(Claims),
+    execute_or_error(ParameterSet, Req);
 setup_session( _, Req) ->
     {ok, Req2} = cowboy_req:reply(400, Req),
     {ok, Req2, []}.
 
 
-execute_or_error({ok, _SessPid}, undefined, Req) ->
+execute_or_error(#{ session := SessPid, iss := Iss, sub:= Sub,
+                    provider := undefined}, Req) ->
     %% todo:
     %% execute the service
+    ok = watts_session:set_iss_sub(Iss, Sub, SessPid),
     {ok, Req, []};
-execute_or_error({ok, SessPid}, Provider, Req) ->
+execute_or_error(#{session := SessPid, provider := Provider}, Req) ->
     Path = io_lib:format("oidc?provider=~s", [binary_to_list(Provider)]),
     Url = watts_http_util:relative_path(Path),
     {ok, Max} = watts_session:get_max_age(SessPid),
     {ok, Token} = watts_session:get_sess_token(SessPid),
     {ok, Req2} = watts_http_util:perform_cookie_action(update, Max, Token, Req),
     watts_http_util:redirect_to(Url, Req2);
-execute_or_error(_, _, Req) ->
+execute_or_error(_, Req) ->
     {ok, Req2} = cowboy_req:reply(400, Req),
     {ok, Req2, []}.
 
+
+parameter_set(Claims) ->
+    Issuer = maps:get(iss, Claims),
+    ServiceId = get_service_id(Claims),
+    Params = get_params(Claims),
+    Provider = get_provider(Claims),
+    {ok, Session} = watts:session_for_direct(ServiceId, Params, Provider,
+                                             Issuer),
+    #{iss => Issuer, service_id => ServiceId, params => Params,
+      provider => Provider, session => Session}.
 
 
 get_service_id(Claims) ->

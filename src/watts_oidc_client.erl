@@ -24,6 +24,7 @@ login_succeeded(TokenMap) ->
     end.
 
 login_failed(Reason, Details) ->
+    %% todo redirect back on direct client
     lager:warning("login failed: ~p - ~p", [Reason, Details]),
     ErrMsg = bin_error_msg(Reason, Details),
     redirect_error(ErrMsg).
