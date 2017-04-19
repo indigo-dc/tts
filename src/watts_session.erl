@@ -235,13 +235,13 @@ handle_call(get_type, _From, #state{type = Type, max_age=MA} = State) ->
 handle_call({set_type, Type}, _From, #state{type = undefined,
                                            max_age=MA} = State) ->
     {reply, ok, State#state{type = Type}, MA};
+handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
+    {reply, ok, State, MA};
 handle_call(get_client, _From, #state{client = Client, max_age=MA} = State) ->
     {reply, {ok, Client}, State, MA};
 handle_call({set_client, Client}, _From, #state{client = undefined,
                                            max_age=MA} = State) ->
     {reply, ok, State#state{client = Client}, MA};
-handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
-    {reply, ok, State, MA};
 handle_call({set_redirection, ServiceId, Params, ProviderId}, _From,
             #state{max_age=MA} = State) ->
     Redirection = #{provider => ProviderId, params => Params,
