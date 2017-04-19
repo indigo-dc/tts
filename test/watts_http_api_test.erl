@@ -1,4 +1,4 @@
--module(watts_rest_test).
+-module(watts_http_api_test).
 -include_lib("eunit/include/eunit.hrl").
 -include("watts.hrl").
 
@@ -7,7 +7,7 @@
 
 
 init_test() ->
-    ?assertEqual({upgrade, protocol, cowboy_rest}, watts_rest:init(a,b,c)),
+    ?assertEqual({upgrade, protocol, cowboy_rest}, watts_http_api:init(a,b,c)),
     ok.
 
 %% state from tts_rest
@@ -27,7 +27,7 @@ rest_init_test() ->
     {ok, Meck} = start_meck(),
     try
         Req = req,
-        {ok, Req, #state{}} = watts_rest:rest_init(Req, doesnt_matter)
+        {ok, Req, #state{}} = watts_http_api:rest_init(Req, doesnt_matter)
     after
         ok = stop_meck(Meck)
     end,
@@ -37,25 +37,25 @@ allowed_methods_test() ->
     State = #state{},
     Req = req,
     {[<<"GET">>, <<"POST">>, <<"DELETE">>], Req, State} =
-    watts_rest:allowed_methods(Req, State),
+    watts_http_api:allowed_methods(Req, State),
     ok.
 
 allow_missing_post_test() ->
     State = #state{},
     Req = req,
-    {false, Req, State} = watts_rest:allow_missing_post(Req, State).
+    {false, Req, State} = watts_http_api:allow_missing_post(Req, State).
 
 content_types_provided_test() ->
     State = #state{},
     Req = req,
-    {[ContentType], Req, State} = watts_rest:content_types_provided(Req, State),
+    {[ContentType], Req, State} = watts_http_api:content_types_provided(Req, State),
     {{<<"application">>, <<"json">>, '*'}, get_json} = ContentType,
     ok.
 
 content_types_accepted_test() ->
     State = #state{},
     Req = req,
-    {[ContentType], Req, State} = watts_rest:content_types_accepted(Req, State),
+    {[ContentType], Req, State} = watts_http_api:content_types_accepted(Req, State),
     {{<<"application">>, <<"json">>, '*'}, post_json} = ContentType,
     ok.
 
@@ -158,7 +158,7 @@ malformed_request_test() ->
 
         Test  = fun({Request, ExpResult}, _) ->
                         io:format("testing with request ~p~n",[Request]),
-                        {Result, Request, _} = watts_rest:malformed_request(Request,
+                        {Result, Request, _} = watts_http_api:malformed_request(Request,
                                                                             State),
                         io:format("got result ~p, expecting ~p~n",[Result, ExpResult]),
                         ?assertEqual(ExpResult, Result),
@@ -197,7 +197,7 @@ is_authorized_test() ->
         Req = req,
         Test = fun({State, ExpResult}, _AccIn) ->
                        io:format("testing with state ~p~n",[State]),
-                       {Result, Req, _CState} = watts_rest:is_authorized(Req, State),
+                       {Result, Req, _CState} = watts_http_api:is_authorized(Req, State),
                        io:format("got result ~p, expecting ~p~n",[Result, ExpResult]),
                        ?assertEqual(ExpResult, Result),
                        ok
@@ -233,7 +233,7 @@ resource_exists_test() ->
 
         Test  = fun({State, ExpResult}, _) ->
                         io:format("testing ~p, expecting: ~p~n", [State, ExpResult]),
-                        {Result, req, _} = watts_rest:resource_exists(req, State),
+                        {Result, req, _} = watts_http_api:resource_exists(req, State),
                         ?assertEqual(ExpResult, Result),
                         ok
                 end,
@@ -345,7 +345,7 @@ get_json_test() ->
 
         Test  = fun({State, ExpResult}, _) ->
                         io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                        {Result, req, _NewState} = watts_rest:get_json(req, State),
+                        {Result, req, _NewState} = watts_http_api:get_json(req, State),
                         ?assertEqual(ExpResult, jsone:decode(Result)),
                         ok
                 end,
@@ -388,7 +388,7 @@ post_json_test() ->
 
         Test  = fun({State, ExpResult}, _) ->
                         io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                        {Result, req, _NewState} = watts_rest:post_json(req, State),
+                        {Result, req, _NewState} = watts_http_api:post_json(req, State),
                         ?assertEqual(ExpResult, Result),
                         ok
                 end,
@@ -419,7 +419,7 @@ delete_resource_test() ->
 
         Test  = fun({State, ExpResult}, _) ->
                         io:format("Expecting ~p on state ~p~n",[ExpResult, State]),
-                        {Result, req, _NewState} = watts_rest:delete_resource(req, State),
+                        {Result, req, _NewState} = watts_http_api:delete_resource(req, State),
                         ?assertEqual(ExpResult, Result),
                         ok
                 end,
@@ -566,8 +566,8 @@ start_meck() ->
 
     SessionType = fun(SessionPid) ->
                           case SessionPid of
-                              pid1 -> oidcc;
-                              _ -> rest
+                              pid1 -> {ok, oidc};
+                              _ -> {ok, rest}
                           end
                   end,
     ok = test_util:meck_new(MeckModules),
@@ -578,6 +578,7 @@ start_meck() ->
     ok = meck:expect(cowboy_req, body, Body),
     ok = meck:expect(cowboy_req, path_info, PathInfo),
     ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
+    ok = meck:expect(cowboy_req, set_resp_cookie, fun(_, _, _, Req) -> Req end),
     ok = meck:expect(cowboy_req, set_resp_header, SetHeader),
     ok = meck:expect(watts, login_with_access_token, Login),
     ok = meck:expect(watts, does_credential_exist, CredExists),

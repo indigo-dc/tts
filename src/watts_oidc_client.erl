@@ -9,7 +9,13 @@
 
 login_succeeded(TokenMap) ->
     case watts:login_with_oidcc(TokenMap) of
-        {ok, #{session_pid := SessPid}} ->
+        {ok, #{session_pid := SessPid, session_type := direct }} ->
+            {ok, #{service := Service,
+                   params := Params
+                  }} = watts_session:get_redirection(SessPid),
+            Result = watts:request_credential_for(Service, SessPid, Params),
+            redirect_back(Result, SessPid);
+        {ok, #{session_pid := SessPid, session_type := oidc }} ->
             redirect_set_cookie(SessPid);
         {error, Reason} ->
             lager:warning("login failed internal: ~p", [Reason]),
@@ -22,17 +28,35 @@ login_failed(Reason, Details) ->
     ErrMsg = bin_error_msg(Reason, Details),
     redirect_error(ErrMsg).
 
+redirect_back(_Result, SessPid) ->
+    %todo: get client url
+    %% {ok, Client} = watts_session:get_client(SessPid),
+    ClientUrl = "http://heise.de",
+    ok = watts:logout(SessPid),
+    {ok, [{redirect, ClientUrl},
+          set_cookie(undefined)]}.
+
+
 redirect_error(ErrorMsg) ->
     {ok, SessPid} = watts:session_with_error(ErrorMsg),
     redirect_set_cookie(SessPid).
 
 redirect_set_cookie(SessPid) ->
+    {ok, [{redirect, ?CONFIG(ep_main)},
+          set_cookie(SessPid)]}.
+
+set_cookie(SessPid) when is_pid(SessPid) ->
     {ok, SessToken} = watts_session:get_sess_token(SessPid),
     {ok, MaxAge} = watts_session:get_max_age(SessPid),
     Opts = watts_http_util:create_cookie_opts(MaxAge),
     CookieName = watts_http_util:cookie_name(),
-    {ok, [{redirect, ?CONFIG(ep_main)},
-          {cookie, CookieName, SessToken, Opts}]}.
+    {cookie, CookieName, SessToken, Opts};
+set_cookie(_)  ->
+    CookieName = watts_http_util:cookie_name(),
+    Opts = watts_http_util:create_cookie_opts(0),
+    {cookie, CookieName, <<"deleted">>, Opts}.
+
+
 
 bin_error_msg(Reason, Details) ->
     list_to_binary(error_msg(Reason, Details)).

@@ -546,9 +546,8 @@ update_cookie_or_end_session(Req, #state{session_pid = Session,
                                           type=RequestType}) ->
     {ok, SessionType} =  watts_session:get_type(Session),
     Oidc = (oidc == SessionType),
-    Direct = (direct == SessionType),
     Logout = (RequestType == logout),
-    update_cookie_or_end_session(Oidc or Direct, Logout, Session, Req).
+    update_cookie_or_end_session(Oidc, Logout, Session, Req).
 
 update_cookie_or_end_session(true, true, Session, Req) ->
     perform_logout(true, Session, Req);

@@ -37,17 +37,11 @@ validate_jwt(_, _) ->
     invalid.
 
 
-
-
-
-
-setup_session(#{ claims := Claims } = Jwt, Req) ->
-    lager:info("got jwt: ~p", [Jwt]),
+setup_session(#{ claims := Claims }, Req) ->
     Issuer = maps:get(iss, Claims),
     ServiceId = get_service_id(Claims),
     Params = get_params(Claims),
     Provider = get_provider(Claims),
-    lager:info("~p ~p ~p ~p", [Issuer, ServiceId, Params, Provider]),
     Session = watts:session_for_direct(ServiceId, Params, Provider, Issuer),
     execute_or_error(Session, Provider, Req);
 setup_session( _, Req) ->
@@ -56,21 +50,17 @@ setup_session( _, Req) ->
 
 
 execute_or_error({ok, _SessPid}, undefined, Req) ->
-    lager:info("not yet supported"),
     %% todo:
     %% execute the service
     {ok, Req, []};
 execute_or_error({ok, SessPid}, Provider, Req) ->
-    lager:info("starting redirection"),
     Path = io_lib:format("oidc?provider=~s", [binary_to_list(Provider)]),
     Url = watts_http_util:relative_path(Path),
     {ok, Max} = watts_session:get_max_age(SessPid),
     {ok, Token} = watts_session:get_sess_token(SessPid),
-    lager:info("session max age: ~p, token: ~p",[Max, Token]),
     {ok, Req2} = watts_http_util:perform_cookie_action(update, Max, Token, Req),
     watts_http_util:redirect_to(Url, Req2);
 execute_or_error(_, _, Req) ->
-    lager:info("no session"),
     {ok, Req2} = cowboy_req:reply(400, Req),
     {ok, Req2, []}.
 
@@ -97,7 +87,7 @@ get_provider(Claims) ->
 safe_decode(Data, Default) when is_binary(Data) ->
     Res = jsone:try_decode(Data, [{object_format, map}, {keys, attempt_atom}]),
     safe_decode(Res, Default);
-safe_decode({ok,Json, _}, _) ->
+safe_decode({ok, Json, _}, _) ->
     Json;
 safe_decode(_, Default) ->
     Default.

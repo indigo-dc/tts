@@ -59,7 +59,7 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
         {ok, oidc, SessionPid} when is_pid(SessionPid) ->
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
         {ok, direct, Pid}  ->
-            do_login(Issuer, Subject, TokenMap, Pid);
+            do_direct_login(Issuer, Subject, TokenMap, Pid);
         _ ->
             do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
     end;
@@ -85,9 +85,10 @@ session_for_direct(ServiceId, Params, Provider, Client) ->
     direct_session_or_error(ValidService and ValidProvider,
                             ServiceId, Params, Provider, Client).
 
-direct_session_or_error(true, ServiceId, Params, Provider, _Client) ->
+direct_session_or_error(true, ServiceId, Params, Provider, Client) ->
     {ok, SessPid} = empty_session(),
     ok = watts_session:set_type(direct, SessPid),
+    ok = watts_session:set_client(Client, SessPid),
     ok = watts_session:set_redirection(ServiceId, Params, Provider,
                                        SessPid),
     {ok, SessPid};
@@ -117,6 +118,21 @@ do_login_if_issuer_enabled(Issuer, Subject, Token) ->
         true ->
             {error, login_disabled}
     end.
+
+do_direct_login(Issuer, Subject, TokenMap, Pid) ->
+    {ok, #{provider := Provider}} = watts_session:get_redirection(Pid),
+    {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+    {ok, #{issuer := Issuer, id := Id}} =
+        oidcc:get_openid_provider_info(ProviderPid),
+    case Provider == Id of
+        true ->
+            do_login(Issuer, Subject, TokenMap, Pid);
+        false ->
+            {error, bad_issuer}
+    end.
+
+
+
 
 new_login(Issuer, Subject, Token) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
@@ -148,9 +164,6 @@ update_session_type(undefined, SessPid) ->
     watts_session:set_type(rest, SessPid);
 update_session_type(_, SessPid) ->
     watts_session:set_type(oidc, SessPid).
-
-
-
 
 
 
@@ -427,8 +440,9 @@ update_session(Issuer, Subject, Token, SessionPid) ->
 return_session_info(SessionPid) ->
     {ok, SessId} = watts_session:get_id(SessionPid),
     {ok, SessToken} = watts_session:get_sess_token(SessionPid),
+    {ok, SessType} = watts_session:get_type(SessionPid),
     {ok, #{session_id => SessId, session_token => SessToken,
-           session_pid => SessionPid}}.
+           session_pid => SessionPid, session_type => SessType}}.
 
 
 retrieve_information(Issuer, Subject, Token, Session) ->

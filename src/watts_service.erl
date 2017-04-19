@@ -55,8 +55,9 @@ get_list(UserInfo) ->
                               authorized => Authz,
                               authz_tooltip => Tooltip
                             },
-                  case {Authz, Hide} of
-                      {true, false} ->
+                  Show = Authz or (not Hide),
+                  case Show of
+                      true ->
                           Keys = [id, description, type, host, port, enabled,
                                   cred_count, cred_limit, limit_reached, params,
                                   authorized, authz_tooltip, pass_access_token],

@@ -35,6 +35,8 @@
 -export([get_type/1]).
 
 
+-export([set_client/2]).
+-export([get_client/1]).
 -export([set_redirection/4]).
 -export([get_redirection/1]).
 -export([clear_redirection/1]).
@@ -98,6 +100,18 @@ get_type(undefined) ->
     {ok, undefined};
 get_type(Pid) ->
     gen_server:call(Pid, get_type).
+
+-spec set_client(Client :: binary(), Pid :: pid()) -> ok.
+set_client(_, undefined) ->
+    ok;
+set_client(Client, Pid) ->
+    gen_server:call(Pid, {set_client, Client}).
+
+-spec get_client(Pid :: pid()) -> {ok, binary()}.
+get_client(undefined) ->
+    {ok, undefined};
+get_client(Pid) ->
+    gen_server:call(Pid, get_client).
 
 -spec set_redirection(ServiceId :: binary(), Params :: list(),
                       ProviderId :: binary(), Pid :: pid()) -> ok.
@@ -184,6 +198,7 @@ is_same_ip(IP, Pid) ->
           issuer_id = undefined,
           sess_token = undefined,
           user_agent = undefined,
+          client = undefined,
           ip = undefined,
           error = <<"">>,
           user_info = undefined,
@@ -220,6 +235,11 @@ handle_call(get_type, _From, #state{type = Type, max_age=MA} = State) ->
 handle_call({set_type, Type}, _From, #state{type = undefined,
                                            max_age=MA} = State) ->
     {reply, ok, State#state{type = Type}, MA};
+handle_call(get_client, _From, #state{client = Client, max_age=MA} = State) ->
+    {reply, {ok, Client}, State, MA};
+handle_call({set_client, Client}, _From, #state{client = undefined,
+                                           max_age=MA} = State) ->
+    {reply, ok, State#state{client = Client}, MA};
 handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
     {reply, ok, State, MA};
 handle_call({set_redirection, ServiceId, Params, ProviderId}, _From,

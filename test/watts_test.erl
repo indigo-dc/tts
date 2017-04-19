@@ -1,6 +1,6 @@
 -module(watts_test).
 -include_lib("eunit/include/eunit.hrl").
-
+-include("watts.hrl").
 
 -define(ISSUER_URL, <<"https:://issuer.sample">>).
 -define(ISSUER2_URL, <<"https:://issuer.other">>).
@@ -125,14 +125,15 @@ revoke_test() ->
 get_provider_info_test() ->
     {ok, Meck} = start_meck(),
     try
+        Id = <<"ID1">>,
         ExpectedInfo = #{
-          id => <<"ID1">>,
+          id => Id,
           description => <<"info">>,
           ready => false,
           extra_config => #{priority => 5},
           issuer => ?ISSUER_URL
          },
-        ?assertEqual({ok, ExpectedInfo}, watts:get_openid_provider_info("ID1"))
+        ?assertEqual({ok, ExpectedInfo}, watts:get_openid_provider_info(Id))
     after
         ok = stop_meck(Meck)
     end.
@@ -140,6 +141,15 @@ get_provider_info_test() ->
 
 
 start_meck() ->
+    ?SETCONFIG(provider_list, [#{id => <<"id">>,
+                                 disable_login => false},
+                               #{id => <<"ID1">>,
+                                 disable_login => false},
+                               #{id => <<"ID2">>,
+                                 disable_login => false},
+                               #{id => <<"ID3">>,
+                                 disable_login => false}
+                              ]),
     MeckModules = [watts_session_mgr, oidcc, watts_plugin, watts_temp_cred,
                    watts_service],
     CredId = <<"cred1">>,
@@ -277,6 +287,7 @@ start_meck() ->
 
 
 stop_meck({SessionPid, MeckModules}) ->
+    ?UNSETCONFIG(provider_list),
     watts_session:close(SessionPid),
     test_util:wait_for_process_to_die(SessionPid, 100),
     ok = test_util:meck_done(MeckModules),

@@ -237,6 +237,13 @@
           {default, false}
           ]}.
 
+%% @doc enable the direct endpoint ./direct/
+{mapping, "enable_direct_endpoint", "watts.enable_http_direct", [
+          {datatype ,  {enum ,  [true, false]}},
+          {commented, true},
+          {default, false}
+          ]}.
+
 %% @doc Name of the Erlang node, only change if you know what you are doing.
 {mapping, "nodename", "vm_args.-name", [
   {default, "{{node}}"}

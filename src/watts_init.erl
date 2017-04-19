@@ -293,7 +293,6 @@ start_web_interface() ->
     ok.
 
 create_dispatch_list() ->
-    ?SETCONFIG(enable_http_direct, true),
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
     EpStatic = watts_http_util:relative_path("static/[...]"),

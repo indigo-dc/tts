@@ -38,7 +38,7 @@ start_meck() ->
     Login = fun(TokenMap) ->
                     case TokenMap of
                         #{token := good} ->
-                            {ok, #{session_pid => Pid1}};
+                            {ok, #{session_pid => Pid1, session_type => oidc}};
                         _ ->
                             {error, bad_token}
                     end
