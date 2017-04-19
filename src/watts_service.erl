@@ -56,14 +56,14 @@ get_list(UserInfo) ->
                               authz_tooltip => Tooltip
                             },
                   case {Authz, Hide} of
-                      {false, true} ->
-                          List;
-                      _ ->
+                      {true, false} ->
                           Keys = [id, description, type, host, port, enabled,
                                   cred_count, cred_limit, limit_reached, params,
                                   authorized, authz_tooltip, pass_access_token],
                           Entry = maps:with(Keys, maps:merge(Service, Update)),
-                          [ Entry | List]
+                          [ Entry | List];
+                      _ ->
+                          List
                   end
           end,
     {ok, lists:reverse(lists:foldl(UpdateLimit, [], ServiceList))}.

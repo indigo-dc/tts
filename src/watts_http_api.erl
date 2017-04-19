@@ -1,4 +1,4 @@
--module(watts_rest).
+-module(watts_http_api).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
 %%
@@ -544,9 +544,11 @@ is_bad_version(_, _) ->
 
 update_cookie_or_end_session(Req, #state{session_pid = Session,
                                           type=RequestType}) ->
-    Oidc = ({ok, oidc} == watts_session:get_type(Session)),
+    {ok, SessionType} =  watts_session:get_type(Session),
+    Oidc = (oidc == SessionType),
+    Direct = (direct == SessionType),
     Logout = (RequestType == logout),
-    update_cookie_or_end_session(Oidc, Logout, Session, Req).
+    update_cookie_or_end_session(Oidc or Direct, Logout, Session, Req).
 
 update_cookie_or_end_session(true, true, Session, Req) ->
     perform_logout(true, Session, Req);

@@ -220,6 +220,8 @@ handle_call(get_type, _From, #state{type = Type, max_age=MA} = State) ->
 handle_call({set_type, Type}, _From, #state{type = undefined,
                                            max_age=MA} = State) ->
     {reply, ok, State#state{type = Type}, MA};
+handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
+    {reply, ok, State, MA};
 handle_call({set_redirection, ServiceId, Params, ProviderId}, _From,
             #state{max_age=MA} = State) ->
     Redirection = #{provider => ProviderId, params => Params,
@@ -246,8 +248,6 @@ handle_call({clear_additional_logins, ServiceId}, _From,
             #state{user_info = UserInfo, max_age=MA} = State) ->
     NewUserInfo = watts_userinfo:clear_additional_logins(ServiceId, UserInfo),
     {reply, ok, State#state{user_info = NewUserInfo}, MA};
-handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
-    {reply, ok, State, MA};
 handle_call({set_iss_sub, Issuer, Subject}, _From,
             #state{max_age=MA, user_info=Info}=State) ->
     {ok, NewInfo} = watts_userinfo:update_iss_sub(Issuer, Subject, Info),

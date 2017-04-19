@@ -242,46 +242,7 @@ add_services([]) ->
 start_web_interface() ->
     lager:info("Init: starting web interface"),
     oidcc_client:register(watts_oidc_client),
-    PrivWarn = "Init: The privacy statement is not configured [~p]",
-    PrivInfo = "Init: Using privacy statement ~p",
-    EpMain = ?CONFIG(ep_main),
-    EpOidc = watts_http_util:relative_path("oidc"),
-    EpStatic = watts_http_util:relative_path("static/[...]"),
-    EpApi = watts_http_util:relative_path("api/[...]"),
-    EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
-    PrivacyFile = case ?CONFIG(privacy_doc) of
-                      undefined ->
-                          lager:warning(PrivWarn, [privacy_doc]),
-                          {priv_file, ?APPLICATION, "no_privacy.html"};
-                      File ->
-                          lager:info(PrivInfo, [File]),
-                          {file, File}
-                  end,
-
-    BaseDispatchList = [{EpStatic, cowboy_static,
-                         {priv_dir, ?APPLICATION, "http_static"}
-                        },
-                        {EpApi, watts_rest, []},
-                        {EpMain, cowboy_static,
-                         {priv_file, ?APPLICATION, "http_static/index.html"}},
-                        {EpPrivacy, cowboy_static, PrivacyFile},
-                        {EpOidc, oidcc_cowboy, []}
-                       ],
-
-    %% the documentation
-    EpDocs = watts_http_util:relative_path("docs/[...]"),
-    EnableDocs = ?CONFIG(enable_docs),
-    DocInfo = "Init: publishing documentation at /docs/",
-    DispatchList = case EnableDocs of
-                       false ->
-                           BaseDispatchList;
-                       _ ->
-                           lager:info(DocInfo),
-                           [ {EpDocs, cowboy_static,
-                              {priv_dir, ?APPLICATION, "docs"} }
-                           ] ++ BaseDispatchList
-                   end,
-    Dispatch = cowboy_router:compile([{'_', DispatchList}]),
+    Dispatch = cowboy_router:compile([{'_', create_dispatch_list()}]),
     SSL = ?CONFIG(ssl),
     ListenPort = ?CONFIG(listen_port),
     case SSL of
@@ -314,7 +275,7 @@ start_web_interface() ->
     RedirectPort = ?CONFIG(redirection_port),
     RedirDispatch = cowboy_router:compile(
                       [{'_', [
-                              {"/[...]", watts_redirection, []}
+                              {"/[...]", watts_http_redirect, []}
                              ]
                        }]
                      ),
@@ -330,6 +291,61 @@ start_web_interface() ->
     end,
 
     ok.
+
+create_dispatch_list() ->
+    ?SETCONFIG(enable_http_direct, true),
+    EpMain = ?CONFIG(ep_main),
+    EpOidc = watts_http_util:relative_path("oidc"),
+    EpStatic = watts_http_util:relative_path("static/[...]"),
+    EpApi = watts_http_util:relative_path("api/[...]"),
+    BaseDispatchList = [{EpStatic, cowboy_static,
+                         {priv_dir, ?APPLICATION, "http_static"}
+                        },
+                        {EpApi, watts_http_api, []},
+                        {EpMain, cowboy_static,
+                         {priv_file, ?APPLICATION, "http_static/index.html"}},
+                        {EpOidc, oidcc_cowboy, []}
+                       ],
+    create_dispatch_list([{docs, ?CONFIG(enable_docs)},
+                          {direct, ?CONFIG(enable_http_direct)},
+                          {privacy, ?CONFIG(privacy_doc)} ],
+                         BaseDispatchList).
+
+create_dispatch_list([], List) ->
+     List;
+create_dispatch_list([{docs, true} | T], List) ->
+    DocInfo = "Init: publishing documentation at /docs/",
+    lager:info(DocInfo),
+    EpDocs = watts_http_util:relative_path("docs/[...]"),
+    NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs"}}
+                | List ],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([{direct, true} | T], List) ->
+    DirectInfo = "Init: enable direct service selection at /direct/",
+    lager:info(DirectInfo),
+    EpDirect = watts_http_util:relative_path("direct/[...]"),
+    NewList = [ {EpDirect, watts_http_direct, []} | List ],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([{privacy, undefined} | T], List) ->
+    EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
+    PrivWarn = "Init: The privacy statement is not configured [~p]",
+    lager:warning(PrivWarn, [privacy_doc]),
+    NewList = [ { EpPrivacy , cowboy_static,
+                  {priv_file, ?APPLICATION, "no_privacy.html"}
+                }
+                | List],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([{privacy, File} | T], List) ->
+    EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
+    PrivInfo = "Init: Using privacy statement ~p",
+    lager:info(PrivInfo, [File]),
+    NewList = [ {EpPrivacy, cowboy_static, {file, File}} | List],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([_ | T], List) ->
+    create_dispatch_list(T, List).
+
+
+
 
 add_options(Options, {ok, CaChainFile}, DhFile, Hostname) ->
     NewOptions = [ {cacertfile, CaChainFile} | Options ],

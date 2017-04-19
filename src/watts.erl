@@ -22,6 +22,7 @@
          login_with_access_token/2,
          logout/1,
          session_with_error/1,
+         session_for_direct/4,
 
          does_credential_exist/2,
          does_temp_cred_exist/2,
@@ -29,6 +30,7 @@
          get_openid_provider_list/0,
          get_openid_provider_info/1,
          get_service_list_for/1,
+
          get_credential_list_for/1,
          request_credential_for/3,
          revoke_credential_for/2,
@@ -53,14 +55,17 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
                  {_, Data} -> Data
              end,
     TokenMap = maps:remove(cookies, TokenMap0),
-    case watts_session_mgr:get_session(Cookie) of
-        {ok, SessionPid} when is_pid(SessionPid) ->
+    case get_session_type(Cookie) of
+        {ok, oidc, SessionPid} when is_pid(SessionPid) ->
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
+        {ok, direct, Pid}  ->
+            do_login(Issuer, Subject, TokenMap, Pid);
         _ ->
             do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
     end;
 login_with_oidcc(_BadToken) ->
     {error, bad_token}.
+
 
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
                                                   is_binary(Issuer) ->
@@ -68,11 +73,39 @@ login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
 
+session_for_direct(ServiceId, Params, Provider, Client) ->
+    %% ValidService = is_allowed_service(ServiceId, Client),
+    ValidService = true,
+    %% TODO:
+    %% add support for direct service execution
+    ProviderEnabled = not is_provider_disabled(Provider),
+    NoProvider = (Provider == undefined),
+    ValidProvider = NoProvider or ProviderEnabled,
+
+    direct_session_or_error(ValidService and ValidProvider,
+                            ServiceId, Params, Provider, Client).
+
+direct_session_or_error(true, ServiceId, Params, Provider, _Client) ->
+    {ok, SessPid} = empty_session(),
+    ok = watts_session:set_type(direct, SessPid),
+    ok = watts_session:set_redirection(ServiceId, Params, Provider,
+                                       SessPid),
+    {ok, SessPid};
+direct_session_or_error(false, _, _, _, _) ->
+    {error, bad_request}.
+
+
 session_with_error(Msg) ->
-    {ok, SessPid} = watts_session_mgr:new_session(),
+    {ok, SessPid} = empty_session(),
     ok = watts_session:set_error(Msg, SessPid),
+    {ok, SessPid}.
+
+empty_session() ->
+    {ok, SessPid} = watts_session_mgr:new_session(),
     false = watts_session:is_logged_in(SessPid),
     {ok, SessPid}.
+
+
 
 do_login_if_issuer_enabled(Issuer, Subject, Token) ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
@@ -80,20 +113,18 @@ do_login_if_issuer_enabled(Issuer, Subject, Token) ->
         oidcc:get_openid_provider_info(ProviderPid),
     case is_provider_disabled(Id) of
         false ->
-            do_login(Issuer, Subject, Token);
+            new_login(Issuer, Subject, Token);
         true ->
             {error, login_disabled}
     end.
 
-
-do_login(Issuer, Subject0, Token0) ->
+new_login(Issuer, Subject, Token) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
+    do_login(Issuer, Subject, Token, SessPid).
+
+do_login(Issuer, Subject0, Token0, SessPid) ->
     SessionId = watts_session:get_id(SessPid),
-    SessionType = case Subject0 of
-                      undefined -> rest;
-                      _ -> oidc
-                  end,
-    ok = watts_session:set_type(SessionType, SessPid),
+    ok = update_session_type(Subject0, SessPid),
     try
         Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
         case Result of
@@ -112,6 +143,16 @@ do_login(Issuer, Subject0, Token0) ->
                         [SessionId, Error, Reason, StackTrace]),
             {error, internal}
     end.
+
+update_session_type(undefined, SessPid) ->
+    watts_session:set_type(rest, SessPid);
+update_session_type(_, SessPid) ->
+    watts_session:set_type(oidc, SessPid).
+
+
+
+
+
 
 do_additional_login(Issuer, Subject0, Token0, SessPid) ->
     {ok, SessionId} = watts_session:get_id(SessPid),
@@ -192,13 +233,14 @@ is_provider_disabled(ProviderId) ->
                                        Current
                                end
                        end,
-    lists:foldl(ProviderDisabled, false, ProviderList).
+    lists:foldl(ProviderDisabled, true, ProviderList).
 
 
 get_service_list_for(Session) ->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, ServiceList} = watts_service:get_list(UserInfo),
     {ok, ServiceList}.
+
 
 get_credential_list_for(Session) ->
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -209,6 +251,7 @@ get_credential_list_for(Session) ->
 request_credential_for(ServiceId, Session, Params) ->
     IFace =  case watts_session:get_type(Session) of
                  {ok, rest} -> <<"REST interface">>;
+                 {ok, direct} -> <<"DIRECT interface">>;
                  {ok, oidc} ->  <<"Web App">>
              end,
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -480,6 +523,18 @@ create_information_result({error, Reason} , _, _, _) ->
     {error, Reason};
 create_information_result(_, {error, Reason}, _, _) ->
     {error, Reason}.
+
+
+get_session_type(Cookie) when is_binary(Cookie) ->
+    Result =  watts_session_mgr:get_session(Cookie),
+    get_session_type(Result);
+get_session_type({ok, Pid}) when is_pid(Pid) ->
+    {ok, Type} = watts_session:get_type(Pid),
+    {ok, Type, Pid};
+get_session_type(_) ->
+    {ok, unknown}.
+
+
 
 
 
