@@ -24,17 +24,15 @@ login_succeeded(TokenMap) ->
     end.
 
 login_failed(Reason, Details) ->
-    %% todo redirect back on direct client
+    %% todo redirect back on to rsp if RSP session
     lager:warning("login failed: ~p - ~p", [Reason, Details]),
     ErrMsg = bin_error_msg(Reason, Details),
     redirect_error(ErrMsg).
 
 redirect_back(_Result, SessPid) ->
-    %todo: get client url
-    %% {ok, Client} = watts_session:get_client(SessPid),
-    ClientUrl = "http://heise.de",
+    {ok, Rsp} = watts_session:get_rsp(SessPid),
     ok = watts:logout(SessPid),
-    {ok, [{redirect, ClientUrl},
+    {ok, [{redirect, maps:get(url, Rsp)},
           set_cookie(undefined)]}.
 
 

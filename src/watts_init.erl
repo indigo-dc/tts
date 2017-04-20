@@ -64,6 +64,10 @@ handle_cast(start_database, State) ->
     {noreply, State};
 handle_cast(add_oidc, State) ->
     add_openid_provider(),
+    gen_server:cast(self(), add_rsps),
+    {noreply, State};
+handle_cast(add_rsps, State) ->
+    add_rsps(),
     gen_server:cast(self(), add_services),
     {noreply, State};
 handle_cast(add_services, State) ->
@@ -215,26 +219,90 @@ wait_and_log_provider_results([{Id, Pid} = H | T], List) ->
     wait_and_log_provider_results(T, NewList).
 
 
-
-add_services() ->
-    lager:info("Init: adding services"),
-    ServiceList = ?CONFIG(service_list),
-    ok = add_services(ServiceList),
+add_rsps() ->
+    lager:info("Init: adding relying service provider (RSP)"),
+    UpdateRsp =
+        fun(#{id := Id, key_location := Location} = Config, List) ->
+                case get_rsp_keys(Location) of
+                    {ok, Keys} ->
+                        lager:info("Init: added RSP ~p", [Id]),
+                        [ maps:put(keys, Keys, Config) | List ];
+                    {error, Reason} ->
+                        Msg = "Init: unable to add keys of RSP ~p: ~p",
+                        lager:critical(Msg, [Id, Reason]),
+                        List
+                end
+        end,
+    NewRspList = lists:foldl(UpdateRsp, [], ?CONFIG(rsp_list, [])),
+    ?SETCONFIG(rsp_list, NewRspList),
     ok.
 
-add_services([#{id := Id } = ConfigMap | T]) ->
-    lager:debug("Init: adding service ~p", [Id]),
-    try
-        {ok, Id} = watts_service:add(ConfigMap),
-        ok = watts_service:update_params(Id)
-     catch Error:Reason ->
-            lager:critical("error occured during adding service ~p: '~p' ~p",
-                           [Id, Error, Reason])
-     end,
-     add_services(T);
-add_services(undefined) ->
-    ok;
-add_services([]) ->
+get_rsp_keys(<< File:7/binary, Path/binary >>)
+  when File == <<"file://">> ->
+    Result = file:read_file(binary_to_list(Path)),
+    extract_rsp_keys(Result);
+get_rsp_keys(<< Https:8/binary, _Rest/binary >> = Url)
+  when Https == <<"https://">> ->
+    Request = { binary_to_list(Url), [] },
+    HttpOpt = [],
+    Options = [{sync, true}, {full_result, true}],
+    Result = httpc:request(get, Request, HttpOpt, Options),
+    extract_rsp_keys(Result).
+
+
+extract_rsp_keys({ok, Data}) when is_binary(Data) ->
+    Json = decode_json(Data, bad_data),
+    extract_rsp_keys(Json, []);
+extract_rsp_keys({ok, Data}) when is_list(Data) ->
+    extract_rsp_keys({ok, list_to_binary(Data)});
+extract_rsp_keys({ok, {Code, Body}}) when Code >= 200, Code < 300 ->
+    extract_rsp_keys({ok, Body});
+extract_rsp_keys({ok, {{_, Code, _}, _, Body}}) ->
+    extract_rsp_keys({ok, {Code, Body}});
+extract_rsp_keys({error, Reason}) ->
+    {error, list_to_binary(io_lib:format("error reading keys: ~p", [Reason]))}.
+
+extract_rsp_keys([], List) ->
+    {ok, List};
+extract_rsp_keys([#{kty := <<"RSA">>,
+                    use := <<"sig">>,
+                    alg := <<"RS256">>,
+                    kid := KeyId,
+                    n := N,
+                    e := E
+                   } | T], List) ->
+    extract_rsp_keys(T, [ rsp_rsa_key(KeyId, N, E), List ]);
+extract_rsp_keys([H | T], List) ->
+    lager:warning("Init: skipping unsupported key ~p", [H]),
+    extract_rsp_keys(T, List);
+extract_rsp_keys(#{keys := Keys}, List) ->
+    extract_rsp_keys(Keys, List);
+extract_rsp_keys(_, _List) ->
+    {error, bad_json}.
+
+rsp_rsa_key(KeyId, N0, E0) ->
+    N = binary:decode_unsigned(base64url:decode(N0)),
+    E = binary:decode_unsigned(base64url:decode(E0)),
+    Key = [E, N],
+    #{kty => rsa, alg => rs256, use => sign, kid => KeyId, key => Key}.
+
+
+add_services() ->
+    AddService =
+        fun(#{id := Id} = ConfigMap, _) ->
+                lager:debug("Init: adding service ~p", [Id]),
+                try
+                    {ok, Id} = watts_service:add(ConfigMap),
+                    ok = watts_service:update_params(Id)
+                catch Error:Reason ->
+                     Msg = "error occured during adding service ~p: '~p' ~p",
+                     lager:critical(Msg, [Id, Error, Reason])
+                end
+        end,
+
+    lager:info("Init: adding services"),
+    ServiceList = ?CONFIG(service_list, []),
+    lists:foldl(AddService, ok, ServiceList),
     ok.
 
 
@@ -306,7 +374,7 @@ create_dispatch_list() ->
                         {EpOidc, oidcc_cowboy, []}
                        ],
     create_dispatch_list([{docs, ?CONFIG(enable_docs)},
-                          {direct, ?CONFIG(enable_http_direct)},
+                          {rsp, ?CONFIG(enable_rsp)},
                           {privacy, ?CONFIG(privacy_doc)} ],
                          BaseDispatchList).
 
@@ -319,11 +387,11 @@ create_dispatch_list([{docs, true} | T], List) ->
     NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs"}}
                 | List ],
     create_dispatch_list(T, NewList);
-create_dispatch_list([{direct, true} | T], List) ->
-    DirectInfo = "Init: enable direct service selection at /direct/",
-    lager:info(DirectInfo),
-    EpDirect = watts_http_util:relative_path("direct/[...]"),
-    NewList = [ {EpDirect, watts_http_direct, []} | List ],
+create_dispatch_list([{rsp, true} | T], List) ->
+    RspInfo = "Init: enable relying service provider at /rsp/",
+    lager:info(RspInfo),
+    EpRsp = watts_http_util:relative_path("rsp/[...]"),
+    NewList = [ {EpRsp, watts_http_rsp, []} | List ],
     create_dispatch_list(T, NewList);
 create_dispatch_list([{privacy, undefined} | T], List) ->
     EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
@@ -394,3 +462,10 @@ remove_newline(List) ->
                      true
              end,
     lists:filter(Filter, List).
+
+decode_json(Data, Default) ->
+    try
+        jsone:decode(Data, [{keys, attempt_atom}, {object_format, map}])
+    catch error:badarg ->
+           Default
+    end.

@@ -35,8 +35,8 @@
 -export([get_type/1]).
 
 
--export([set_client/2]).
--export([get_client/1]).
+-export([set_rsp/2]).
+-export([get_rsp/1]).
 -export([set_redirection/4]).
 -export([get_redirection/1]).
 -export([clear_redirection/1]).
@@ -101,17 +101,17 @@ get_type(undefined) ->
 get_type(Pid) ->
     gen_server:call(Pid, get_type).
 
--spec set_client(Client :: binary(), Pid :: pid()) -> ok.
-set_client(_, undefined) ->
+-spec set_rsp(Rsp :: binary(), Pid :: pid()) -> ok.
+set_rsp(_, undefined) ->
     ok;
-set_client(Client, Pid) ->
-    gen_server:call(Pid, {set_client, Client}).
+set_rsp(Client, Pid) ->
+    gen_server:call(Pid, {set_rsp, Client}).
 
--spec get_client(Pid :: pid()) -> {ok, binary()}.
-get_client(undefined) ->
+-spec get_rsp(Pid :: pid()) -> {ok, binary()}.
+get_rsp(undefined) ->
     {ok, undefined};
-get_client(Pid) ->
-    gen_server:call(Pid, get_client).
+get_rsp(Pid) ->
+    gen_server:call(Pid, get_rsp).
 
 -spec set_redirection(ServiceId :: binary(), Params :: list(),
                       ProviderId :: binary(), Pid :: pid()) -> ok.
@@ -198,7 +198,7 @@ is_same_ip(IP, Pid) ->
           issuer_id = undefined,
           sess_token = undefined,
           user_agent = undefined,
-          client = undefined,
+          rsp = undefined,
           ip = undefined,
           error = <<"">>,
           user_info = undefined,
@@ -237,11 +237,11 @@ handle_call({set_type, Type}, _From, #state{type = undefined,
     {reply, ok, State#state{type = Type}, MA};
 handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
     {reply, ok, State, MA};
-handle_call(get_client, _From, #state{client = Client, max_age=MA} = State) ->
-    {reply, {ok, Client}, State, MA};
-handle_call({set_client, Client}, _From, #state{client = undefined,
+handle_call(get_rsp, _From, #state{rsp = Rsp, max_age=MA} = State) ->
+    {reply, {ok, Rsp}, State, MA};
+handle_call({set_rsp, Rsp}, _From, #state{rsp = undefined,
                                            max_age=MA} = State) ->
-    {reply, ok, State#state{client = Client}, MA};
+    {reply, ok, State#state{rsp = Rsp}, MA};
 handle_call({set_redirection, ServiceId, Params, ProviderId}, _From,
             #state{max_age=MA} = State) ->
     Redirection = #{provider => ProviderId, params => Params,
