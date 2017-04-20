@@ -1,0 +1,153 @@
+%% @doc location of the public keys of the RSP. Needs to be a url, either https:// or file://
+{mapping, "rsp.$id.keys_location", "watts.rsp_list", [
+          {datatype, string}
+          ]}.
+
+%% @doc wether the ui should be disabled, default is to show the ui
+{mapping, "rsp.$id.disable_ui", "watts.rsp_list.a", [
+          {datatype, {enum, [true, false]}}
+          ]}.
+
+%% @doc wether the login should be disabled, default is to perform a login
+{mapping, "rsp.$id.disable_login", "watts.rsp_list.b", [
+          {datatype, {enum, [true, false]}}
+          ]}.
+
+%% @doc the url to return to once the work has been done
+{mapping, "rsp.$id.return_url", "watts.rsp_list.c", [
+          {datatype, string}
+          ]}.
+
+%% @doc if set to true the user will be returned to the URL she came from. Default is false.
+{mapping, "rsp.$id.return_to_referer", "watts.rsp_list.d", [
+          {datatype, {enum, [true, false]}}
+          ]}.
+
+{translation, "watts.rsp_list",
+ fun(Conf) ->
+         TypeFilter =
+             fun(Type) ->
+                     Filter =
+                         fun({K, _V}) ->
+                                 Tokens = string:tokens(Type, "."),
+                                 cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                         end,
+                     lists:filter(Filter, Conf)
+             end,
+
+         IdValueList =
+             fun(List, Type) ->
+                     case Type of
+                         three ->
+                             [ {Id, V}  || {[_, Id, _], V} <- List ];
+                         four ->
+                             [ {Id, V}  || {[_, Id, _, _], V} <- List ];
+                         plugin ->
+                             [ {Id, K, V} || {[_, Id, _, K], V} <- List];
+                         authz ->
+                             [ {Id, P, K, O, V} ||
+                                 {[_, Id, _, _, P, K, O], V} <- List]
+                     end
+
+             end,
+
+
+         TypeIdValue =
+             fun(Key, Type) ->
+                     List = TypeFilter(Key),
+                     IdValueList(List, Type)
+             end,
+
+         Keys = TypeIdValue("rsp.$id.keys_location", three),
+         NoUis = TypeIdValue("rsp.$id.disable_ui", three),
+         NoLogins = TypeIdValue("rsp.$id.disable_login", three),
+         ReturnUrls = TypeIdValue("rsp.$id.return_url", three),
+         UseReferers = TypeIdValue("rsp.$id.return_to_referer", three),
+
+
+         AddIfNotExists =
+             fun(Id, List) ->
+                     case lists:member(Id, List) of
+                         true -> List;
+                         false -> [ Id | List ]
+                     end
+             end,
+
+         ExtractId
+             = fun({Id, _}, List) ->
+                       AddIfNotExists(Id, List);
+                  ({Id, _, _}, List) ->
+                       AddIfNotExists(Id, List);
+                  ({Id, _, _, _, _}, List) ->
+                       AddIfNotExists(Id, List)
+               end,
+
+         ExtractIds
+             = fun(List, Ids) ->
+                       lists:foldl(ExtractId, Ids, List)
+               end,
+
+         Ids = lists:foldl(ExtractIds, [], [Keys, NoUis, NoLogins, ReturnUrls,
+                                            UseReferers]),
+
+         CreateSetting =
+             fun(Id, Result) ->
+                     Key = case lists:keyfind(Id, 1, Keys) of
+                               {Id, K} ->
+                                   BinK = list_to_binary(K),
+                                   case binary:match(BinK, [<<"file://">>, <<"https://">>]) of
+                                       {0, _} -> BinK;
+                                       _ ->
+                                           BadLocationMsg = io_lib:format("the key location of the rsp ~p is neither a file:// nor an https:// location", [Id]),
+                                           cuttlefish:invalid(BadLocationMsg)
+                                   end;
+                               _ -> undefined
+                           end,
+
+                     NoUi = case lists:keyfind(Id, 1, NoUis) of
+                               {Id, NU} -> NU;
+                               _ -> false
+                           end,
+
+                     NoLogin = case lists:keyfind(Id, 1, NoLogins) of
+                               {Id, NL} -> NL;
+                               _ -> false
+                           end,
+
+                     ReturnUrl = case lists:keyfind(Id, 1, ReturnUrls) of
+                               {Id, U} -> U;
+                               _ -> undefined
+                           end,
+
+                     UseReferer = case lists:keyfind(Id, 1, UseReferers) of
+                               {Id, R} -> R;
+                               _ -> false
+                           end,
+
+                     case ((UseReferer == false)  and (ReturnUrl == undefined)) of
+                         true ->
+                             BadReturnMsg = io_lib:format("rsp ~p is not having a return location. Either specify return_url or enable return_to_referer", [Id]),
+                             cuttlefish:invalid(BadReturnMsg);
+                         _ ->
+                             ok
+                     end,
+
+                     case (Key == undefined) of
+                         true ->
+                             MissingParamMsg = io_lib:format("not all mandatory parameter of the rsp ~p are given",[Id]),
+                             cuttlefish:invalid(MissingParamMsg);
+                         false ->
+                             ok
+                     end,
+                     Setting = #{ id => list_to_binary(Id),
+                                  key_location => Key,
+                                  disable_ui => NoUi,
+                                  disable_login => NoLogin,
+                                  return_url => ReturnUrl,
+                                  use_referer => UseReferer,
+                                  keys => []
+                                  },
+                     [ Setting | Result]
+             end,
+         lists:foldl(CreateSetting, [], Ids)
+    end}.

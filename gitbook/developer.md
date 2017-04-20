@@ -197,3 +197,6 @@ or in case of an error:
 Therefore, if only the result key is present in the object, WaTTS assumes that
 everything went fine, however, if the error key is present it assumes that
 something went bad and does not remove the credential state from its database.
+
+## Using WaTTS to authenticate your user (being a relying service provider)
+To be able to rely on WaTTS as a service provider the direct endpoint needs to be enabled at WaTTs.

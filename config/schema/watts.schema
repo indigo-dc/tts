@@ -237,10 +237,10 @@
           {default, false}
           ]}.
 
-%% @doc enable the direct endpoint ./direct/
-{mapping, "enable_direct_endpoint", "watts.enable_http_direct", [
+%% @doc enable the relying service provider (RSP) endpoint ./rsp/
+{mapping, "enable_rsp", "watts.enable_rsp", [
           {datatype ,  {enum ,  [true, false]}},
-          {commented, true},
+          {commented, false},
           {default, false}
           ]}.
 
