@@ -20,6 +20,7 @@
 -export([
          login_with_oidcc/1,
          login_with_access_token/2,
+         login_with_rsp/2,
          logout/1,
          session_with_error/1,
          session_for_rsp/1,
@@ -55,12 +56,15 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
                  {_, Data} -> Data
              end,
     TokenMap = maps:remove(cookies, TokenMap0),
+    lager:info("session type: ~p",[get_session_type(Cookie)]),
     case get_session_type(Cookie) of
         {ok, oidc, SessionPid} when is_pid(SessionPid) ->
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
         {ok, rsp, Pid}  ->
             do_rsp_login(Issuer, Subject, TokenMap, Pid);
-        _ ->
+        %% {ok, rsp_ui, Pid}  ->
+        %%     do_rsp_login(Issuer, Subject, TokenMap, Pid);
+        {ok, none} ->
             do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
     end;
 login_with_oidcc(_BadToken) ->
@@ -72,6 +76,12 @@ login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
     do_login_if_issuer_enabled(Issuer, undefined, AccessToken);
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
+
+login_with_rsp(Rsp, SessionPid) ->
+    {Issuer, Subject} = watts_rsp:get_iss_sub(Rsp),
+    Token = #{access => #{token => <<"RSP">>}},
+    update_session(Issuer, Issuer, Subject, Token, SessionPid).
+
 
 session_for_rsp(Rsp) ->
     %% ValidService = is_allowed_service(ServiceId, Rsp),
@@ -426,7 +436,10 @@ stop_debug() ->
 update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, Provider} = oidcc:find_openid_provider(Issuer),
     {ok, #{id := IssId}} = oidcc:get_openid_provider_info(Provider),
+    update_session(Issuer, IssId, Subject, Token, SessionPid).
 
+
+update_session(Issuer, IssId, Subject, Token, SessionPid) ->
     ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = watts_session:is_logged_in(SessionPid),
     ok = watts_session:set_iss_id(IssId, SessionPid),
@@ -547,7 +560,7 @@ get_session_type({ok, Pid}) when is_pid(Pid) ->
     {ok, Type} = watts_session:get_type(Pid),
     {ok, Type, Pid};
 get_session_type(_) ->
-    {ok, unknown}.
+    {ok, none}.
 
 
 
