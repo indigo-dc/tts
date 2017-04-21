@@ -222,11 +222,11 @@ wait_and_log_provider_results([{Id, Pid} = H | T], List) ->
 add_rsps() ->
     lager:info("Init: adding relying service provider (RSP)"),
     UpdateRsp =
-        fun(#{id := Id, key_location := Location} = Config, List) ->
-                case get_rsp_keys(Location) of
-                    {ok, Keys} ->
+        fun(#{id := Id} = Config, List) ->
+                case watts_rsp:new(Config) of
+                    {ok, Rsp} ->
                         lager:info("Init: added RSP ~p", [Id]),
-                        [ maps:put(keys, Keys, Config) | List ];
+                        [ Rsp | List ];
                     {error, Reason} ->
                         Msg = "Init: unable to add keys of RSP ~p: ~p",
                         lager:critical(Msg, [Id, Reason]),
@@ -237,54 +237,6 @@ add_rsps() ->
     ?SETCONFIG(rsp_list, NewRspList),
     ok.
 
-get_rsp_keys(<< File:7/binary, Path/binary >>)
-  when File == <<"file://">> ->
-    Result = file:read_file(binary_to_list(Path)),
-    extract_rsp_keys(Result);
-get_rsp_keys(<< Https:8/binary, _Rest/binary >> = Url)
-  when Https == <<"https://">> ->
-    Request = { binary_to_list(Url), [] },
-    HttpOpt = [],
-    Options = [{sync, true}, {full_result, true}],
-    Result = httpc:request(get, Request, HttpOpt, Options),
-    extract_rsp_keys(Result).
-
-
-extract_rsp_keys({ok, Data}) when is_binary(Data) ->
-    Json = decode_json(Data, bad_data),
-    extract_rsp_keys(Json, []);
-extract_rsp_keys({ok, Data}) when is_list(Data) ->
-    extract_rsp_keys({ok, list_to_binary(Data)});
-extract_rsp_keys({ok, {Code, Body}}) when Code >= 200, Code < 300 ->
-    extract_rsp_keys({ok, Body});
-extract_rsp_keys({ok, {{_, Code, _}, _, Body}}) ->
-    extract_rsp_keys({ok, {Code, Body}});
-extract_rsp_keys({error, Reason}) ->
-    {error, list_to_binary(io_lib:format("error reading keys: ~p", [Reason]))}.
-
-extract_rsp_keys([], List) ->
-    {ok, List};
-extract_rsp_keys([#{kty := <<"RSA">>,
-                    use := <<"sig">>,
-                    alg := <<"RS256">>,
-                    kid := KeyId,
-                    n := N,
-                    e := E
-                   } | T], List) ->
-    extract_rsp_keys(T, [ rsp_rsa_key(KeyId, N, E), List ]);
-extract_rsp_keys([H | T], List) ->
-    lager:warning("Init: skipping unsupported key ~p", [H]),
-    extract_rsp_keys(T, List);
-extract_rsp_keys(#{keys := Keys}, List) ->
-    extract_rsp_keys(Keys, List);
-extract_rsp_keys(_, _List) ->
-    {error, bad_json}.
-
-rsp_rsa_key(KeyId, N0, E0) ->
-    N = binary:decode_unsigned(base64url:decode(N0)),
-    E = binary:decode_unsigned(base64url:decode(E0)),
-    Key = [E, N],
-    #{kty => rsa, alg => rs256, use => sign, kid => KeyId, key => Key}.
 
 
 add_services() ->
@@ -462,10 +414,3 @@ remove_newline(List) ->
                      true
              end,
     lists:filter(Filter, List).
-
-decode_json(Data, Default) ->
-    try
-        jsone:decode(Data, [{keys, attempt_atom}, {object_format, map}])
-    catch error:badarg ->
-           Default
-    end.

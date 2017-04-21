@@ -22,8 +22,7 @@
          login_with_access_token/2,
          logout/1,
          session_with_error/1,
-         session_for_rsp/4,
-         session_for_rsp_ui/4,
+         session_for_rsp/1,
 
          does_credential_exist/2,
          does_temp_cred_exist/2,
@@ -74,14 +73,11 @@ login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
 
-session_for_rsp_ui(ServiceId, Params, Provider, Rsp) ->
-    session_for_rsp(ServiceId, Params, Provider, Rsp, rsp_ui).
-
-session_for_rsp(ServiceId, Params, Provider, Rsp) ->
-    session_for_rsp(ServiceId, Params, Provider, Rsp, rsp).
-
-session_for_rsp(ServiceId, Params, Provider, Rsp, SessType) ->
+session_for_rsp(Rsp) ->
     %% ValidService = is_allowed_service(ServiceId, Rsp),
+    Provider = watts_rsp:get_provider(Rsp),
+    SessType = watts_rsp:session_type(Rsp),
+    {ServiceId, Params} = watts_rsp:get_service_data(Rsp),
     ValidService = true,
     ProviderEnabled = not is_provider_disabled(Provider),
     NoProvider = (Provider == undefined),

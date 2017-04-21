@@ -9,7 +9,7 @@
 
 login_succeeded(TokenMap) ->
     case watts:login_with_oidcc(TokenMap) of
-        {ok, #{session_pid := SessPid, session_type := direct }} ->
+        {ok, #{session_pid := SessPid, session_type := rsp }} ->
             {ok, #{service := Service,
                    params := Params
                   }} = watts_session:get_redirection(SessPid),
@@ -32,7 +32,7 @@ login_failed(Reason, Details) ->
 redirect_back(_Result, SessPid) ->
     {ok, Rsp} = watts_session:get_rsp(SessPid),
     ok = watts:logout(SessPid),
-    {ok, [{redirect, maps:get(url, Rsp)},
+    {ok, [{redirect, watts_rsp:get_return_url(Rsp)},
           set_cookie(undefined)]}.
 
 
