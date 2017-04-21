@@ -51,11 +51,13 @@ new(#{id := Id, key_location := Location, disable_ui := DisableUi,
             {error, Reason}
     end.
 
+
 get_provider(#watts_rsp{session = #watts_rsp_session{ provider = P }}) ->
     P.
 
 get_iss_sub(#watts_rsp{session = #watts_rsp_session{ iss = I, sub = S }}) ->
-    {I, S}.
+    Issuer = << <<"rsp-">>/binary, I/binary >>,
+    {Issuer, S}.
 
 get_return_url(#watts_rsp{ use_referer = true,
                            session = #watts_rsp_session{ referer = R }}) ->
@@ -80,7 +82,7 @@ validate_jwt_get_rsp(JwtData, Referer) ->
     update_rsp_on_success(validate_jwt(JwtData), Referer).
 
 
-session_type(#watts_rsp{ disable_ui = false} ) ->
+session_type(#watts_rsp{ disable_ui = true} ) ->
     rsp;
 session_type(_) ->
     rsp_ui.
