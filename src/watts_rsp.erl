@@ -161,21 +161,22 @@ validate_jwt(#{ claims := #{iss := Iss,
                              iat := _Iat,
                              watts_service := _Service
                             },
-               header := #{ kid := _KeyId}
-              } = Jwt, _JwtData) ->
+               header := #{ kid := KeyId}
+              } , JwtData) ->
     Rsp = get_info(Iss),
-%%     Keys = Rsp#watts_rsp.keys,
-%%     FilterKey = fun(#{kid := Kid}) ->
-%%                         Kid == KeyId
-%%                 end,
-%%     case lists:filter(FilterKey, Keys) of
-%%         [] ->
-%%             no_key;
-%%         [Key] ->
-%%             {erljwt:parse_jwt(JwtData, Key, <<"JWT">>), Rsp};
-%%         _ ->
-%%             too_many_keys
-%%     end;
+    Keys = Rsp#watts_rsp.keys,
+    FilterKey = fun(#{kid := Kid}) ->
+                        Kid == KeyId
+                end,
+    Jwt =
+        case lists:filter(FilterKey, Keys) of
+            [] ->
+                no_key;
+            [Key] ->
+                {erljwt:parse_jwt(JwtData, Key, <<"JWT">>), Rsp};
+            _ ->
+                too_many_keys
+        end,
     {Jwt, Rsp};
 validate_jwt(_, _) ->
     invalid.
