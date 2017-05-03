@@ -45,7 +45,7 @@ execute_or_error(rsp_with_ui_with_login, Session, Rsp, Req) ->
     redirect_to_provider(Session, Rsp, Req);
 execute_or_error({error, Reason}, Session, _Rsp, Req) ->
     % bad request type
-    warning("~p",[Reason]),
+    warning("~p", [Reason]),
     watts:logout(Session),
     {ok, Req2} = cowboy_req:reply(400, Req),
     {ok, Req2, []}.
