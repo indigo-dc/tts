@@ -161,7 +161,7 @@ validate_jwt(#{ claims := #{iss := Iss,
                              iat := _Iat,
                              watts_service := _Service
                             },
-               header := #{ kid := KeyId}
+               header := #{ kid := KeyId, alg := <<"RS256">>}
               } , JwtData) ->
     Rsp = get_info(Iss),
     Keys = Rsp#watts_rsp.keys,
