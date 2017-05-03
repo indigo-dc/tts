@@ -56,7 +56,6 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
                  {_, Data} -> Data
              end,
     TokenMap = maps:remove(cookies, TokenMap0),
-    lager:info("session type: ~p",[get_session_type(Cookie)]),
     case get_session_type(Cookie) of
         {ok, oidc, SessionPid} when is_pid(SessionPid) ->
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
