@@ -82,10 +82,14 @@ validate_jwt_get_rsp(JwtData, Referer) ->
     update_rsp_on_success(validate_jwt(JwtData), Referer).
 
 
-session_type(#watts_rsp{ disable_ui = true} ) ->
-    rsp;
+session_type(#watts_rsp{ disable_ui = true, disable_login = true} ) ->
+    rsp_no_ui_no_login;
+session_type(#watts_rsp{ disable_ui = true, disable_login = false} ) ->
+    rsp_no_ui_with_login;
+session_type(#watts_rsp{ disable_ui = false, disable_login = true} ) ->
+    rsp_with_ui_no_login;
 session_type(_) ->
-    rsp_ui.
+    rsp_with_ui_with_login.
 
 request_type(Rsp) ->
     ValidReturn = has_valid_return(Rsp),
@@ -177,6 +181,16 @@ validate_jwt(#{ claims := #{iss := Iss,
             _ ->
                 too_many_keys
         end,
+    {Jwt, Rsp};
+validate_jwt(#{ claims := #{iss := Iss,
+                             exp := _Exp,
+                             iat := _Iat,
+                             watts_service := _Service
+                            },
+               header := #{ kid := _KeyId, alg := _}
+              } = Jwt, _) ->
+    io:format("Remove before merging!"),
+    Rsp = get_info(Iss),
     {Jwt, Rsp};
 validate_jwt(_, _) ->
     invalid.
