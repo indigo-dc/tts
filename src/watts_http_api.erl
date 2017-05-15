@@ -244,6 +244,8 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
+    %% TODO:
+    %% add support for minimal ui for RSPs
     {LoggedIn, DName, IssId, Error, AutoService}  =
         case is_pid(Session) of
             false ->

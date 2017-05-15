@@ -61,8 +61,6 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
         {ok, {rsp, _, login}, Pid}  ->
             do_rsp_login(Issuer, Subject, TokenMap, Pid);
-        %% {ok, rsp_ui, Pid}  ->
-        %%     do_rsp_login(Issuer, Subject, TokenMap, Pid);
         {ok, none} ->
             do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
     end;
@@ -131,15 +129,18 @@ do_login_if_issuer_enabled(Issuer, Subject, Token) ->
 do_rsp_login(Issuer, Subject, TokenMap, Pid) ->
     {ok, #{provider := Provider}} = watts_session:get_redirection(Pid),
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
-    {ok, #{issuer := Issuer, id := Id}} =
-        oidcc:get_openid_provider_info(ProviderPid),
-    case Provider == Id of
-        true ->
-            do_login(Issuer, Subject, TokenMap, Pid);
-        false ->
-            {error, bad_issuer}
-    end.
+    Result = oidcc:get_openid_provider_info(ProviderPid),
+    RspEnabled = ?CONFIG(enable_rsp),
+    trigger_rsp_login(RspEnabled, Provider, Result, Subject, TokenMap, Pid).
 
+
+trigger_rsp_login(false, _, _, _, _, _) ->
+    {error, rsp_not_enabled};
+trigger_rsp_login(true, Provider, {ok, #{issuer := Issuer, id := Id}},
+                  Subject, TokenMap, Pid) when Provider == Id ->
+            do_login(Issuer, Subject, TokenMap, Pid);
+trigger_rsp_login(true, _Provider, _ , _Subject, _TokenMap, _Pid) ->
+    {error, bad_issuer}.
 
 
 
