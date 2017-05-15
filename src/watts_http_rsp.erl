@@ -29,19 +29,19 @@ setup_session_and_start(Error, Req) ->
     {ok, Req2, []}.
 
 
-execute_or_error(rsp_no_ui_no_login, Session, Rsp, Req) ->
+execute_or_error({rsp, no_ui, no_login}, Session, Rsp, Req) ->
     {ok, Req2} = login_with_rsp(Session, Rsp, Req),
     {ServiceId, Params} = watts_rsp:get_service_data(Rsp),
     watts:request_credential_for(ServiceId, Session, Params),
     Url = watts_rsp:get_return_url(Rsp),
     watts_http_util:redirect_to(Url, Req2);
-execute_or_error(rsp_with_ui_no_login, Session, Rsp, Req) ->
+execute_or_error({rsp, ui, no_login}, Session, Rsp, Req) ->
     {ok, Req2} = login_with_rsp(Session, Rsp, Req),
     Url = watts_http_util:relative_path(""),
     watts_http_util:redirect_to(Url, Req2);
-execute_or_error(rsp_no_ui_with_login, Session, Rsp, Req) ->
+execute_or_error({rsp, no_ui, login}, Session, Rsp, Req) ->
     redirect_to_provider(Session, Rsp, Req);
-execute_or_error(rsp_with_ui_with_login, Session, Rsp, Req) ->
+execute_or_error({rsp, ui, login}, Session, Rsp, Req) ->
     redirect_to_provider(Session, Rsp, Req);
 execute_or_error({error, Reason}, Session, _Rsp, Req) ->
     % bad request type
