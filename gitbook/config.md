@@ -255,11 +255,9 @@ you want to give to the relying service provider.
 | keys_location  | the location of the file / web-page containing the json structure with the public keys (see below). the location must be a url with either 'https://' or 'file://' scheme. | url | yes |
 | disable_ui | if set to 'true' no userinterface will be shown. | boolean | no |
 | disable_login | If set to 'true' the user won't be redirected to a login. | boolean | no |
-| return_to_referer | If set to 'true' the user will be redirected to the url that refered her to WaTTS. | boolean | no* |
-| return_url | The url the user will be redirected to, once WaTTS is done and return_to_referer is false. | string | no* |
+| base_url | The url each url passed to WaTTS in the JWT must start with. | string | yes |
 
 
- - * either `return_to_referer` must be true or `return_url` must be specified
 
 The json format of the plublic key file must be according to
 [RFC7517](https://tools.ietf.org/html/rfc7517). The following is an example:
