@@ -15,6 +15,9 @@
 
 -record(watts_rsp_session, {
           referer = undefined,
+          success_url = undefined,
+          failed_url = undefined,
+          error_url = undefined,
           iss = undefined,
           sub = undefined,
           service_id = undefined,
@@ -28,8 +31,7 @@
           keys = [],
           disable_login = false,
           disable_ui = false,
-          return_url = undefined,
-          use_referer = false,
+          base_url = undefined,
 
           session = #watts_rsp_session{}
          }).
@@ -37,15 +39,12 @@
 
 
 new(#{id := Id, key_location := Location, disable_ui := DisableUi,
-      disable_login := DisableLogin, return_url := ReturnUrl,
-      use_referer := UseReferer}) ->
+      disable_login := DisableLogin, base_url := BaseUrl}) ->
     case get_rsp_keys(Location) of
         {ok, Keys} ->
-
             {ok,  #watts_rsp{id = Id, key_location = Location,
                              keys = Keys, disable_login = DisableLogin,
-                             disable_ui = DisableUi, return_url = ReturnUrl,
-                             use_referer = UseReferer
+                             disable_ui = DisableUi, base_url = BaseUrl
                             }};
         {error, Reason} ->
             {error, Reason}
@@ -59,11 +58,14 @@ get_iss_sub(#watts_rsp{session = #watts_rsp_session{ iss = I, sub = S }}) ->
     Issuer = << <<"rsp-">>/binary, I/binary >>,
     {Issuer, S}.
 
-get_return_url(#watts_rsp{ use_referer = true,
-                           session = #watts_rsp_session{ referer = R }}) ->
+get_return_url(#watts_rsp{session = Session}) ->
+    session_return_url(Session).
+
+session_return_url(#watts_rsp_session{ referer = R, success_url = undefined }) ->
     R;
-get_return_url(#watts_rsp{ use_referer = false, return_url = Url}) ->
-    Url.
+session_return_url(#watts_rsp_session{ success_url = R }) ->
+    R.
+
 
 get_service_data(#watts_rsp{ session = #watts_rsp_session{ service_id = Id,
                                                            params = Param}}) ->
@@ -118,22 +120,36 @@ request_type(false, _) ->
 
 
 
-has_valid_return(#watts_rsp{use_referer = UseReferer, return_url = ReturnUrl,
-                            session = #watts_rsp_session{ referer = Ref }}) ->
-    ValidRefer = UseReferer and is_url(Ref),
-    ValidReturn = (not UseReferer) and is_url(ReturnUrl),
-    ValidRefer or ValidReturn.
+has_valid_return(#watts_rsp{base_url = BaseUrl, session = Session}) ->
+    UrlList = extract_urls(Session),
+    EnsureValidUrls = fun(Url, Current) ->
+                              is_valid_url(Url, BaseUrl) and Current
+                      end,
+    lists:foldl(EnsureValidUrls, true, UrlList).
 
-is_url(<< Https:8/binary, _Rest/binary>>) when Https == <<"https://">> ->
-    true;
-is_url(<< Http:7/binary, _Rest/binary>>) when Http == <<"http://">> ->
-    true;
-is_url(Url) when is_list(Url) ->
-    is_url(list_to_binary(Url));
-is_url(_) ->
+
+
+extract_urls(#watts_rsp_session{referer=R, success_url=S, failed_url=F}) ->
+    List = [R, S, F],
+    FilterAtom = fun(Url) ->
+                         not is_atom(Url)
+                 end,
+    lists:filter(FilterAtom, List).
+
+
+
+is_valid_url(<< Https:8/binary, _Rest/binary>> = Url, Base) when Https == <<"https://">> ->
+    binary:match(Url, Base) == {0, byte_size(Base)};
+is_valid_url(<< Http:7/binary, _Rest/binary>> = Url, Base) when Http == <<"http://">> ->
+    binary:match(Url, Base) == {0, byte_size(Base)};
+is_valid_url(Url, Base) when is_list(Url) ->
+    is_valid_url(list_to_binary(Url), Base);
+is_valid_url(_, _) ->
     false.
 
 update_rsp_on_success({Claims, Rsp}, Referer) when is_map(Claims) ->
+    Success = jwt_get_success_url(Claims),
+    Failed = jwt_get_failed_url(Claims),
     Issuer = jwt_get_issuer(Claims),
     Subject = jwt_get_subject(Claims),
     ServiceId = jwt_get_service_id(Claims),
@@ -145,6 +161,8 @@ update_rsp_on_success({Claims, Rsp}, Referer) when is_map(Claims) ->
                  service_id = ServiceId,
                  params = Params,
                  provider = Provider,
+                 success_url = Success,
+                 failed_url = Failed,
                  referer = Referer
                 },
     {ok, Rsp#watts_rsp{session = Session}};
@@ -244,6 +262,12 @@ safe_decode({ok, Json, _}, _) ->
 safe_decode(_, Default) ->
     Default.
 
+jwt_get_success_url(Claims) ->
+    maps:get(success_url, Claims, undefined).
+
+jwt_get_failed_url(Claims) ->
+    maps:get(failed_url, Claims, undefined).
+
 jwt_get_provider(Claims) ->
     maps:get(watts_provider, Claims, undefined).
 
@@ -257,10 +281,12 @@ jwt_get_service_id(Claims) ->
     maps:get(watts_service, Claims).
 
 jwt_get_params(Claims) ->
-    ParamsText = maps:get(watts_params, Claims, undefined),
-    ensure_map(safe_decode(ParamsText, #{})).
+    Params = maps:get(watts_params, Claims, #{}),
+    ensure_map(Params).
 
 ensure_map(Map) when is_map(Map) ->
     Map;
+ensure_map(MapList) when is_list(MapList) ->
+    maps:from_list(MapList);
 ensure_map(_) ->
     #{}.
