@@ -123,7 +123,7 @@
                                   key_location => Key,
                                   disable_ui => NoUi,
                                   disable_login => NoLogin,
-                                  base_url => BaseUrl
+                                  base_url => list_to_binary(BaseUrl)
                                   },
                      [ Setting | Result]
              end,
