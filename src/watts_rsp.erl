@@ -61,9 +61,9 @@ get_iss_sub(#watts_rsp{session = #watts_rsp_session{ iss = I, sub = S }}) ->
 get_return_url(#watts_rsp{session = Session}) ->
     session_return_url(Session).
 
-session_return_url(#watts_rsp_session{ referer = R, success_url = undefined }) ->
+session_return_url(#watts_rsp_session{ referer=R, success_url=undefined }) ->
     R;
-session_return_url(#watts_rsp_session{ success_url = R }) ->
+session_return_url(#watts_rsp_session{ success_url=R }) ->
     R.
 
 
@@ -138,14 +138,20 @@ extract_urls(#watts_rsp_session{referer=R, success_url=S, failed_url=F}) ->
 
 
 
-is_valid_url(<< Https:8/binary, _Rest/binary>> = Url, Base) when Https == <<"https://">> ->
-    binary:match(Url, Base) == {0, byte_size(Base)};
-is_valid_url(<< Http:7/binary, _Rest/binary>> = Url, Base) when Http == <<"http://">> ->
-    binary:match(Url, Base) == {0, byte_size(Base)};
+is_valid_url(<< Https:8/binary, _Rest/binary>> = Url, Base)
+  when Https == <<"https://">> ->
+    starts_with_base(Url, Base);
+is_valid_url(<< Http:7/binary, _Rest/binary>> = Url, Base)
+  when Http == <<"http://">> ->
+    starts_with_base(Url, Base);
 is_valid_url(Url, Base) when is_list(Url) ->
     is_valid_url(list_to_binary(Url), Base);
 is_valid_url(_, _) ->
     false.
+
+starts_with_base(Url, Base) ->
+    binary:match(Url, Base) == {0, byte_size(Base)}.
+
 
 update_rsp_on_success({Claims, Rsp}, Referer) when is_map(Claims) ->
     Success = jwt_get_success_url(Claims),
