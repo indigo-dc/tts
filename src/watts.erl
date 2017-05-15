@@ -273,7 +273,7 @@ get_credential_list_for(Session) ->
 request_credential_for(ServiceId, Session, Params) ->
     IFace =  case watts_session:get_type(Session) of
                  {ok, rest} -> <<"REST interface">>;
-                 {ok, {rsp, _, login}} -> <<"RSP interface">>;
+                 {ok, {rsp, _, _}}  -> <<"RSP interface">>;
                  {ok, oidc} ->  <<"Web App">>
              end,
     {ok, UserInfo} = watts_session:get_user_info(Session),
