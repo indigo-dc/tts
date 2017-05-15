@@ -59,7 +59,7 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
     case get_session_type(Cookie) of
         {ok, oidc, SessionPid} when is_pid(SessionPid) ->
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
-        {ok, rsp_no_ui_with_login, Pid}  ->
+        {ok, {rsp, _, login}, Pid}  ->
             do_rsp_login(Issuer, Subject, TokenMap, Pid);
         %% {ok, rsp_ui, Pid}  ->
         %%     do_rsp_login(Issuer, Subject, TokenMap, Pid);
