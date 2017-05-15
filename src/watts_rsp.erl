@@ -134,7 +134,7 @@ is_url(Url) when is_list(Url) ->
 is_url(_) ->
     false.
 
-update_rsp_on_success({#{claims := Claims }, Rsp}, Referer) ->
+update_rsp_on_success({Claims, Rsp}, Referer) when is_map(Claims) ->
     Issuer = jwt_get_issuer(Claims),
     Subject = jwt_get_subject(Claims),
     ServiceId = jwt_get_service_id(Claims),
@@ -149,8 +149,8 @@ update_rsp_on_success({#{claims := Claims }, Rsp}, Referer) ->
                  referer = Referer
                 },
     {ok, Rsp#watts_rsp{session = Session}};
-update_rsp_on_success(_, _) ->
-    {error, bad_jwt}.
+update_rsp_on_success({Error, _Rsp}, _) ->
+    {error, {bad_jwt, Error}}.
 
 
 
@@ -174,28 +174,19 @@ validate_jwt(#{ claims := #{iss := Iss,
                    (_) ->
                         false
                 end,
-    Jwt =
-        case lists:filter(FilterKey, Keys) of
-            [] ->
-                no_key;
-            [Key] ->
-                {erljwt:parse_jwt(JwtData, Key, <<"JWT">>), Rsp};
-            _ ->
-                too_many_keys
-        end,
-    {Jwt, Rsp};
-validate_jwt(#{ claims := #{iss := Iss,
-                             exp := _Exp,
-                             iat := _Iat,
-                             watts_service := _Service
-                            },
-               header := #{ kid := _KeyId, alg := _}
-              } = Jwt, _) ->
-    io:format("Remove before merging!"),
-    Rsp = get_info(Iss),
+    Jwt =   case lists:filter(FilterKey, Keys) of
+                [] ->
+                    no_key;
+                [#{key := Key}] ->
+                    erljwt:parse_jwt(JwtData, Key, <<"JWT">>);
+                [_] ->
+                    bad_key;
+                _ ->
+                    too_many_keys
+            end,
     {Jwt, Rsp};
 validate_jwt(_, _) ->
-    invalid.
+    {invalid, unknown}.
 
 get_rsp_keys(<< File:7/binary, Path/binary >>)
   when File == <<"file://">> ->
