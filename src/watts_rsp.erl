@@ -83,13 +83,13 @@ validate_jwt_get_rsp(JwtData, Referer) ->
 
 
 session_type(#watts_rsp{ disable_ui = true, disable_login = true} ) ->
-    rsp_no_ui_no_login;
+    {rsp, no_ui, no_login};
 session_type(#watts_rsp{ disable_ui = true, disable_login = false} ) ->
-    rsp_no_ui_with_login;
+    {rsp, no_ui, login};
 session_type(#watts_rsp{ disable_ui = false, disable_login = true} ) ->
-    rsp_with_ui_no_login;
+    {rsp, ui, no_login};
 session_type(_) ->
-    rsp_with_ui_with_login.
+    {rsp, ui, login}.
 
 request_type(Rsp) ->
     ValidReturn = has_valid_return(Rsp),
@@ -98,20 +98,19 @@ request_type(Rsp) ->
 request_type(true, #watts_rsp{disable_ui = false, disable_login = false,
                               session = #watts_rsp_session{provider = Provider}
                              }) when is_binary(Provider) ->
-    rsp_with_ui_with_login;
+    {rsp, ui,  login};
 request_type(true, #watts_rsp{disable_ui = true, disable_login = false,
                               session = #watts_rsp_session{provider = Provider}
                              }) when is_binary(Provider) ->
-    rsp_no_ui_with_login;
+    {rsp, no_ui, login};
 request_type(true, #watts_rsp{disable_ui = false, disable_login = true,
                               session = #watts_rsp_session{sub = Sub}
                              }) when is_binary(Sub) ->
-
-    rsp_with_ui_no_login;
+    {rsp, ui, no_login};
 request_type(true, #watts_rsp{disable_ui = true, disable_login = true,
                               session = #watts_rsp_session{sub = Sub}
                              }) when is_binary(Sub) ->
-    rsp_no_ui_no_login;
+    {rsp, no_ui, no_login};
 request_type(true, _) ->
     {error, bad_jwt_config};
 request_type(false, _) ->
