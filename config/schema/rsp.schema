@@ -13,14 +13,9 @@
           {datatype, {enum, [true, false]}}
           ]}.
 
-%% @doc the url to return to once the work has been done
-{mapping, "rsp.$id.return_url", "watts.rsp_list.c", [
+%% @doc the base url of the rsp, all of its urls MUST start with this
+{mapping, "rsp.$id.base_url", "watts.rsp_list.c", [
           {datatype, string}
-          ]}.
-
-%% @doc if set to true the user will be returned to the URL she came from. Default is false.
-{mapping, "rsp.$id.return_to_referer", "watts.rsp_list.d", [
-          {datatype, {enum, [true, false]}}
           ]}.
 
 {translation, "watts.rsp_list",
@@ -61,8 +56,7 @@
          Keys = TypeIdValue("rsp.$id.keys_location", three),
          NoUis = TypeIdValue("rsp.$id.disable_ui", three),
          NoLogins = TypeIdValue("rsp.$id.disable_login", three),
-         ReturnUrls = TypeIdValue("rsp.$id.return_url", three),
-         UseReferers = TypeIdValue("rsp.$id.return_to_referer", three),
+         BaseUrls = TypeIdValue("rsp.$id.base_url", three),
 
 
          AddIfNotExists =
@@ -87,8 +81,7 @@
                        lists:foldl(ExtractId, Ids, List)
                end,
 
-         Ids = lists:foldl(ExtractIds, [], [Keys, NoUis, NoLogins, ReturnUrls,
-                                            UseReferers]),
+         Ids = lists:foldl(ExtractIds, [], [Keys, NoUis, NoLogins, BaseUrls]),
 
          CreateSetting =
              fun(Id, Result) ->
@@ -114,25 +107,12 @@
                                _ -> false
                            end,
 
-                     ReturnUrl = case lists:keyfind(Id, 1, ReturnUrls) of
+                     BaseUrl = case lists:keyfind(Id, 1, BaseUrls) of
                                {Id, U} -> U;
                                _ -> undefined
                            end,
 
-                     UseReferer = case lists:keyfind(Id, 1, UseReferers) of
-                               {Id, R} -> R;
-                               _ -> false
-                           end,
-
-                     case ((UseReferer == false)  and (ReturnUrl == undefined)) of
-                         true ->
-                             BadReturnMsg = io_lib:format("rsp ~p is not having a return location. Either specify return_url or enable return_to_referer", [Id]),
-                             cuttlefish:invalid(BadReturnMsg);
-                         _ ->
-                             ok
-                     end,
-
-                     case (Key == undefined) of
+                     case (Key == undefined) or (BaseUrl == undefined) of
                          true ->
                              MissingParamMsg = io_lib:format("not all mandatory parameter of the rsp ~p are given",[Id]),
                              cuttlefish:invalid(MissingParamMsg);
@@ -143,8 +123,7 @@
                                   key_location => Key,
                                   disable_ui => NoUi,
                                   disable_login => NoLogin,
-                                  return_url => ReturnUrl,
-                                  use_referer => UseReferer
+                                  base_url => BaseUrl
                                   },
                      [ Setting | Result]
              end,
