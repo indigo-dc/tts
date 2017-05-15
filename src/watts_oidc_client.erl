@@ -9,7 +9,7 @@
 
 login_succeeded(TokenMap) ->
     case watts:login_with_oidcc(TokenMap) of
-        {ok, #{session_pid := SessPid, session_type := rsp }} ->
+        {ok, #{session_pid := SessPid, session_type := {rsp, _, login} }} ->
             {ok, #{service := Service,
                    params := Params
                   }} = watts_session:get_redirection(SessPid),
