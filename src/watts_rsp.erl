@@ -170,7 +170,9 @@ validate_jwt(#{ claims := #{iss := Iss,
     Rsp = get_info(Iss),
     Keys = Rsp#watts_rsp.keys,
     FilterKey = fun(#{kid := Kid}) ->
-                        Kid == KeyId
+                        Kid == KeyId;
+                   (_) ->
+                        false
                 end,
     Jwt =
         case lists:filter(FilterKey, Keys) of
