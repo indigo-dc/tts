@@ -9,13 +9,9 @@ is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
     lager:debug("checking authorization of ~p ~p at service ~p [~p]",
                 [Issuer, Subject, ServiceId, A]),
     try
-        ProviderId = get_provider_id(Issuer),
+        {ok, ProviderId} = get_provider_id(Issuer),
         FilterById = fun({Id, _, _, _}) ->
-                             case Id of
-                                 ProviderId -> true;
-                                 any -> true;
-                                 _ -> false
-                             end
+                             (Id == ProviderId) or (Id == any)
                      end,
         Allow = lists:filter(FilterById, Allow0),
         Forbid = lists:filter(FilterById, Forbid0),
