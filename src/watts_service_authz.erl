@@ -1,5 +1,5 @@
 -module(watts_service_authz).
-
+-include("watts.hrl").
 -export([is_authorized/3]).
 -export([validate_config/2]).
 
@@ -9,9 +9,7 @@ is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
     lager:debug("checking authorization of ~p ~p at service ~p [~p]",
                 [Issuer, Subject, ServiceId, A]),
     try
-        {ok, Pid} = oidcc:find_openid_provider(Issuer),
-        {ok, #{id := ProviderId}} = oidcc:get_openid_provider_info(Pid),
-
+        ProviderId = get_provider_id(Issuer),
         FilterById = fun({Id, _, _, _}) ->
                              case Id of
                                  ProviderId -> true;
@@ -134,3 +132,24 @@ does_provider_exist(ProviderId, ProviderList) ->
         {_, false} ->
             {true, ProviderId}
     end.
+
+get_provider_id(<< Prefix:4/binary, _/binary>> = Rsp)
+  when Prefix == <<"rsp-">> ->
+    return_rsp_if_enabled(Rsp, ?CONFIG(enable_rsp));
+get_provider_id(Issuer) ->
+    Result = oidcc:find_openid_provider(Issuer),
+    return_provider_id_if_found(Result).
+
+
+return_provider_id_if_found({ok, Pid}) ->
+    {ok, #{id := ProviderId}} = oidcc:get_openid_provider_info(Pid),
+    {ok, ProviderId};
+return_provider_id_if_found(_) ->
+    {error, provider_not_found}.
+
+
+
+return_rsp_if_enabled(Rsp, true) ->
+    {ok, Rsp};
+return_rsp_if_enabled(_, false) ->
+    {error, rsp_disabled}.
