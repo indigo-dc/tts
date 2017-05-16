@@ -230,6 +230,7 @@ get_rsp_keys(<< Https:8/binary, _Rest/binary >> = Url)
     fetch_rsp_keys(Url);
 get_rsp_keys(<< Http:7/binary, _Rest/binary >> = Url)
   when Http == <<"http://">> ->
+    lager:warning("fetching rsp keys over a non secure connection: ~p!", [Url]),
     fetch_rsp_keys(Url).
 
 fetch_rsp_keys(Url) ->
