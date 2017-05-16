@@ -227,6 +227,12 @@ get_rsp_keys(<< File:7/binary, Path/binary >>)
     extract_rsp_keys(Result);
 get_rsp_keys(<< Https:8/binary, _Rest/binary >> = Url)
   when Https == <<"https://">> ->
+    fetch_rsp_keys(Url);
+get_rsp_keys(<< Http:7/binary, _Rest/binary >> = Url)
+  when Http == <<"http://">> ->
+    fetch_rsp_keys(Url).
+
+fetch_rsp_keys(Url) ->
     Request = { binary_to_list(Url), [] },
     HttpOpt = [],
     Options = [{sync, true}, {full_result, true}],

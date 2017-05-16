@@ -88,7 +88,7 @@
                      Key = case lists:keyfind(Id, 1, Keys) of
                                {Id, K} ->
                                    BinK = list_to_binary(K),
-                                   case binary:match(BinK, [<<"file://">>, <<"https://">>]) of
+                                   case binary:match(BinK, [<<"file://">>, <<"https://">>, <<"http://">>]) of
                                        {0, _} -> BinK;
                                        _ ->
                                            BadLocationMsg = io_lib:format("the key location of the rsp ~p is neither a file:// nor an https:// location", [Id]),
