@@ -325,17 +325,32 @@
                                    {"regexp", regexp},
                                    {"any", any}
                                   ],
+
+                     FindRsp =
+                         fun(<< Prefix:4/binary, RspId/binary >>)
+                               when Prefix == <<"rsp-">>  ->
+                                 RspKey = ["rsp",RspId,"keys_location"],
+                                 lists:keyfind(RspKey, 1, Conf);
+                            (_) ->
+                                 false
+                         end,
+
                      CheckProvider =
                          fun(ProviderId) ->
                                  ProviderKey = ["openid",ProviderId,"client_id"],
                                  IsAny = (ProviderId == "any"),
                                  ProvRes = lists:keyfind(ProviderKey, 1, Conf),
-                                 case {IsAny, ProvRes} of
-                                     {true, _} ->
+                                 RspRes = FindRsp(ProviderId),
+                                 case {IsAny, ProvRes, RspRes} of
+                                     {true, _, _} ->
                                          any;
-                                     {false, {ProviderKey, _}} ->
+                                     {false, {ProviderKey, _}, _} ->
                                          list_to_binary(ProviderId);
-                                     {_, false} ->
+                                     {false, _, {RspKey, _}} ->
+                                         Prefix = <<"rsp-">>,
+                                         RspProvId = <<Prefix/binary, RspKey/binary >>,
+                                         list_to_binary(RspProvId);
+                                     {_, false, false} ->
                                          BadProvMsg = io_lib:format("Authz Config Error: no configuration for provider '~s' found",[ProviderId]),
                                          cuttlefish:invalid(BadProvMsg),
                                          undefined
