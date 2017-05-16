@@ -22,7 +22,8 @@ handle(Req, _State) ->
 
 setup_session_and_start({ok, Rsp}, Req) ->
     {ok, Session} = watts:session_for_rsp(Rsp),
-    execute_or_error(watts_rsp:request_type(Rsp), Session, Rsp, Req);
+    {ok, Req2} = login_with_rsp(Session, Rsp, Req),
+    execute_or_error(watts_rsp:request_type(Rsp), Session, Rsp, Req2);
 setup_session_and_start(Error, Req) ->
     warning("~p", [Error]),
     {ok, Req2} = cowboy_req:reply(400, Req),
@@ -30,15 +31,13 @@ setup_session_and_start(Error, Req) ->
 
 
 execute_or_error({rsp, no_ui, no_login}, Session, Rsp, Req) ->
-    {ok, Req2} = login_with_rsp(Session, Rsp, Req),
     {ServiceId, Params} = watts_rsp:get_service_data(Rsp),
     watts:request_credential_for(ServiceId, Session, Params),
     Url = watts_rsp:get_return_url(Rsp),
-    watts_http_util:redirect_to(Url, Req2);
-execute_or_error({rsp, ui, no_login}, Session, Rsp, Req) ->
-    {ok, Req2} = login_with_rsp(Session, Rsp, Req),
+    watts_http_util:redirect_to(Url, Req);
+execute_or_error({rsp, ui, no_login}, _Session, _Rsp, Req) ->
     Url = watts_http_util:relative_path(""),
-    watts_http_util:redirect_to(Url, Req2);
+    watts_http_util:redirect_to(Url, Req);
 execute_or_error({rsp, no_ui, login}, Session, Rsp, Req) ->
     redirect_to_provider(Session, Rsp, Req);
 execute_or_error({rsp, ui, login}, Session, Rsp, Req) ->
