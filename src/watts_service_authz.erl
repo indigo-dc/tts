@@ -82,9 +82,9 @@ perform_operation(regexp, KeyValue, Value) ->
 
 
 validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0} = Authz0) ->
-    lager:info("Service ~p: validating authz", [ServiceId]),
+    lager:info("Service ~p: validating authz: allow", [ServiceId]),
     {AllowOk, Allow} = validate(Allow0),
-    lager:info("Service ~p: validating authz forbid", [ServiceId]),
+    lager:info("Service ~p: validating authz: forbid", [ServiceId]),
     {ForbidOk, Forbid} = validate(Forbid0),
     ValidatedAuthz =
         case AllowOk and ForbidOk of
@@ -100,7 +100,19 @@ validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0} = Authz0) ->
 
 validate(List) ->
     {ok, ProviderList} = oidcc:get_openid_provider_list(),
-    validate(List, ProviderList, {true, []}).
+    {ok, RspProviderList} = get_rsp_provider_list(),
+    AllProviderList = RspProviderList ++ ProviderList,
+    validate(List, AllProviderList, {true, []}).
+
+get_rsp_provider_list() ->
+    {ok, RspList} = watts_rsp:get_list(),
+    Convert = fun(Rsp, Ids) ->
+                      {ok, Id} = watts_rsp:get_id(Rsp),
+                      Prefix = <<"rsp-">>,
+                      ProviderId = << Prefix/binary, Id/binary >>,
+                      [ {ProviderId, rsp} | Ids]
+              end,
+    {ok, lists:foldl(Convert, [], RspList)}.
 
 
 validate([], _ProviderList, Result) ->
