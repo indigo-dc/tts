@@ -327,9 +327,8 @@
                                   ],
 
                      FindRsp =
-                         fun(<< Prefix:4/binary, RspId/binary >>)
-                               when Prefix == <<"rsp-">>  ->
-                                 RspKey = ["rsp",RspId,"keys_location"],
+                         fun([$r, $s, $p, $- | RspId]) ->
+                                 RspKey = ["rsp",RspId,"base_url"],
                                  lists:keyfind(RspKey, 1, Conf);
                             (_) ->
                                  false
@@ -344,13 +343,13 @@
                                  case {IsAny, ProvRes, RspRes} of
                                      {true, _, _} ->
                                          any;
-                                     {false, {ProviderKey, _}, _} ->
+                                     {_, {ProviderKey, _}, _} ->
                                          list_to_binary(ProviderId);
-                                     {false, _, {RspKey, _}} ->
+                                     {_, _, {[_, RspId, _], _}} ->
+                                         BinRspId = list_to_binary(RspId),
                                          Prefix = <<"rsp-">>,
-                                         RspProvId = <<Prefix/binary, RspKey/binary >>,
-                                         list_to_binary(RspProvId);
-                                     {_, false, false} ->
+                                         <<Prefix/binary, BinRspId/binary >>;
+                                     _ ->
                                          BadProvMsg = io_lib:format("Authz Config Error: no configuration for provider '~s' found",[ProviderId]),
                                          cuttlefish:invalid(BadProvMsg),
                                          undefined
