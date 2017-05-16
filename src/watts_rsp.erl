@@ -98,21 +98,23 @@ request_type(Rsp) ->
     request_type(ValidReturn, Rsp).
 
 request_type(true, #watts_rsp{disable_ui = false, disable_login = false,
-                              session = #watts_rsp_session{provider = Provider}
-                             }) when is_binary(Provider) ->
-    {rsp, ui,  login};
+                              session = #watts_rsp_session{provider = Provider,
+                                                           sub = Sub}
+                             }) when is_binary(Provider), is_binary(Sub) ->
+    rsp_ui_login;
 request_type(true, #watts_rsp{disable_ui = true, disable_login = false,
-                              session = #watts_rsp_session{provider = Provider}
-                             }) when is_binary(Provider) ->
-    {rsp, no_ui, login};
+                              session = #watts_rsp_session{provider = Provider,
+                                                          sub = Sub}
+                             }) when is_binary(Provider), is_binary(Sub) ->
+    rsp_no_ui_login;
 request_type(true, #watts_rsp{disable_ui = false, disable_login = true,
                               session = #watts_rsp_session{sub = Sub}
                              }) when is_binary(Sub) ->
-    {rsp, ui, no_login};
+    rsp_ui_no_login;
 request_type(true, #watts_rsp{disable_ui = true, disable_login = true,
                               session = #watts_rsp_session{sub = Sub}
                              }) when is_binary(Sub) ->
-    {rsp, no_ui, no_login};
+    rsp_no_ui_no_login;
 request_type(true, _) ->
     {error, bad_jwt_config};
 request_type(false, _) ->
@@ -184,11 +186,12 @@ validate_jwt(JwtData) ->
     validate_jwt(Jwt, JwtData).
 
 validate_jwt(#{ claims := #{iss := Iss,
-                             exp := _Exp,
-                             iat := _Iat,
-                             watts_service := _Service
-                            },
-               header := #{ kid := KeyId, alg := <<"RS256">>}
+                            sub := _Sub,
+                            exp := _Exp,
+                            iat := _Iat,
+                            watts_service := _Service
+                           },
+                header := #{ kid := KeyId, alg := <<"RS256">>}
               } , JwtData) ->
     Rsp = get_info(Iss),
     Keys = Rsp#watts_rsp.keys,
