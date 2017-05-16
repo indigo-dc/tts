@@ -3,13 +3,16 @@
 
 -export([new/1,
          get_info/1,
+         get_id/1,
          validate_jwt_get_rsp/2,
          request_type/1,
          session_type/1,
          get_provider/1,
          get_iss_sub/1,
          get_return_url/1,
-         get_service_data/1
+         get_service_data/1,
+
+         get_list/0
         ]).
 
 
@@ -37,6 +40,8 @@
          }).
 
 
+get_list() ->
+    {ok, ?CONFIG(rsp_list)}.
 
 new(#{id := Id, key_location := Location, disable_ui := DisableUi,
       disable_login := DisableLogin, base_url := BaseUrl}) ->
@@ -50,6 +55,8 @@ new(#{id := Id, key_location := Location, disable_ui := DisableUi,
             {error, Reason}
     end.
 
+get_id(#watts_rsp{ id = Id }) ->
+    {ok, Id}.
 
 get_provider(#watts_rsp{session = #watts_rsp_session{ provider = P }}) ->
     P.
