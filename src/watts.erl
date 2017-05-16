@@ -274,19 +274,21 @@ get_credential_list_for(Session) ->
 
 
 request_credential_for(ServiceId, Session, Params) ->
-    IFace =  case watts_session:get_type(Session) of
-                 {ok, rest} ->
-                     <<"REST interface">>;
-                 {ok, {rsp, _, _}}  ->
-                     true = ?CONFIG(enable_rsp),
-                     <<"RSP interface">>;
-                 {ok, oidc} ->
-                     <<"Web App">>
-             end,
+    IFace =  get_interface_description(watts_session:get_type(Session)),
     {ok, UserInfo} = watts_session:get_user_info(Session),
     true = watts_service:is_enabled(ServiceId),
     Result = watts_plugin:request(ServiceId, UserInfo, IFace, Params),
     handle_credential_result(Result, ServiceId, Session, Params).
+
+
+get_interface_description({ok, oidc}) ->
+    <<"Web App">>;
+get_interface_description({ok, rest}) ->
+    <<"REST interface">>;
+get_interface_description({ok, {rsp, _, _}}) ->
+    true = ?CONFIG(enable_rsp),
+    <<"RSP interface">>.
+
 
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
@@ -340,35 +342,27 @@ handle_credential_result({error, Map}, ServiceId, Session, _Params)
 handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
-    BaseWMsg = "SESS~p credential request for ~p failed: ~p",
-    {UMsg, WMsg}
-        = case Reason of
-              limit_reached ->
-                  {<<"the credential limit has been reached">>,
-                   BaseWMsg};
-              user_not_allowed ->
-                  {<<"you are not allowed to use this service">>,
-                   BaseWMsg};
-              service_disabled ->
-                  {<<"the service you tried to use is disabled">>,
-                   BaseWMsg};
-              invalid_params ->
-                  {<<"invalid parameter have been passed">>,
-                   BaseWMsg};
-              {storing, {error, not_unique_state}} ->
-                  {list_to_binary(
-                     io_lib:format("~s ~s",
-                                   ["the service did not return a unique",
-                                    "state, contact the administrator"])),
-                   <<"SESS~p identical state in request ~p: ~p">>
-                  };
-              _ ->
-                  {<<"unknown error occured, please contact the admin">>,
-                   BaseWMsg}
-          end,
+    {UMsg, WMsg} = credential_error_message(Reason),
     lager:warning(WMsg, [SessionId, ServiceId, Reason]),
     {error, #{result => error, user_msg => UMsg}}.
 
+
+credential_error_message(Reason) ->
+    BaseWMsg = "SESS~p credential request for ~p failed: ~p",
+    credential_error_message(Reason, BaseWMsg).
+credential_error_message(limit_reached, BaseWMsg) ->
+    {<<"the credential limit has been reached">>, BaseWMsg};
+credential_error_message(user_not_allowed, BaseWMsg) ->
+    {<<"you are not allowed to use this service">>, BaseWMsg};
+credential_error_message(service_disabled, BaseWMsg) ->
+    {<<"the service you tried to use is disabled">>, BaseWMsg};
+credential_error_message(invalid_params, BaseWMsg) ->
+    {<<"invalid parameter have been passed">>, BaseWMsg};
+credential_error_message({storing, {error, not_unique_state}}, _) ->
+    {<<"the service did not return a unique state, contact the administrator">>,
+     <<"SESS~p identical state in request ~p: ~p">>};
+credential_error_message(_, BaseWMsg) ->
+    {<<"unknown error occured, please contact the admin">>, BaseWMsg}.
 
 
 
