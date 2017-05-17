@@ -4,12 +4,12 @@
           ]}.
 
 %% @doc wether the ui should be disabled, default is to show the ui
-{mapping, "rsp.$id.disable_ui", "watts.rsp_list.a", [
+{mapping, "rsp.$id.show_ui", "watts.rsp_list.a", [
           {datatype, {enum, [true, false]}}
           ]}.
 
 %% @doc wether the login should be disabled, default is to perform a login
-{mapping, "rsp.$id.disable_login", "watts.rsp_list.b", [
+{mapping, "rsp.$id.perform_login", "watts.rsp_list.b", [
           {datatype, {enum, [true, false]}}
           ]}.
 
@@ -54,8 +54,8 @@
              end,
 
          Keys = TypeIdValue("rsp.$id.keys_location", three),
-         NoUis = TypeIdValue("rsp.$id.disable_ui", three),
-         NoLogins = TypeIdValue("rsp.$id.disable_login", three),
+         Uis = TypeIdValue("rsp.$id.show_ui", three),
+         Logins = TypeIdValue("rsp.$id.perform_login", three),
          BaseUrls = TypeIdValue("rsp.$id.base_url", three),
 
 
@@ -81,7 +81,7 @@
                        lists:foldl(ExtractId, Ids, List)
                end,
 
-         Ids = lists:foldl(ExtractIds, [], [Keys, NoUis, NoLogins, BaseUrls]),
+         Ids = lists:foldl(ExtractIds, [], [Keys, Uis, Logins, BaseUrls]),
 
          CreateSetting =
              fun(Id, Result) ->
@@ -97,14 +97,14 @@
                                _ -> undefined
                            end,
 
-                     NoUi = case lists:keyfind(Id, 1, NoUis) of
-                               {Id, NU} -> NU;
-                               _ -> false
+                     Ui = case lists:keyfind(Id, 1, Uis) of
+                               {Id, SU} -> SU;
+                               _ -> true
                            end,
 
-                     NoLogin = case lists:keyfind(Id, 1, NoLogins) of
-                               {Id, NL} -> NL;
-                               _ -> false
+                     Login = case lists:keyfind(Id, 1, Logins) of
+                               {Id, PL} -> PL;
+                               _ -> true
                            end,
 
                      BaseUrl = case lists:keyfind(Id, 1, BaseUrls) of
@@ -121,8 +121,8 @@
                      end,
                      Setting = #{ id => list_to_binary(Id),
                                   key_location => Key,
-                                  disable_ui => NoUi,
-                                  disable_login => NoLogin,
+                                  show_ui => Ui,
+                                  perform_login => Login,
                                   base_url => list_to_binary(BaseUrl)
                                   },
                      [ Setting | Result]

@@ -32,8 +32,8 @@
           id = undefined,
           key_location = undefined,
           keys = [],
-          disable_login = false,
-          disable_ui = false,
+          perform_login = true,
+          show_ui = true,
           base_url = undefined,
 
           session = #watts_rsp_session{}
@@ -43,13 +43,13 @@
 get_list() ->
     {ok, ?CONFIG(rsp_list)}.
 
-new(#{id := Id, key_location := Location, disable_ui := DisableUi,
-      disable_login := DisableLogin, base_url := BaseUrl}) ->
+new(#{id := Id, key_location := Location, show_ui := Ui,
+      perform_login := Login, base_url := BaseUrl}) ->
     case get_rsp_keys(Location) of
         {ok, Keys} ->
             {ok,  #watts_rsp{id = Id, key_location = Location,
-                             keys = Keys, disable_login = DisableLogin,
-                             disable_ui = DisableUi, base_url = BaseUrl
+                             keys = Keys, perform_login = Login,
+                             show_ui = Ui, base_url = BaseUrl
                             }};
         {error, Reason} ->
             {error, Reason}
@@ -91,11 +91,11 @@ validate_jwt_get_rsp(JwtData, Referer) ->
     update_rsp_on_success(validate_jwt(JwtData), Referer).
 
 
-session_type(#watts_rsp{ disable_ui = true, disable_login = true} ) ->
+session_type(#watts_rsp{ show_ui = false, perform_login = false} ) ->
     {rsp, no_ui, no_login};
-session_type(#watts_rsp{ disable_ui = true, disable_login = false} ) ->
+session_type(#watts_rsp{ show_ui = false, perform_login = true} ) ->
     {rsp, no_ui, login};
-session_type(#watts_rsp{ disable_ui = false, disable_login = true} ) ->
+session_type(#watts_rsp{ show_ui = true, perform_login = false} ) ->
     {rsp, ui, no_login};
 session_type(_) ->
     {rsp, ui, login}.
@@ -104,21 +104,21 @@ request_type(Rsp) ->
     ValidReturn = has_valid_return(Rsp),
     request_type(ValidReturn, Rsp).
 
-request_type(true, #watts_rsp{disable_ui = false, disable_login = false,
+request_type(true, #watts_rsp{show_ui = true, perform_login = true,
                               session = #watts_rsp_session{provider = Provider,
                                                            sub = Sub}
                              }) when is_binary(Provider), is_binary(Sub) ->
     rsp_ui_login;
-request_type(true, #watts_rsp{disable_ui = true, disable_login = false,
+request_type(true, #watts_rsp{show_ui = false, perform_login = true,
                               session = #watts_rsp_session{provider = Provider,
                                                           sub = Sub}
                              }) when is_binary(Provider), is_binary(Sub) ->
     rsp_no_ui_login;
-request_type(true, #watts_rsp{disable_ui = false, disable_login = true,
+request_type(true, #watts_rsp{show_ui = true, perform_login = false,
                               session = #watts_rsp_session{sub = Sub}
                              }) when is_binary(Sub) ->
     rsp_ui_no_login;
-request_type(true, #watts_rsp{disable_ui = true, disable_login = true,
+request_type(true, #watts_rsp{show_ui = false, perform_login = false,
                               session = #watts_rsp_session{sub = Sub}
                              }) when is_binary(Sub) ->
     rsp_no_ui_no_login;
