@@ -246,37 +246,50 @@ perform_get(oidcp, _, _, _) ->
 perform_get(info, undefined, Session, _) ->
     %% TODO:
     %% add support for minimal ui for RSPs
-    {LoggedIn, DName, IssId, Error, AutoService}  =
+    {LoggedIn, DName, IssId, Error, AutoService, SuccessRedir, ErrorRedir}  =
         case is_pid(Session) of
             false ->
-                {false, <<"">>, <<"">>, <<"">>, undefined};
+                {false, <<"">>, <<"">>, <<"">>, undefined, undefined,
+                 undefined};
             true ->
                 {ok, Name} = watts:get_display_name_for(Session),
                 {ok, _Iss, Id, _Sub} = watts:get_iss_id_sub_for(Session),
                 {ok, Err} = watts_session:get_error(Session),
                 {ok, Redir} = watts_session:get_redirection(Session),
                 ok = watts_session:clear_redirection(Session),
-                {watts_session:is_logged_in(Session), Name, Id, Err, Redir}
+                {watts_session:is_logged_in(Session), Name, Id, Err, Redir,
+                 undefined, undefined}
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
     EnableDocs = ?CONFIG(enable_docs),
-    Info0 = #{version => list_to_binary(Version),
-             redirect_path => list_to_binary(Redirect),
-             error => Error,
-             logged_in => LoggedIn,
-             display_name => DName,
-             issuer_id => IssId,
-             documentation => EnableDocs
+    Info = #{version => list_to_binary(Version),
+              redirect_path => list_to_binary(Redirect),
+              error => Error,
+              logged_in => LoggedIn,
+              display_name => DName,
+              issuer_id => IssId,
+              documentation => EnableDocs
             },
-    Info = case AutoService of
-               undefined  -> Info0;
+    Info1 = case AutoService of
+               undefined  -> Info;
                _ ->
                    SuppKeys = [service, params],
                    maps:put(service_request, maps:with(SuppKeys, AutoService),
-                            Info0)
+                            Info)
            end,
-    jsone:encode(Info);
+    Info2 = case SuccessRedir of
+               undefined  -> Info1;
+               _ ->
+                    ErrRedir = case ErrorRedir of
+                                   undefined -> SuccessRedir;
+                                   _ -> ErrorRedir
+                               end,
+                    Update = #{success_redir => SuccessRedir,
+                               error_redir => ErrRedir},
+                   maps:merge(Info1, Update)
+           end,
+    jsone:encode(Info2);
 perform_get(logout, undefined, _, _) ->
     jsone:encode(#{result => ok});
 perform_get(access_token, undefined, Session, _) ->
@@ -425,6 +438,11 @@ verify_content_type(_) ->
 
 verify_issuer(undefined) ->
     undefined;
+verify_issuer(<< Prefix:4/binary, RspId/binary>> = Rsp)
+  when Prefix == <<"rsp-">> ->
+    Exists = watts_rsp:exists(RspId),
+    Enabled = ?CONFIG(enable_rsp, false),
+    return_rsp_if_enabled(Rsp, Exists, Enabled);
 verify_issuer(Issuer) when is_binary(Issuer) ->
     case watts:get_openid_provider_info(Issuer) of
         {ok, #{issuer := IssuerUrl}} ->
@@ -438,6 +456,14 @@ verify_issuer(Issuer) when is_binary(Issuer) ->
     end;
 verify_issuer(_Issuer)  ->
     bad_issuer.
+
+return_rsp_if_enabled(Rsp, true, true) ->
+    Rsp;
+return_rsp_if_enabled(_, false, true) ->
+    unkonwn_rsp;
+return_rsp_if_enabled(_, _, false) ->
+    rsps_disabled.
+
 
 
 verify_session({ok, Pid}) when is_pid(Pid) ->
@@ -547,9 +573,17 @@ is_bad_version(_, _) ->
 update_cookie_or_end_session(Req, #state{session_pid = Session,
                                           type=RequestType}) ->
     {ok, SessionType} =  watts_session:get_type(Session),
-    Oidc = (oidc == SessionType),
+    KeepAlive = keep_session_alive(SessionType),
     Logout = (RequestType == logout),
-    update_cookie_or_end_session(Oidc, Logout, Session, Req).
+    update_cookie_or_end_session(KeepAlive, Logout, Session, Req).
+
+keep_session_alive(oidc) ->
+    true;
+keep_session_alive({rsp, _, _}) ->
+    true;
+keep_session_alive(_) ->
+    false.
+
 
 update_cookie_or_end_session(true, true, Session, Req) ->
     perform_logout(true, Session, Req);
