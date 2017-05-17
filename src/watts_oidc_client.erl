@@ -31,11 +31,18 @@ login_failed(Reason, Details) ->
     ErrMsg = bin_error_msg(Reason, Details),
     redirect_error(ErrMsg).
 
-redirect_back(_Result, SessPid) ->
+redirect_back(Result, SessPid) ->
     {ok, Rsp} = watts_session:get_rsp(SessPid),
     ok = watts:logout(SessPid),
-    {ok, [{redirect, watts_rsp:get_return_url(Rsp)},
-          set_cookie(undefined)]}.
+    {ok, [{redirect, get_return_url(Result, Rsp)}, set_cookie(undefined)]}.
+
+get_return_url({ok, _}, Rsp) ->
+    {SuccessUrl, _} = watts_rsp:get_return_urls(Rsp),
+    SuccessUrl;
+get_return_url(_, Rsp) ->
+    {_, ErrorUrl} = watts_rsp:get_return_urls(Rsp),
+    ErrorUrl.
+
 
 
 redirect_error(ErrorMsg) ->
