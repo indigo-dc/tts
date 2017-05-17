@@ -277,7 +277,7 @@ extract_rsp_keys([#{kty := <<"RSA">>,
                     n := N,
                     e := E
                    } | T], List) ->
-    extract_rsp_keys(T, [ rsp_rsa_key(KeyId, N, E), List ]);
+    extract_rsp_keys(T, [ rsp_rsa_key(KeyId, N, E) | List ]);
 extract_rsp_keys([H | T], List) ->
     lager:warning("Init: skipping unsupported key ~p", [H]),
     extract_rsp_keys(T, List);
