@@ -20,7 +20,6 @@
 -export([
          login_with_oidcc/1,
          login_with_access_token/2,
-         login_with_rsp/2,
          logout/1,
          session_with_error/1,
          session_for_rsp/1,
@@ -74,22 +73,15 @@ login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
 
-login_with_rsp(Rsp, SessionPid) ->
-    {Issuer, Subject} = watts_rsp:get_iss_sub(Rsp),
-    Token = #{access => #{token => <<"RSP">>}},
-    update_session(Issuer, Issuer, Subject, Token, SessionPid).
-
 
 session_for_rsp(Rsp) ->
     Provider = watts_rsp:get_provider(Rsp),
     SessType = watts_rsp:session_type(Rsp),
     {ServiceId, Params} = watts_rsp:get_service_data(Rsp),
-    %% ValidService = is_allowed_service(ServiceId, Rsp),
-    ValidService = true,
     ProviderEnabled = not is_provider_disabled(Provider),
     NoProvider = (Provider == undefined),
     ValidProvider = NoProvider or ProviderEnabled,
-    rsp_session_or_error(ValidService and ValidProvider,
+    rsp_session_or_error(ValidProvider,
                             ServiceId, Params, Provider, Rsp, SessType).
 
 
@@ -100,9 +92,22 @@ rsp_session_or_error(true, ServiceId, Params, Provider, Rsp, SessType) ->
     ok = watts_session:set_rsp(Rsp, SessPid),
     ok = watts_session:set_redirection(ServiceId, Params, Provider,
                                        SessPid),
-    {ok, SessPid};
+
+    {Issuer, Subject} = watts_rsp:get_iss_sub(Rsp),
+    Token = #{access => #{token => <<"RSP">>}},
+    {ok, _} = update_session(Issuer, Issuer, Subject, Token, SessPid),
+
+    {ok, UserInfo} = watts_session:get_user_info(SessPid),
+    Allowed = watts_service:is_allowed(UserInfo, ServiceId),
+    Enabled = watts_service:is_enabled(ServiceId),
+    rsp_session_if_service_allowed(Enabled and Allowed, SessPid);
 rsp_session_or_error(false, _, _, _, _, _) ->
     {error, bad_request}.
+
+rsp_session_if_service_allowed(true, SessPid) ->
+    {ok, SessPid};
+rsp_session_if_service_allowed(_, _SessPid) ->
+    {error, rsp_service_not_allowed}.
 
 
 session_with_error(Msg) ->
@@ -206,6 +211,16 @@ do_additional_login(Issuer, Subject0, Token0, SessPid) ->
                         [SessionId, Error, Reason, StackTrace]),
             return_session_info(SessPid)
     end.
+
+
+logout_rsp_session(Session) ->
+    {ok, Type} = watts_session:get_type(Session),
+    logout_if_rsp_session(Type, Session).
+logout_if_rsp_session({rsp, _, _}, Session) ->
+    logout(Session);
+logout_if_rsp_session(_, _) ->
+    ok.
+
 
 
 logout(Session) ->
@@ -336,14 +351,18 @@ handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
                                    msg => UsrMsg} }
             };
         {{ok, _}, oidc, true} ->
+            logout_rsp_session(Session),
             {error, #{result => error, user_msg => DoneMsg}};
         {{ok, _}, oidc, _} ->
+            logout_rsp_session(Session),
             {error, #{result => error, user_msg => OffMsg}};
         {{ok, _}, rest, _} ->
+            logout_rsp_session(Session),
             {error, #{result => error, user_msg => RestMsg}};
         _ ->
             WMsg = "SESS~p additional login request for ~p failed: ~s",
             lager:warning(WMsg, [SessionId, ServiceId, Provider]),
+            logout_rsp_session(Session),
             {error, #{result => error, user_msg => Msg}}
     end;
 handle_credential_result({error, Map}, ServiceId, Session, _Params)
@@ -355,11 +374,13 @@ handle_credential_result({error, Map}, ServiceId, Session, _Params)
     WMsg = "SESS~p credential request for ~p failed: ~s",
     lager:warning(WMsg, [SessionId, ServiceId, LogMsg]),
     BadCred = #{result => error, user_msg => UserMsg},
+    logout_rsp_session(Session),
     {error, BadCred};
 handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
     {UMsg, WMsg} = credential_error_message(Reason),
+    logout_rsp_session(Session),
     lager:warning(WMsg, [SessionId, ServiceId, Reason]),
     {error, #{result => error, user_msg => UMsg}}.
 
