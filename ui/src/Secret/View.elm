@@ -11,6 +11,11 @@ import Secret.Model as Secret exposing (Model, Entry)
 
 view : Maybe String -> Maybe Secret.Model -> Html Msg
 view progress_title scrt =
+    view_and_redirect Nothing Nothing progress_title scrt
+
+
+view_and_redirect : Maybe String -> Maybe String -> Maybe String -> Maybe Secret.Model -> Html Msg
+view_and_redirect success_redir error_redir progress_title scrt =
     let
         config =
             case ( scrt, progress_title ) of
@@ -77,9 +82,23 @@ view progress_title scrt =
 
                                 False ->
                                     ""
+
+                        closeMsg =
+                            case ( success_redir, error_redir, isError ) of
+                                ( Nothing, _, _ ) ->
+                                    Messages.HideSecret
+
+                                ( Just url, _, False ) ->
+                                    (Messages.LoadUrl url)
+
+                                ( _, Just url, True ) ->
+                                    (Messages.LoadUrl url)
+
+                                _ ->
+                                    Messages.Logout
                     in
                         Just
-                            { closeMessage = Just Messages.HideSecret
+                            { closeMessage = Just closeMsg
                             , containerClass = Nothing
                             , dialogSize = Dialog.Large
                             , header =
@@ -111,7 +130,7 @@ view progress_title scrt =
                                             [ button
                                                 [ type_ "button"
                                                 , class "btn btn-default"
-                                                , onClick Messages.HideSecret
+                                                , onClick closeMsg
                                                 ]
                                                 [ text "Close" ]
                                             ]

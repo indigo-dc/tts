@@ -29,4 +29,5 @@ type Msg
     | RetrieveAccessToken
     | AdvancedCancel
     | AdvancedChange String String
+    | LoadUrl String
     | Logout

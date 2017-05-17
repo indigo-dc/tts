@@ -15,7 +15,9 @@ import Info.Decoder as Info exposing (decodeInfo)
 import Json.Decode exposing (decodeString)
 import Json.Encode as Json exposing (encode)
 import Messages exposing (Msg)
+import Navigation exposing (load)
 import Pages.Login.View as Login exposing (view)
+import Pages.Rsp.View as Rsp exposing (view)
 import Pages.User.View as User exposing (view)
 import ProviderList.Decoder as ProviderList exposing (decodeProviderList)
 import ProviderList.Model as ProviderList exposing (Model, initModel)
@@ -40,6 +42,7 @@ main =
 type Page
     = Login
     | User
+    | Rsp
     | Unknown
 
 
@@ -68,6 +71,8 @@ type alias Model =
     , request_progressing : Bool
     , docs_enabled : Bool
     , progressing_title : Maybe String
+    , rsp_redir_success : Maybe String
+    , rsp_redir_error : Maybe String
     }
 
 
@@ -77,11 +82,14 @@ update msg model =
         Messages.Info (Ok info) ->
             let
                 ( nextPage, nextCmd ) =
-                    case info.loggedIn of
-                        True ->
+                    case ( info.loggedIn, info.rsp_success_redir ) of
+                        ( True, Nothing ) ->
                             ( User, retrieveServiceList model.url model.restVersion info.issuer_id )
 
-                        False ->
+                        ( True, _ ) ->
+                            ( Rsp, retrieveCredentialList model.url model.restVersion info.issuer_id )
+
+                        ( False, _ ) ->
                             ( Login, retrieveProviderList model.url model.restVersion )
 
                 ( curService, curServiceParam ) =
@@ -103,6 +111,8 @@ update msg model =
                     , docs_enabled = info.docs_enabled
                     , current_serviceid = curService
                     , current_param = curServiceParam
+                    , rsp_redir_success = info.rsp_success_redir
+                    , rsp_redir_error = info.rsp_error_redir
                   }
                 , nextCmd
                 )
@@ -110,7 +120,7 @@ update msg model =
         Messages.Info (Err info) ->
             let
                 bla =
-                    Debug.log "info:" info
+                    Debug.log "info error:" info
             in
                 ( model, Cmd.none )
 
@@ -368,6 +378,9 @@ update msg model =
         Messages.HideSecret ->
             ( { model | credential = Nothing }, Cmd.none )
 
+        Messages.LoadUrl url ->
+            ( { model | credential = Nothing }, Navigation.load url )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -468,6 +481,17 @@ mainContent model =
             in
                 User.view context
 
+        Rsp ->
+            let
+                context =
+                    { secret = model.credential
+                    , progressing_title = model.progressing_title
+                    , success_url = model.rsp_redir_success
+                    , error_url = model.rsp_redir_error
+                    }
+            in
+                Rsp.view context
+
         Unknown ->
             let
                 context =
@@ -525,6 +549,8 @@ initModel baseUrl restVersion =
       , request_progressing = False
       , docs_enabled = False
       , progressing_title = Nothing
+      , rsp_redir_success = Nothing
+      , rsp_redir_error = Nothing
       }
     , retrieveInfo baseUrl restVersion
     )
