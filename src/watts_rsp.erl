@@ -10,7 +10,7 @@
          session_type/1,
          get_provider/1,
          get_iss_sub/1,
-         get_return_url/1,
+         get_return_urls/1,
          get_service_data/1,
 
          get_list/0
@@ -74,13 +74,19 @@ get_iss_sub(#watts_rsp{session = #watts_rsp_session{ iss = I, sub = S }}) ->
     Issuer = << <<"rsp-">>/binary, I/binary >>,
     {Issuer, S}.
 
-get_return_url(#watts_rsp{session = Session}) ->
-    session_return_url(Session).
+get_return_urls(#watts_rsp{session = Session}) ->
+    session_return_urls(Session).
 
-session_return_url(#watts_rsp_session{ referer=R, success_url=undefined }) ->
-    R;
-session_return_url(#watts_rsp_session{ success_url=R }) ->
-    R.
+session_return_urls(#watts_rsp_session{ referer=R, success_url=undefined,
+                                       error_url=undefined }) ->
+    {R, R};
+session_return_urls(#watts_rsp_session{ success_url=Succ,
+                                        error_url=undefined }) ->
+    {Succ, Succ};
+session_return_urls(#watts_rsp_session{ success_url=Succ,
+                                        error_url=Err }) ->
+    {Succ, Err}.
+
 
 
 get_service_data(#watts_rsp{ session = #watts_rsp_session{ service_id = Id,
