@@ -81,16 +81,18 @@ login_with_rsp(Rsp, SessionPid) ->
 
 
 session_for_rsp(Rsp) ->
-    %% ValidService = is_allowed_service(ServiceId, Rsp),
     Provider = watts_rsp:get_provider(Rsp),
     SessType = watts_rsp:session_type(Rsp),
     {ServiceId, Params} = watts_rsp:get_service_data(Rsp),
+    %% ValidService = is_allowed_service(ServiceId, Rsp),
     ValidService = true,
     ProviderEnabled = not is_provider_disabled(Provider),
     NoProvider = (Provider == undefined),
     ValidProvider = NoProvider or ProviderEnabled,
     rsp_session_or_error(ValidService and ValidProvider,
                             ServiceId, Params, Provider, Rsp, SessType).
+
+
 
 rsp_session_or_error(true, ServiceId, Params, Provider, Rsp, SessType) ->
     {ok, SessPid} = empty_session(),
@@ -262,15 +264,30 @@ is_provider_disabled(ProviderId) ->
 
 
 get_service_list_for(Session) ->
+    {ok, SessType} = watts_session:get_type(Session),
+    return_service_list(Session, SessType).
+
+return_service_list(Session, Type)
+  when Type == oidc; Type == rest->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, ServiceList} = watts_service:get_list(UserInfo),
-    {ok, ServiceList}.
+    {ok, ServiceList};
+return_service_list(_, _) ->
+    {ok, []}.
+
 
 
 get_credential_list_for(Session) ->
+    {ok, SessType} = watts_session:get_type(Session),
+    return_credential_list(Session, SessType).
+
+return_credential_list(Session,  Type)
+  when Type == oidc; Type == rest->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, CredentialList} = watts_plugin:get_cred_list(UserInfo),
-    {ok, CredentialList}.
+    {ok, CredentialList};
+return_credential_list(_,  _) ->
+    {ok, []}.
 
 
 request_credential_for(ServiceId, Session, Params) ->
