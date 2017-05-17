@@ -2,6 +2,7 @@
 -include("watts.hrl").
 
 -export([new/1,
+         exists/1,
          get_info/1,
          get_id/1,
          validate_jwt_get_rsp/2,
@@ -53,6 +54,14 @@ new(#{id := Id, key_location := Location, show_ui := Ui,
                             }};
         {error, Reason} ->
             {error, Reason}
+    end.
+
+exists(RspId) ->
+    case get_info(RspId) of
+        #watts_rsp{id = undefined} ->
+            false;
+        _ ->
+            true
     end.
 
 get_id(#watts_rsp{ id = Id }) ->
