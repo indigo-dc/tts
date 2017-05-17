@@ -244,8 +244,6 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
-    %% TODO:
-    %% add support for minimal ui for RSPs
     {LoggedIn, DName, IssId, Error, AutoService, SuccessRedir, ErrorRedir}  =
         case is_pid(Session) of
             false ->
@@ -257,8 +255,10 @@ perform_get(info, undefined, Session, _) ->
                 {ok, Err} = watts_session:get_error(Session),
                 {ok, Redir} = watts_session:get_redirection(Session),
                 ok = watts_session:clear_redirection(Session),
+                {ok, Rsp} = watts_session:get_rsp(Session),
+                {SuccessUrl, ErrorUrl} = get_return_urls(Rsp),
                 {watts_session:is_logged_in(Session), Name, Id, Err, Redir,
-                 undefined, undefined}
+                 SuccessUrl, ErrorUrl}
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
@@ -285,8 +285,8 @@ perform_get(info, undefined, Session, _) ->
                                    undefined -> SuccessRedir;
                                    _ -> ErrorRedir
                                end,
-                    Update = #{success_redir => SuccessRedir,
-                               error_redir => ErrRedir},
+                    Update = #{rsp_success => SuccessRedir,
+                               rsp_error => ErrRedir},
                    maps:merge(Info1, Update)
            end,
     jsone:encode(Info2);
@@ -573,41 +573,50 @@ is_bad_version(_, _) ->
 update_cookie_or_end_session(Req, #state{session_pid = Session,
                                           type=RequestType}) ->
     {ok, SessionType} =  watts_session:get_type(Session),
-    KeepAlive = keep_session_alive(SessionType),
-    Logout = (RequestType == logout),
-    update_cookie_or_end_session(KeepAlive, Logout, Session, Req).
+    KeepAlive = keep_session_alive(SessionType, RequestType),
+    update_cookie_or_end_session(KeepAlive, Session, SessionType, Req).
 
-keep_session_alive(oidc) ->
+keep_session_alive(_, logout) ->
+    false;
+keep_session_alive(oidc, _) ->
     true;
-keep_session_alive({rsp, _, _}) ->
+keep_session_alive({rsp, _, _}, cred_data) ->
+    false;
+keep_session_alive({rsp, _, _}, _) ->
     true;
-keep_session_alive(_) ->
+keep_session_alive(_, _) ->
     false.
 
-
-update_cookie_or_end_session(true, true, Session, Req) ->
-    perform_logout(true, Session, Req);
-update_cookie_or_end_session(true, false, Session, Req) ->
+update_cookie_or_end_session(true, Session, SessType, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
             {ok, Max} = watts_session:get_max_age(Session),
             {ok, Token} = watts_session:get_sess_token(Session),
             watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
-            perform_logout(true, Session, Req)
+            perform_logout(Session, SessType, Req)
     end;
-update_cookie_or_end_session(false, _, Session, Req) ->
-    perform_logout(false, Session, Req);
+update_cookie_or_end_session(false, Session, SessType, Req) ->
+    perform_logout(Session, SessType, Req);
 update_cookie_or_end_session(_, _, _, Req) ->
     {ok, Req}.
 
-perform_logout(CookieBased, Session, Req) ->
-    Result =
-        case CookieBased of
-            true ->
-                watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
-            _ ->
-                {ok, Req}
-        end,
+perform_logout(Session, oidc, Req) ->
+    perform_cookie_logout(Session, Req);
+perform_logout(Session, {rsp, _, _}, Req) ->
+    perform_cookie_logout(Session, Req);
+perform_logout(Session, _, Req) ->
+    watts:logout(Session),
+    {ok, Req}.
+
+perform_cookie_logout(Session, Req) ->
+    Result = watts_http_util:perform_cookie_action(clear, 0, deleted, Req),
     watts:logout(Session),
     Result.
+
+
+
+get_return_urls(undefined) ->
+    {undefined, undefined};
+get_return_urls(Rsp) ->
+    watts_rsp:get_return_urls(Rsp).
