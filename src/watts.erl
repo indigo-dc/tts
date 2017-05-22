@@ -213,15 +213,6 @@ do_additional_login(Issuer, Subject0, Token0, SessPid) ->
     end.
 
 
-logout_rsp_session(Session) ->
-    {ok, Type} = watts_session:get_type(Session),
-    logout_if_rsp_session(Type, Session).
-logout_if_rsp_session({rsp, _, _}, Session) ->
-    logout(Session);
-logout_if_rsp_session(_, _) ->
-    ok.
-
-
 
 logout(Session) ->
     watts_session:close(Session).
@@ -351,18 +342,14 @@ handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
                                    msg => UsrMsg} }
             };
         {{ok, _}, oidc, true} ->
-            logout_rsp_session(Session),
             {error, #{result => error, user_msg => DoneMsg}};
         {{ok, _}, oidc, _} ->
-            logout_rsp_session(Session),
             {error, #{result => error, user_msg => OffMsg}};
         {{ok, _}, rest, _} ->
-            logout_rsp_session(Session),
             {error, #{result => error, user_msg => RestMsg}};
         _ ->
             WMsg = "SESS~p additional login request for ~p failed: ~s",
             lager:warning(WMsg, [SessionId, ServiceId, Provider]),
-            logout_rsp_session(Session),
             {error, #{result => error, user_msg => Msg}}
     end;
 handle_credential_result({error, Map}, ServiceId, Session, _Params)
@@ -374,13 +361,11 @@ handle_credential_result({error, Map}, ServiceId, Session, _Params)
     WMsg = "SESS~p credential request for ~p failed: ~s",
     lager:warning(WMsg, [SessionId, ServiceId, LogMsg]),
     BadCred = #{result => error, user_msg => UserMsg},
-    logout_rsp_session(Session),
     {error, BadCred};
 handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
     {UMsg, WMsg} = credential_error_message(Reason),
-    logout_rsp_session(Session),
     lager:warning(WMsg, [SessionId, ServiceId, Reason]),
     {error, #{result => error, user_msg => UMsg}}.
 
