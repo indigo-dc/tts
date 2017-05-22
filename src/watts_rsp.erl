@@ -1,5 +1,6 @@
 -module(watts_rsp).
 -include("watts.hrl").
+-include_lib("public_key/include/public_key.hrl").
 
 -export([new/1,
          exists/1,
@@ -13,6 +14,8 @@
          get_return_urls/1,
          get_service_data/1,
 
+         show_rsa/1,
+
          get_list/0
         ]).
 
@@ -21,7 +24,6 @@
           referer = undefined,
           success_url = undefined,
           failed_url = undefined,
-          error_url = undefined,
           iss = undefined,
           sub = undefined,
           service_id = undefined,
@@ -39,6 +41,26 @@
 
           session = #watts_rsp_session{}
          }).
+
+show_rsa(File) ->
+    {ok, Bin} = file:read_file(File),
+    [PemEntry] = public_key:pem_decode(Bin),
+    Key = public_key:pem_entry_decode(PemEntry),
+    {E, N} =
+        case Key of
+            #'RSAPrivateKey'{} ->
+                 {Key#'RSAPrivateKey'.modulus
+                 ,Key#'RSAPrivateKey'.publicExponent};
+            #'RSAPublicKey'{} ->
+                 {Key#'RSAPublicKey'.modulus
+                 ,Key#'RSAPublicKey'.publicExponent}
+        end,
+    NEnc = base64url:encode(binary:encode_unsigned(N)),
+    EEnc = base64url:encode(binary:encode_unsigned(E)),
+    io:format("n: ~p, e: ~p ~n",[N, E]),
+    io:format("n: ~p, e: ~p ~n",[NEnc, EEnc]),
+    ok.
+
 
 
 get_list() ->
@@ -78,13 +100,13 @@ get_return_urls(#watts_rsp{session = Session}) ->
     session_return_urls(Session).
 
 session_return_urls(#watts_rsp_session{ referer=R, success_url=undefined,
-                                       error_url=undefined }) ->
+                                       failed_url=undefined }) ->
     {R, R};
 session_return_urls(#watts_rsp_session{ success_url=Succ,
-                                        error_url=undefined }) ->
+                                        failed_url=undefined }) ->
     {Succ, Succ};
 session_return_urls(#watts_rsp_session{ success_url=Succ,
-                                        error_url=Err }) ->
+                                        failed_url=Err }) ->
     {Succ, Err}.
 
 
