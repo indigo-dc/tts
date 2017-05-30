@@ -49,15 +49,14 @@
         ]).
 
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
-                 = TokenMap, SessType) ->
-    case SessType of
-        {ok, oidc, SessionPid} when is_pid(SessionPid) ->
-            do_additional_login(Issuer, Subject, TokenMap, SessionPid);
-        {ok, {rsp, _, login}, Pid}  ->
-            do_rsp_additional_login(Issuer, Subject, TokenMap, Pid);
-        {ok, none, _} ->
-            do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
-    end;
+                 = TokenMap, {ok, oidc, Pid} ) when is_pid(Pid) ->
+    do_additional_login(Issuer, Subject, TokenMap, Pid);
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
+                 = TokenMap, {ok, {rsp, _, login}, Pid} ) when is_pid(Pid) ->
+    do_rsp_additional_login(Issuer, Subject, TokenMap, Pid);
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
+                 = TokenMap, {ok, none, _} )  ->
+    do_login_if_issuer_enabled(Issuer, Subject, TokenMap);
 login_with_oidcc(_BadToken, _) ->
     {error, bad_token}.
 

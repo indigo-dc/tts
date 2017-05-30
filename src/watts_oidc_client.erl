@@ -106,7 +106,7 @@ get_session_type(#{req := Req}) ->
     {Cookies, _} = cowboy_req:cookies(Req),
     Cookie = lists:keyfind(watts_http_util:cookie_name(), 1, Cookies),
     get_session_type(Cookie);
-get_session_type(Cookie) when is_binary(Cookie) ->
+get_session_type({_, Cookie}) when is_binary(Cookie) ->
     Result =  watts_session_mgr:get_session(Cookie),
     get_session_type(Result);
 get_session_type({ok, Pid}) when is_pid(Pid) ->
