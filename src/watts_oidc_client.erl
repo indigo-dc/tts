@@ -3,12 +3,12 @@
 -include("watts.hrl").
 
 -export([
-         login_succeeded/1,
-         login_failed/2
+         login_succeeded/2,
+         login_failed/3
         ]).
 
-login_succeeded(TokenMap) ->
-    case watts:login_with_oidcc(TokenMap) of
+login_succeeded(TokenMap, EnvMap) ->
+    case watts:login_with_oidcc(TokenMap, get_session_type(EnvMap)) of
         {ok, #{session_pid := SessPid, session_type := {rsp, no_ui, login} }} ->
             {ok, #{service := Service,
                    params := Params
@@ -25,9 +25,14 @@ login_succeeded(TokenMap) ->
             redirect_error(ErrMsg)
     end.
 
-login_failed(Reason, Details) ->
-    %% todo redirect back on to rsp if RSP session
+login_failed(Reason, Details, EnvMap) ->
     lager:warning("login failed: ~p - ~p", [Reason, Details]),
+    {ok, SessType, Sess} = get_session_type(EnvMap),
+    handle_failed_for_session(SessType, Sess, Reason, Details).
+
+handle_failed_for_session({rsp, _, _} , SessPid, Reason, _Details) ->
+    redirect_back({error, Reason}, SessPid);
+handle_failed_for_session(_, _, Reason, Details) ->
     ErrMsg = bin_error_msg(Reason, Details),
     redirect_error(ErrMsg).
 
@@ -95,3 +100,17 @@ error_msg(session_not_found, _) ->
     "sorry, your session expired during the login process, please try again.";
 error_msg(_, _) ->
     "sorry, something went wrong, please try again".
+
+
+get_session_type(#{req := Req}) ->
+    {Cookies, _} = cowboy_req:cookies(Req),
+    Cookie = lists:keyfind(watts_http_util:cookie_name(), 1, Cookies),
+    get_session_type(Cookie);
+get_session_type(Cookie) when is_binary(Cookie) ->
+    Result =  watts_session_mgr:get_session(Cookie),
+    get_session_type(Result);
+get_session_type({ok, Pid}) when is_pid(Pid) ->
+    {ok, Type} = watts_session:get_type(Pid),
+    {ok, Type, Pid};
+get_session_type(_) ->
+    {ok, none, undefined}.
