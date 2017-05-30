@@ -49,18 +49,13 @@
         ]).
 
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
-                 = TokenMap, #{req := Req}) ->
-    {Cookies, _} = cowboy_req:cookies(Req),
-    Cookie = case lists:keyfind(watts_http_util:cookie_name(), 1, Cookies) of
-                 false -> undefined;
-                 {_, Data} -> Data
-             end,
-    case get_session_type(Cookie) of
+                 = TokenMap, SessType) ->
+    case SessType of
         {ok, oidc, SessionPid} when is_pid(SessionPid) ->
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
         {ok, {rsp, _, login}, Pid}  ->
             do_rsp_additional_login(Issuer, Subject, TokenMap, Pid);
-        {ok, none} ->
+        {ok, none, _} ->
             do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
     end;
 login_with_oidcc(_BadToken, _) ->
@@ -575,14 +570,14 @@ create_information_result(_, {error, Reason}, _, _) ->
     {error, Reason}.
 
 
-get_session_type(Cookie) when is_binary(Cookie) ->
-    Result =  watts_session_mgr:get_session(Cookie),
-    get_session_type(Result);
-get_session_type({ok, Pid}) when is_pid(Pid) ->
-    {ok, Type} = watts_session:get_type(Pid),
-    {ok, Type, Pid};
-get_session_type(_) ->
-    {ok, none}.
+%% get_session_type(Cookie) when is_binary(Cookie) ->
+%%     Result =  watts_session_mgr:get_session(Cookie),
+%%     get_session_type(Result);
+%% get_session_type({ok, Pid}) when is_pid(Pid) ->
+%%     {ok, Type} = watts_session:get_type(Pid),
+%%     {ok, Type, Pid};
+%% get_session_type(_) ->
+%%     {ok, none}.
 
 
 
