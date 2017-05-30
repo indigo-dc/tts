@@ -18,7 +18,7 @@
 -include("watts.hrl").
 
 -export([
-         login_with_oidcc/1,
+         login_with_oidcc/2,
          login_with_access_token/2,
          logout/1,
          session_with_error/1,
@@ -48,13 +48,13 @@
          stop_debug/0
         ]).
 
-login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
-                   cookies := Cookies} = TokenMap0) ->
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
+                 = TokenMap, #{req := Req}) ->
+    {Cookies, _} = cowboy_req:cookies(Req),
     Cookie = case lists:keyfind(watts_http_util:cookie_name(), 1, Cookies) of
                  false -> undefined;
                  {_, Data} -> Data
              end,
-    TokenMap = maps:remove(cookies, TokenMap0),
     case get_session_type(Cookie) of
         {ok, oidc, SessionPid} when is_pid(SessionPid) ->
             do_additional_login(Issuer, Subject, TokenMap, SessionPid);
@@ -63,7 +63,7 @@ login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
         {ok, none} ->
             do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
     end;
-login_with_oidcc(_BadToken) ->
+login_with_oidcc(_BadToken, _) ->
     {error, bad_token}.
 
 
