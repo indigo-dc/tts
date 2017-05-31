@@ -13,9 +13,6 @@
          get_iss_sub/1,
          get_return_urls/1,
          get_service_data/1,
-
-         show_rsa/1,
-
          get_list/0
         ]).
 
@@ -41,26 +38,6 @@
 
           session = #watts_rsp_session{}
          }).
-
-show_rsa(File) ->
-    {ok, Bin} = file:read_file(File),
-    [PemEntry] = public_key:pem_decode(Bin),
-    Key = public_key:pem_entry_decode(PemEntry),
-    {E, N} =
-        case Key of
-            #'RSAPrivateKey'{} ->
-                 {Key#'RSAPrivateKey'.modulus
-                 ,Key#'RSAPrivateKey'.publicExponent};
-            #'RSAPublicKey'{} ->
-                 {Key#'RSAPublicKey'.modulus
-                 ,Key#'RSAPublicKey'.publicExponent}
-        end,
-    NEnc = base64url:encode(binary:encode_unsigned(N)),
-    EEnc = base64url:encode(binary:encode_unsigned(E)),
-    io:format("n: ~p, e: ~p ~n",[N, E]),
-    io:format("n: ~p, e: ~p ~n",[NEnc, EEnc]),
-    ok.
-
 
 
 get_list() ->
@@ -123,6 +100,7 @@ get_info(Id) ->
         [Rsp] -> Rsp;
         _ -> #watts_rsp{}
     end.
+
 
 validate_jwt_get_rsp(JwtData, Referer) ->
     update_rsp_on_success(validate_jwt(JwtData), Referer).
@@ -199,7 +177,8 @@ starts_with_base(Url, Base) ->
     binary:match(Url, Base) == {0, byte_size(Base)}.
 
 
-update_rsp_on_success({Claims, Rsp}, Referer) when is_map(Claims) ->
+update_rsp_on_success({#{claims := Claims}, Rsp}, Referer)
+  when is_map(Claims) ->
     Success = jwt_get_success_url(Claims),
     Failed = jwt_get_failed_url(Claims),
     Issuer = jwt_get_issuer(Claims),
@@ -225,35 +204,23 @@ update_rsp_on_success({Error, _Rsp}, _) ->
 
 
 
-validate_jwt(JwtData) ->
-    Jwt = erljwt:pre_parse_jwt(JwtData),
-    validate_jwt(Jwt, JwtData).
+validate_jwt(Jwt) ->
+    Rsp = get_rsp(erljwt:to_map(Jwt)),
+    validate_jwt(erljwt:parse(Jwt, Rsp#watts_rsp.keys), Rsp).
 
-validate_jwt(#{ claims := #{iss := Iss,
+get_rsp(#{claims := #{ iss := Iss}}) ->
+    get_info(Iss);
+get_rsp(_) ->
+    #watts_rsp{}.
+
+
+validate_jwt(#{ claims := #{iss := _Iss,
                             sub := _Sub,
                             exp := _Exp,
                             iat := _Iat,
                             watts_service := _Service
-                           },
-                header := #{ kid := KeyId, alg := <<"RS256">>}
-              } , JwtData) ->
-    Rsp = get_info(Iss),
-    Keys = Rsp#watts_rsp.keys,
-    FilterKey = fun(#{kid := Kid}) ->
-                        Kid == KeyId;
-                   (_) ->
-                        false
-                end,
-    Jwt =   case lists:filter(FilterKey, Keys) of
-                [] ->
-                    no_key;
-                [#{key := Key}] ->
-                    erljwt:parse_jwt(JwtData, Key, <<"JWT">>);
-                [_] ->
-                    bad_key;
-                _ ->
-                    too_many_keys
-            end,
+                           } = Jwt
+              } , Rsp) ->
     {Jwt, Rsp};
 validate_jwt(_, _) ->
     {invalid, unknown}.
@@ -279,8 +246,8 @@ fetch_rsp_keys(Url) ->
 
 
 extract_rsp_keys({ok, Data}) when is_binary(Data) ->
-    Json = safe_decode(Data, bad_data),
-    extract_rsp_keys(Json, []);
+    #{keys := Keys} = safe_decode(Data, bad_data),
+    Keys;
 extract_rsp_keys({ok, Data}) when is_list(Data) ->
     extract_rsp_keys({ok, list_to_binary(Data)});
 extract_rsp_keys({ok, {Code, Body}}) when Code >= 200, Code < 300 ->
@@ -289,30 +256,6 @@ extract_rsp_keys({ok, {{_, Code, _}, _, Body}}) ->
     extract_rsp_keys({ok, {Code, Body}});
 extract_rsp_keys({error, Reason}) ->
     {error, list_to_binary(io_lib:format("error reading keys: ~p", [Reason]))}.
-
-extract_rsp_keys([], List) ->
-    {ok, List};
-extract_rsp_keys([#{kty := <<"RSA">>,
-                    use := <<"sig">>,
-                    alg := <<"RS256">>,
-                    kid := KeyId,
-                    n := N,
-                    e := E
-                   } | T], List) ->
-    extract_rsp_keys(T, [ rsp_rsa_key(KeyId, N, E) | List ]);
-extract_rsp_keys([H | T], List) ->
-    lager:warning("Init: skipping unsupported key ~p", [H]),
-    extract_rsp_keys(T, List);
-extract_rsp_keys(#{keys := Keys}, List) ->
-    extract_rsp_keys(Keys, List);
-extract_rsp_keys(_, _List) ->
-    {error, bad_json}.
-
-rsp_rsa_key(KeyId, N0, E0) ->
-    N = binary:decode_unsigned(base64url:decode(N0)),
-    E = binary:decode_unsigned(base64url:decode(E0)),
-    Key = [E, N],
-    #{kty => rsa, alg => rs256, use => sign, kid => KeyId, key => Key}.
 
 safe_decode(Data, Default) when is_binary(Data) ->
     Res = jsone:try_decode(Data, [{object_format, map}, {keys, attempt_atom}]),
