@@ -247,7 +247,7 @@ fetch_rsp_keys(Url) ->
 
 extract_rsp_keys({ok, Data}) when is_binary(Data) ->
     #{keys := Keys} = safe_decode(Data, bad_data),
-    Keys;
+    {ok, Keys};
 extract_rsp_keys({ok, Data}) when is_list(Data) ->
     extract_rsp_keys({ok, list_to_binary(Data)});
 extract_rsp_keys({ok, {Code, Body}}) when Code >= 200, Code < 300 ->
