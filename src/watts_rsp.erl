@@ -219,8 +219,8 @@ validate_jwt(#{ claims := #{iss := _Iss,
                             exp := _Exp,
                             iat := _Iat,
                             watts_service := _Service
-                           } = Jwt
-              } , Rsp) ->
+                           }
+              } = Jwt , Rsp) ->
     {Jwt, Rsp};
 validate_jwt(_, _) ->
     {invalid, unknown}.
