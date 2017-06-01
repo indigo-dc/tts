@@ -200,6 +200,42 @@ request_parts_test() ->
     end,
     ok.
 
+plugin_api_test() ->
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
+    try
+        ServiceId = <<"local5">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
+        {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
+        {ok, ReqPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, ReqPid},
+
+        ConfigReq = #{action => request,
+                      service_id => ServiceId,
+                      user_info => UserInfo,
+                      queue => undefined},
+
+        {ok, Cred, _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
+        ok = test_util:wait_for_process_to_die(ReqPid,100),
+        %% the Cred contains the passed parameter to the plugin as state
+        State = maps:get(state, Cred),
+        Map = jsone:decode(base64url:decode(State), [{keys, attempt_atom}, {object_format, map}]),
+        io:format("map passed to plugin: ~p~n", [Map]),
+        ?assertEqual(true, is_map(Map)),
+        ?assertEqual(true, is_binary(maps:get(watts_version, Map))),
+        ?assertEqual(true, is_binary(maps:get(action, Map))),
+        ?assertEqual(true, is_map(maps:get(conf_params, Map))),
+        ?assertEqual(true, is_map(maps:get(params, Map))),
+        ?assertEqual(true, is_map(maps:get(user_info, Map))),
+        UsrInfo = maps:get(user_info, Map),
+        ?assertEqual(true, is_binary(maps:get(iss, UsrInfo))),
+        ?assertEqual(true, is_binary(maps:get(sub, UsrInfo)))
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
+
+
 no_cmd_crash_test() ->
     {ok, Meck} = start_meck(),
     try
@@ -316,6 +352,21 @@ start_meck() ->
                        type => local,
                        user => undefined
                       }
+                   },
+                   #{id => <<"local5">>,
+                     plugin_timeout => 500,
+                     cmd => <<"env">>,
+                     cmd_env_use => true,
+                     cmd_env_var => "WATTS_PARAMETER",
+                     connection => #{
+                       host => undefined,
+                       port => 22,
+                       passwd => undefined,
+                       ssh_dir => undefined,
+                       ssh_key_pass => undefined,
+                       type => local,
+                       user => undefined
+                      }
                    }
                   ],
     InfoFun = fun(Id) ->
@@ -362,13 +413,6 @@ start_meck() ->
                             end,
 
                       receive
-                          exec_bad_start ->
-                              %% stdout
-                              Pid ! {stdout, 456,  <<"working ...">>},
-                              %% stderr
-                              Pid ! {stderr, 456, <<"oops ...">>},
-                              %% everything went well
-                              Pid ! {'DOWN', 456, process, pid2, normal};
                           exec_good_start ->
                               %% stdout
                               Json = jsone:encode(JsonMap),
@@ -380,6 +424,21 @@ start_meck() ->
                               Pid ! {stdout, 345,  <<"\"state\": \"test\",">>},
                               Pid ! {stdout, 345,  <<"\"credential\": []}">>},
                               Pid ! {'DOWN', 345, process, pid3, normal};
+                          {exec_return_input, Input} ->
+                              InputMap = #{ credential => [],
+                                           state => Input,
+                                           result => ok
+                                         },
+                              Pid ! {stdout, 456,  jsone:encode(InputMap)},
+                              %% everything went well
+                              Pid ! {'DOWN', 456, process, pid4, normal};
+                          exec_bad_start ->
+                              %% stdout
+                              Pid ! {stdout, 999,  <<"working ...">>},
+                              %% stderr
+                              Pid ! {stderr, 999, <<"oops ...">>},
+                              %% everything went well
+                              Pid ! {'DOWN', 999, process, pid9, normal};
                           stop ->
                               ok
                       end
@@ -408,7 +467,8 @@ start_meck() ->
                         SshPid ! ssh_start,
                         success
                  end,
-    ErlexecRun = fun(Cmd, _Params) ->
+    ErlexecRun = fun(Cmd, Params) ->
+                         Env = lists:keyfind(env, 1, Params),
                          case Cmd of
                              "ls" ->
                                  ExecPid ! exec_good_start,
@@ -418,9 +478,13 @@ start_meck() ->
                              "parts" ->
                                  ExecPid ! exec_parts_start,
                                  {ok, pid3, 345};
+                             "env" ->
+                                 {env, [{_, Data}]} = Env,
+                                 ExecPid ! {exec_return_input, list_to_binary(Data)},
+                                 {ok, pid4, 456};
                              _ ->
                                  ExecPid ! exec_bad_start,
-                                 {ok, pid4, 456}
+                                 {ok, pid9, 999}
                          end
 
                  end,
@@ -434,6 +498,9 @@ start_meck() ->
     ok = meck:expect(exec, stop, fun(_) -> ok end),
 
     {ok, {SshPid, ExecPid, MeckModules}}.
+
+
+
 
 
 stop_meck({SshPid, ExecPid, MeckModules}) ->

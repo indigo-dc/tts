@@ -90,7 +90,7 @@ handle_call({request_action,
              From, #state{client = undefined} = State ) ->
     UserInfo = maps:get(user_info, Config, undefined),
     CredState = maps:get(cred_state, Config, undefined),
-    Params = maps:get(params, Config, undefined),
+    Params = maps:get(params, Config, #{}),
     Queue = maps:get(queue, Config, undefined),
     NewState = State#state{ action = Action,
                             client = From,
