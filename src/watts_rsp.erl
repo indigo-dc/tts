@@ -200,8 +200,9 @@ update_rsp_on_success({#{claims := Claims}, Rsp, undefined}, Referer)
                  referer = Referer
                 },
     {ok, Rsp#watts_rsp{session = Session}};
-update_rsp_on_success({Error, #watts_rsp{base_url = Base}, JwtMap}, Referer) ->
-    FailedUrl = jwt_get_failed_url(JwtMap),
+update_rsp_on_success({Error, #watts_rsp{base_url = Base},
+                       #{claims := Claims}}, Referer) ->
+    FailedUrl = jwt_get_failed_url(Claims),
     FromRsp = is_valid_url(Base, Referer),
     ValidFail = is_valid_url(Base, FailedUrl),
     ReturnUrl = failed_or_referer(FromRsp and ValidFail, FailedUrl, Referer),
