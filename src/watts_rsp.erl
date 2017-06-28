@@ -305,8 +305,8 @@ ensure_map(_) ->
 
 return_url( #watts_rsp{base_url = Base}, #{claims := Claims}, Referer) ->
     FailedUrl = jwt_get_failed_url(Claims),
-    FromRsp = is_valid_url(Base, Referer),
-    ValidFail = is_valid_url(Base, FailedUrl),
+    FromRsp = is_valid_url(Referer, Base),
+    ValidFail = is_valid_url(FailedUrl, Base),
     failed_or_referer(FromRsp and ValidFail, FailedUrl, Referer);
 return_url(_, _, Referer) ->
     Referer.
