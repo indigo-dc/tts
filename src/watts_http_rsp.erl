@@ -24,6 +24,9 @@ setup_session_and_start({ok, Rsp}, Req) ->
     {ok, Session} = watts:session_for_rsp(Rsp),
     {ok, Req2} = set_cookie(Session, Req),
     execute_or_error(watts_rsp:request_type(Rsp), Session, Rsp, Req2);
+setup_session_and_start({error, Error, ReturnUrl}, Req) ->
+    warning("~p", [Error]),
+    watts_http_util:redirect_to(ReturnUrl, Req);
 setup_session_and_start(Error, Req) ->
     warning("~p", [Error]),
     {ok, Req2} = cowboy_req:reply(400, Req),
@@ -41,12 +44,11 @@ execute_or_error(rsp_no_ui_login, Session, Rsp, Req) ->
     redirect_to_provider(Session, Rsp, Req);
 execute_or_error(rsp_ui_login, Session, Rsp, Req) ->
     redirect_to_provider(Session, Rsp, Req);
-execute_or_error({error, Reason}, Session, _Rsp, Req) ->
+execute_or_error({error, Reason}, Session, Rsp, Req) ->
     % bad request type
     warning("~p", [Reason]),
     watts:logout(Session),
-    {ok, Req2} = cowboy_req:reply(400, Req),
-    {ok, Req2, []}.
+    watts_http_util:redirect_to(get_return_url(failed, Rsp), Req).
 
 get_return_url({ok, _}, Rsp) ->
     {Url, _} = watts_rsp:get_return_urls(Rsp),

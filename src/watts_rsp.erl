@@ -177,7 +177,7 @@ starts_with_base(Url, Base) ->
     binary:match(Url, Base) == {0, byte_size(Base)}.
 
 
-update_rsp_on_success({#{claims := Claims}, Rsp}, Referer)
+update_rsp_on_success({#{claims := Claims}, Rsp, undefined}, Referer)
   when is_map(Claims) ->
     Success = jwt_get_success_url(Claims),
     Failed = jwt_get_failed_url(Claims),
@@ -197,18 +197,32 @@ update_rsp_on_success({#{claims := Claims}, Rsp}, Referer)
                  referer = Referer
                 },
     {ok, Rsp#watts_rsp{session = Session}};
-update_rsp_on_success({Error, _Rsp}, _) ->
-    {error, {bad_jwt, Error}}.
+update_rsp_on_success({Error, #watts_rsp{base_url = Base}, JwtMap}, Referer) ->
+    FailedUrl = jwt_get_failed_url(JwtMap),
+    FromRsp = is_valid_url(Base, Referer),
+    ValidFail = is_valid_url(Base, FailedUrl),
+    ReturnUrl = failed_or_referer(FromRsp and ValidFail, FailedUrl, Referer),
+    {error, {bad_jwt, Error}, ReturnUrl};
+update_rsp_on_success({Error, _, _}, Referer) ->
+    {error, {bad_jwt, Error}, Referer}.
+
+
+failed_or_referer(true, FailedUrl, _) ->
+    FailedUrl;
+failed_or_referer(_, _, Referer) ->
+    Referer.
 
 
 
 
 
 validate_jwt(Jwt) ->
-    Rsp = get_rsp(erljwt:to_map(Jwt)),
-    validate_jwt(erljwt:validate(Jwt, [rs256], #{}, Rsp#watts_rsp.keys), Rsp).
+    {ok, JwtMap} = erljwt:to_map(Jwt),
+    Rsp = get_rsp(JwtMap),
+    validate_jwt(erljwt:validate(Jwt, [rs256], #{}, Rsp#watts_rsp.keys),
+                 Rsp, JwtMap).
 
-get_rsp({ok, #{claims := #{ iss := Iss}}}) ->
+get_rsp(#{claims := #{ iss := Iss}}) ->
     get_info(Iss);
 get_rsp(_) ->
     #watts_rsp{}.
@@ -220,10 +234,10 @@ validate_jwt(#{ claims := #{iss := _Iss,
                             iat := _Iat,
                             watts_service := _Service
                            }
-              } = Jwt , Rsp) ->
-    {Jwt, Rsp};
-validate_jwt(_, _) ->
-    {invalid, unknown}.
+              } = Jwt , Rsp, _) ->
+    {Jwt, Rsp, undefined};
+validate_jwt(_, Rsp, JwtMap) ->
+    {invalid, Rsp, JwtMap}.
 
 get_rsp_keys(<< File:7/binary, Path/binary >>)
   when File == <<"file://">> ->
