@@ -173,8 +173,11 @@ is_valid_url(Url, Base) when is_list(Url) ->
 is_valid_url(_, _) ->
     false.
 
-starts_with_base(Url, Base) ->
-    binary:match(Url, Base) == {0, byte_size(Base)}.
+starts_with_base(Url, Base) when is_binary(Url), is_binary(Base) ->
+    binary:match(Url, Base) == {0, byte_size(Base)};
+starts_with_base(_, _) ->
+    false.
+
 
 
 update_rsp_on_success({#{claims := Claims}, Rsp, undefined}, Referer)
