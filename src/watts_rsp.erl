@@ -200,21 +200,9 @@ update_rsp_on_success({#{claims := Claims}, Rsp, undefined}, Referer)
                  referer = Referer
                 },
     {ok, Rsp#watts_rsp{session = Session}};
-update_rsp_on_success({Error, #watts_rsp{base_url = Base},
-                       #{claims := Claims}}, Referer) ->
-    FailedUrl = jwt_get_failed_url(Claims),
-    FromRsp = is_valid_url(Base, Referer),
-    ValidFail = is_valid_url(Base, FailedUrl),
-    ReturnUrl = failed_or_referer(FromRsp and ValidFail, FailedUrl, Referer),
-    {error, {bad_jwt, Error}, ReturnUrl};
-update_rsp_on_success({Error, _, _}, Referer) ->
-    {error, {bad_jwt, Error}, Referer}.
+update_rsp_on_success({Error, Rsp, JwtMap}, Referer) ->
+    {error, {bad_jwt, Error}, return_url(Rsp, JwtMap, Referer) }.
 
-
-failed_or_referer(true, FailedUrl, _) ->
-    FailedUrl;
-failed_or_referer(_, _, Referer) ->
-    Referer.
 
 
 
@@ -232,16 +220,18 @@ get_rsp(_) ->
     #watts_rsp{}.
 
 
-validate_jwt(#{ claims := #{iss := _Iss,
+validate_jwt({ok, #{ claims := #{iss := _Iss,
                             sub := _Sub,
                             exp := _Exp,
                             iat := _Iat,
                             watts_service := _Service
                            }
-              } = Jwt , Rsp, _) ->
+              } = Jwt }, Rsp, _) ->
     {Jwt, Rsp, undefined};
-validate_jwt(_, Rsp, JwtMap) ->
-    {invalid, Rsp, JwtMap}.
+validate_jwt({ok, _}, Rsp, JwtMap) ->
+    {invalid, Rsp, JwtMap};
+validate_jwt({error, Error}, Rsp, JwtMap) ->
+    {Error, Rsp, JwtMap}.
 
 get_rsp_keys(<< File:7/binary, Path/binary >>)
   when File == <<"file://">> ->
@@ -311,3 +301,17 @@ ensure_map(MapList) when is_list(MapList) ->
     maps:from_list(MapList);
 ensure_map(_) ->
     #{}.
+
+
+return_url( #watts_rsp{base_url = Base}, #{claims := Claims}, Referer) ->
+    FailedUrl = jwt_get_failed_url(Claims),
+    FromRsp = is_valid_url(Base, Referer),
+    ValidFail = is_valid_url(Base, FailedUrl),
+    failed_or_referer(FromRsp and ValidFail, FailedUrl, Referer);
+return_url(_, _, Referer) ->
+    Referer.
+
+failed_or_referer(true, FailedUrl, _) ->
+    FailedUrl;
+failed_or_referer(_, _, Referer) ->
+    Referer.
