@@ -27,7 +27,7 @@ login_succeeded(TokenMap, EnvMap) ->
 
 login_failed(Reason, Details, EnvMap) ->
     lager:warning("login failed: ~p - ~p", [Reason, Details]),
-    {ok, SessType, Sess} = get_session_type(EnvMap),
+    {SessType, Sess} = get_session_type(EnvMap),
     handle_failed_for_session(SessType, Sess, Reason, Details).
 
 handle_failed_for_session({rsp, _, _} , SessPid, Reason, _Details) ->
@@ -111,6 +111,6 @@ get_session_type({_, Cookie}) when is_binary(Cookie) ->
     get_session_type(Result);
 get_session_type({ok, Pid}) when is_pid(Pid) ->
     {ok, Type} = watts_session:get_type(Pid),
-    {ok, Type, Pid};
+    {Type, Pid};
 get_session_type(_) ->
-    {ok, none, undefined}.
+    {none, undefined}.

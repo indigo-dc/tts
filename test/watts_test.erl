@@ -29,9 +29,9 @@ login_and_out_test() ->
                           access => #{token => GoodAccessToken},
                           cookies => []
                          },
-        {error, bad_token} = watts:login_with_oidcc(BadOidcToken, {ok, none, undefined}),
+        {error, bad_token} = watts:login_with_oidcc(BadOidcToken, {none, undefined}),
         {error, bad_token} = watts:login_with_access_token(BadAccessToken, Issuer),
-        {ok, #{session_pid := Pid1}} = watts:login_with_oidcc(GoodOidcToken, {ok, none, undefined}),
+        {ok, #{session_pid := Pid1}} = watts:login_with_oidcc(GoodOidcToken, {none, undefined}),
         {ok, #{session_pid := Pid2}} = watts:login_with_access_token(GoodAccessToken,
                                                                      Issuer),
 
@@ -53,7 +53,7 @@ additional_login_test() ->
                        access => #{token => <<"accestoken">>},
                        cookies => []
                       },
-        {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken1, {ok, none, undefined}),
+        {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken1, {none, undefined}),
 
         {ok, Token} = watts_session:get_sess_token(Pid),
         OidcToken2 = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer2}},
@@ -64,7 +64,7 @@ additional_login_test() ->
         ServiceId = <<"service0815">>,
         Provider = <<"ID3">>,
         ok = watts_session:set_redirection(ServiceId, Params, Provider, Pid),
-        {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken2, {ok, oidc, Pid}),
+        {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken2, {oidc, Pid}),
         {ok, UserInfo} = watts_session:get_user_info(Pid),
         true = watts_userinfo:has_additional_login(ServiceId, Provider, UserInfo),
 

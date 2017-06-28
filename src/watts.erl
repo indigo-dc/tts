@@ -49,14 +49,16 @@
         ]).
 
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
-                 = TokenMap, {ok, oidc, Pid} ) when is_pid(Pid) ->
+                 = TokenMap, {oidc, Pid} ) when is_pid(Pid) ->
     do_additional_login(Issuer, Subject, TokenMap, Pid);
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
-                 = TokenMap, {ok, {rsp, _, login}, Pid} ) when is_pid(Pid) ->
+                 = TokenMap, {{rsp, _, login}, Pid} ) when is_pid(Pid) ->
     do_rsp_additional_login(Issuer, Subject, TokenMap, Pid);
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
-                 = TokenMap, {ok, none, _} )  ->
+                 = TokenMap, {none, _} )  ->
     do_login_if_issuer_enabled(Issuer, Subject, TokenMap);
+login_with_oidcc(#{id := #{claims := #{ sub := _, iss := _}}}, _) ->
+    {error, bad_session_type};
 login_with_oidcc(_BadToken, _) ->
     {error, bad_token}.
 
