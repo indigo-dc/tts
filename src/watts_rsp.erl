@@ -208,7 +208,7 @@ validate_jwt(Jwt) ->
     Rsp = get_rsp(erljwt:to_map(Jwt)),
     validate_jwt(erljwt:validate(Jwt, [rs256], #{}, Rsp#watts_rsp.keys), Rsp).
 
-get_rsp(#{claims := #{ iss := Iss}}) ->
+get_rsp({ok, #{claims := #{ iss := Iss}}}) ->
     get_info(Iss);
 get_rsp(_) ->
     #watts_rsp{}.
