@@ -5,7 +5,9 @@
 -export([
          new/1,
          start_link/1,
+         stop/1,
          get_keys/1,
+         get_last_error/1,
          reread/1]).
 
 -export([
@@ -37,11 +39,17 @@ new(Map) when is_map(Map) ->
 start_link(Map) when is_map(Map) ->
     gen_server:start_link(?MODULE, Map, []).
 
+stop(Pid) when is_pid(Pid) ->
+    gen_server:cast(Pid, stop).
+
 reread(Pid) ->
     gen_server:cast(Pid, read_keys).
 
 get_keys(Pid) ->
     gen_server:call(Pid, get_keys).
+
+get_last_error(Pid) ->
+    gen_server:call(Pid, get_last_error).
 
 init(#{id := Id, key_location := Location0}) ->
     {Location, Type} = get_location_type(Location0),
@@ -50,13 +58,19 @@ init(#{id := Id, key_location := Location0}) ->
 
 handle_call(get_keys, _From, #state{keys = Keys} = State) ->
     {reply, {ok, Keys}, State, ?IDLE_TIMEOUT};
+handle_call(get_last_error, _From, #state{last_error = Error} = State) ->
+    {reply, {ok, Error}, State, ?IDLE_TIMEOUT};
 handle_call(_Request, _From, State) ->
     reread_keys_if_needed(State),
     {reply, ignored, State, ?IDLE_TIMEOUT}.
 
-handle_cast(read_keys, #state{reading_keys = false} = State) ->
+handle_cast(read_keys, #state{reading_keys = Reading,
+                              http_req_id = Id} = State) ->
+    maybe_cancel_request(Reading, Id),
     NewState = handle_key_result(get_rsp_keys(State)),
-    {noreply, NewState#state{reading_keys = true}, ?IDLE_TIMEOUT};
+    {noreply, NewState, ?IDLE_TIMEOUT};
+handle_cast(stop, State) ->
+    {stop, normal, State};
 handle_cast(_Request, State) ->
     reread_keys_if_needed(State),
     {noreply, State, ?IDLE_TIMEOUT}.
@@ -158,6 +172,13 @@ safe_decode({ok, Json, _}, _) ->
     Json;
 safe_decode(_, Default) ->
     Default.
+
+
+maybe_cancel_request(false, _) ->
+    ok;
+maybe_cancel_request(true, Id) ->
+    httpc:cancel_request(Id).
+
 
 
 code_change(_, _, State) ->
