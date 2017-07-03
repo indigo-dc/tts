@@ -2,6 +2,7 @@
 -include("watts.hrl").
 -include_lib("public_key/include/public_key.hrl").
 
+
 -export([new/1,
          exists/1,
          get_info/1,
@@ -31,7 +32,7 @@
 -record(watts_rsp, {
           id = undefined,
           key_location = undefined,
-          keys = [],
+          key_pid = undefined,
           perform_login = true,
           show_ui = true,
           base_url = undefined,
@@ -44,16 +45,12 @@ get_list() ->
     {ok, ?CONFIG(rsp_list)}.
 
 new(#{id := Id, key_location := Location, show_ui := Ui,
-      perform_login := Login, base_url := BaseUrl}) ->
-    case get_rsp_keys(Location) of
-        {ok, Keys} ->
-            {ok,  #watts_rsp{id = Id, key_location = Location,
-                             keys = Keys, perform_login = Login,
-                             show_ui = Ui, base_url = BaseUrl
-                            }};
-        {error, Reason} ->
-            {error, Reason}
-    end.
+      perform_login := Login, base_url := BaseUrl} = Map) ->
+    {ok, Pid} = watts_rsp_keys:new(Map),
+    {ok,  #watts_rsp{id = Id, key_location = Location,
+                     key_pid = Pid, perform_login = Login,
+                     show_ui = Ui, base_url = BaseUrl
+                    }}.
 
 exists(RspId) ->
     case get_info(RspId) of
@@ -204,14 +201,11 @@ update_rsp_on_success({Error, Rsp, JwtMap}, Referer) ->
     {error, {bad_jwt, Error}, return_url(Rsp, JwtMap, Referer) }.
 
 
-
-
-
-
 validate_jwt(Jwt) ->
     {ok, JwtMap} = erljwt:to_map(Jwt),
     Rsp = get_rsp(JwtMap),
-    validate_jwt(erljwt:validate(Jwt, [rs256], #{}, Rsp#watts_rsp.keys),
+    {ok, Keys} = watts_rsp_keys:get_keys(Rsp#watts_rsp.key_pid),
+    validate_jwt(erljwt:validate(Jwt, [rs256], #{}, Keys),
                  Rsp, JwtMap).
 
 get_rsp(#{claims := #{ iss := Iss}}) ->
@@ -232,46 +226,6 @@ validate_jwt({ok, _}, Rsp, JwtMap) ->
     {invalid, Rsp, JwtMap};
 validate_jwt({error, Error}, Rsp, JwtMap) ->
     {Error, Rsp, JwtMap}.
-
-get_rsp_keys(<< File:7/binary, Path/binary >>)
-  when File == <<"file://">> ->
-    Result = file:read_file(binary_to_list(Path)),
-    extract_rsp_keys(Result);
-get_rsp_keys(<< Https:8/binary, _Rest/binary >> = Url)
-  when Https == <<"https://">> ->
-    fetch_rsp_keys(Url);
-get_rsp_keys(<< Http:7/binary, _Rest/binary >> = Url)
-  when Http == <<"http://">> ->
-    lager:warning("fetching rsp keys over a non secure connection: ~p!", [Url]),
-    fetch_rsp_keys(Url).
-
-fetch_rsp_keys(Url) ->
-    Request = { binary_to_list(Url), [] },
-    HttpOpt = [],
-    Options = [{sync, true}, {full_result, true}],
-    Result = httpc:request(get, Request, HttpOpt, Options),
-    extract_rsp_keys(Result).
-
-
-extract_rsp_keys({ok, Data}) when is_binary(Data) ->
-    #{keys := Keys} = safe_decode(Data, bad_data),
-    {ok, Keys};
-extract_rsp_keys({ok, Data}) when is_list(Data) ->
-    extract_rsp_keys({ok, list_to_binary(Data)});
-extract_rsp_keys({ok, {Code, Body}}) when Code >= 200, Code < 300 ->
-    extract_rsp_keys({ok, Body});
-extract_rsp_keys({ok, {{_, Code, _}, _, Body}}) ->
-    extract_rsp_keys({ok, {Code, Body}});
-extract_rsp_keys({error, Reason}) ->
-    {error, list_to_binary(io_lib:format("error reading keys: ~p", [Reason]))}.
-
-safe_decode(Data, Default) when is_binary(Data) ->
-    Res = jsone:try_decode(Data, [{object_format, map}, {keys, attempt_atom}]),
-    safe_decode(Res, Default);
-safe_decode({ok, Json, _}, _) ->
-    Json;
-safe_decode(_, Default) ->
-    Default.
 
 jwt_get_success_url(Claims) ->
     maps:get(success_url, Claims, undefined).
