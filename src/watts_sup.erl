@@ -27,6 +27,7 @@ start_link() ->
 init([]) ->
     Procs = [
              sessions_supervisor(),
+             rsp_keys_supervisor(),
              plugin_supervisor(),
              plugin_worker(),
              sqlite_worker(),
@@ -41,6 +42,12 @@ init([]) ->
 sessions_supervisor() ->
     #{ id => sessions_sup,
        start => {watts_sessions_sup, start_link, []},
+       type => supervisor
+     }.
+
+rsp_keys_supervisor() ->
+    #{ id => rsp_keys_sup,
+       start => {watts_rsp_keys_sup, start_link, []},
        type => supervisor
      }.
 
