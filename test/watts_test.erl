@@ -75,6 +75,45 @@ additional_login_test() ->
     end,
     ok.
 
+rsp_session_test() ->
+    {ok, Meck} = start_meck(),
+    try
+        {ok, Pid} = watts:session_for_rsp(rsp1),
+        true = is_pid(Pid),
+        ok = watts:logout(Pid),
+        test_util:wait_for_process_to_die(Pid, 100)
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
+
+
+
+additional_rsp_login_test() ->
+    {ok, Meck} = start_meck(),
+    ?SETCONFIG(enable_rsp, true),
+    try
+        Issuer = ?ISSUER2_URL,
+        Provider = <<"ID3">>,
+        ServiceId = <<"service1">>,
+        {ok, Pid} = watts:session_for_rsp(rsp1),
+        {ok, Token} = watts_session:get_sess_token(Pid),
+        OidcToken2 = #{id => #{claims => #{sub => <<"sub">>, iss => Issuer}},
+                       access => #{token => <<"accestoken">>},
+                       cookies => [{watts_http_util:cookie_name(), Token}]
+                      },
+
+        io:format("redirection: ~p~n", [watts_session:get_redirection(Pid)]),
+        {ok, #{session_pid := Pid}} = watts:login_with_oidcc(OidcToken2, {{rsp, ui, login}, Pid}),
+        {ok, UserInfo} = watts_session:get_user_info(Pid),
+        true = watts_userinfo:has_additional_login(ServiceId, Provider, UserInfo),
+        ok = watts:logout(Pid),
+        test_util:wait_for_process_to_die(Pid, 100)
+    after
+        ?SETCONFIG(enable_rsp, false),
+        ok = stop_meck(Meck)
+    end,
+    ok.
 
 proxy_function_test() ->
     {ok, {Session, _} = Meck} = start_meck(),
@@ -148,10 +187,12 @@ start_meck() ->
                                #{id => <<"ID2">>,
                                  disable_login => false},
                                #{id => <<"ID3">>,
+                                 disable_login => false},
+                               #{id => <<"ID4">>,
                                  disable_login => false}
                               ]),
     MeckModules = [watts_session_mgr, oidcc, watts_plugin, watts_temp_cred,
-                   watts_service],
+                   watts_service, watts_rsp],
     CredId = <<"cred1">>,
     Credential = #{id => CredId,
                    entries => [
@@ -248,6 +289,21 @@ start_meck() ->
     ServiceEnabled = fun(_Uid) ->
                              true
                      end,
+    ServiceAllowed = fun(_UserInfo, _ServiceId) ->
+                             true
+                     end,
+    Provider = fun(rsp1) ->
+                       <<"ID3">>
+               end,
+    SessType = fun(rsp1) ->
+                      {rsp, ui, login}
+               end,
+    ServiceData = fun(rsp1) ->
+                      {<<"service1">>, #{}}
+               end,
+    IssSub = fun(rsp1) ->
+                      {<<"rsp-test">>, <<"joe">>}
+               end,
     GetSession = fun(Id) ->
                          case Id of
                              undefined -> {ok, Id};
@@ -271,6 +327,11 @@ start_meck() ->
     ok = meck:expect(watts_temp_cred, get_cred, TempCredGet),
     ok = meck:expect(watts_service, get_list, ServiceGetList),
     ok = meck:expect(watts_service, is_enabled, ServiceEnabled),
+    ok = meck:expect(watts_service, is_allowed, ServiceAllowed),
+    ok = meck:expect(watts_rsp, get_provider, Provider),
+    ok = meck:expect(watts_rsp, session_type, SessType),
+    ok = meck:expect(watts_rsp, get_service_data, ServiceData),
+    ok = meck:expect(watts_rsp, get_iss_sub, IssSub),
 
 
 
