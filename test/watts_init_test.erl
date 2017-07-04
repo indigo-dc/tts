@@ -5,7 +5,6 @@
 basic_init_test() ->
     {ok, Meck} = start_meck(),
     try
-        {ok, Pid} = watts_init:start_link(),
         ?SETCONFIG( hostname, "localhost"),
         ?SETCONFIG( ssl, false),
         ?SETCONFIG( listen_port, 8080),
@@ -13,6 +12,7 @@ basic_init_test() ->
         ?SETCONFIG( redirection_enable, false),
         ?SETCONFIG( redirection_port, 443),
         ?SETCONFIG( persistent_module, watts_data_sqlite),
+        {ok, Pid} = watts_init:start_link(),
         test_util:wait_for_process_to_die(Pid, 300)
     after
         ok = stop_meck(Meck)
@@ -23,7 +23,6 @@ basic_init_test() ->
 advanced_init_test() ->
     {ok, Meck} = start_meck(),
     try
-        {ok, Pid} = watts_init:start_link(),
         ServiceList = [#{id => <<"info">>}, #{id => <<"ssh">>}],
         ProviderList = [#{client_id => <<"1234">>,
                           client_secret => <<"seCret">>,
@@ -44,6 +43,7 @@ advanced_init_test() ->
         ?SETCONFIG( service_list, ServiceList),
         ?SETCONFIG( provider_list, ProviderList),
         ?SETCONFIG( persistent_module, watts_data_sqlite),
+        {ok, Pid} = watts_init:start_link(),
         test_util:wait_for_process_to_die(Pid, 300)
     after
         ok = stop_meck(Meck)
