@@ -32,6 +32,7 @@
 -export([code_change/3]).
 
 -record(state, {
+          start = undefined
          }).
 
 %% API.
@@ -49,7 +50,7 @@ stop(Pid) ->
 
 init([]) ->
     gen_server:cast(self(), start_watts),
-    {ok, #state{}}.
+    {ok, #state{start = erlang:system_time(seconds)}}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -78,7 +79,9 @@ handle_cast(start_http, State) ->
     start_web_interface(),
     stop(),
     {noreply, State};
-handle_cast(stop, State) ->
+handle_cast(stop, #state{start = Time} = State) ->
+    lager:info("Init: startup took ~p seconds",
+               [erlang:system_time(seconds) - Time]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -111,31 +114,30 @@ enforce_security() ->
     SSL = ?CONFIG(ssl),
     Hostname0 = ?CONFIG(hostname),
     Onion = lists:suffix(".onion", Hostname0),
-    Hostname = case SSL or Onion of
-                   false ->
-                       "localhost";
-                   _ ->
-                       Hostname0
-               end,
-    case Hostname == Hostname0 of
-        false ->
-            lager:warning("Init: SSL is not configured; change hostname to ~p",
-                          [Hostname]);
-        true -> ok
-    end,
+    Hostname = maybe_change_hostname(SSL, Onion, Hostname0),
     ?SETCONFIG(hostname, Hostname),
-    Uid = list_to_integer(remove_newline(os:cmd("id -u"))),
-    User = remove_newline(os:cmd("id -un")),
-    ok = case (Uid == 0) or (User == "root") of
-             true ->
-                 lager:critical("Init: do not run WaTTS as root, stopping"),
-                 error;
-             false ->
-                 lager:info("Init: running as user ~p [~p]", [User, Uid]),
-                 ok
-         end,
+    ok = error_if_running_as_root(),
     ok.
 
+maybe_change_hostname(false, false, _) ->
+    H = "localhost",
+    lager:warning("Init: Neither SSL nor Tor is configured; "
+                  "hostname set to ~p", [H]),
+    H;
+maybe_change_hostname(_, _, Hostname) ->
+    Hostname.
+
+error_if_running_as_root() ->
+    Uid = list_to_integer(remove_newline(os:cmd("id -u"))),
+    User = remove_newline(os:cmd("id -un")),
+    ok = maybe_root_error(User, Uid).
+
+maybe_root_error(User, Uid) when User == "root"; Uid == 0 ->
+    lager:critical("Init: do not run WaTTS as root, stopping"),
+    error;
+maybe_root_error(User, Uid) ->
+    lager:info("Init: running as user ~p [~p]", [User, Uid]),
+    ok.
 
 
 start_database() ->
@@ -326,7 +328,7 @@ create_dispatch_list() ->
                         {EpOidc, oidcc_cowboy, []}
                        ],
     create_dispatch_list([{docs, ?CONFIG(enable_docs)},
-                          {rsp, ?CONFIG(enable_rsp)},
+                          {rsp, ?CONFIG(enable_rsp), ?CONFIG(rsp_list)},
                           {privacy, ?CONFIG(privacy_doc)} ],
                          BaseDispatchList).
 
@@ -339,7 +341,11 @@ create_dispatch_list([{docs, true} | T], List) ->
     NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs"}}
                 | List ],
     create_dispatch_list(T, NewList);
-create_dispatch_list([{rsp, true} | T], List) ->
+create_dispatch_list([{rsp, true, []} | T], List) ->
+    lager:info("Init: relying service provider won't be enabled as none is "
+               "configured"),
+    create_dispatch_list(T, List);
+create_dispatch_list([{rsp, true, _} | T], List) ->
     RspInfo = "Init: enable relying service provider at /rsp/",
     lager:info(RspInfo),
     EpRsp = watts_http_util:relative_path("rsp/[...]"),
