@@ -71,7 +71,14 @@
 
             CreateSetting =
                 fun({Id, Desc}, Result) ->
-                        case Id == "any" of
+                        IdAny = (Id == "any"),
+                        IdStartsWithRsp =
+                            case binary:match(list_to_binary(Id),<<"rsp">>) of
+                                {0, _} -> true;
+                                _ -> false
+                            end,
+
+                        case IdAny or IdStartsWithRsp of
                             true ->
                                 BadIdMsg = io_lib:format("OpenId Connect Provider id MUST not be ~p",[Id]),
                                 cuttlefish:invalid(BadIdMsg);

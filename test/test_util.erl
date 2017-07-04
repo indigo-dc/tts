@@ -46,6 +46,10 @@ meck_new([H | T]) ->
 meck_done([]) ->
     ok;
 meck_done([H | T]) ->
-    true = meck:validate(H),
+    true = case meck:validate(H) of
+               true -> true;
+               _ -> io:format("invalid call to mock of ~p~n", [H]),
+                    false
+           end,
     ok = meck:unload(H),
     meck_done(T).

@@ -20,7 +20,8 @@
          create_cookie_opts/1,
          cookie_name/0,
          relative_path/1,
-         whole_url/1
+         whole_url/1,
+         redirect_to/2
         ]).
 
 -define(COOKIE, <<"watts_session">>).
@@ -60,6 +61,10 @@ whole_url(Path) when is_binary(Path)->
 whole_url(Path) when is_list(Path) ->
     whole_url(list_to_binary(Path)).
 
+redirect_to(Url, Req) ->
+    Header = [{<<"location">>, Url}],
+    {ok, Req2} = cowboy_req:reply(302, Header, Req),
+    {ok, Req2, []}.
 
 cookie_name() ->
     ?COOKIE.

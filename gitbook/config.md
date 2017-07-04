@@ -90,6 +90,7 @@ And for production use:
 | redirection.listen_port | The port to listen on for browsers to redirect | port | 8080 |
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
 | enable_docs | Whether the documentation is reachable at /docs/ | boolean | false |
+| enable_direct_endpoint | Whether the direct endpoint will be enabled at /direct/. This will enable other services to rely on WaTTS to perform certain tasks or authenticate their user. | boolean | false |
 | log_dir | The path where the log files will be put | path | /var/log/watts |
 | syslog_facility | The facility to use for syslog | 'daemon','local0'-'local7'  | 'daemon' |
 
@@ -240,6 +241,52 @@ openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/op
 openid.iam.request_scopes = openid, profile
 ```
 
+### Relying Service Providers
+#### Introduction
+A relying service provider (RSP) is a service that relys on WaTTS for either performing some
+task or even completely for authentication.
+
+#### Settings
+Each setting is prefixed with 'rsp.`id`.' where `id` must be replaced by the id
+you want to give to the relying service provider.
+
+| Key | Description | Datatype | Mandatory |
+| :---: | --- | :---: | :---: |
+| keys_location  | the location of the file / web-page containing the json structure with the public keys (see below). the location must be a url with either 'https://' or 'file://' scheme. | url | yes |
+| disable_ui | if set to 'true' no userinterface will be shown. | boolean | no |
+| disable_login | If set to 'true' the user won't be redirected to a login. | boolean | no |
+| base_url | The url each url passed to WaTTS in the JWT must start with. | string | yes |
+
+
+
+The json format of the plublic key file must be according to
+[RFC7517](https://tools.ietf.org/html/rfc7517). The following is an example:
+```
+{"keys":
+       [
+         {"kty":"RSA",
+          "use":"sig",
+          "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx
+     4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMs
+     tn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2
+     QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbI
+     SD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqb
+     w0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+          "e":"AQAB",
+          "alg":"RS256",
+          "kid":"2011-04-29"}
+       ]
+     }
+```
+WaTTS expects:
+ - kty of "RSA"
+ - use of "sig"
+ - alg of "RS256"
+ - kid which must also be set in the JWT sent by the RSP
+ - n (part of the public key)
+ - e (part of the public key)
+
+
 ### Services
 #### Introduction
 A service is a single entity for which a user can request credentials.
@@ -286,14 +333,14 @@ you want to give to the service.
 | connection.ssh_dir | The ssh_dir to use with ssh | port | no |
 | connection.ssh_key_pass | The password of the private key to use with ssh | string | no |
 | plugin.`key` | A setting to send to the plugin, the name of the parameter will be `key`. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs | any | no |
-| authz.allow.`p`.`k`.`o` | See the Authorization section | other | no ([])|
-| authz.forbid.`p`.`k`.`o` | See the Authorization section | other | no ([]) |
+| authz.allow.`p`.`k`.`o` | See the Authorization sections | other | no ([])|
+| authz.forbid.`p`.`k`.`o` | See the Authorization sections | other | no ([]) |
 | authz.hide | Hide the service if the user is not allowed | boolean | no (false) |
 | authz.tooltip | Message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
 
 
 
-#### Authorization
+#### Authorization with OpenId Connect
 Authorization follows a few simple steps:
  1. everyone can be forbidden
  2. if an `allow` rule that matches the user is true, she is allowed
@@ -306,6 +353,7 @@ So a for a user to access a service she:
 Each rule is exactly one line long. A rule always consists of five parts:
 ` authz.allow.p.k.o = v`, where the values are:
 
+for OpenId Connect:
  - `p`: the Id of the provider
  - `k`: the key within the OpenId Connect Id-Token or user information
  - `info`: the information in the Id Token or user information with the key `k`
@@ -315,7 +363,6 @@ Each rule is exactly one line long. A rule always consists of five parts:
 The provider Id is the same as was given during the configuration, in the provider example above
 the *id* was `iam`, so using that for `p` allows making decisions on users coming from `iam`.
 There is a special provider *id* value, `any`, which matches any provider.
-
 
 The key `k` has to match a value of the *id* token or the user info. The value of the
 *Id Token* offers *Userinfo*, i.e. having the key `k` is the `info`.
@@ -331,6 +378,7 @@ The operation `o` can be one of the following list:
  - `equals`: `v` and `info` need to be equal
  - `regexp`: `v` is a regular expression and `info` needs to satisfy the expression
  - `any`: evaluates to `v`, so to make this pass set `v` to 'true'
+
 
 #### Examples
 ```
@@ -382,6 +430,7 @@ service.plugin.path = /tmp/data
 ```
 
 
+
 ### Complete Config Example
 This example uses the info plugin, which is a very simple plugin and can be downloaded [here](https://github.com/indigo-dc/tts_plugin_info).
 ```
@@ -414,7 +463,6 @@ service.info.cmd = /home/watts/info.py
 service.info.parallel_runner = infinite
 service.info.authz.allow.any.sub.any = true
 ```
-
 
 
 ### Configuring SSH for WaTTS

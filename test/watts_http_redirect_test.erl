@@ -1,10 +1,10 @@
--module(watts_redirection_test).
+-module(watts_http_redirect_test).
 -include_lib("eunit/include/eunit.hrl").
 -include("watts.hrl").
 
 basic_test() ->
-    {ok, req, []} = watts_redirection:init(ignored, req, ignored),
-    ok = watts_redirection:terminate( ignored, ignored, ignored).
+    {ok, req, []} = watts_http_redirect:init(ignored, req, ignored),
+    ok = watts_http_redirect:terminate( ignored, ignored, ignored).
 
 
 redirect_test() ->
@@ -31,7 +31,7 @@ redirect_test() ->
     ok = meck:expect(cowboy_req, reply, Reply),
     ok = meck:expect(cowboy_req, path, Path),
     set_needed_env(),
-    {ok, req2, []} = watts_redirection:handle(req, ignored),
+    {ok, req2, []} = watts_http_redirect:handle(req, ignored),
     unset_env(),
     ok = test_util:meck_done(MeckModules),
     ok.

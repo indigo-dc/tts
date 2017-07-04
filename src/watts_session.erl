@@ -35,6 +35,8 @@
 -export([get_type/1]).
 
 
+-export([set_rsp/2]).
+-export([get_rsp/1]).
 -export([set_redirection/4]).
 -export([get_redirection/1]).
 -export([clear_redirection/1]).
@@ -98,6 +100,18 @@ get_type(undefined) ->
     {ok, undefined};
 get_type(Pid) ->
     gen_server:call(Pid, get_type).
+
+-spec set_rsp(Rsp :: binary(), Pid :: pid()) -> ok.
+set_rsp(_, undefined) ->
+    ok;
+set_rsp(Client, Pid) ->
+    gen_server:call(Pid, {set_rsp, Client}).
+
+-spec get_rsp(Pid :: pid()) -> {ok, binary()}.
+get_rsp(undefined) ->
+    {ok, undefined};
+get_rsp(Pid) ->
+    gen_server:call(Pid, get_rsp).
 
 -spec set_redirection(ServiceId :: binary(), Params :: list(),
                       ProviderId :: binary(), Pid :: pid()) -> ok.
@@ -184,6 +198,7 @@ is_same_ip(IP, Pid) ->
           issuer_id = undefined,
           sess_token = undefined,
           user_agent = undefined,
+          rsp = undefined,
           ip = undefined,
           error = <<"">>,
           user_info = undefined,
@@ -220,6 +235,13 @@ handle_call(get_type, _From, #state{type = Type, max_age=MA} = State) ->
 handle_call({set_type, Type}, _From, #state{type = undefined,
                                            max_age=MA} = State) ->
     {reply, ok, State#state{type = Type}, MA};
+handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
+    {reply, ok, State, MA};
+handle_call(get_rsp, _From, #state{rsp = Rsp, max_age=MA} = State) ->
+    {reply, {ok, Rsp}, State, MA};
+handle_call({set_rsp, Rsp}, _From, #state{rsp = undefined,
+                                           max_age=MA} = State) ->
+    {reply, ok, State#state{rsp = Rsp}, MA};
 handle_call({set_redirection, ServiceId, Params, ProviderId}, _From,
             #state{max_age=MA} = State) ->
     Redirection = #{provider => ProviderId, params => Params,
@@ -246,8 +268,6 @@ handle_call({clear_additional_logins, ServiceId}, _From,
             #state{user_info = UserInfo, max_age=MA} = State) ->
     NewUserInfo = watts_userinfo:clear_additional_logins(ServiceId, UserInfo),
     {reply, ok, State#state{user_info = NewUserInfo}, MA};
-handle_call({set_type, _Type}, _From, #state{max_age=MA} = State) ->
-    {reply, ok, State, MA};
 handle_call({set_iss_sub, Issuer, Subject}, _From,
             #state{max_age=MA, user_info=Info}=State) ->
     {ok, NewInfo} = watts_userinfo:update_iss_sub(Issuer, Subject, Info),

@@ -32,6 +32,7 @@
 -export([code_change/3]).
 
 -record(state, {
+          start = undefined
          }).
 
 %% API.
@@ -49,7 +50,7 @@ stop(Pid) ->
 
 init([]) ->
     gen_server:cast(self(), start_watts),
-    {ok, #state{}}.
+    {ok, #state{start = erlang:system_time(seconds)}}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -64,6 +65,10 @@ handle_cast(start_database, State) ->
     {noreply, State};
 handle_cast(add_oidc, State) ->
     add_openid_provider(),
+    gen_server:cast(self(), add_rsps),
+    {noreply, State};
+handle_cast(add_rsps, State) ->
+    add_rsps(),
     gen_server:cast(self(), add_services),
     {noreply, State};
 handle_cast(add_services, State) ->
@@ -74,7 +79,9 @@ handle_cast(start_http, State) ->
     start_web_interface(),
     stop(),
     {noreply, State};
-handle_cast(stop, State) ->
+handle_cast(stop, #state{start = Time} = State) ->
+    lager:info("Init: startup took ~p seconds",
+               [erlang:system_time(seconds) - Time]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -107,31 +114,30 @@ enforce_security() ->
     SSL = ?CONFIG(ssl),
     Hostname0 = ?CONFIG(hostname),
     Onion = lists:suffix(".onion", Hostname0),
-    Hostname = case SSL or Onion of
-                   false ->
-                       "localhost";
-                   _ ->
-                       Hostname0
-               end,
-    case Hostname == Hostname0 of
-        false ->
-            lager:warning("Init: SSL is not configured; change hostname to ~p",
-                          [Hostname]);
-        true -> ok
-    end,
+    Hostname = maybe_change_hostname(SSL, Onion, Hostname0),
     ?SETCONFIG(hostname, Hostname),
-    Uid = list_to_integer(remove_newline(os:cmd("id -u"))),
-    User = remove_newline(os:cmd("id -un")),
-    ok = case (Uid == 0) or (User == "root") of
-             true ->
-                 lager:critical("Init: do not run WaTTS as root, stopping"),
-                 error;
-             false ->
-                 lager:info("Init: running as user ~p [~p]", [User, Uid]),
-                 ok
-         end,
+    ok = error_if_running_as_root(),
     ok.
 
+maybe_change_hostname(false, false, _) ->
+    H = "localhost",
+    lager:warning("Init: Neither SSL nor Tor is configured; "
+                  "hostname set to ~p", [H]),
+    H;
+maybe_change_hostname(_, _, Hostname) ->
+    Hostname.
+
+error_if_running_as_root() ->
+    Uid = list_to_integer(remove_newline(os:cmd("id -u"))),
+    User = remove_newline(os:cmd("id -un")),
+    ok = maybe_root_error(User, Uid).
+
+maybe_root_error(User, Uid) when User == "root"; Uid == 0 ->
+    lager:critical("Init: do not run WaTTS as root, stopping"),
+    error;
+maybe_root_error(User, Uid) ->
+    lager:info("Init: running as user ~p [~p]", [User, Uid]),
+    ok.
 
 
 start_database() ->
@@ -215,26 +221,42 @@ wait_and_log_provider_results([{Id, Pid} = H | T], List) ->
     wait_and_log_provider_results(T, NewList).
 
 
-
-add_services() ->
-    lager:info("Init: adding services"),
-    ServiceList = ?CONFIG(service_list),
-    ok = add_services(ServiceList),
+add_rsps() ->
+    lager:info("Init: adding relying service provider (RSP)"),
+    UpdateRsp =
+        fun(#{id := Id} = Config, List) ->
+                case watts_rsp:new(Config) of
+                    {ok, Rsp} ->
+                        lager:info("Init: added RSP ~p", [Id]),
+                        [ Rsp | List ];
+                    {error, Reason} ->
+                        Msg = "Init: unable to add keys of RSP ~p: ~p",
+                        lager:critical(Msg, [Id, Reason]),
+                        List
+                end
+        end,
+    NewRspList = lists:foldl(UpdateRsp, [], ?CONFIG(rsp_list, [])),
+    ?SETCONFIG(rsp_list, NewRspList),
     ok.
 
-add_services([#{id := Id } = ConfigMap | T]) ->
-    lager:debug("Init: adding service ~p", [Id]),
-    try
-        {ok, Id} = watts_service:add(ConfigMap),
-        ok = watts_service:update_params(Id)
-     catch Error:Reason ->
-            lager:critical("error occured during adding service ~p: '~p' ~p",
-                           [Id, Error, Reason])
-     end,
-     add_services(T);
-add_services(undefined) ->
-    ok;
-add_services([]) ->
+
+
+add_services() ->
+    AddService =
+        fun(#{id := Id} = ConfigMap, _) ->
+                lager:debug("Init: adding service ~p", [Id]),
+                try
+                    {ok, Id} = watts_service:add(ConfigMap),
+                    ok = watts_service:update_params(Id)
+                catch Error:Reason ->
+                     Msg = "error occured during adding service ~p: '~p' ~p",
+                     lager:critical(Msg, [Id, Error, Reason])
+                end
+        end,
+
+    lager:info("Init: adding services"),
+    ServiceList = ?CONFIG(service_list, []),
+    lists:foldl(AddService, ok, ServiceList),
     ok.
 
 
@@ -242,46 +264,7 @@ add_services([]) ->
 start_web_interface() ->
     lager:info("Init: starting web interface"),
     oidcc_client:register(watts_oidc_client),
-    PrivWarn = "Init: The privacy statement is not configured [~p]",
-    PrivInfo = "Init: Using privacy statement ~p",
-    EpMain = ?CONFIG(ep_main),
-    EpOidc = watts_http_util:relative_path("oidc"),
-    EpStatic = watts_http_util:relative_path("static/[...]"),
-    EpApi = watts_http_util:relative_path("api/[...]"),
-    EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
-    PrivacyFile = case ?CONFIG(privacy_doc) of
-                      undefined ->
-                          lager:warning(PrivWarn, [privacy_doc]),
-                          {priv_file, ?APPLICATION, "no_privacy.html"};
-                      File ->
-                          lager:info(PrivInfo, [File]),
-                          {file, File}
-                  end,
-
-    BaseDispatchList = [{EpStatic, cowboy_static,
-                         {priv_dir, ?APPLICATION, "http_static"}
-                        },
-                        {EpApi, watts_rest, []},
-                        {EpMain, cowboy_static,
-                         {priv_file, ?APPLICATION, "http_static/index.html"}},
-                        {EpPrivacy, cowboy_static, PrivacyFile},
-                        {EpOidc, oidcc_cowboy, []}
-                       ],
-
-    %% the documentation
-    EpDocs = watts_http_util:relative_path("docs/[...]"),
-    EnableDocs = ?CONFIG(enable_docs),
-    DocInfo = "Init: publishing documentation at /docs/",
-    DispatchList = case EnableDocs of
-                       false ->
-                           BaseDispatchList;
-                       _ ->
-                           lager:info(DocInfo),
-                           [ {EpDocs, cowboy_static,
-                              {priv_dir, ?APPLICATION, "docs"} }
-                           ] ++ BaseDispatchList
-                   end,
-    Dispatch = cowboy_router:compile([{'_', DispatchList}]),
+    Dispatch = cowboy_router:compile([{'_', create_dispatch_list()}]),
     SSL = ?CONFIG(ssl),
     ListenPort = ?CONFIG(listen_port),
     case SSL of
@@ -314,7 +297,7 @@ start_web_interface() ->
     RedirectPort = ?CONFIG(redirection_port),
     RedirDispatch = cowboy_router:compile(
                       [{'_', [
-                              {"/[...]", watts_redirection, []}
+                              {"/[...]", watts_http_redirect, []}
                              ]
                        }]
                      ),
@@ -330,6 +313,64 @@ start_web_interface() ->
     end,
 
     ok.
+
+create_dispatch_list() ->
+    EpMain = ?CONFIG(ep_main),
+    EpOidc = watts_http_util:relative_path("oidc"),
+    EpStatic = watts_http_util:relative_path("static/[...]"),
+    EpApi = watts_http_util:relative_path("api/[...]"),
+    BaseDispatchList = [{EpStatic, cowboy_static,
+                         {priv_dir, ?APPLICATION, "http_static"}
+                        },
+                        {EpApi, watts_http_api, []},
+                        {EpMain, cowboy_static,
+                         {priv_file, ?APPLICATION, "http_static/index.html"}},
+                        {EpOidc, oidcc_cowboy, []}
+                       ],
+    create_dispatch_list([{docs, ?CONFIG(enable_docs)},
+                          {rsp, ?CONFIG(enable_rsp), ?CONFIG(rsp_list)},
+                          {privacy, ?CONFIG(privacy_doc)} ],
+                         BaseDispatchList).
+
+create_dispatch_list([], List) ->
+     List;
+create_dispatch_list([{docs, true} | T], List) ->
+    DocInfo = "Init: publishing documentation at /docs/",
+    lager:info(DocInfo),
+    EpDocs = watts_http_util:relative_path("docs/[...]"),
+    NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs"}}
+                | List ],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([{rsp, true, []} | T], List) ->
+    lager:info("Init: relying service provider won't be enabled as none is "
+               "configured"),
+    create_dispatch_list(T, List);
+create_dispatch_list([{rsp, true, _} | T], List) ->
+    RspInfo = "Init: enable relying service provider at /rsp/",
+    lager:info(RspInfo),
+    EpRsp = watts_http_util:relative_path("rsp/[...]"),
+    NewList = [ {EpRsp, watts_http_rsp, []} | List ],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([{privacy, undefined} | T], List) ->
+    EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
+    PrivWarn = "Init: The privacy statement is not configured [~p]",
+    lager:warning(PrivWarn, [privacy_doc]),
+    NewList = [ { EpPrivacy , cowboy_static,
+                  {priv_file, ?APPLICATION, "no_privacy.html"}
+                }
+                | List],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([{privacy, File} | T], List) ->
+    EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
+    PrivInfo = "Init: Using privacy statement ~p",
+    lager:info(PrivInfo, [File]),
+    NewList = [ {EpPrivacy, cowboy_static, {file, File}} | List],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([_ | T], List) ->
+    create_dispatch_list(T, List).
+
+
+
 
 add_options(Options, {ok, CaChainFile}, DhFile, Hostname) ->
     NewOptions = [ {cacertfile, CaChainFile} | Options ],

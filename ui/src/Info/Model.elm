@@ -13,6 +13,8 @@ type alias Model =
     , issuer_id : String
     , docs_enabled : Bool
     , service_request : Maybe ServiceRequest
+    , rsp_success_redir : Maybe String
+    , rsp_error_redir : Maybe String
     }
 
 

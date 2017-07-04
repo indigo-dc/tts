@@ -1,4 +1,4 @@
--module(watts_rest).
+-module(watts_http_api).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
 %%
@@ -244,37 +244,52 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
-    {LoggedIn, DName, IssId, Error, AutoService}  =
+    {LoggedIn, DName, IssId, Error, AutoService, SuccessRedir, ErrorRedir}  =
         case is_pid(Session) of
             false ->
-                {false, <<"">>, <<"">>, <<"">>, undefined};
+                {false, <<"">>, <<"">>, <<"">>, undefined, undefined,
+                 undefined};
             true ->
                 {ok, Name} = watts:get_display_name_for(Session),
                 {ok, _Iss, Id, _Sub} = watts:get_iss_id_sub_for(Session),
                 {ok, Err} = watts_session:get_error(Session),
                 {ok, Redir} = watts_session:get_redirection(Session),
                 ok = watts_session:clear_redirection(Session),
-                {watts_session:is_logged_in(Session), Name, Id, Err, Redir}
+                {ok, Rsp} = watts_session:get_rsp(Session),
+                {SuccessUrl, ErrorUrl} = get_return_urls(Rsp),
+                {watts_session:is_logged_in(Session), Name, Id, Err, Redir,
+                 SuccessUrl, ErrorUrl}
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
     EnableDocs = ?CONFIG(enable_docs),
-    Info0 = #{version => list_to_binary(Version),
-             redirect_path => list_to_binary(Redirect),
-             error => Error,
-             logged_in => LoggedIn,
-             display_name => DName,
-             issuer_id => IssId,
-             documentation => EnableDocs
+    Info = #{version => list_to_binary(Version),
+              redirect_path => list_to_binary(Redirect),
+              error => Error,
+              logged_in => LoggedIn,
+              display_name => DName,
+              issuer_id => IssId,
+              documentation => EnableDocs
             },
-    Info = case AutoService of
-               undefined  -> Info0;
+    Info1 = case AutoService of
+               undefined  -> Info;
                _ ->
                    SuppKeys = [service, params],
                    maps:put(service_request, maps:with(SuppKeys, AutoService),
-                            Info0)
+                            Info)
            end,
-    jsone:encode(Info);
+    Info2 = case SuccessRedir of
+               undefined  -> Info1;
+               _ ->
+                    ErrRedir = case ErrorRedir of
+                                   undefined -> SuccessRedir;
+                                   _ -> ErrorRedir
+                               end,
+                    Update = #{rsp_success => SuccessRedir,
+                               rsp_error => ErrRedir},
+                   maps:merge(Info1, Update)
+           end,
+    jsone:encode(Info2);
 perform_get(logout, undefined, _, _) ->
     jsone:encode(#{result => ok});
 perform_get(access_token, undefined, Session, _) ->
@@ -423,6 +438,11 @@ verify_content_type(_) ->
 
 verify_issuer(undefined) ->
     undefined;
+verify_issuer(<< Prefix:4/binary, RspId/binary>> = Rsp)
+  when Prefix == <<"rsp-">> ->
+    Exists = watts_rsp:exists(RspId),
+    Enabled = ?CONFIG(enable_rsp, false),
+    return_rsp_if_enabled(Rsp, Exists, Enabled);
 verify_issuer(Issuer) when is_binary(Issuer) ->
     case watts:get_openid_provider_info(Issuer) of
         {ok, #{issuer := IssuerUrl}} ->
@@ -436,6 +456,14 @@ verify_issuer(Issuer) when is_binary(Issuer) ->
     end;
 verify_issuer(_Issuer)  ->
     bad_issuer.
+
+return_rsp_if_enabled(Rsp, true, true) ->
+    Rsp;
+return_rsp_if_enabled(_, false, true) ->
+    unkonwn_rsp;
+return_rsp_if_enabled(_, _, false) ->
+    rsps_disabled.
+
 
 
 verify_session({ok, Pid}) when is_pid(Pid) ->
@@ -544,33 +572,51 @@ is_bad_version(_, _) ->
 
 update_cookie_or_end_session(Req, #state{session_pid = Session,
                                           type=RequestType}) ->
-    Oidc = ({ok, oidc} == watts_session:get_type(Session)),
-    Logout = (RequestType == logout),
-    update_cookie_or_end_session(Oidc, Logout, Session, Req).
+    {ok, SessionType} =  watts_session:get_type(Session),
+    KeepAlive = keep_session_alive(SessionType, RequestType),
+    update_cookie_or_end_session(KeepAlive, Session, SessionType, Req).
 
-update_cookie_or_end_session(true, true, Session, Req) ->
-    perform_logout(true, Session, Req);
-update_cookie_or_end_session(true, false, Session, Req) ->
+keep_session_alive(_, logout) ->
+    false;
+keep_session_alive(oidc, _) ->
+    true;
+keep_session_alive({rsp, _, _}, cred_data) ->
+    false;
+keep_session_alive({rsp, _, _}, _) ->
+    true;
+keep_session_alive(_, _) ->
+    false.
+
+update_cookie_or_end_session(true, Session, SessType, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
             {ok, Max} = watts_session:get_max_age(Session),
             {ok, Token} = watts_session:get_sess_token(Session),
             watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
-            perform_logout(true, Session, Req)
+            perform_logout(Session, SessType, Req)
     end;
-update_cookie_or_end_session(false, _, Session, Req) ->
-    perform_logout(false, Session, Req);
+update_cookie_or_end_session(false, Session, SessType, Req) ->
+    perform_logout(Session, SessType, Req);
 update_cookie_or_end_session(_, _, _, Req) ->
     {ok, Req}.
 
-perform_logout(CookieBased, Session, Req) ->
-    Result =
-        case CookieBased of
-            true ->
-                watts_http_util:perform_cookie_action(clear, 0, deleted, Req);
-            _ ->
-                {ok, Req}
-        end,
+perform_logout(Session, oidc, Req) ->
+    perform_cookie_logout(Session, Req);
+perform_logout(Session, {rsp, _, _}, Req) ->
+    perform_cookie_logout(Session, Req);
+perform_logout(Session, _, Req) ->
+    watts:logout(Session),
+    {ok, Req}.
+
+perform_cookie_logout(Session, Req) ->
+    Result = watts_http_util:perform_cookie_action(clear, 0, deleted, Req),
     watts:logout(Session),
     Result.
+
+
+
+get_return_urls(undefined) ->
+    {undefined, undefined};
+get_return_urls(Rsp) ->
+    watts_rsp:get_return_urls(Rsp).

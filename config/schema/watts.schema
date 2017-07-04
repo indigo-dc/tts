@@ -237,6 +237,13 @@
           {default, false}
           ]}.
 
+%% @doc enable the relying service provider (RSP) endpoint ./rsp/
+{mapping, "enable_rsp", "watts.enable_rsp", [
+          {datatype ,  {enum ,  [true, false]}},
+          {commented, false},
+          {default, false}
+          ]}.
+
 %% @doc Name of the Erlang node, only change if you know what you are doing.
 {mapping, "nodename", "vm_args.-name", [
   {default, "{{node}}"}

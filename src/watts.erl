@@ -18,10 +18,11 @@
 -include("watts.hrl").
 
 -export([
-         login_with_oidcc/1,
+         login_with_oidcc/2,
          login_with_access_token/2,
          logout/1,
          session_with_error/1,
+         session_for_rsp/1,
 
          does_credential_exist/2,
          does_temp_cred_exist/2,
@@ -29,6 +30,7 @@
          get_openid_provider_list/0,
          get_openid_provider_info/1,
          get_service_list_for/1,
+
          get_credential_list_for/1,
          request_credential_for/3,
          revoke_credential_for/2,
@@ -46,21 +48,20 @@
          stop_debug/0
         ]).
 
-login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}},
-                   cookies := Cookies} = TokenMap0) ->
-    Cookie = case lists:keyfind(watts_http_util:cookie_name(), 1, Cookies) of
-                 false -> undefined;
-                 {_, Data} -> Data
-             end,
-    TokenMap = maps:remove(cookies, TokenMap0),
-    case watts_session_mgr:get_session(Cookie) of
-        {ok, SessionPid} when is_pid(SessionPid) ->
-            do_additional_login(Issuer, Subject, TokenMap, SessionPid);
-        _ ->
-            do_login_if_issuer_enabled(Issuer, Subject, TokenMap)
-    end;
-login_with_oidcc(_BadToken) ->
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
+                 = TokenMap, {oidc, Pid} ) when is_pid(Pid) ->
+    do_additional_login(Issuer, Subject, TokenMap, Pid);
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
+                 = TokenMap, {{rsp, _, login}, Pid} ) when is_pid(Pid) ->
+    do_rsp_additional_login(Issuer, Subject, TokenMap, Pid);
+login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
+                 = TokenMap, {none, _} )  ->
+    do_login_if_issuer_enabled(Issuer, Subject, TokenMap);
+login_with_oidcc(#{id := #{claims := #{ sub := _, iss := _}}}, _) ->
+    {error, bad_session_type};
+login_with_oidcc(_BadToken, _) ->
     {error, bad_token}.
+
 
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
                                                   is_binary(Issuer) ->
@@ -68,11 +69,54 @@ login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
 login_with_access_token(_AccessToken, _Issuer) ->
     {error, bad_token}.
 
+
+session_for_rsp(Rsp) ->
+    Provider = watts_rsp:get_provider(Rsp),
+    SessType = watts_rsp:session_type(Rsp),
+    {ServiceId, Params} = watts_rsp:get_service_data(Rsp),
+    ProviderEnabled = not is_provider_disabled(Provider),
+    NoProvider = (Provider == undefined),
+    ValidProvider = NoProvider or ProviderEnabled,
+    rsp_session_or_error(ValidProvider,
+                            ServiceId, Params, Provider, Rsp, SessType).
+
+
+
+rsp_session_or_error(true, ServiceId, Params, Provider, Rsp, SessType) ->
+    {ok, SessPid} = empty_session(),
+    ok = watts_session:set_type(SessType, SessPid),
+    ok = watts_session:set_rsp(Rsp, SessPid),
+    ok = watts_session:set_redirection(ServiceId, Params, Provider,
+                                       SessPid),
+
+    {Issuer, Subject} = watts_rsp:get_iss_sub(Rsp),
+    Token = #{access => #{token => <<"RSP">>}},
+    {ok, _} = update_session(Issuer, Issuer, Subject, Token, SessPid),
+
+    {ok, UserInfo} = watts_session:get_user_info(SessPid),
+    Allowed = watts_service:is_allowed(UserInfo, ServiceId),
+    Enabled = watts_service:is_enabled(ServiceId),
+    rsp_session_if_service_allowed(Enabled and Allowed, SessPid);
+rsp_session_or_error(false, _, _, _, _, _) ->
+    {error, bad_request}.
+
+rsp_session_if_service_allowed(true, SessPid) ->
+    {ok, SessPid};
+rsp_session_if_service_allowed(_, _SessPid) ->
+    {error, rsp_service_not_allowed}.
+
+
 session_with_error(Msg) ->
-    {ok, SessPid} = watts_session_mgr:new_session(),
+    {ok, SessPid} = empty_session(),
     ok = watts_session:set_error(Msg, SessPid),
+    {ok, SessPid}.
+
+empty_session() ->
+    {ok, SessPid} = watts_session_mgr:new_session(),
     false = watts_session:is_logged_in(SessPid),
     {ok, SessPid}.
+
+
 
 do_login_if_issuer_enabled(Issuer, Subject, Token) ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
@@ -80,20 +124,38 @@ do_login_if_issuer_enabled(Issuer, Subject, Token) ->
         oidcc:get_openid_provider_info(ProviderPid),
     case is_provider_disabled(Id) of
         false ->
-            do_login(Issuer, Subject, Token);
+            new_login(Issuer, Subject, Token);
         true ->
             {error, login_disabled}
     end.
 
+do_rsp_additional_login(Issuer, Subject, TokenMap, Pid) ->
+    {ok, #{provider := Provider}} = watts_session:get_redirection(Pid),
+    {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+    Result = oidcc:get_openid_provider_info(ProviderPid),
+    RspEnabled = ?CONFIG(enable_rsp),
+    trigger_rsp_additional_login(RspEnabled, Provider, Result, Subject,
+                                 TokenMap, Pid).
 
-do_login(Issuer, Subject0, Token0) ->
+
+trigger_rsp_additional_login(false, _, _, _, _, _) ->
+    {error, rsp_not_enabled};
+trigger_rsp_additional_login(true, Provider, {ok, #{issuer := Issuer,
+                                                    id := Id}},
+                             Subject, TokenMap, Pid) when Provider == Id ->
+    do_additional_login(Issuer, Subject, TokenMap, Pid);
+trigger_rsp_additional_login(true, _Provider, _ , _Subject, _TokenMap, _Pid) ->
+    {error, bad_issuer}.
+
+
+
+new_login(Issuer, Subject, Token) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
+    do_login(Issuer, Subject, Token, SessPid).
+
+do_login(Issuer, Subject0, Token0, SessPid) ->
     SessionId = watts_session:get_id(SessPid),
-    SessionType = case Subject0 of
-                      undefined -> rest;
-                      _ -> oidc
-                  end,
-    ok = watts_session:set_type(SessionType, SessPid),
+    ok = update_session_type(Subject0, SessPid),
     try
         Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
         case Result of
@@ -112,6 +174,13 @@ do_login(Issuer, Subject0, Token0) ->
                         [SessionId, Error, Reason, StackTrace]),
             {error, internal}
     end.
+
+update_session_type(undefined, SessPid) ->
+    watts_session:set_type(rest, SessPid);
+update_session_type(_, SessPid) ->
+    watts_session:set_type(oidc, SessPid).
+
+
 
 do_additional_login(Issuer, Subject0, Token0, SessPid) ->
     {ok, SessionId} = watts_session:get_id(SessPid),
@@ -138,6 +207,7 @@ do_additional_login(Issuer, Subject0, Token0, SessPid) ->
                         [SessionId, Error, Reason, StackTrace]),
             return_session_info(SessPid)
     end.
+
 
 
 logout(Session) ->
@@ -192,29 +262,52 @@ is_provider_disabled(ProviderId) ->
                                        Current
                                end
                        end,
-    lists:foldl(ProviderDisabled, false, ProviderList).
+    lists:foldl(ProviderDisabled, true, ProviderList).
 
 
 get_service_list_for(Session) ->
+    {ok, SessType} = watts_session:get_type(Session),
+    return_service_list(Session, SessType).
+
+return_service_list(Session, Type)
+  when Type == oidc; Type == rest->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, ServiceList} = watts_service:get_list(UserInfo),
-    {ok, ServiceList}.
+    {ok, ServiceList};
+return_service_list(_, _) ->
+    {ok, []}.
+
+
 
 get_credential_list_for(Session) ->
+    {ok, SessType} = watts_session:get_type(Session),
+    return_credential_list(Session, SessType).
+
+return_credential_list(Session,  Type)
+  when Type == oidc; Type == rest->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, CredentialList} = watts_plugin:get_cred_list(UserInfo),
-    {ok, CredentialList}.
+    {ok, CredentialList};
+return_credential_list(_,  _) ->
+    {ok, []}.
 
 
 request_credential_for(ServiceId, Session, Params) ->
-    IFace =  case watts_session:get_type(Session) of
-                 {ok, rest} -> <<"REST interface">>;
-                 {ok, oidc} ->  <<"Web App">>
-             end,
+    IFace =  get_interface_description(watts_session:get_type(Session)),
     {ok, UserInfo} = watts_session:get_user_info(Session),
     true = watts_service:is_enabled(ServiceId),
     Result = watts_plugin:request(ServiceId, UserInfo, IFace, Params),
     handle_credential_result(Result, ServiceId, Session, Params).
+
+
+get_interface_description({ok, oidc}) ->
+    <<"Web App">>;
+get_interface_description({ok, rest}) ->
+    <<"REST interface">>;
+get_interface_description({ok, {rsp, _, _}}) ->
+    true = ?CONFIG(enable_rsp),
+    <<"RSP interface">>.
+
 
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
@@ -268,35 +361,27 @@ handle_credential_result({error, Map}, ServiceId, Session, _Params)
 handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
-    BaseWMsg = "SESS~p credential request for ~p failed: ~p",
-    {UMsg, WMsg}
-        = case Reason of
-              limit_reached ->
-                  {<<"the credential limit has been reached">>,
-                   BaseWMsg};
-              user_not_allowed ->
-                  {<<"you are not allowed to use this service">>,
-                   BaseWMsg};
-              service_disabled ->
-                  {<<"the service you tried to use is disabled">>,
-                   BaseWMsg};
-              invalid_params ->
-                  {<<"invalid parameter have been passed">>,
-                   BaseWMsg};
-              {storing, {error, not_unique_state}} ->
-                  {list_to_binary(
-                     io_lib:format("~s ~s",
-                                   ["the service did not return a unique",
-                                    "state, contact the administrator"])),
-                   <<"SESS~p identical state in request ~p: ~p">>
-                  };
-              _ ->
-                  {<<"unknown error occured, please contact the admin">>,
-                   BaseWMsg}
-          end,
+    {UMsg, WMsg} = credential_error_message(Reason),
     lager:warning(WMsg, [SessionId, ServiceId, Reason]),
     {error, #{result => error, user_msg => UMsg}}.
 
+
+credential_error_message(Reason) ->
+    BaseWMsg = "SESS~p credential request for ~p failed: ~p",
+    credential_error_message(Reason, BaseWMsg).
+credential_error_message(limit_reached, BaseWMsg) ->
+    {<<"the credential limit has been reached">>, BaseWMsg};
+credential_error_message(user_not_allowed, BaseWMsg) ->
+    {<<"you are not allowed to use this service">>, BaseWMsg};
+credential_error_message(service_disabled, BaseWMsg) ->
+    {<<"the service you tried to use is disabled">>, BaseWMsg};
+credential_error_message(invalid_params, BaseWMsg) ->
+    {<<"invalid parameter have been passed">>, BaseWMsg};
+credential_error_message({storing, {error, not_unique_state}}, _) ->
+    {<<"the service did not return a unique state, contact the administrator">>,
+     <<"SESS~p identical state in request ~p: ~p">>};
+credential_error_message(_, BaseWMsg) ->
+    {<<"unknown error occured, please contact the admin">>, BaseWMsg}.
 
 
 
@@ -369,7 +454,10 @@ stop_debug() ->
 update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, Provider} = oidcc:find_openid_provider(Issuer),
     {ok, #{id := IssId}} = oidcc:get_openid_provider_info(Provider),
+    update_session(Issuer, IssId, Subject, Token, SessionPid).
 
+
+update_session(Issuer, IssId, Subject, Token, SessionPid) ->
     ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = watts_session:is_logged_in(SessionPid),
     ok = watts_session:set_iss_id(IssId, SessionPid),
@@ -384,8 +472,9 @@ update_session(Issuer, Subject, Token, SessionPid) ->
 return_session_info(SessionPid) ->
     {ok, SessId} = watts_session:get_id(SessionPid),
     {ok, SessToken} = watts_session:get_sess_token(SessionPid),
+    {ok, SessType} = watts_session:get_type(SessionPid),
     {ok, #{session_id => SessId, session_token => SessToken,
-           session_pid => SessionPid}}.
+           session_pid => SessionPid, session_type => SessType}}.
 
 
 retrieve_information(Issuer, Subject, Token, Session) ->
@@ -480,6 +569,18 @@ create_information_result({error, Reason} , _, _, _) ->
     {error, Reason};
 create_information_result(_, {error, Reason}, _, _) ->
     {error, Reason}.
+
+
+%% get_session_type(Cookie) when is_binary(Cookie) ->
+%%     Result =  watts_session_mgr:get_session(Cookie),
+%%     get_session_type(Result);
+%% get_session_type({ok, Pid}) when is_pid(Pid) ->
+%%     {ok, Type} = watts_session:get_type(Pid),
+%%     {ok, Type, Pid};
+%% get_session_type(_) ->
+%%     {ok, none}.
+
+
 
 
 

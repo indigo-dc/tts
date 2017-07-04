@@ -1,5 +1,5 @@
 -module(watts_service_authz).
-
+-include("watts.hrl").
 -export([is_authorized/3]).
 -export([validate_config/2]).
 
@@ -9,15 +9,9 @@ is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
     lager:debug("checking authorization of ~p ~p at service ~p [~p]",
                 [Issuer, Subject, ServiceId, A]),
     try
-        {ok, Pid} = oidcc:find_openid_provider(Issuer),
-        {ok, #{id := ProviderId}} = oidcc:get_openid_provider_info(Pid),
-
+        {ok, ProviderId} = get_provider_id(Issuer),
         FilterById = fun({Id, _, _, _}) ->
-                             case Id of
-                                 ProviderId -> true;
-                                 any -> true;
-                                 _ -> false
-                             end
+                             (Id == ProviderId) or (Id == any)
                      end,
         Allow = lists:filter(FilterById, Allow0),
         Forbid = lists:filter(FilterById, Forbid0),
@@ -84,9 +78,9 @@ perform_operation(regexp, KeyValue, Value) ->
 
 
 validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0} = Authz0) ->
-    lager:info("Service ~p: validating authz", [ServiceId]),
+    lager:info("Service ~p: validating authz: allow", [ServiceId]),
     {AllowOk, Allow} = validate(Allow0),
-    lager:info("Service ~p: validating authz forbid", [ServiceId]),
+    lager:info("Service ~p: validating authz: forbid", [ServiceId]),
     {ForbidOk, Forbid} = validate(Forbid0),
     ValidatedAuthz =
         case AllowOk and ForbidOk of
@@ -102,7 +96,19 @@ validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0} = Authz0) ->
 
 validate(List) ->
     {ok, ProviderList} = oidcc:get_openid_provider_list(),
-    validate(List, ProviderList, {true, []}).
+    {ok, RspProviderList} = get_rsp_provider_list(),
+    AllProviderList = RspProviderList ++ ProviderList,
+    validate(List, AllProviderList, {true, []}).
+
+get_rsp_provider_list() ->
+    {ok, RspList} = watts_rsp:get_list(),
+    Convert = fun(Rsp, Ids) ->
+                      {ok, Id} = watts_rsp:get_id(Rsp),
+                      Prefix = <<"rsp-">>,
+                      ProviderId = << Prefix/binary, Id/binary >>,
+                      [ {ProviderId, rsp} | Ids]
+              end,
+    {ok, lists:foldl(Convert, [], RspList)}.
 
 
 validate([], _ProviderList, Result) ->
@@ -134,3 +140,24 @@ does_provider_exist(ProviderId, ProviderList) ->
         {_, false} ->
             {true, ProviderId}
     end.
+
+get_provider_id(<< Prefix:4/binary, _/binary>> = Rsp)
+  when Prefix == <<"rsp-">> ->
+    return_rsp_if_enabled(Rsp, ?CONFIG(enable_rsp));
+get_provider_id(Issuer) ->
+    Result = oidcc:find_openid_provider(Issuer),
+    return_provider_id_if_found(Result).
+
+
+return_provider_id_if_found({ok, Pid}) ->
+    {ok, #{id := ProviderId}} = oidcc:get_openid_provider_info(Pid),
+    {ok, ProviderId};
+return_provider_id_if_found(_) ->
+    {error, provider_not_found}.
+
+
+
+return_rsp_if_enabled(Rsp, true) ->
+    {ok, Rsp};
+return_rsp_if_enabled(_, false) ->
+    {error, rsp_disabled}.
