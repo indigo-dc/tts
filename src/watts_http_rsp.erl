@@ -63,7 +63,7 @@ redirect_to_provider(Session, Rsp, Req) ->
     {ok, Req2} = set_cookie(Session, Req),
     Provider = watts_rsp:get_provider(Rsp),
     Path = io_lib:format("oidc?provider=~s", [binary_to_list(Provider)]),
-    Url = watts_http_util:relative_path(Path),
+    Url = watts_http_util:relative_path(lists:flatten(Path)),
     watts_http_util:redirect_to(Url, Req2).
 
 set_cookie(Session, Req) ->
