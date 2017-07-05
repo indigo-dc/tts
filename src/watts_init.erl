@@ -32,7 +32,6 @@
 -export([code_change/3]).
 
 -record(state, {
-          start = undefined
          }).
 
 %% API.
@@ -50,7 +49,7 @@ stop(Pid) ->
 
 init([]) ->
     gen_server:cast(self(), start_watts),
-    {ok, #state{start = erlang:system_time(seconds)}}.
+    {ok, #state{}}.
 
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -79,9 +78,9 @@ handle_cast(start_http, State) ->
     start_web_interface(),
     stop(),
     {noreply, State};
-handle_cast(stop, #state{start = Time} = State) ->
+handle_cast(stop, #state{} = State) ->
     lager:info("Init: startup took ~p seconds",
-               [erlang:system_time(seconds) - Time]),
+               [erlang:system_time(seconds) - ?CONFIG(start_time)]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -194,15 +193,16 @@ add_openid_provider([], _) ->
 
 wait_and_log_provider_results() ->
     {ok, List} = oidcc:get_openid_provider_list(),
-    ok = wait_and_log_provider_results(List, []),
+    Max = erlang:system_time(seconds) + ?CONFIG(max_provider_wait, 5),
+    ok = wait_and_log_provider_results(List, [], Max),
     ok.
 
-wait_and_log_provider_results([], []) ->
+wait_and_log_provider_results([], [], _Max) ->
     ok;
-wait_and_log_provider_results([], List) ->
-    timer:sleep(200),
-    wait_and_log_provider_results(List, []);
-wait_and_log_provider_results([{Id, Pid} = H | T], List) ->
+wait_and_log_provider_results([], List, Max) ->
+    InTime = (erlang:system_time(seconds) < Max),
+    maybe_recheck_provider(InTime, List, Max);
+wait_and_log_provider_results([{Id, Pid} = H | T], List, Max) ->
     {ok, #{ready := Ready}} = oidcc_openid_provider:get_config(Pid),
     {ok, Error} = oidcc_openid_provider:get_error(Pid),
     IsError = (Error /= undefined),
@@ -218,7 +218,22 @@ wait_and_log_provider_results([{Id, Pid} = H | T], List) ->
             _ ->
                 [ H | List ]
         end,
-    wait_and_log_provider_results(T, NewList).
+    wait_and_log_provider_results(T, NewList, Max).
+
+
+maybe_recheck_provider(true, List, Max) ->
+    timer:sleep(200),
+    wait_and_log_provider_results(List, [], Max);
+maybe_recheck_provider(false, List, _) ->
+    Output =
+        fun({Id, _Pid}, _) ->
+                lager:info("Init: OpenId Connect provider ~p takes too long, "
+                           "won't wait for its result", [Id])
+        end,
+    lists:foldl(Output, ok, List),
+    ok.
+
+
 
 
 add_rsps() ->

@@ -122,6 +122,8 @@ setup_group(DbType) ->
                    id => <<"google">>,
                    disable_login => false,
                    scopes => [<<"openid">>,<<"profile">>]}],
+    ?SETCONFIG(start_time, erlang:system_time(seconds)),
+    ?SETCONFIG(max_provider_wait, 1),
     ?SETCONFIG(service_list, ServiceList),
     ?SETCONFIG(provider_list, ProviderList),
     ?SETCONFIG(session_timeout, 90000),
