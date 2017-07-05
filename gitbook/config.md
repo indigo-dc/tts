@@ -90,10 +90,10 @@ And for production use:
 | redirection.listen_port | The port to listen on for browsers to redirect | port | 8080 |
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
 | enable_docs | Whether the documentation is reachable at /docs/ | boolean | false |
-| enable_direct_endpoint | Whether the direct endpoint will be enabled at /direct/. This will enable other services to rely on WaTTS to perform certain tasks or authenticate their user. | boolean | false |
 | max_provider_wait | The duration to wait for provider results. If the duration is passed the results of OpenID Connect provider won't be logged, the provider will still function. | duration | 30s |
 | log_dir | The path where the log files will be put | path | /var/log/watts |
 | syslog_facility | The facility to use for syslog | 'daemon','local0'-'local7'  | 'daemon' |
+| enable_rsp | Enable support for RSP (relying service provider) at WaTTS. This will enable support for other services to rely on WaTTS to perform certain taks e.g. run plugins for them. | boolean | false |
 | debug_mode | enable debug output, this adds a lot of load. debug_mode is only allowed when running on localhost as it might log senstive data. | boolean  | false |
 
 
@@ -231,7 +231,7 @@ oidc.cert_depth = 5
 | request_scopes | the scopes to request | comma separated list |
 
 Each setting is prefixed with 'openid.`id`.' where `id` must be replaced by the id
-you want to give to the provider.
+you want to give to the provider. The `id` MUST not be 'any' or start with 'rsp'.
 
 #### Example
 An example for the IAM OpenId Connect Provider, setting its id to `iam`:
@@ -252,11 +252,11 @@ task or even completely for authentication.
 Each setting is prefixed with 'rsp.`id`.' where `id` must be replaced by the id
 you want to give to the relying service provider.
 
-| Key | Description | Datatype | Mandatory |
+| Key | Description | Datatype | Mandatory (Default) |
 | :---: | --- | :---: | :---: |
-| keys_location  | the location of the file / web-page containing the json structure with the public keys (see below). the location must be a url with either 'https://' or 'file://' scheme. | url | yes |
-| disable_ui | if set to 'true' no userinterface will be shown. | boolean | no |
-| disable_login | If set to 'true' the user won't be redirected to a login. | boolean | no |
+| keys_location  | the location of the file / web-page containing the json object with the public keys (see below). the location must be a url with either 'https://' or 'file://' scheme. | url | yes |
+| show_ui | if set to 'false' no user-interface will be shown. | boolean | no (true) |
+| perform_login | If set to 'false' the user won't be redirected to a login. | boolean | no (true) |
 | base_url | The url each url passed to WaTTS in the JWT must start with. | string | yes |
 
 
@@ -288,6 +288,14 @@ WaTTS expects:
  - n (part of the public key)
  - e (part of the public key)
 
+#### Example
+An example for an RSP, setting its id to `simple`:
+```
+rsp.simple.keys_location = https://simple-rsp.kit.edu/jwk
+rsp.simple.perform_login = false
+rsp.simple.show_ui = true
+rsp.simple.base_url = https://simple-rsp.kit.edu
+```
 
 ### Services
 #### Introduction
@@ -335,36 +343,43 @@ you want to give to the service.
 | connection.ssh_dir | The ssh_dir to use with ssh | port | no |
 | connection.ssh_key_pass | The password of the private key to use with ssh | string | no |
 | plugin.`key` | A setting to send to the plugin, the name of the parameter will be `key`. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs | any | no |
-| authz.allow.`p`.`k`.`o` | See the Authorization sections | other | no ([])|
-| authz.forbid.`p`.`k`.`o` | See the Authorization sections | other | no ([]) |
+| authz.allow.`p`.`k`.`o` | See the Authorization section | other | no ([])|
+| authz.forbid.`p`.`k`.`o` | See the Authorization section | other | no ([]) |
 | authz.hide | Hide the service if the user is not allowed | boolean | no (false) |
 | authz.tooltip | Message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
 
 
 
-#### Authorization with OpenId Connect
+#### Authorization
 Authorization follows a few simple steps:
- 1. everyone can be forbidden
- 2. if an `allow` rule that matches the user is true, she is allowed
- 3. if a `forbid` rule that matches the user is true, he is forbidden
+ 1. at first everyone is forbidden
+ 2. if an `allow` rule that matches the user evaluates to true, she is allowed
+ 3. if a `forbid` rule that matches the user evaluates to true, he is forbidden
 
 So a for a user to access a service she:
- - MUST match at least one `allow` rule that evaluates to true
- - MUST NOT match any `forbid` rule that evaluates to true
+ - MUST match at least one `allow` rule
+ - MUST NOT match any `forbid` rule
 
 Each rule is exactly one line long. A rule always consists of five parts:
 ` authz.allow.p.k.o = v`, where the values are:
 
-for OpenId Connect:
- - `p`: the Id of the provider
+ - `p`: the Id of the provider, this can either be an OpenID Connect provider or an rsp
  - `k`: the key within the OpenId Connect Id-Token or user information
  - `info`: the information in the Id Token or user information with the key `k`
  - `o`: the operation to perform
  - `v`: the value
 
-The provider Id is the same as was given during the configuration, in the provider example above
-the *id* was `iam`, so using that for `p` allows making decisions on users coming from `iam`.
-There is a special provider *id* value, `any`, which matches any provider.
+The provider Id for an OpenID Connect provider is the same as was given during the configuration,
+in the provider example above the *id* was `iam`, so using that for `p` allows making decisions
+on users coming from `iam`.
+
+The provider Id for an RSP is the id of the RSP prefixed with an 'rsp-'. So the simple RSP in
+the example above would have the *id* `rsp-simple`. All connections from an RSP get logged in
+by the information sent by the RSP, an additional login at configured OpenID Connect providers
+can be performed.
+
+There is a special provider *id* value, `any`, which matches any provider, meaning any OpenID
+Connect or RSP provider.
 
 The key `k` has to match a value of the *id* token or the user info. The value of the
 *Id Token* offers *Userinfo*, i.e. having the key `k` is the `info`.
