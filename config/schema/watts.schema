@@ -1,3 +1,26 @@
+%% store the current system time at starting of parsing the config
+%% this is a more accurate value than at start of the init gen_server
+{mapping, "watts.start_time", "watts.start_time", [
+          {default, 0},
+          {datatype, integer},
+          hidden
+          ]}.
+
+{translation, "watts.start_time",
+ fun(Conf) ->
+         erlang:system_time(seconds)
+ end}.
+
+
+%% @doc the duration to wait for OpenID Connect provider
+%% results to log them. The result for OpenID Connect provider
+%% finishing after that period won't be logged.
+{mapping, "max_provider_wait", "watts.max_provider_wait", [
+          {commented, "30s"},
+          {default, "30s"},
+          {datatype, {duration, s}}
+          ]}.
+
 %% @doc the hostname of watts, use localhost
 %% for development
 {mapping, "hostname", "watts.hostname", [

@@ -91,8 +91,10 @@ And for production use:
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
 | enable_docs | Whether the documentation is reachable at /docs/ | boolean | false |
 | enable_direct_endpoint | Whether the direct endpoint will be enabled at /direct/. This will enable other services to rely on WaTTS to perform certain tasks or authenticate their user. | boolean | false |
+| max_provider_wait | The duration to wait for provider results. If the duration is passed the results of OpenID Connect provider won't be logged, the provider will still function. | duration | 30s |
 | log_dir | The path where the log files will be put | path | /var/log/watts |
 | syslog_facility | The facility to use for syslog | 'daemon','local0'-'local7'  | 'daemon' |
+| debug_mode | enable debug output, this adds a lot of load. debug_mode is only allowed when running on localhost as it might log senstive data. | boolean  | false |
 
 
 
