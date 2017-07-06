@@ -79,8 +79,6 @@ handle_cast(start_http, State) ->
     stop(),
     {noreply, State};
 handle_cast(stop, #state{} = State) ->
-    lager:info("Init: startup took ~p seconds",
-               [erlang:system_time(seconds) - ?CONFIG(start_time)]),
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -425,6 +423,8 @@ local_endpoint() ->
 
 stop() ->
     lager:info("Init: done"),
+    lager:info("Init: startup took ~p seconds",
+               [erlang:system_time(seconds) - ?CONFIG(start_time)]),
     lager:info("WaTTS ready"),
     stop(self()).
 

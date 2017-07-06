@@ -180,7 +180,7 @@ init_done(_Config) ->
                            false
                    end
            end,
-    ok = test_util:wait_for_true(Done, 100),
+    ok = test_util:wait_for_true(Done, 500),
     ok.
 
 python2_check(_Config) ->
