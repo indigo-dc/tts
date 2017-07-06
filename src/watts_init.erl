@@ -292,14 +292,14 @@ start_web_interface() ->
             Options = add_options(BasicOptions, ?CONFIG_(cachain_file),
                                   ?CONFIG_(dh_file), ?CONFIG_(hostname)),
             {ok, _} = cowboy:start_https( http_handler
-                                          , 100
+                                          , ?CONFIG(num_acceptors)
                                           , Options
                                           , [{env, [{dispatch, Dispatch}]}]
                                         );
         false ->
             lager:warning("Init: listening only at 127.0.0.1"),
             {ok, _} = cowboy:start_http( http_handler
-                                         , 100
+                                         , ?CONFIG(num_acceptors)
                                          , [ {port, ListenPort},
                                              {ip, {127, 0, 0, 1}}
                                              ]
@@ -318,7 +318,7 @@ start_web_interface() ->
         true ->
             lager:info("Init: enable redirection at port ~p", [RedirectPort]),
             {ok, _} = cowboy:start_http( redirect_handler
-                                          , 100
+                                          , 10
                                           , [ {port, RedirectPort}]
                                           , [{env, [{dispatch, RedirDispatch}]}]
                                         );

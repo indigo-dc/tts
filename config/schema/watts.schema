@@ -65,6 +65,21 @@
     end}.
 
 
+%% the number of acceptors
+{mapping, "web_acceptors", "watts.num_acceptors", [
+          {default, 100},
+          {datatype,  [integer]}
+          ]}.
+
+{translation, "watts.num_acceptors",
+    fun(Conf) ->
+        Num = cuttlefish:conf_get("web_acceptors", Conf),
+        case Num of
+            Good when is_integer(Good), Good >= 1 ->
+                Good;
+             _ -> cuttlefish:invalid("invalid number of web_acceptors, need to be at least one")
+        end
+    end}.
 
 %% @doc The port to actually listen on. together with
 %% port this can be used to pretend to be listening on
