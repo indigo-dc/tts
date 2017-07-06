@@ -261,33 +261,6 @@ you want to give to the relying service provider.
 
 
 
-The json format of the plublic key file must be according to
-[RFC7517](https://tools.ietf.org/html/rfc7517). The following is an example:
-```
-{"keys":
-       [
-         {"kty":"RSA",
-          "use":"sig",
-          "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx
-     4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMs
-     tn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2
-     QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbI
-     SD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqb
-     w0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
-          "e":"AQAB",
-          "alg":"RS256",
-          "kid":"2011-04-29"}
-       ]
-     }
-```
-WaTTS expects:
- - kty of "RSA"
- - use of "sig"
- - alg of "RS256"
- - kid which must also be set in the JWT sent by the RSP
- - n (part of the public key)
- - e (part of the public key)
-
 #### Example
 An example for an RSP, setting its id to `simple`:
 ```
