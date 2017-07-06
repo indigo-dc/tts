@@ -154,7 +154,20 @@
             
         </li>
     
-        <li class="chapter " data-level="1.6" data-path="api.html">
+        <li class="chapter " data-level="1.6" data-path="rsp.html">
+            
+                <a href="rsp.html">
+            
+                    
+                    Relying Service Provider (RSP) Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="api.html">
             
                 <a href="api.html">
             
@@ -167,7 +180,7 @@
             
         </li>
     
-        <li class="chapter " data-level="1.7" data-path="service_ref_card.html">
+        <li class="chapter " data-level="1.8" data-path="service_ref_card.html">
             
                 <a href="service_ref_card.html">
             
@@ -446,6 +459,12 @@ ports, hostname and SSL.</p>
 <td style="text-align:center">false</td>
 </tr>
 <tr>
+<td style="text-align:center">max_provider_wait</td>
+<td>The duration to wait for provider results. If the duration is passed the results of OpenID Connect provider won&apos;t be logged, the provider will still function.</td>
+<td style="text-align:center">duration</td>
+<td style="text-align:center">30s</td>
+</tr>
+<tr>
 <td style="text-align:center">log_dir</td>
 <td>The path where the log files will be put</td>
 <td style="text-align:center">path</td>
@@ -456,6 +475,18 @@ ports, hostname and SSL.</p>
 <td>The facility to use for syslog</td>
 <td style="text-align:center">&apos;daemon&apos;,&apos;local0&apos;-&apos;local7&apos;</td>
 <td style="text-align:center">&apos;daemon&apos;</td>
+</tr>
+<tr>
+<td style="text-align:center">enable_rsp</td>
+<td>Enable support for RSP (relying service provider) at WaTTS. This will enable support for other services to rely on WaTTS to perform certain taks e.g. run plugins for them.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
+</tr>
+<tr>
+<td style="text-align:center">debug_mode</td>
+<td>enable debug output, this adds a lot of load. debug_mode is only allowed when running on localhost as it might log senstive data.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
 </tr>
 </tbody>
 </table>
@@ -636,7 +667,7 @@ oidc.cert_depth = 5
 </tbody>
 </table>
 <p>Each setting is prefixed with &apos;openid.<code>id</code>.&apos; where <code>id</code> must be replaced by the id
-you want to give to the provider.</p>
+you want to give to the provider. The <code>id</code> MUST not be &apos;any&apos; or start with &apos;rsp&apos;.</p>
 <h4 id="example">Example</h4>
 <p>An example for the IAM OpenId Connect Provider, setting its id to <code>iam</code>:</p>
 <pre><code>openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)
@@ -644,6 +675,55 @@ openid.iam.client_id = &lt;insert the client id&gt;
 opemid.iam.client_secret =  &lt;insert the client secret&gt;
 openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration
 openid.iam.request_scopes = openid, profile
+</code></pre><h3 id="relying-service-providers">Relying Service Providers</h3>
+<h4 id="introduction">Introduction</h4>
+<p>A relying service provider (RSP) is a service that relys on WaTTS for either performing some
+task or even completely for authentication.</p>
+<h4 id="settings">Settings</h4>
+<p>Each setting is prefixed with &apos;rsp.<code>id</code>.&apos; where <code>id</code> must be replaced by the id
+you want to give to the relying service provider.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Key</th>
+<th>Description</th>
+<th style="text-align:center">Datatype</th>
+<th style="text-align:center">Mandatory (Default)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">keys_location</td>
+<td>the location of the file / web-page containing the json object with the public keys (see below). the location must be a url with either &apos;https://&apos; or &apos;file://&apos; scheme.</td>
+<td style="text-align:center">url</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">show_ui</td>
+<td>if set to &apos;false&apos; no user-interface will be shown.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no (true)</td>
+</tr>
+<tr>
+<td style="text-align:center">perform_login</td>
+<td>If set to &apos;false&apos; the user won&apos;t be redirected to a login.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no (true)</td>
+</tr>
+<tr>
+<td style="text-align:center">base_url</td>
+<td>The url each url passed to WaTTS in the JWT must start with.</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">yes</td>
+</tr>
+</tbody>
+</table>
+<h4 id="example">Example</h4>
+<p>An example for an RSP, setting its id to <code>simple</code>:</p>
+<pre><code>rsp.simple.keys_location = https://simple-rsp.kit.edu/jwk
+rsp.simple.perform_login = false
+rsp.simple.show_ui = true
+rsp.simple.base_url = https://simple-rsp.kit.edu
 </code></pre><h3 id="services">Services</h3>
 <h4 id="introduction">Introduction</h4>
 <p>A service is a single entity for which a user can request credentials.
@@ -806,27 +886,33 @@ you want to give to the service.</p>
 <h4 id="authorization">Authorization</h4>
 <p>Authorization follows a few simple steps:</p>
 <ol>
-<li>everyone can be forbidden</li>
-<li>if an <code>allow</code> rule that matches the user is true, she is allowed</li>
-<li>if a <code>forbid</code> rule that matches the user is true, he is forbidden</li>
+<li>at first everyone is forbidden</li>
+<li>if an <code>allow</code> rule that matches the user evaluates to true, she is allowed</li>
+<li>if a <code>forbid</code> rule that matches the user evaluates to true, he is forbidden</li>
 </ol>
 <p>So a for a user to access a service she:</p>
 <ul>
-<li>MUST match at least one <code>allow</code> rule that evaluates to true</li>
-<li>MUST NOT match any <code>forbid</code> rule that evaluates to true</li>
+<li>MUST match at least one <code>allow</code> rule</li>
+<li>MUST NOT match any <code>forbid</code> rule</li>
 </ul>
 <p>Each rule is exactly one line long. A rule always consists of five parts:
 <code>authz.allow.p.k.o = v</code>, where the values are:</p>
 <ul>
-<li><code>p</code>: the Id of the provider</li>
+<li><code>p</code>: the Id of the provider, this can either be an OpenID Connect provider or an rsp</li>
 <li><code>k</code>: the key within the OpenId Connect Id-Token or user information</li>
 <li><code>info</code>: the information in the Id Token or user information with the key <code>k</code></li>
 <li><code>o</code>: the operation to perform</li>
 <li><code>v</code>: the value</li>
 </ul>
-<p>The provider Id is the same as was given during the configuration, in the provider example above
-the <em>id</em> was <code>iam</code>, so using that for <code>p</code> allows making decisions on users coming from <code>iam</code>.
-There is a special provider <em>id</em> value, <code>any</code>, which matches any provider.</p>
+<p>The provider Id for an OpenID Connect provider is the same as was given during the configuration,
+in the provider example above the <em>id</em> was <code>iam</code>, so using that for <code>p</code> allows making decisions
+on users coming from <code>iam</code>.</p>
+<p>The provider Id for an RSP is the id of the RSP prefixed with an &apos;rsp-&apos;. So the simple RSP in
+the example above would have the <em>id</em> <code>rsp-simple</code>. All connections from an RSP get logged in
+by the information sent by the RSP, an additional login at configured OpenID Connect providers
+can be performed.</p>
+<p>There is a special provider <em>id</em> value, <code>any</code>, which matches any provider, meaning any OpenID
+Connect or RSP provider.</p>
 <p>The key <code>k</code> has to match a value of the <em>id</em> token or the user info. The value of the
 <em>Id Token</em> offers <em>Userinfo</em>, i.e. having the key <code>k</code> is the <code>info</code>.
 If the key is not present:</p>
@@ -987,7 +1073,7 @@ situation described above will happen.</li>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-04-11T05:53:50.118Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-04-11T05:54:21.009Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Configuration Guide","level":"1.4","depth":1,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"Deployment And Administration Guide","level":"1.3","depth":1,"path":"admin.md","ref":"admin.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config.md","mtime":"2017-07-06T06:36:27.864Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-07-06T06:54:05.175Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
