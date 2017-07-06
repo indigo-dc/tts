@@ -76,6 +76,7 @@ And for production use:
 | hostname | Hostname of the web server | host | localhost |
 | port | Port number where clients seem to connect to; default is port 80 for non SSL, 443 for SSL. In production systems this should be left 'default' | port number or 'default' | 8080 |
 | listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privileged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
+| web_acceptors | The number of parallel waiting processes for incomming connection | integer | 100 |
 | ssl | Whether SSL should be used | boolean | true |
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
