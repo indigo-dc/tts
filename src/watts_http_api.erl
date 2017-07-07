@@ -122,28 +122,38 @@ malformed_request(Req, State) ->
 
 is_authorized(Req, #state{type=oidcp} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{type=info} = State) ->
+is_authorized(Req, #state{type=info, session_pid=undefined} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{type=logout} = State) ->
+is_authorized(Req, #state{type=logout, session_pid=undefined} = State) ->
     {true, Req, State};
 is_authorized(Req, #state{type=Type, session_pid=Pid} = State)
   when is_pid(Pid) ->
     ValidType = lists:member(Type, [oidcp, info, logout, service, credential,
                                     cred_data, access_token]),
     LoggedIn = watts_session:is_logged_in(Pid),
-    case {ValidType, LoggedIn} of
-        {false, _} ->
+    {{Ip, _}, Req1} = cowboy_req:peer(Req),
+    SameIp = watts_session:is_same_ip(Ip, Pid),
+    {Agent, Req2} = cowboy_req:header(<<"user-agent">>, Req1),
+    SameAgent = watts_session:is_user_agent(Agent, Pid),
+    case {ValidType, LoggedIn, SameAgent and SameIp} of
+        {false, _, _} ->
             Msg = list_to_binary(io_lib:format("unsupported path ~p", [Type])),
             Body = jsone:encode(#{result => error, user_msg => Msg}),
-            Req1 = cowboy_req:set_resp_body(Body, Req),
-            {{false, <<"authorization">>}, Req1, State};
-        {_, false} ->
+            Req3 = cowboy_req:set_resp_body(Body, Req2),
+            {{false, <<"authorization">>}, Req3, State};
+        {_, false, _} ->
             Msg = <<"seems like the session expired">>,
             Body = jsone:encode(#{result => error, user_msg => Msg}),
-            Req1 = cowboy_req:set_resp_body(Body, Req),
-            {{false, <<"authorization">>}, Req1, State};
-        {true, true} ->
-            {true,  Req, State}
+            Req3 = cowboy_req:set_resp_body(Body, Req2),
+            {{false, <<"authorization">>}, Req3, State};
+        {_, _, false} ->
+            Msg = <<"sorry, you can't be identified">>,
+            Body = jsone:encode(#{result => error, user_msg => Msg}),
+            Req3 = cowboy_req:set_resp_body(Body, Req2),
+            {ok, Req4} = perform_cookie_logout(Pid, Req3),
+            {{false, <<"authorization">>}, Req4, State};
+        {true, true, true} ->
+            {true,  Req2, State}
     end;
 is_authorized(Req, #state{type=Type, token=Token, issuer=Issuer,
                           session_pid=undefined} = State)
