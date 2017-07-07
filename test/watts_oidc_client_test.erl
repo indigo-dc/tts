@@ -74,6 +74,8 @@ start_meck() ->
                             {ok, Pid1}
                     end,
     Cookies = fun(Req) -> {[{watts_http_util:cookie_name(), <<"data">>}], Req} end,
+    Peer = fun(Req) -> {{{127, 0, 0 , 1},234}, Req} end,
+    Header = fun(_Name, Req) -> {<<>>, Req} end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(watts, login_with_oidcc, Login),
     ok = meck:expect(watts, session_with_error, ErrorSession),
@@ -83,6 +85,8 @@ start_meck() ->
     ok = meck:expect(watts_session_mgr, session_terminating, fun(_) -> ok end),
     ok = meck:expect(watts_session_mgr, get_session, ReturnSession),
     ok = meck:expect(cowboy_req, cookies, Cookies),
+    ok = meck:expect(cowboy_req, peer, Peer),
+    ok = meck:expect(cowboy_req, header, Header),
     {ok, {MeckModules, Pid1, Pid2, Pid3}}.
 
 

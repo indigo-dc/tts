@@ -14,32 +14,33 @@ login_succeeded(TokenMap, EnvMap) ->
                    params := Params
                   }} = watts_session:get_redirection(SessPid),
             Result = watts:request_credential_for(Service, SessPid, Params),
-            redirect_back(Result, SessPid);
+            redirect_back(Result, SessPid, EnvMap);
         {ok, #{session_pid := SessPid, session_type := {rsp, ui, login} }} ->
-            redirect_set_cookie(SessPid);
+            redirect_set_cookie(SessPid, EnvMap);
         {ok, #{session_pid := SessPid, session_type := oidc }} ->
-            redirect_set_cookie(SessPid);
+            redirect_set_cookie(SessPid, EnvMap);
         {error, Reason} ->
             lager:warning("login failed internal: ~p", [Reason]),
             ErrMsg = bin_error_msg(login, undefind),
-            redirect_error(ErrMsg)
+            redirect_error(ErrMsg, EnvMap)
     end.
 
 login_failed(Reason, Details, EnvMap) ->
     lager:warning("login failed: ~p - ~p", [Reason, Details]),
     {SessType, Sess} = get_session_type(EnvMap),
-    handle_failed_for_session(SessType, Sess, Reason, Details).
+    handle_failed_for_session(SessType, Sess, EnvMap, Reason, Details).
 
-handle_failed_for_session({rsp, _, _} , SessPid, Reason, _Details) ->
-    redirect_back({error, Reason}, SessPid);
-handle_failed_for_session(_, _, Reason, Details) ->
+handle_failed_for_session({rsp, _, _} , SessPid, EnvMap, Reason, _Details) ->
+    redirect_back({error, Reason}, SessPid, EnvMap);
+handle_failed_for_session(_, _, EnvMap, Reason, Details) ->
     ErrMsg = bin_error_msg(Reason, Details),
-    redirect_error(ErrMsg).
+    redirect_error(ErrMsg, EnvMap).
 
-redirect_back(Result, SessPid) ->
+redirect_back(Result, SessPid, EnvMap) ->
     {ok, Rsp} = watts_session:get_rsp(SessPid),
     ok = watts:logout(SessPid),
-    {ok, [{redirect, get_return_url(Result, Rsp)}, set_cookie(undefined)]}.
+    {ok, [{redirect, get_return_url(Result, Rsp)},
+          set_cookie(undefined, EnvMap)]}.
 
 get_return_url({ok, _}, Rsp) ->
     {SuccessUrl, _} = watts_rsp:get_return_urls(Rsp),
@@ -50,21 +51,25 @@ get_return_url(_, Rsp) ->
 
 
 
-redirect_error(ErrorMsg) ->
+redirect_error(ErrorMsg, EnvMap) ->
     {ok, SessPid} = watts:session_with_error(ErrorMsg),
-    redirect_set_cookie(SessPid).
+    redirect_set_cookie(SessPid, EnvMap).
 
-redirect_set_cookie(SessPid) ->
+redirect_set_cookie(SessPid, EnvMap) ->
     {ok, [{redirect, ?CONFIG(ep_main)},
-          set_cookie(SessPid)]}.
+          set_cookie(SessPid, EnvMap)]}.
 
-set_cookie(SessPid) when is_pid(SessPid) ->
+set_cookie(SessPid, #{req := Req}) when is_pid(SessPid) ->
+    {{Ip, _}, Req1} = cowboy_req:peer(Req),
+    true = watts_session:is_same_ip(Ip, SessPid),
+    {Agent, _} = cowboy_req:header(<<"user-agent">>, Req1),
+    true = watts_session:is_user_agent(Agent, SessPid),
     {ok, SessToken} = watts_session:get_sess_token(SessPid),
     {ok, MaxAge} = watts_session:get_max_age(SessPid),
     Opts = watts_http_util:create_cookie_opts(MaxAge),
     CookieName = watts_http_util:cookie_name(),
     {cookie, CookieName, SessToken, Opts};
-set_cookie(_)  ->
+set_cookie(_, _)  ->
     CookieName = watts_http_util:cookie_name(),
     Opts = watts_http_util:create_cookie_opts(0),
     {cookie, CookieName, <<"deleted">>, Opts}.

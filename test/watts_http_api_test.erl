@@ -436,7 +436,9 @@ start_meck() ->
                       case lists:keyfind(Name, 1, Header) of
                           {Name, Value} -> {Value, Request};
                           _ -> {undefined, Request}
-                      end
+                      end;
+                (_, Req) ->
+                     {undefined, Req}
              end,
     ParseHeader = fun(Name, #{header := Hdr} = Request) ->
                       case lists:keyfind(Name, 1, Hdr) of
@@ -570,9 +572,15 @@ start_meck() ->
                               _ -> {ok, rest}
                           end
                   end,
+    Peer = fun(Req) -> {{{127, 0, 0 , 1},234}, Req} end,
+
+    IsIp = fun(Ip, _) -> Ip == {127, 0, 0, 1} end,
+    IsUserAgent = fun(_, _) -> true end,
+
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(cowboy_req, cookie, GetCookie),
     ok = meck:expect(cowboy_req, header, Header),
+    ok = meck:expect(cowboy_req, peer, Peer),
     ok = meck:expect(cowboy_req, parse_header, ParseHeader),
     ok = meck:expect(cowboy_req, method, Method),
     ok = meck:expect(cowboy_req, body, Body),
@@ -596,6 +604,8 @@ start_meck() ->
     ok = meck:expect(watts, store_temp_cred, StoreTempCred),
     ok = meck:expect(watts_session, is_logged_in, fun(_) -> false end),
     ok = meck:expect(watts_session, get_type, SessionType),
+    ok = meck:expect(watts_session, is_same_ip, IsIp),
+    ok = meck:expect(watts_session, is_user_agent, IsUserAgent),
     {ok, {MeckModules}}.
 
 stop_meck({MeckModules}) ->
