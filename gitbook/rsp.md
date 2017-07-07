@@ -49,8 +49,10 @@ WaTTS expects the following keys to be present:
  - e (part of the public key)
 
 ### Generation of JWTs
-The RSP must implement or use a JWT library signing the JWTs with the private part of the keys
+The RSP must implement or use a JWT library to sign the JWTs with the private part of the keys
 mentioned above.
+
+The Jwt header *MUST* contain the key value pair `"typ": "watts-rsp"`.
 
 The following claims in the JWT are supported:
 
