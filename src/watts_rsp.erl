@@ -219,7 +219,8 @@ validate_jwt({ok, #{ claims := #{iss := _Iss,
                             exp := _Exp,
                             iat := _Iat,
                             watts_service := _Service
-                           }
+                           },
+                     header := #{ typ := <<"watts-rsp">> }
               } = Jwt }, Rsp, _) ->
     {Jwt, Rsp, undefined};
 validate_jwt({ok, _}, Rsp, JwtMap) ->
