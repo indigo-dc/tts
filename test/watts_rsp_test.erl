@@ -72,7 +72,7 @@ validate_jwt_test() ->
                    success_url => GoodUrl,
                    failed_url => BadUrl
                   },
-        JwtMap = #{claims => Claims},
+        JwtMap = #{claims => Claims, header => #{typ => <<"watts-rsp">>}},
         Referer = <<"https://rsp.watts.kit.edu/referer">>,
         {ok, Rsp} = watts_rsp:validate_jwt_get_rsp(JwtMap, Referer),
         rsp_no_ui_login = watts_rsp:request_type(Rsp),

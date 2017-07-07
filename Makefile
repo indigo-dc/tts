@@ -29,6 +29,11 @@ ct: compile
 	./utils/setup_ct.sh
 	$(REBAR) do ct,cover -v
 
+jenkins_ct: compile
+	./utils/setup_ct.sh
+	$(REBAR) ct
+
+
 tests: elvis
 	$(REBAR) cover -r
 	$(REBAR) eunit
