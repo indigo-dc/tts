@@ -52,6 +52,9 @@ make package
 The package can be found in `./package/packages`.
 
 ## Upgrade WaTTS
+### v1.1.0 to v1.2.0
+Nothing needs to be done, WaTTS 1.2.0 includes only new features.
+
 ### v1.0.0 to v1.1.0
 Only two new settings are needed in the watts.conf:
 - nodename: `nodename = watts@127.0.0.1`
