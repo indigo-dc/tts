@@ -122,9 +122,9 @@ malformed_request(Req, State) ->
 
 is_authorized(Req, #state{type=oidcp} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{type=info, session_pid=undefined} = State) ->
+is_authorized(Req, #state{type=info} = State) ->
     {true, Req, State};
-is_authorized(Req, #state{type=logout, session_pid=undefined} = State) ->
+is_authorized(Req, #state{type=logout} = State) ->
     {true, Req, State};
 is_authorized(Req, #state{type=Type, session_pid=Pid} = State)
   when is_pid(Pid) ->
