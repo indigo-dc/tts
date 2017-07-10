@@ -84,9 +84,10 @@ And for production use:
 | dh_file | Path to the file containing the diffie hellman parameter. To generate it simply run `openssl dhparam -out watts_dh.pem 2048` | file | none |
 | session_timeout | The duration for which a session at the web-app is valid during inactivity | duration | 15m |
 | session_max_duration | The maximum duration of a session at the web interface, even if active. After this time an additional Login is required | duration | 30m |
-| database_type | The type of database to user | 'sqlite', 'mnesia' | 'sqlite' |
+| database_type | The type of database to user | 'sqlite', 'mnesia', 'eleveldb' | 'sqlite' |
 | sqlite_file | Path to the sqlite database, used if database_type is 'sqlite' | file | /etc/watts/watts.db |
-| mnesia_dir | Base directory of the mnesia database, used if database_type is 'mnesia' | dir | /etc/watts/mnesia |
+| mnesia_dir | Base directory of the mnesia database, used if database_type is 'mnesia' | dir | /var/lib/watts/mnesia |
+| eleveldb_dir | Base directory of the eleveldb database, used if database_type is 'eleveldb' | dir | /var/lib/watts/eleveldb |
 | redirection.enable | Whether redirection should be enabled | boolean | false |
 | redirection.listen_port | The port to listen on for browsers to redirect | port | 8080 |
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
