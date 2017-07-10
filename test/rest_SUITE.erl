@@ -162,7 +162,7 @@ config_db(mnesia) ->
 config_db(eleveldb) ->
     ?SETCONFIG(database_type, eleveldb),
     ?SETCONFIG(persistent_module, watts_data_leveldb),
-    ?SETCONFIG(mnesia_dir, "/tmp/watts_common_test/eleveldb").
+    ?SETCONFIG(eleveldb_dir, "/tmp/watts_common_test/eleveldb").
 
 service_config(_Config) ->
     {ok, Services} = watts_service:get_list(),
