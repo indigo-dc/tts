@@ -1,32 +1,32 @@
-%% store the current system time at starting of parsing the config
-%% this is a more accurate value than at start of the init gen_server
-{mapping, "watts.start_time", "watts.start_time", [
-          {default, 0},
-          {datatype, integer},
-          hidden
-          ]}.
+    %% store the current system time at starting of parsing the config
+    %% this is a more accurate value than at start of the init gen_server
+    {mapping, "watts.start_time", "watts.start_time", [
+            {default, 0},
+            {datatype, integer},
+            hidden
+            ]}.
 
-{translation, "watts.start_time",
- fun(Conf) ->
-         erlang:system_time(seconds)
- end}.
+    {translation, "watts.start_time",
+    fun(Conf) ->
+            erlang:system_time(seconds)
+    end}.
 
 
-%% @doc the duration to wait for OpenID Connect provider
-%% results to log them. The result for OpenID Connect provider
-%% finishing after that period won't be logged.
-{mapping, "max_provider_wait", "watts.max_provider_wait", [
-          {commented, "30s"},
-          {default, "30s"},
-          {datatype, {duration, s}}
-          ]}.
+    %% @doc the duration to wait for OpenID Connect provider
+    %% results to log them. The result for OpenID Connect provider
+    %% finishing after that period won't be logged.
+    {mapping, "max_provider_wait", "watts.max_provider_wait", [
+            {commented, "30s"},
+            {default, "30s"},
+            {datatype, {duration, s}}
+            ]}.
 
-%% @doc the hostname of watts, use localhost
-%% for development
-{mapping, "hostname", "watts.hostname", [
-          {commented, "localhost"},
-          {default, "localhost"}
-          ]}.
+    %% @doc the hostname of watts, use localhost
+    %% for development
+    {mapping, "hostname", "watts.hostname", [
+            {commented, "localhost"},
+            {default, "localhost"}
+            ]}.
 
 {translation, "watts.hostname",
  fun(Conf) ->
@@ -173,7 +173,7 @@
 {mapping, "database_type", "watts.persistent_module", [
           {default, sqlite},
           {commented, sqlite},
-          {datatype, {enum, [sqlite, mnesia]}}
+          {datatype, {enum, [sqlite, mnesia, eleveldb]}}
           ]}.
 
 {translation, "watts.persistent_module",
@@ -182,10 +182,12 @@
          case Type of
              mnesia ->
                  watts_data_mnesia;
+             eleveldb ->
+                 watts_data_leveldb;
              sqlite ->
                  watts_data_sqlite;
              _ ->
-                 cuttlefish:error("unknown database type")
+                 cuttlefish:invalid("unknown database type")
          end
  end}.
 
@@ -199,17 +201,52 @@
 {translation, "watts.mnesia_dir",
  fun(Conf) ->
          BaseDir = cuttlefish:conf_get("mnesia_dir", Conf),
-         case file:make_dir(BaseDir) of
-             ok ->
-                 ok;
-             {error, eexist} ->
-                 ok;
-             {error, Error} ->
-                 Msg = io_lib:format("unable to create mnesia base directory: ~p", [Error]),
-                 cuttlefish:error(Msg)
+         CreateDir = (cuttlefish:conf_get("database_type", Conf) == mnesia),
+         case CreateDir of
+             true ->
+                 case file:make_dir(BaseDir) of
+                     ok ->
+                         ok;
+                     {error, eexist} ->
+                         ok;
+                     {error, Error} ->
+                         Msg = io_lib:format("unable to create mnesia base directory: ~p", [Error]),
+                         cuttlefish:invalid(Msg)
+                 end;
+             false ->
+                 ok
          end,
          Node = cuttlefish:conf_get("nodename", Conf),
          filename:join(BaseDir, Node)
+ end}.
+
+%% @doc the leveldb directory to use
+{mapping, "eleveldb_dir", "watts.eleveldb_dir", [
+          {default, "{{platform_data_dir}}/eleveldb/"},
+          {commented, "{{platform_data_dir}}/eleveldb/"},
+          {datatype, string}
+          ]}.
+
+{translation, "watts.eleveldb_dir",
+ fun(Conf) ->
+         BaseDir = cuttlefish:conf_get("eleveldb_dir", Conf),
+         CreateDir = (cuttlefish:conf_get("database_type", Conf) == eleveldb),
+         case CreateDir of
+             true ->
+                 case file:make_dir(BaseDir) of
+                     ok ->
+                         ok;
+                     {error, eexist} ->
+                         ok;
+                     {error, Error} ->
+                         Msg = io_lib:format("unable to create eleveldb base directory: ~p", [Error]),
+                         cuttlefish:invalid(Msg)
+                 end,
+                 Node = cuttlefish:conf_get("nodename", Conf),
+                 filename:join(BaseDir, Node);
+             false ->
+                 undefined
+         end
  end}.
 
 %% @doc The path to the sqlite database file
