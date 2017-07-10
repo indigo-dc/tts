@@ -26,7 +26,8 @@
 all() ->
     [
      {group, sqlite},
-     {group, mnesia}
+     {group, mnesia},
+     {group, eleveldb}
      %% init_done,
      %% python2_check,
      %% provider_config,
@@ -46,6 +47,14 @@ groups() ->
      rest_communication_v2,
      rest_communication_v1]},
     {mnesia, [sequence],[
+     init_done,
+     python2_check,
+     provider_config,
+     wattson_version,
+     service_config,
+     rest_communication_v2,
+     rest_communication_v1]},
+    {eleveldb, [sequence],[
      init_done,
      python2_check,
      provider_config,
@@ -149,7 +158,12 @@ config_db(sqlite) ->
 config_db(mnesia) ->
     ?SETCONFIG(database_type, mnesia),
     ?SETCONFIG(persistent_module, watts_data_mnesia),
-    ?SETCONFIG(mnesia_dir, "/tmp/watts_common_test/mnesia").
+    ?SETCONFIG(mnesia_dir, "/tmp/watts_common_test/mnesia");
+config_db(eleveldb) ->
+    ?SETCONFIG(database_type, eleveldb),
+    ?SETCONFIG(persistent_module, watts_data_leveldb),
+    ?SETCONFIG(mnesia_dir, "/tmp/watts_common_test/eleveldb").
+
 service_config(_Config) ->
     {ok, Services} = watts_service:get_list(),
     ct:log("service configs:~n~p~n", [Services]),
