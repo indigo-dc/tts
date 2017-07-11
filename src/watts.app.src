@@ -12,6 +12,8 @@
                                     mnesia,
                                     erlexec,
                                     jsone,
+                                    eleveldb,
+                                    mnesia_eleveldb,
                                     esqlite,
                                     base64url,
                                     oidcc,
