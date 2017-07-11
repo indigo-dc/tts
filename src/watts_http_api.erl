@@ -519,13 +519,14 @@ safe_binary_to_integer(Version) ->
                        {<<"access_token">>, access_token},
                        {<<"credential_data">>, cred_data }
                       ]).
+id_to_url(Id, IssuerId, Version) ->
+    ApiBase = watts_http_util:whole_url("/api"),
+    id_to_url(ApiBase, Id, IssuerId, Version).
 
-id_to_url(Id, _IssuerId, 1) ->
-    ApiBase = watts_http_util:relative_path("api"),
+id_to_url(ApiBase, Id, _IssuerId, 1) ->
     Path = << <<"/v1/credential_data/">>/binary, Id/binary >>,
     << ApiBase/binary, Path/binary>>;
-id_to_url(Id, IssuerId, ApiVersion) ->
-    ApiBase = watts_http_util:relative_path("api"),
+id_to_url(ApiBase, Id, IssuerId, ApiVersion) ->
     Version = list_to_binary(io_lib:format("v~p", [ApiVersion])),
     PathElements =[Version, IssuerId, <<"credential_data">>, Id],
     Concat = fun(Element, Path) ->

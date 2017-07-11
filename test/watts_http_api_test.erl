@@ -359,9 +359,12 @@ post_json_test() ->
     {ok, Meck} = start_meck(),
     try
         ?SETCONFIG( ep_main, <<"/">>),
+        ?SETCONFIG(ssl, false),
+        ?SETCONFIG(hostname, "localhost"),
+        ?SETCONFIG(port, 80),
 
-        Url_v1 = <<"/api/v1/credential_data/CRED1">>,
-        Url_v2 = <<"/api/v2/ID1/credential_data/CRED1">>,
+        Url_v1 = <<"http://localhost/api/v1/credential_data/CRED1">>,
+        Url_v2 = <<"http://localhost/api/v2/ID1/credential_data/CRED1">>,
         Requests = [
                     {#state{version = 2,
                             type = credential,
@@ -393,7 +396,10 @@ post_json_test() ->
                         ok
                 end,
         ok = lists:foldl(Test,ok,Requests),
-        ?UNSETCONFIG( ep_main)
+        ?UNSETCONFIG( ep_main),
+        ?UNSETCONFIG( ssl),
+        ?UNSETCONFIG( hostname),
+        ?UNSETCONFIG( port)
     after
         ok = stop_meck(Meck)
     end,
