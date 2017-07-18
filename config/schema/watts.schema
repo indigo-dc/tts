@@ -81,6 +81,14 @@
         end
     end}.
 
+
+%% wether IPv6 should be used.
+{mapping, "enable_ipv6", "watts.enable_ipv6", [
+          {default, false},
+          {datatype,  {enum, [true, false]}}
+          ]}.
+
+
 %% @doc The port to actually listen on. together with
 %% port this can be used to pretend to be listening on
 %% e.g. 443, although WaTTS actually listens on 8443

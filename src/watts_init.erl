@@ -290,18 +290,28 @@ start_web_interface() ->
                   {keyfile, KeyFile}
                 ],
             Options = add_options(BasicOptions, ?CONFIG_(cachain_file),
-                                  ?CONFIG_(dh_file), ?CONFIG_(hostname)),
+                                  ?CONFIG_(dh_file), ?CONFIG_(hostname),
+                                  ?CONFIG_(enable_ipv6)),
             {ok, _} = cowboy:start_https( http_handler
                                           , ?CONFIG(num_acceptors)
                                           , Options
                                           , [{env, [{dispatch, Dispatch}]}]
                                         );
         false ->
-            lager:warning("Init: listening only at 127.0.0.1"),
+            LocalIp =
+                case ?CONFIG(enable_ipv6) of
+                    false ->
+                        lager:warning("Init: listening only at 127.0.0.1"),
+                        {127, 0, 0, 1};
+                    true ->
+                        lager:warning("Init: listening only at ::1"),
+                        {0, 0, 0, 0, 0, 0, 0, 1}
+                end,
+
             {ok, _} = cowboy:start_http( http_handler
                                          , ?CONFIG(num_acceptors)
                                          , [ {port, ListenPort},
-                                             {ip, {127, 0, 0, 1}}
+                                             {ip, LocalIp}
                                              ]
                                          , [{env, [{dispatch, Dispatch}]}]
                                        )
@@ -317,11 +327,15 @@ start_web_interface() ->
     case Redirect and SSL of
         true ->
             lager:info("Init: enable redirection at port ~p", [RedirectPort]),
+            IPv6 = case ?CONFIG(enable_ipv6) of
+                       true ->  [inet6];
+                       false -> []
+                   end,
             {ok, _} = cowboy:start_http( redirect_handler
-                                          , 10
-                                          , [ {port, RedirectPort}]
-                                          , [{env, [{dispatch, RedirDispatch}]}]
-                                        );
+                                       , 10
+                                       , [ {port, RedirectPort} | IPv6  ]
+                                       , [{env, [{dispatch, RedirDispatch}]}]
+                                       );
         _ -> ok
     end,
 
@@ -385,32 +399,41 @@ create_dispatch_list([_ | T], List) ->
 
 
 
-add_options(Options, {ok, CaChainFile}, DhFile, Hostname) ->
+add_options(Options, {ok, CaChainFile}, DhFile, Hostname, IPv6) ->
     NewOptions = [ {cacertfile, CaChainFile} | Options ],
-    add_options(NewOptions, ok, DhFile, Hostname);
-add_options(Options, undefined, DhFile, Hostname) ->
+    add_options(NewOptions, ok, DhFile, Hostname, IPv6);
+add_options(Options, undefined, DhFile, Hostname, IPv6) ->
     lager:warning("Init: no ca-chain-file configured [cachain_file]!"),
-    add_options(Options, ok, DhFile, Hostname);
-add_options(Options, CaChainFile,  {ok, none}, Hostname) ->
+    add_options(Options, ok, DhFile, Hostname, IPv6);
+add_options(Options, CaChainFile,  {ok, none}, Hostname, IPv6) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
-    add_options(Options, CaChainFile, ok, Hostname);
-add_options(Options, CaChainFile,  undefined, Hostname) ->
+    add_options(Options, CaChainFile, ok, Hostname, IPv6);
+add_options(Options, CaChainFile,  undefined, Hostname, IPv6) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
-    add_options(Options, CaChainFile, ok, Hostname);
-add_options(Options, CaChainFile, {ok, DhFile}, Hostname) ->
+    add_options(Options, CaChainFile, ok, Hostname, IPv6);
+add_options(Options, CaChainFile, {ok, DhFile}, Hostname, IPv6) ->
     NewOptions = [ {dhfile, DhFile} | Options ],
-    add_options(NewOptions, CaChainFile, ok, Hostname);
-add_options(Options, CaChainFile, DhFile, {ok, Hostname}) ->
+    add_options(NewOptions, CaChainFile, ok, Hostname, IPv6);
+add_options(Options, CaChainFile, DhFile, {ok, Hostname}, IPv6) ->
     NewOptions =
-        case lists:suffix(".onion", Hostname) of
-            true ->
+        case {lists:suffix(".onion", Hostname), IPv6} of
+            {true, true} ->
+                lager:info("Init: listening only at ::1 (onion)"),
+                [ {ip, {0, 0, 0, 0, 0, 0, 0, 1}} | Options ];
+            {true, false} ->
                 lager:info("Init: listening only at 127.0.0.1 (onion)"),
                 [ {ip, {127, 0, 0, 1}} | Options ];
             _ ->
                 Options
         end,
-    add_options(NewOptions, CaChainFile, DhFile, ok);
-add_options(Options, _, _, _) ->
+    add_options(NewOptions, CaChainFile, DhFile, ok, ok);
+add_options(Options, CaChainFile, DhFile, Hostname, {ok, true}) ->
+    NewOptions =  [ inet6 | Options],
+    add_options(NewOptions, CaChainFile, DhFile, Hostname, ok);
+add_options(Options, CaChainFile, DhFile, Hostname, {ok, false}) ->
+    NewOptions =  [ inet | Options],
+    add_options(NewOptions, CaChainFile, DhFile, Hostname, ok);
+add_options(Options, _, _, _, _) ->
     Options.
 
 
