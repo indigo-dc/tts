@@ -141,6 +141,7 @@ setup_group(DbType) ->
     ?SETCONFIG(redirection_port, 8080),
     ?SETCONFIG(ssl, false),
     ?SETCONFIG(port, 8080),
+    ?SETCONFIG(enable_ipv6, false),
     ?SETCONFIG(num_acceptors, 100),
     ?SETCONFIG(listen_port, 8080),
     ?SETCONFIG(ep_main, <<"/">>),
