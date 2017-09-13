@@ -23,11 +23,11 @@ clean: check
 	rm -rf _book
 
 eunit: check
-	$(REBAR) do eunit,cover -v
+	$(REBAR) do eunit -v, cover -v
 
 ct: compile
 	./utils/setup_ct.sh
-	$(REBAR) do ct,cover -v
+	$(REBAR) do ct -v, cover -v
 
 jenkins_ct: compile
 	./utils/setup_ct.sh
