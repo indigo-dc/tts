@@ -63,8 +63,12 @@ After upgrading WaTTs start it again
 ```
 watts start
 ```
+### v1.2.0 to v1.2.1
+Nothing special needs to be done by the administrator.
+WaTTS 1.2.1 includes only a bug-fix.
+
 ### v1.1.0 to v1.2.0
-Nothing needs to be done, WaTTS 1.2.0 includes only new features.
+Nothing special needs to be done, WaTTS 1.2.0 includes only new features.
 
 ### v1.0.0 to v1.1.0
 Only two new settings are needed in the watts.conf:
