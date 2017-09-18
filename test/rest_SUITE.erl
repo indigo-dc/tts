@@ -147,7 +147,7 @@ setup_group(DbType) ->
     ?SETCONFIG(ep_main, <<"/">>),
     ?SETCONFIG(hostname, "localhost"),
     application:set_env(oidcc, cert_depth, 5),
-    application:set_env(oidcc, cacertfile, "/etc/ssl/certs/ca-certificates.crt"),
+    application:set_env(oidcc, cacertfile, ca_file()),
     {ok, _} = application:ensure_all_started(watts),
     ok.
 
@@ -178,6 +178,7 @@ provider_config(_Config) ->
     ok = test_util:wait_for_true(WaitList, 10),
     WaitReady = fun() ->
                    {ok, Provider} = watts:get_openid_provider_list(),
+                   io:format("Provider: ~p~n",[Provider]),
                    [#{ready := Result}| _] = Provider,
                    Result
            end,
@@ -351,7 +352,11 @@ mock_oidcc() ->
     meck:expect(oidcc, retrieve_user_info, UserInfo3),
     ok.
 
+
 unmock_oidcc() ->
     true = meck:validate(oidcc),
     ok = meck:unload(oidcc),
     ok.
+
+ca_file() ->
+    code:where_is_file("cacert.pem").

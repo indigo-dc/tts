@@ -53,14 +53,6 @@ echo "*** BUILDING AND INSTALLING ERLANG ***"
 cd $UTILS_DIR
 ./build_install_erlang.sh
 
-echo " "
-echo " "
-echo "*** INSTALLING PREBUILT CUTTLEFISH ***"
-cd $UTILS_DIR
-sudo cp cuttlefish  /usr/local/lib/erlang/erts-9.0/bin/
-sudo chmod 555 /usr/local/lib/erlang/erts-9.0/bin/cuttlefish
-
-
 
 cd $CURRENT_DIR
 echo " "
