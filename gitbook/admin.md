@@ -52,6 +52,17 @@ make package
 The package can be found in `./package/packages`.
 
 ## Upgrade WaTTS
+### General
+The best way to upgrade WaTTS is to stop it before upgrading:
+```
+watts stop
+```
+then upgrade WaTTs, either using the package management system of your distribution or
+manually.
+After upgrading WaTTs start it again
+```
+watts start
+```
 ### v1.1.0 to v1.2.0
 Nothing needs to be done, WaTTS 1.2.0 includes only new features.
 
