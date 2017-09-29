@@ -358,8 +358,8 @@ read_ssl_files(_) ->
 
 read_certificate({ok, Path}) ->
     case read_pem_entries(Path) of
-        [Certificate] ->
-            ?SETCONFIG(cert, public_key:pem_entry_decode(Certificate)),
+        [{'Certificate', Certificate, no_encrypted}] ->
+            ?SETCONFIG(cert, Certificate),
             true;
         _ ->
             lager:error("Init: certificate ~p invalid", [Path]),
@@ -387,8 +387,10 @@ read_cachain({ok, Path}) ->
             ?UNSETCONFIG(cachain),
             false;
         PemCerts ->
-            Decode = fun(Pem, List) ->
-                             [ public_key:pem_entry_decode(Pem) | List ]
+            Decode = fun({'Certificate', Cert, not_encrypted}, List) ->
+                             [ Cert | List ];
+                        (_, List) ->
+                             List
                      end,
             Certs = lists:foldl(Decode, [], PemCerts),
             ?SETCONFIG(cachain, Certs),
