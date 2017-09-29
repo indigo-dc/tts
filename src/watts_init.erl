@@ -370,7 +370,9 @@ read_certificate(_) ->
 
 read_key({ok, Path}) ->
     case read_pem_entries(Path) of
-        [PrivateKey] ->
+        [{Type, PrivateKey, not_encrypted}]
+        when Type == 'RSAPrivateKey'; Type == 'DSAPrivateKey';
+             Type =='ECPrivateKey'->
             ?SETCONFIG(key, PrivateKey),
             true;
         _ ->
@@ -407,7 +409,7 @@ read_dhparam({ok, none}) ->
     true;
 read_dhparam({ok, Path}) ->
     case read_pem_entries(Path) of
-        [DhParam] ->
+        [{'DHParameter', DhParam, not_encrypted}] ->
             ?SETCONFIG(dhparam, DhParam),
             true;
         _ ->
