@@ -372,8 +372,8 @@ read_key({ok, Path}) ->
     case read_pem_entries(Path) of
         [{Type, PrivateKey, not_encrypted}]
         when Type == 'RSAPrivateKey'; Type == 'DSAPrivateKey';
-             Type =='ECPrivateKey'->
-            ?SETCONFIG(key, PrivateKey),
+             Type =='ECPrivateKey'; Type == 'PrivateKeyInfo'->
+            ?SETCONFIG(key, {Type, PrivateKey}),
             true;
         _ ->
             lager:error("Init: private key ~p invalid", [Path]),
