@@ -359,7 +359,7 @@ read_ssl_files(_) ->
 read_certificate({ok, Path}) ->
     case read_pem_entries(Path) of
         [Certificate] ->
-            ?SETCONFIG(cert, Certificate),
+            ?SETCONFIG(cert, public_key:pem_entry_decode(Certificate)),
             true;
         _ ->
             lager:error("Init: certificate ~p invalid", [Path]),
@@ -384,19 +384,24 @@ read_cachain({ok, Path}) ->
     case read_pem_entries(Path) of
         [] ->
             lager:error("Init: ca chain ~p is empty", [Path]),
+            ?UNSETCONFIG(cachain),
             false;
-        Certs ->
+        PemCerts ->
+            Decode = fun(Pem, List) ->
+                             [ public_key:pem_entry_decode(Pem) | List ]
+                     end,
+            Certs = lists:foldl(Decode, [], PemCerts),
             ?SETCONFIG(cachain, Certs),
             true
     end;
 read_cachain(_) ->
     lager:warning("Init: no ca-chain-file configured [cachain_file]!"),
-    ?SETCONFIG(cachain, []),
+    ?UNSETCONFIG(cachain),
     true.
 
 read_dhparam({ok, none}) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
-    ?SETCONFIG(dhparam, none),
+    ?UNSETCONFIG(dhparam),
     true;
 read_dhparam({ok, Path}) ->
     case read_pem_entries(Path) of
@@ -405,11 +410,12 @@ read_dhparam({ok, Path}) ->
             true;
         _ ->
             lager:error("Init: dh-file ~p is invalid", [Path]),
+            ?UNSETCONFIG(dhparam),
             false
     end;
 read_dhparam(_) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
-    ?SETCONFIG(dhparam, none),
+    ?UNSETCONFIG(dhparam),
     true.
 
 read_pem_entries(Path) ->
