@@ -67,7 +67,7 @@ handle_cast(add_oidc, State) ->
     gen_server:cast(self(), add_rsps),
     {noreply, State};
 handle_cast(add_rsps, State) ->
-    add_rsps(),
+    maybe_add_rsps(?CONFIG(enable_rsp)),
     gen_server:cast(self(), add_services),
     {noreply, State};
 handle_cast(add_services, State) ->
@@ -231,7 +231,11 @@ maybe_recheck_provider(false, List, _) ->
     lists:foldl(Output, ok, List),
     ok.
 
-
+maybe_add_rsps(true) ->
+    add_rsps();
+maybe_add_rsps(_) ->
+    ?SETCONFIG(rsp_list, []),
+    ok.
 
 
 add_rsps() ->
@@ -279,18 +283,19 @@ start_web_interface() ->
     oidcc_client:register(watts_oidc_client),
     Dispatch = cowboy_router:compile([{'_', create_dispatch_list()}]),
     SSL = ?CONFIG(ssl),
+    UseSSL = read_ssl_files(SSL),
     ListenPort = ?CONFIG(listen_port),
-    case SSL of
+    case UseSSL of
         true ->
-            CertFile = ?CONFIG(cert_file),
-            KeyFile = ?CONFIG(key_file),
+            Cert = ?CONFIG(cert),
+            Key = ?CONFIG(key),
             BasicOptions =
                 [ {port, ListenPort},
-                  {certfile, CertFile},
-                  {keyfile, KeyFile}
+                  {cert, Cert},
+                  {key, Key}
                 ],
-            Options = add_options(BasicOptions, ?CONFIG_(cachain_file),
-                                  ?CONFIG_(dh_file), ?CONFIG_(hostname),
+            Options = add_options(BasicOptions, ?CONFIG_(cachain),
+                                  ?CONFIG_(dhparam), ?CONFIG_(hostname),
                                   ?CONFIG_(enable_ipv6)),
             {ok, _} = cowboy:start_https( http_handler
                                           , ?CONFIG(num_acceptors)
@@ -340,6 +345,93 @@ start_web_interface() ->
     end,
 
     ok.
+
+read_ssl_files(true) ->
+    CertOK = read_certificate(?CONFIG_(cert_file)),
+    KeyOK = read_key(?CONFIG_(key_file)),
+    ChainOK = read_cachain(?CONFIG_(cachain_file)),
+    DhOK = read_dhparam(?CONFIG_(dh_file)),
+    CertOK and KeyOK and ChainOK and DhOK;
+read_ssl_files(_) ->
+    false.
+
+
+read_certificate({ok, Path}) ->
+    case read_pem_entries(Path) of
+        [{'Certificate', Certificate, not_encrypted}] ->
+            ?SETCONFIG(cert, Certificate),
+            true;
+        _ ->
+            lager:error("Init: certificate ~p invalid", [Path]),
+            false
+    end;
+read_certificate(_) ->
+    false.
+
+read_key({ok, Path}) ->
+    case read_pem_entries(Path) of
+        [{Type, PrivateKey, not_encrypted}]
+        when Type == 'RSAPrivateKey'; Type == 'DSAPrivateKey';
+             Type =='ECPrivateKey'; Type == 'PrivateKeyInfo'->
+            ?SETCONFIG(key, {Type, PrivateKey}),
+            true;
+        _ ->
+            lager:error("Init: private key ~p invalid", [Path]),
+            false
+    end;
+read_key(_) ->
+    false.
+
+read_cachain({ok, Path}) ->
+    case read_pem_entries(Path) of
+        [] ->
+            lager:error("Init: ca chain ~p is empty", [Path]),
+            ?UNSETCONFIG(cachain),
+            false;
+        PemCerts ->
+            Decode = fun({'Certificate', Cert, not_encrypted}, List) ->
+                             [ Cert | List ];
+                        (_, List) ->
+                             List
+                     end,
+            Certs = lists:foldl(Decode, [], PemCerts),
+            ?SETCONFIG(cachain, Certs),
+            true
+    end;
+read_cachain(_) ->
+    lager:warning("Init: no ca-chain-file configured [cachain_file]!"),
+    ?UNSETCONFIG(cachain),
+    true.
+
+read_dhparam({ok, none}) ->
+    lager:warning("Init: no dh-file configured [dh_file]!"),
+    ?UNSETCONFIG(dhparam),
+    true;
+read_dhparam({ok, Path}) ->
+    case read_pem_entries(Path) of
+        [{'DHParameter', DhParam, not_encrypted}] ->
+            ?SETCONFIG(dhparam, DhParam),
+            true;
+        _ ->
+            lager:error("Init: dh-file ~p is invalid", [Path]),
+            ?UNSETCONFIG(dhparam),
+            false
+    end;
+read_dhparam(_) ->
+    lager:warning("Init: no dh-file configured [dh_file]!"),
+    ?UNSETCONFIG(dhparam),
+    true.
+
+read_pem_entries(Path) ->
+    extract_pem(file:read_file(Path), Path).
+
+extract_pem({ok, PemBin}, _) ->
+    public_key:pem_decode(PemBin);
+extract_pem(Error, Path) ->
+    lager:error("Init: error reading file ~p: ~p", [Path, Error]),
+    [].
+
+
 
 create_dispatch_list() ->
     EpMain = ?CONFIG(ep_main),
@@ -399,22 +491,17 @@ create_dispatch_list([_ | T], List) ->
 
 
 
-add_options(Options, {ok, CaChainFile}, DhFile, Hostname, IPv6) ->
-    NewOptions = [ {cacertfile, CaChainFile} | Options ],
-    add_options(NewOptions, ok, DhFile, Hostname, IPv6);
-add_options(Options, undefined, DhFile, Hostname, IPv6) ->
-    lager:warning("Init: no ca-chain-file configured [cachain_file]!"),
-    add_options(Options, ok, DhFile, Hostname, IPv6);
-add_options(Options, CaChainFile,  {ok, none}, Hostname, IPv6) ->
-    lager:warning("Init: no dh-file configured [dh_file]!"),
-    add_options(Options, CaChainFile, ok, Hostname, IPv6);
-add_options(Options, CaChainFile,  undefined, Hostname, IPv6) ->
-    lager:warning("Init: no dh-file configured [dh_file]!"),
-    add_options(Options, CaChainFile, ok, Hostname, IPv6);
-add_options(Options, CaChainFile, {ok, DhFile}, Hostname, IPv6) ->
-    NewOptions = [ {dhfile, DhFile} | Options ],
-    add_options(NewOptions, CaChainFile, ok, Hostname, IPv6);
-add_options(Options, CaChainFile, DhFile, {ok, Hostname}, IPv6) ->
+add_options(Options, {ok, CaChain}, DhParam, Hostname, IPv6) ->
+    NewOptions = [ {cacerts, CaChain} | Options ],
+    add_options(NewOptions, ok, DhParam, Hostname, IPv6);
+add_options(Options, undefined, DhParam, Hostname, IPv6) ->
+    add_options(Options, ok, DhParam, Hostname, IPv6);
+add_options(Options, CaChain,  undefined, Hostname, IPv6) ->
+    add_options(Options, CaChain, ok, Hostname, IPv6);
+add_options(Options, CaChain, {ok, DhParam}, Hostname, IPv6) ->
+    NewOptions = [ {dh, DhParam} | Options ],
+    add_options(NewOptions, CaChain, ok, Hostname, IPv6);
+add_options(Options, CaChain, DhParam, {ok, Hostname}, IPv6) ->
     NewOptions =
         case {lists:suffix(".onion", Hostname), IPv6} of
             {true, true} ->
@@ -426,13 +513,13 @@ add_options(Options, CaChainFile, DhFile, {ok, Hostname}, IPv6) ->
             _ ->
                 Options
         end,
-    add_options(NewOptions, CaChainFile, DhFile, ok, ok);
-add_options(Options, CaChainFile, DhFile, Hostname, {ok, true}) ->
+    add_options(NewOptions, CaChain, DhParam, ok, ok);
+add_options(Options, CaChain, DhParam, Hostname, {ok, true}) ->
     NewOptions =  [ inet6 | Options],
-    add_options(NewOptions, CaChainFile, DhFile, Hostname, ok);
-add_options(Options, CaChainFile, DhFile, Hostname, {ok, false}) ->
+    add_options(NewOptions, CaChain, DhParam, Hostname, ok);
+add_options(Options, CaChain, DhParam, Hostname, {ok, false}) ->
     NewOptions =  [ inet | Options],
-    add_options(NewOptions, CaChainFile, DhFile, Hostname, ok);
+    add_options(NewOptions, CaChain, DhParam, Hostname, ok);
 add_options(Options, _, _, _, _) ->
     Options.
 
