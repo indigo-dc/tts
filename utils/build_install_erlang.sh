@@ -1,6 +1,6 @@
 #!/bin/bash
-VERSION=20.0.4
-ERTS=9.0.4
+VERSION=20.1.0
+ERTS=9.1.0
 
 cd `dirname $0`
 UTILS_DIR=`pwd`
