@@ -358,7 +358,7 @@ read_ssl_files(_) ->
 
 read_certificate({ok, Path}) ->
     case read_pem_entries(Path) of
-        [{'Certificate', Certificate, no_encrypted}] ->
+        [{'Certificate', Certificate, not_encrypted}] ->
             ?SETCONFIG(cert, Certificate),
             true;
         _ ->
