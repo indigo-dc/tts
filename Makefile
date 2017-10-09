@@ -29,13 +29,17 @@ ct: compile
 	./utils/setup_ct.sh
 	$(REBAR) do ct -v, cover -v
 
+dialyzer:
+	$(REBAR) dialyzer
+
+
 jenkins_ct: compile
 	./utils/setup_ct.sh
 	$(REBAR) ct
 
 
 tests: elvis
-	$(REBAR) do cover -r, eunit -v
+	$(REBAR) do cover -r, dialyzer, eunit -v
 	./utils/setup_ct.sh
 	$(REBAR) do ct -v, cover -v
 

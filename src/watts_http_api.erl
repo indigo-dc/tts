@@ -334,11 +334,6 @@ perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
         {error, ErrorInfo} ->
             Body = jsone:encode(ErrorInfo),
             Req1 = cowboy_req:set_resp_body(Body, Req),
-            {Req1, false};
-        _Other ->
-            UserMsg = "An internal error occured, please contact the admin.",
-            Body = jsone:encode(#{result => error, user_msg => UserMsg}),
-            Req1 = cowboy_req:set_resp_body(Body, Req),
             {Req1, false}
     end.
 
@@ -463,9 +458,7 @@ verify_issuer(Issuer) when is_binary(Issuer) ->
                 true -> Issuer;
                 false -> bad_issuer
             end
-    end;
-verify_issuer(_Issuer)  ->
-    bad_issuer.
+    end.
 
 return_rsp_if_enabled(Rsp, true, true) ->
     Rsp;
@@ -489,7 +482,7 @@ verify_method(<<"POST">>) ->
 verify_method(<<"DELETE">>) ->
     delete.
 
-verify_body([]) ->
+verify_body(<<>>) ->
     undefined;
 verify_body(Data) ->
     case jsone:try_decode(Data, [{object_format, map}, {keys, attempt_atom}]) of
@@ -577,9 +570,7 @@ is_bad_version(1, true) ->
 is_bad_version(_, true) ->
     true;
 is_bad_version(Version, false) when is_integer(Version) ->
-   (Version =< 0) or (Version > ?LATEST_VERSION);
-is_bad_version(_, _) ->
-    true.
+   (Version =< 0) or (Version > ?LATEST_VERSION).
 
 update_cookie_or_end_session(Req, #state{session_pid = Session,
                                           type=RequestType}) ->
@@ -608,9 +599,7 @@ update_cookie_or_end_session(true, Session, SessType, Req) ->
             perform_logout(Session, SessType, Req)
     end;
 update_cookie_or_end_session(false, Session, SessType, Req) ->
-    perform_logout(Session, SessType, Req);
-update_cookie_or_end_session(_, _, _, Req) ->
-    {ok, Req}.
+    perform_logout(Session, SessType, Req).
 
 perform_logout(Session, oidc, Req) ->
     perform_cookie_logout(Session, Req);
@@ -625,9 +614,5 @@ perform_cookie_logout(Session, Req) ->
     watts:logout(Session),
     Result.
 
-
-
-get_return_urls(undefined) ->
-    {undefined, undefined};
 get_return_urls(Rsp) ->
     watts_rsp:get_return_urls(Rsp).

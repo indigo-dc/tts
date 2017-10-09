@@ -3,9 +3,14 @@
 -include("watts.hrl").
 
 -export([
+         login_succeeded/1,
          login_succeeded/2,
+         login_failed/2,
          login_failed/3
         ]).
+login_succeeded(TokenMap) ->
+    lager:warning("using old secceeded interface, not passing EnvMap"),
+    login_succeeded(TokenMap, #{}).
 
 login_succeeded(TokenMap, EnvMap) ->
     case watts:login_with_oidcc(TokenMap, get_session_type(EnvMap)) of
@@ -24,6 +29,10 @@ login_succeeded(TokenMap, EnvMap) ->
             ErrMsg = bin_error_msg(login, undefind),
             redirect_error(ErrMsg, EnvMap)
     end.
+
+login_failed(Reason, Details) ->
+    lager:warning("using old failed interface, not passing EnvMap"),
+    login_failed(Reason, Details, #{}).
 
 login_failed(Reason, Details, EnvMap) ->
     lager:warning("login failed: ~p - ~p", [Reason, Details]),
