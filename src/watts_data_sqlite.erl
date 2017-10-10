@@ -72,7 +72,8 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
 credential_get_list(UserId) ->
     gen_server:call(?MODULE, {credential_get_list, UserId}).
 
--spec credential_get_count(UserId::binary(), ServiceId::binary()) -> integer().
+-spec credential_get_count(UserId::binary(), ServiceId::binary()) ->
+                                  {ok, integer()}.
 credential_get_count(UserId, ServiceId) ->
     gen_server:call(?MODULE, {credential_get_count, UserId, ServiceId}).
 
@@ -85,7 +86,7 @@ credential_get(CredId) ->
 credential_remove(UserId, CredId) ->
     gen_server:call(?MODULE, {credential_remove, UserId, CredId}).
 
--spec is_ready() -> ok | {error, not_configured}.
+-spec is_ready() -> ok | {error, Reason :: atom()}.
 is_ready() ->
     gen_server:call(?MODULE, is_ready).
 
