@@ -46,12 +46,12 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec add_cred(Credential :: list(), UserId::binary()) -> {ok, Id::binary()}.
+-spec add_cred(Credential :: map(), UserId::binary()) -> {ok, Id::binary()}.
 add_cred(Credential, UserId) ->
     gen_server:call(?MODULE, {add, Credential, UserId}).
 
 -spec get_cred(CredId :: binary(), UserId::binary()) ->
-                      {ok, Credential::list()} | {error, Reason::any()}.
+                      {ok, Credential::map()} | {error, Reason::any()}.
 get_cred(Id, UserId) ->
     gen_server:call(?MODULE, {get, Id, UserId}).
 

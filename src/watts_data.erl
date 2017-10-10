@@ -80,7 +80,7 @@ sessions_update_pid(Token, Pid) ->
     insert(?WATTS_SESSIONS, {Token, Pid}),
     ok.
 
--spec sessions_delete(Token :: binary()) -> true.
+-spec sessions_delete(Token :: binary()) -> ok.
 sessions_delete(Token) ->
     delete(?WATTS_SESSIONS, Token).
 
@@ -96,7 +96,7 @@ service_add(Identifier, Info) ->
 service_update(Identifier, Info) ->
     return_ok_or_error(insert(?WATTS_SERVICE, {Identifier, Info})).
 
--spec service_get(Identifier::binary()) ->ok.
+-spec service_get(Identifier::binary()) -> {ok, tuple()} | {error, not_found}.
 service_get(Id) ->
     lookup(?WATTS_SERVICE, Id).
 

@@ -242,15 +242,9 @@ add_rsps() ->
     lager:info("Init: adding relying service provider (RSP)"),
     UpdateRsp =
         fun(#{id := Id} = Config, List) ->
-                case watts_rsp:new(Config) of
-                    {ok, Rsp} ->
-                        lager:info("Init: added RSP ~p", [Id]),
-                        [ Rsp | List ];
-                    {error, Reason} ->
-                        Msg = "Init: unable to add keys of RSP ~p: ~p",
-                        lager:critical(Msg, [Id, Reason]),
-                        List
-                end
+                {ok, Rsp} = watts_rsp:new(Config),
+                lager:info("Init: added RSP ~p (keys not yet fetched)", [Id]),
+                [ Rsp | List ]
         end,
     NewRspList = lists:foldl(UpdateRsp, [], ?CONFIG(rsp_list, [])),
     ?SETCONFIG(rsp_list, NewRspList),
@@ -504,10 +498,10 @@ add_options(Options, CaChain, {ok, DhParam}, Hostname, IPv6) ->
 add_options(Options, CaChain, DhParam, {ok, Hostname}, IPv6) ->
     NewOptions =
         case {lists:suffix(".onion", Hostname), IPv6} of
-            {true, true} ->
+            {true, {ok, true}} ->
                 lager:info("Init: listening only at ::1 (onion)"),
                 [ {ip, {0, 0, 0, 0, 0, 0, 0, 1}} | Options ];
-            {true, false} ->
+            {true, _} ->
                 lager:info("Init: listening only at 127.0.0.1 (onion)"),
                 [ {ip, {127, 0, 0, 1}} | Options ];
             _ ->

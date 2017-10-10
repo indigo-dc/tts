@@ -24,7 +24,8 @@ setup_session_and_start({ok, Rsp}, Req) ->
     {ok, Session} = watts:session_for_rsp(Rsp),
     {ok, Req2} = set_cookie(Session, Req),
     execute_or_error(watts_rsp:request_type(Rsp), Session, Rsp, Req2);
-setup_session_and_start({error, Error, ReturnUrl}, Req) ->
+setup_session_and_start({error, Error, ReturnUrl}, Req)
+  when is_binary(ReturnUrl) ->
     warning("~p", [Error]),
     watts_http_util:redirect_to(ReturnUrl, Req);
 setup_session_and_start(Error, Req) ->

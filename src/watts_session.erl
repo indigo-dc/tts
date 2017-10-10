@@ -89,25 +89,25 @@ get_sess_token(undefined) ->
 get_sess_token(Pid) ->
     gen_server:call(Pid, get_sess_token).
 
--spec set_type(Type :: atom(), Pid :: pid()) -> ok.
+-spec set_type(Type :: atom() | tuple(), Pid :: pid()) -> ok.
 set_type(_, undefined) ->
     ok;
 set_type(Type, Pid) ->
     gen_server:call(Pid, {set_type, Type}).
 
--spec get_type(Pid :: pid()) -> {ok, atom()}.
+-spec get_type(Pid :: pid()) -> {ok, atom() | tuple()}.
 get_type(undefined) ->
     {ok, undefined};
 get_type(Pid) ->
     gen_server:call(Pid, get_type).
 
--spec set_rsp(Rsp :: binary(), Pid :: pid()) -> ok.
+-spec set_rsp(Rsp :: tuple(), Pid :: pid()) -> ok.
 set_rsp(_, undefined) ->
     ok;
 set_rsp(Client, Pid) ->
     gen_server:call(Pid, {set_rsp, Client}).
 
--spec get_rsp(Pid :: pid()) -> {ok, binary()}.
+-spec get_rsp(Pid :: pid()) -> {ok, tuple()}.
 get_rsp(undefined) ->
     {ok, undefined};
 get_rsp(Pid) ->
@@ -159,7 +159,7 @@ get_error(Pid) ->
 set_error(Error, Pid) ->
     gen_server:call(Pid, {set_error, Error}).
 
--spec get_user_info(Pid :: pid()) -> {ok, UserInfo::map()}.
+-spec get_user_info(Pid :: pid()) -> {ok, tuple()}.
 get_user_info(Pid) ->
     gen_server:call(Pid, get_user_info).
 

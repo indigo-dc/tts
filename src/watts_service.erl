@@ -1,6 +1,6 @@
 -module(watts_service).
 %%
-%% Copyright 2016 SCC/KIT
+%% Copyright 2016-2017 SCC/KIT
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -378,10 +378,10 @@ validate_call_parameter(Key, false, false,  _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: key ~p of parameter contains spaces: ~p",
     lager:error(EMsg, [Id, Key, Param]),
     {false, ParamSet};
-validate_call_parameter(Key, _, true,  _N, _D, _T, Param, Id, ParamSet) ->
-    EMsg = "service ~p: key ~p exists multiple times: ~p",
-    lager:error(EMsg, [Id, Key, Param]),
-    {false, ParamSet};
+%% validate_call_parameter(Key, _, true,  _N, _D, _T, Param, Id, ParamSet) ->
+%%     EMsg = "service ~p: key ~p exists multiple times: ~p",
+%%     lager:error(EMsg, [Id, Key, Param]),
+%%     {false, ParamSet};
 validate_call_parameter(_,  true, false,  _, _, _, Param, Id, ParamSet) ->
     EMsg = "service ~p: bad request parameter values ~p (not strings)",
     lager:error(EMsg, [Id, Param]),
@@ -416,13 +416,11 @@ start_runner_queue_if_needed(#{enabled := true,
                               } = Info)
   when is_number(NumRunner) ->
     QueueId = gen_queue_name(Id),
-    ok = jobs:add_queue(QueueId, [{regulators, [
-                                           {counter, [{limit, NumRunner}]}
-                                          ]},
+    ok = jobs:add_queue(QueueId, [{counter, [{limit, NumRunner}]},
                              {type, fifo}
                             ]),
-    Msg = "service ~p: queue ~p started with max ~p parallel runners",
-    lager:info(Msg, [Id, QueueId, NumRunner]),
+    lager:info("service ~p: queue ~p started with max ~p parallel runners",
+               [Id, QueueId, NumRunner]),
     {ok, maps:put(queue, QueueId, Info)};
 start_runner_queue_if_needed(Info) ->
     {ok, Info}.
@@ -430,10 +428,8 @@ start_runner_queue_if_needed(Info) ->
 
 
 
-update_service(Id, NewInfo) when is_map(NewInfo) ->
-    watts_data:service_update(Id, NewInfo);
-update_service( _, _) ->
-    {error, invalid_config}.
+update_service(Id, NewInfo) ->
+    watts_data:service_update(Id, NewInfo).
 
 convert_to_type(Value, string)
   when is_binary(Value) ->
