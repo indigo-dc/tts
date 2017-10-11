@@ -76,13 +76,13 @@ stop(Pid) ->
 %% The function just sends a cast to itself which in turn will be
 %% handled by handle_cast.
 %% @see handle_cast/2
--spec init(no_parameter) -> {ok, #state{}}.
+-spec init(no_parameter) -> {ok, tuple()}.
 init(no_parameter) ->
     gen_server:cast(self(), check_watts_not_started),
     {ok, #state{}}.
 
 %% @doc just a dummy to be compliant with the behaviour, no functionality.
--spec handle_call(any(), any(), #state{}) -> {reply, ignored, #state{}}.
+-spec handle_call(any(), any(), tuple()) -> {reply, ignored, tuple()}.
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
@@ -102,8 +102,8 @@ handle_call(_Request, _From, State) ->
 %% <li> start the web interface <em>start_web_interface</em></li>
 %% </ul>
 %%
--spec handle_cast(any(), #state{}) -> {noreply, #state{}} |
-                                      {stop, normal, #state{}}.
+-spec handle_cast(any(), tuple()) -> {noreply, tuple()} |
+                                      {stop, normal, tuple()}.
 handle_cast(check_watts_not_started, State) ->
     start_if_not_started_before(),
     {noreply, State};
@@ -137,17 +137,17 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %% @doc just a dummy to be compliant with the behaviour, no functionality.
--spec handle_info(any(), #state{}) -> {noreply, #state{}}.
+-spec handle_info(any(), tuple()) -> {noreply, tuple()}.
 handle_info(_Info, State) ->
     {noreply, State}.
 
 %% @doc just a dummy to be compliant with the behaviour, no functionality.
--spec terminate(any(), #state{}) -> ok.
+-spec terminate(any(), tuple()) -> ok.
 terminate(_Reason, _State) ->
     ok.
 
 %% @doc just a dummy to be compliant with the behaviour, no functionality.
--spec code_change(any(), #state{}, any()) -> {ok, #state{}}.
+-spec code_change(any(), tuple(), any()) -> {ok, tuple()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
