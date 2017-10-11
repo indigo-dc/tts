@@ -63,6 +63,10 @@ After upgrading WaTTs start it again
 ```
 watts start
 ```
+### v1.2.1 to v1.3.0
+The configuration enable_docs is renamed to enable_user_doc, so if you have it
+in your watts.conf please rename it.
+
 ### v1.2.0 to v1.2.1
 Nothing special needs to be done by the administrator.
 WaTTS 1.2.1 includes only a bug-fix.
