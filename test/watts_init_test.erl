@@ -5,6 +5,8 @@
 basic_init_test() ->
     {ok, Meck} = start_meck(),
     try
+        %% ensure the VM does not get killed
+        ?UNSETCONFIG(watts_init_started),
         ?SETCONFIG( hostname, "localhost"),
         ?SETCONFIG( ssl, false),
         ?SETCONFIG( listen_port, 8080),
@@ -33,6 +35,8 @@ advanced_init_test() ->
                           scopes => [<<"openid">>],
                           disable_login => false
                          }],
+        %% ensure the VM does not get killed
+        ?UNSETCONFIG(watts_init_started),
         ?SETCONFIG( hostname, "localhost"),
         ?SETCONFIG( ssl, true),
         ?SETCONFIG( cert_file, "some_cert"),
