@@ -33,6 +33,8 @@ jenkins_ct: compile
 	./utils/setup_ct.sh
 	$(REBAR) ct
 
+dialyzer:
+	$(REBAR) dialyzer
 
 tests: elvis
 	$(REBAR) do cover -r, eunit -v
@@ -53,6 +55,9 @@ docs:
 	rm -rf priv/docs
 	mkdir -p priv/docs
 	cp -r _book/* priv/docs
+	rm -rf _book
+	$(REBAR) edoc
+
 
 rel: compile
 	cat ./config/vars.config > ./config/vars_gen.config

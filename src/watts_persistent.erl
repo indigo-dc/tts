@@ -39,16 +39,16 @@
     {ok, [watts:cred()]}.
 
 -callback credential_get_count(UserId::binary(), ServiceId::binary()) ->
-    integer().
+    {ok, integer()}.
 
 -callback credential_get(CredId::binary()) ->
-    {ok, watts:cred()}.
+    {ok, watts:cred()} | {error, Reason :: atom()}.
 
 -callback credential_remove(UserId::binary(), CredentialId::binary()) ->
     ok | {error, Reason :: atom()}.
 
 -callback is_ready() ->
-    ok | {error, not_configured}.
+    ok | {error, Reason::atom()}.
 
 
 init() ->
