@@ -571,19 +571,6 @@ create_information_result(_, {error, Reason}, _, _) ->
     {error, Reason}.
 
 
-%% get_session_type(Cookie) when is_binary(Cookie) ->
-%%     Result =  watts_session_mgr:get_session(Cookie),
-%%     get_session_type(Result);
-%% get_session_type({ok, Pid}) when is_pid(Pid) ->
-%%     {ok, Type} = watts_session:get_type(Pid),
-%%     {ok, Type, Pid};
-%% get_session_type(_) ->
-%%     {ok, none}.
-
-
-
-
-
 get_user_msg(#{user_msg := Msg}) when is_list(Msg) ->
     list_to_binary(Msg);
 get_user_msg(#{user_msg := Msg}) when is_binary(Msg) ->

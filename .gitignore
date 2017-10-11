@@ -6,7 +6,10 @@ deps/
 _rel/
 _build/
 _book/
-doc/
+doc/*.html
+doc/*.css
+doc/edoc-info
+doc/erlang.png
 .erlang.mk/
 .tts.plt
 elvis
@@ -29,5 +32,5 @@ TAGS
 *#
 .#*
 ttsc
-pkg 
+pkg
 github.com

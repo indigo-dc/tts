@@ -146,6 +146,7 @@ setup_group(DbType) ->
     ?SETCONFIG(listen_port, 8080),
     ?SETCONFIG(ep_main, <<"/">>),
     ?SETCONFIG(hostname, "localhost"),
+    ?UNSETCONFIG(watts_init_started),
     application:set_env(oidcc, cert_depth, 5),
     application:set_env(oidcc, cacertfile, ca_file()),
     {ok, _} = application:ensure_all_started(watts),

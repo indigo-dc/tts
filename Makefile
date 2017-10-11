@@ -49,17 +49,21 @@ compile: check
 	# workaround to ensure syslog gets build
 	cd _build/default/lib/syslog && ./rebar compile
 
-
-docs:
-	gitbook build
-	rm -rf priv/docs
-	mkdir -p priv/docs
-	cp -r _book/* priv/docs
-	rm -rf _book
+edoc:
 	$(REBAR) edoc
+	rm -rf priv/docs/code
+	mkdir -p priv/docs/code
+	cp -r doc/* priv/docs/code
+
+gitbook:
+	gitbook build
+	rm -rf priv/docs/user
+	mkdir -p priv/docs/user
+	cp -r _book/* priv/docs/user
+	rm -rf _book
 
 
-rel: compile
+rel: compile edoc gitbook
 	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
 	cat $(OVERLAY_VARS) >> ./config/vars_gen.config

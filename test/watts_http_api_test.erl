@@ -246,7 +246,8 @@ resource_exists_test() ->
 get_json_test() ->
     ?SETCONFIG(ep_main, <<"/">>),
     ?SETCONFIG(vsn, "latest"),
-    ?SETCONFIG(enable_docs, false),
+    ?SETCONFIG(enable_user_doc, false),
+    ?SETCONFIG(enable_code_doc, false),
 
     {ok, Meck} = start_meck(),
     try
@@ -318,7 +319,8 @@ get_json_test() ->
                        <<"logged_in">> => false,
                        <<"display_name">> => <<"">>,
                        <<"issuer_id">> => <<"">>,
-                       <<"documentation">> => false}
+                       <<"user_documentation">> => false,
+                       <<"code_documentation">> => false}
                     },
                     {#state{version = latest,
                             type = access_token,

@@ -11,7 +11,8 @@ type alias Model =
     , displayName : String
     , error : String
     , issuer_id : String
-    , docs_enabled : Bool
+    , doc_user_enabled : Bool
+    , doc_code_enabled : Bool
     , service_request : Maybe ServiceRequest
     , rsp_success_redir : Maybe String
     , rsp_error_redir : Maybe String
