@@ -272,14 +272,16 @@ perform_get(info, undefined, Session, _) ->
         end,
     {ok, Version} = ?CONFIG_(vsn),
     Redirect = io_lib:format("~s~s", [?CONFIG(ep_main), "oidc"]),
-    EnableDocs = ?CONFIG(enable_docs),
+    EnableUserDocs = ?CONFIG(enable_user_doc),
+    EnableCodeDocs = ?CONFIG(enable_code_doc),
     Info = #{version => list_to_binary(Version),
               redirect_path => list_to_binary(Redirect),
               error => Error,
               logged_in => LoggedIn,
               display_name => DName,
               issuer_id => IssId,
-              documentation => EnableDocs
+              user_documentation => EnableUserDocs,
+              code_documentation => EnableCodeDocs
             },
     Info1 = case AutoService of
                undefined  -> Info;

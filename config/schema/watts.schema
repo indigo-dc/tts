@@ -313,8 +313,15 @@
           {commented, "/path/to/privacy_document.html"}
           ]}.
 
-%% @doc publish documentation at ./docs/ if enabled
-{mapping, "enable_docs", "watts.enable_docs", [
+%% @doc publish user documentation at ./docs/user/ if enabled
+{mapping, "enable_user_doc", "watts.enable_user_doc", [
+          {datatype ,    {enum ,  [true, false]}},
+          {commented, true},
+          {default, false}
+          ]}.
+
+%% @doc publish code documentation at ./docs/code if enabled
+{mapping, "enable_code_doc", "watts.enable_code_doc", [
           {datatype ,    {enum ,  [true, false]}},
           {commented, true},
           {default, false}

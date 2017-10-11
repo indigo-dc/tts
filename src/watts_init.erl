@@ -499,18 +499,26 @@ create_dispatch_list() ->
                          {priv_file, ?APPLICATION, "http_static/index.html"}},
                         {EpOidc, oidcc_cowboy, []}
                        ],
-    create_dispatch_list([{docs, ?CONFIG(enable_docs)},
+    create_dispatch_list([{doc_user, ?CONFIG(enable_user_doc)},
+                          {doc_code, ?CONFIG(enable_code_doc)},
                           {rsp, ?CONFIG(enable_rsp), ?CONFIG(rsp_list)},
                           {privacy, ?CONFIG(privacy_doc)} ],
                          BaseDispatchList).
 
 create_dispatch_list([], List) ->
      List;
-create_dispatch_list([{docs, true} | T], List) ->
-    DocInfo = "Init: publishing documentation at /docs/",
+create_dispatch_list([{doc_user, true} | T], List) ->
+    DocInfo = "Init: publishing user documentation at /docs/user/",
     lager:info(DocInfo),
-    EpDocs = watts_http_util:relative_path("docs/[...]"),
-    NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs"}}
+    EpDocs = watts_http_util:relative_path("docs/user/[...]"),
+    NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs/user"}}
+                | List ],
+    create_dispatch_list(T, NewList);
+create_dispatch_list([{doc_code, true} | T], List) ->
+    DocInfo = "Init: publishing code documentation at /docs/code/",
+    lager:info(DocInfo),
+    EpDocs = watts_http_util:relative_path("docs/code/[...]"),
+    NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs/code"}}
                 | List ],
     create_dispatch_list(T, NewList);
 create_dispatch_list([{rsp, true, []} | T], List) ->

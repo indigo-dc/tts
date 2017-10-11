@@ -69,7 +69,8 @@ type alias Model =
     , current_param : Maybe (Dict String Json.Value)
     , current_serviceid : Maybe String
     , request_progressing : Bool
-    , docs_enabled : Bool
+    , user_docs_enabled : Bool
+    , code_docs_enabled : Bool
     , progressing_title : Maybe String
     , rsp_redir_success : Maybe String
     , rsp_redir_error : Maybe String
@@ -108,7 +109,8 @@ update msg model =
                     , displayName = info.displayName
                     , activePage = nextPage
                     , issuer_id = info.issuer_id
-                    , docs_enabled = info.docs_enabled
+                    , user_docs_enabled = info.doc_user_enabled
+                    , code_docs_enabled = info.doc_code_enabled
                     , current_serviceid = curService
                     , current_param = curServiceParam
                     , rsp_redir_success = info.rsp_success_redir
@@ -398,11 +400,21 @@ view model =
                 _ ->
                     False
 
-        docu =
-            case model.docs_enabled of
+        user_docu =
+            case model.user_docs_enabled of
                 True ->
                     [ small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
-                        [ a [ href "docs/index.html" ] [ text "Documentation" ]
+                        [ a [ href "docs/user/index.html" ] [ text "User Documentation" ]
+                        ]
+                    ]
+
+                False ->
+                    []
+        code_docu =
+            case model.code_docs_enabled of
+                True ->
+                    [ small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
+                        [ a [ href "docs/code/index.html" ] [ text "Code Documentation" ]
                         ]
                     ]
 
@@ -434,7 +446,8 @@ view model =
                         [ a [ href "privacystatement.html" ] [ text "Privacy Statement" ]
                         ]
                      ]
-                        ++ docu
+                        ++ user_docu
+                        ++ code_docu
                         ++ [ small [ style [ ( "color", "#808080" ), ( "margin-left", "20px" ) ] ]
                                 [ a [ href "https://github.com/indigo-dc/tts" ] [ text "GitHub" ]
                                 ]
@@ -547,7 +560,8 @@ initModel baseUrl restVersion =
       , current_serviceid = Nothing
       , current_param = Nothing
       , request_progressing = False
-      , docs_enabled = False
+      , user_docs_enabled = False
+      , code_docs_enabled = False
       , progressing_title = Nothing
       , rsp_redir_success = Nothing
       , rsp_redir_error = Nothing
