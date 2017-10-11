@@ -1,4 +1,3 @@
--module(watts_init).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
 %%
@@ -14,6 +13,31 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%
+%% @doc The {@module} module takes care of the initialization of WaTTS.
+%% It uses the application environment set by the cuttlefish.
+%%
+%% Cuttlefish is a config parsing and validation tool creating a set of
+%% parameter for the actual application to run, it is configured by schemas,
+%% those are stored at /config/schema.
+%%
+%% Once the configuration file is parsed and is valid the result is passed to
+%% the application environment of WaTTS.
+%%
+%% Once WaTTS and all it's dependencies are loaded this part starts running and
+%% configures the application.
+%%
+%% The steps taken to configure the server include:
+%% <ul>
+%% <li> setup the database </li>
+%% <li> initilize the OpenID Connect provider </li>
+%% <li> configure the services with their plugins </li>
+%% <li> start the web interface </li>
+%% </ul>
+%% The most important functions are {@link init/1} and {@link handle_cast/2}.
+-module(watts_init).
+
+
+
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
 
@@ -37,23 +61,52 @@
 %% API.
 
 -spec start_link() -> {ok, pid()}.
+%% @doc starting the gen_server process.
 start_link() ->
-    gen_server:start_link(?MODULE, [], []).
+    gen_server:start_link(?MODULE, no_parameter, []).
 
 -spec stop(pid()) -> ok.
+%% @doc function to stop the process.
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
 
 %% gen_server.
-
-init([]) ->
-    gen_server:cast(self(), start_watts),
+%% @doc staring the initializing process.
+%% The function just sends a cast to itself which in turn will be
+%% handled by handle_cast.
+%% @see handle_cast/2
+-spec init(no_parameter) -> {ok, #state{}}.
+init(no_parameter) ->
+    gen_server:cast(self(), check_watts_not_started),
     {ok, #state{}}.
 
+%% @doc just a dummy to be compliant with the behaviour, no functionality.
+-spec handle_call(any(), any(), #state{}) -> {reply, ignored, #state{}}.
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+
+%% @doc this is where the magic happens.
+%% The process handles one step at a time and after each step it will
+%% send a cast to itself to trigger the next step.
+%%
+%% The folowing steps are processed (in order of excution):
+%% <ul>
+%% <li> ensure the init process has not been started before </li>
+%% <li> set the version and ensure not running as root <em>init_watts</em> </li>
+%% <li> starting the database <em>start_database</em> </li>
+%% <li> adding the OpenID Connect provider <em>add_openid_provider</em> </li>
+%% <li> maybe adding RSPs, if configured <em>maybe_add_rsps</em> </li>
+%% <li> add the configured services <em>add_services</em> </li>
+%% <li> start the web interface <em>start_web_interface</em></li>
+%% </ul>
+%%
+-spec handle_cast(any(), #state{}) -> {noreply, #state{}} |
+                                      {stop, normal, #state{}}.
+handle_cast(check_watts_not_started, State) ->
+    start_if_not_started_before(),
+    {noreply, State};
 handle_cast(start_watts, State) ->
     init_watts(),
     gen_server:cast(self(), start_database),
@@ -83,15 +136,20 @@ handle_cast(stop, #state{} = State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
+%% @doc just a dummy to be compliant with the behaviour, no functionality.
+-spec handle_info(any(), #state{}) -> {noreply, #state{}}.
 handle_info(_Info, State) ->
     {noreply, State}.
 
+%% @doc just a dummy to be compliant with the behaviour, no functionality.
+-spec terminate(any(), #state{}) -> ok.
 terminate(_Reason, _State) ->
     ok.
 
+%% @doc just a dummy to be compliant with the behaviour, no functionality.
+-spec code_change(any(), #state{}, any()) -> {ok, #state{}}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
 
 init_watts() ->
     lager:info("Init: starting  "),
@@ -242,15 +300,9 @@ add_rsps() ->
     lager:info("Init: adding relying service provider (RSP)"),
     UpdateRsp =
         fun(#{id := Id} = Config, List) ->
-                case watts_rsp:new(Config) of
-                    {ok, Rsp} ->
-                        lager:info("Init: added RSP ~p", [Id]),
-                        [ Rsp | List ];
-                    {error, Reason} ->
-                        Msg = "Init: unable to add keys of RSP ~p: ~p",
-                        lager:critical(Msg, [Id, Reason]),
-                        List
-                end
+                {ok, Rsp} = watts_rsp:new(Config),
+                lager:info("Init: added RSP ~p (keys not yet fetched)", [Id]),
+                [ Rsp | List ]
         end,
     NewRspList = lists:foldl(UpdateRsp, [], ?CONFIG(rsp_list, [])),
     ?SETCONFIG(rsp_list, NewRspList),
@@ -294,8 +346,9 @@ start_web_interface() ->
                   {cert, Cert},
                   {key, Key}
                 ],
+            IsOnion = lists:suffix(".onion", ?CONFIG(hostname)),
             Options = add_options(BasicOptions, ?CONFIG_(cachain),
-                                  ?CONFIG_(dhparam), ?CONFIG_(hostname),
+                                  ?CONFIG_(dhparam), IsOnion,
                                   ?CONFIG_(enable_ipv6)),
             {ok, _} = cowboy:start_https( http_handler
                                           , ?CONFIG(num_acceptors)
@@ -501,19 +554,14 @@ add_options(Options, CaChain,  undefined, Hostname, IPv6) ->
 add_options(Options, CaChain, {ok, DhParam}, Hostname, IPv6) ->
     NewOptions = [ {dh, DhParam} | Options ],
     add_options(NewOptions, CaChain, ok, Hostname, IPv6);
-add_options(Options, CaChain, DhParam, {ok, Hostname}, IPv6) ->
-    NewOptions =
-        case {lists:suffix(".onion", Hostname), IPv6} of
-            {true, true} ->
-                lager:info("Init: listening only at ::1 (onion)"),
-                [ {ip, {0, 0, 0, 0, 0, 0, 0, 1}} | Options ];
-            {true, false} ->
-                lager:info("Init: listening only at 127.0.0.1 (onion)"),
-                [ {ip, {127, 0, 0, 1}} | Options ];
-            _ ->
-                Options
-        end,
-    add_options(NewOptions, CaChain, DhParam, ok, ok);
+add_options(Options, CaChain, DhParam, true, {ok, true}) ->
+    lager:info("Init: listening only at ::1 (onion)"),
+    NewOptions = [ {ip, {0, 0, 0, 0, 0, 0, 0, 1}} | Options ],
+    add_options(NewOptions, CaChain, DhParam, ok, {ok, true});
+add_options(Options, CaChain, DhParam, true, IPv6) ->
+    lager:info("Init: listening only at 127.0.0.1 (onion)"),
+    NewOptions = [ {ip, {127, 0, 0, 1}} | Options ],
+    add_options(NewOptions, CaChain, DhParam, ok, IPv6);
 add_options(Options, CaChain, DhParam, Hostname, {ok, true}) ->
     NewOptions =  [ inet6 | Options],
     add_options(NewOptions, CaChain, DhParam, Hostname, ok);
@@ -545,3 +593,13 @@ remove_newline(List) ->
                      true
              end,
     lists:filter(Filter, List).
+
+start_if_not_started_before() ->
+    start_if_undefined(?CONFIG(watts_init_started)).
+
+start_if_undefined(undefined) ->
+    ok = ?SETCONFIG(watts_init_started, true),
+    gen_server:cast(self(), start_watts);
+start_if_undefined(_) ->
+    lager:emergency("Init: restarting ... this should not happen!"),
+    erlang:halt(1).

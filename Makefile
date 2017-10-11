@@ -49,14 +49,15 @@ compile: check
 	# workaround to ensure syslog gets build
 	cd _build/default/lib/syslog && ./rebar compile
 
+edoc:
+	$(REBAR) edoc
 
-docs:
+docs: edoc
 	gitbook build
 	rm -rf priv/docs
 	mkdir -p priv/docs
 	cp -r _book/* priv/docs
 	rm -rf _book
-	$(REBAR) edoc
 
 
 rel: compile

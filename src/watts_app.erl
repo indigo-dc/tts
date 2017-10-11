@@ -1,4 +1,3 @@
--module(watts_app).
 %%
 %% Copyright 2016 SCC/KIT
 %%
@@ -14,6 +13,10 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%
+%% @doc this is just starting the supervisor tree nothing more.
+%% The main supervisor is watts_sup.
+%% @see watts_sup
+-module(watts_app).
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 
 -behaviour(application).
@@ -22,9 +25,11 @@
 -export([start/2]).
 -export([stop/1]).
 
+-spec start(any(), any()) ->  {ok, pid()} | {error, Reason::term()}.
 start(_Type, _Args) ->
     lager:info("WaTTS starting ..."),
     watts_sup:start_link().
 
+-spec stop(any()) -> ok.
 stop(_State) ->
     ok.
