@@ -26,6 +26,12 @@
 
 -define(COOKIE, <<"watts_session">>).
 
+%% @doc either update or delete a cookie.
+%% the cookie will either be updated with a new lifetime or will be deleted
+%% by setting the time to timestamp 0.
+-spec perform_cookie_action(Action :: clear | update, MaxAge :: integer(),
+                            CookieData :: deleted | binary(),
+                            cowboy_req:req()) -> {ok, cowboy_req:req()}.
 perform_cookie_action(clear, _MaxAge, _Value, Req) ->
     Opts = create_cookie_opts(0),
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, <<"deleted">>, Opts, Req),
@@ -39,6 +45,8 @@ perform_cookie_action(update, MaxAge, Value, Req) ->
     Req2 = cowboy_req:set_resp_cookie(?COOKIE, Value, Opts, Req),
     {ok, Req2}.
 
+%% @doc generate the options list for the cookie
+-spec create_cookie_opts(MaxAge :: integer()) -> [tuple()].
 create_cookie_opts(MaxAge) ->
     BasicOpts = [ {http_only, true}, {max_age, MaxAge}, {path, <<"/">>}],
     case ?CONFIG(ssl) of
@@ -53,6 +61,8 @@ relative_path(Append) ->
     Base = ?CONFIG(ep_main),
     << Base/binary, AppendBin/binary >>.
 
+%% @doc convert a path into the url to that path
+-spec whole_url(Path :: string() | binary()) -> binary().
 whole_url(Path) when is_binary(Path)->
     HostName = binary:list_to_bin(?CONFIG(hostname)),
     Prot = local_protocol(),
@@ -61,16 +71,27 @@ whole_url(Path) when is_binary(Path)->
 whole_url(Path) when is_list(Path) ->
     whole_url(list_to_binary(Path)).
 
+%% @doc create a redirection for cowboy to the given url.
+-spec redirect_to(Url :: binary(), cowboy_req:req()) ->
+                         {ok, cowboy_req:req(), []}.
 redirect_to(Url, Req) ->
     Header = [{<<"location">>, Url}],
     {ok, Req2} = cowboy_req:reply(302, Header, Req),
     {ok, Req2, []}.
 
+%% @doc return the name of the cookie.
+-spec cookie_name() -> binary().
 cookie_name() ->
     ?COOKIE.
 
+%% @doc return the string for the current port setting
+-spec local_port() -> PortText :: binary().
 local_port() ->
     return_port(?CONFIG(port), ?CONFIG(ssl)).
+
+%% @doc helper function to decide if the port needs to be written.
+-spec return_port(PortNumber :: pos_integer(), UsingSSL :: boolean() )
+                 -> PortText :: binary().
 return_port(443, true) ->
     <<"">>;
 return_port(80, false) ->
@@ -79,9 +100,13 @@ return_port(Port, _) ->
     PortBin = binary:list_to_bin(io_lib:format("~p", [Port])),
     << <<":">>/binary, PortBin/binary>>.
 
-
+%% @doc return the protocol to use, either https or http.
+-spec local_protocol() -> ProtocolText :: binary().
 local_protocol() ->
     return_http(?CONFIG(ssl)).
+
+%% helper function to return the protocol
+-spec return_http(UseSSL :: boolean()) -> binary().
 return_http(false) ->
     <<"http://">>;
 return_http(_) ->
