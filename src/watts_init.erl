@@ -393,7 +393,10 @@ add_rsps() ->
     ok.
 
 
-
+%% @doc add the services to the server and log the results.
+%% @see watts_service:add/1
+%% @see watts_service:update_params/1
+-spec add_services() -> ok.
 add_services() ->
     AddService =
         fun(#{id := Id} = ConfigMap, _) ->
@@ -413,7 +416,15 @@ add_services() ->
     ok.
 
 
-
+%% @doc start the web interface of WaTTS.
+%% This starts the main web server with the API, the static file serving of
+%% the java script SPA and, if configured, the documentations. The redirection
+%% from http to https endpoint is also started if configured.
+%%
+%% To configure SSL first the files are read and if that fails SSL is disabled.
+%% @see create_dispatch_list/0
+%% @see add_options/5
+-spec start_web_interface() -> ok.
 start_web_interface() ->
     lager:info("Init: starting web interface"),
     oidcc_client:register(watts_oidc_client),
@@ -483,6 +494,17 @@ start_web_interface() ->
 
     ok.
 
+
+%% @doc try to read the SSL files and return if successful.
+%% This function is reading
+%% <ul>
+%% <li> the certificat </li>
+%% <li> the private key </li>
+%% <li> the ca chain </li>
+%% <li> the dh params </li>
+%% </ul>
+%% SSL gets disable if one of them fails.
+-spec read_ssl_files(ShouldBeRead :: boolean()) -> UseSSL :: boolean().
 read_ssl_files(true) ->
     CertOK = read_certificate(?CONFIG_(cert_file)),
     KeyOK = read_key(?CONFIG_(key_file)),
@@ -492,7 +514,8 @@ read_ssl_files(true) ->
 read_ssl_files(_) ->
     false.
 
-
+%% @doc read the certificate for SSL
+-spec read_certificate(any()) -> Success :: boolean().
 read_certificate({ok, Path}) ->
     case read_pem_entries(Path) of
         [{'Certificate', Certificate, not_encrypted}] ->
@@ -505,6 +528,8 @@ read_certificate({ok, Path}) ->
 read_certificate(_) ->
     false.
 
+%% @doc read the private key for SSL
+-spec read_key(any()) -> Success :: boolean().
 read_key({ok, Path}) ->
     case read_pem_entries(Path) of
         [{Type, PrivateKey, not_encrypted}]
@@ -519,6 +544,8 @@ read_key({ok, Path}) ->
 read_key(_) ->
     false.
 
+%% @doc read the ca chain for SSL
+-spec read_cachain(any()) -> Success :: boolean().
 read_cachain({ok, Path}) ->
     case read_pem_entries(Path) of
         [] ->
@@ -540,6 +567,8 @@ read_cachain(_) ->
     ?UNSETCONFIG(cachain),
     true.
 
+%% @doc read the dh params for SSL
+-spec read_dhparam(any()) -> Success :: boolean().
 read_dhparam({ok, none}) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
     ?UNSETCONFIG(dhparam),
@@ -559,9 +588,13 @@ read_dhparam(_) ->
     ?UNSETCONFIG(dhparam),
     true.
 
+%% @doc helper function to read pem encoded files
+-spec read_pem_entries(Path :: binary()) -> [tuple()].
 read_pem_entries(Path) ->
     extract_pem(file:read_file(Path), Path).
 
+%% @doc helper function to decode pem entries
+-spec extract_pem({ok, binary()} | any(), binary()) -> [tuple()].
 extract_pem({ok, PemBin}, _) ->
     public_key:pem_decode(PemBin);
 extract_pem(Error, Path) ->
@@ -569,7 +602,15 @@ extract_pem(Error, Path) ->
     [].
 
 
-
+%% @doc create the dispatch list for the web interface.
+%% This is the list of endpoints and the corresponding action to happen,
+%% this could be either calling a function or serving static files.
+%%
+%% The function creates a basic dispatch list for the javascript to be served,
+%% the OpenID connect handling (login) and the api.
+%% Then calls the create_dispatch_list/2 function to configure the dynamic part.
+%% @see create_dispatch_list/2
+-spec create_dispatch_list() -> [tuple()].
 create_dispatch_list() ->
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
@@ -589,6 +630,16 @@ create_dispatch_list() ->
                           {privacy, ?CONFIG(privacy_doc)} ],
                          BaseDispatchList).
 
+%% @doc handle each configuration and transform it into a dispatch entry.
+%% The handled settings include
+%% <ul>
+%% <li> user documentation </li>
+%% <li> code documentation </li>
+%% <li> rps endpoint </li>
+%% <li> privacy statement </li>
+%% </ul>
+-spec create_dispatch_list(Config:: [tuple()], DispatchList :: [tuple()])
+                          -> [tuple()].
 create_dispatch_list([], List) ->
      List;
 create_dispatch_list([{doc_user, true} | T], List) ->
@@ -635,17 +686,20 @@ create_dispatch_list([_ | T], List) ->
 
 
 
-
-add_options(Options, {ok, CaChain}, DhParam, Hostname, IPv6) ->
+%% @doc dynamically generate the list of options for the webserver.
+-spec add_options(Options :: [tuple()], CaChainSetting :: tuple() | ok,
+                  DhParamSetting :: tuple() | ok, IsOnion :: boolean() | ok,
+                  IPv6Setting :: tuple() | ok) -> [tuple()].
+add_options(Options, {ok, CaChain}, DhParam, IsOnion, IPv6) ->
     NewOptions = [ {cacerts, CaChain} | Options ],
-    add_options(NewOptions, ok, DhParam, Hostname, IPv6);
-add_options(Options, undefined, DhParam, Hostname, IPv6) ->
-    add_options(Options, ok, DhParam, Hostname, IPv6);
-add_options(Options, CaChain,  undefined, Hostname, IPv6) ->
-    add_options(Options, CaChain, ok, Hostname, IPv6);
-add_options(Options, CaChain, {ok, DhParam}, Hostname, IPv6) ->
+    add_options(NewOptions, ok, DhParam, IsOnion, IPv6);
+add_options(Options, undefined, DhParam, IsOnion, IPv6) ->
+    add_options(Options, ok, DhParam, IsOnion, IPv6);
+add_options(Options, CaChain,  undefined, IsOnion, IPv6) ->
+    add_options(Options, CaChain, ok, IsOnion, IPv6);
+add_options(Options, CaChain, {ok, DhParam}, IsOnion, IPv6) ->
     NewOptions = [ {dh, DhParam} | Options ],
-    add_options(NewOptions, CaChain, ok, Hostname, IPv6);
+    add_options(NewOptions, CaChain, ok, IsOnion, IPv6);
 add_options(Options, CaChain, DhParam, true, {ok, true}) ->
     lager:info("Init: listening only at ::1 (onion)"),
     NewOptions = [ {ip, {0, 0, 0, 0, 0, 0, 0, 1}} | Options ],
@@ -654,23 +708,25 @@ add_options(Options, CaChain, DhParam, true, IPv6) ->
     lager:info("Init: listening only at 127.0.0.1 (onion)"),
     NewOptions = [ {ip, {127, 0, 0, 1}} | Options ],
     add_options(NewOptions, CaChain, DhParam, ok, IPv6);
-add_options(Options, CaChain, DhParam, Hostname, {ok, true}) ->
+add_options(Options, CaChain, DhParam, IsOnion, {ok, true}) ->
     NewOptions =  [ inet6 | Options],
-    add_options(NewOptions, CaChain, DhParam, Hostname, ok);
-add_options(Options, CaChain, DhParam, Hostname, {ok, false}) ->
+    add_options(NewOptions, CaChain, DhParam, IsOnion, ok);
+add_options(Options, CaChain, DhParam, IsOnion, {ok, false}) ->
     NewOptions =  [ inet | Options],
-    add_options(NewOptions, CaChain, DhParam, Hostname, ok);
+    add_options(NewOptions, CaChain, DhParam, IsOnion, ok);
 add_options(Options, _, _, _, _) ->
     Options.
 
 
 
 
-
+%% @doc return the local endpoint
+-spec local_endpoint() -> binary().
 local_endpoint() ->
     watts_http_util:whole_url(watts_http_util:relative_path("oidc")).
 
-
+%% @doc gracefully stop the configuration process when done.
+-spec stop() -> ok.
 stop() ->
     lager:info("Init: done"),
     lager:info("Init: startup took ~p seconds",
@@ -678,6 +734,8 @@ stop() ->
     lager:info("WaTTS ready"),
     stop(self()).
 
+%% @doc helperfunction to remove newlines from data
+-spec remove_newline(string()) -> string().
 remove_newline(List) ->
     Filter = fun($\n) ->
                      false;
