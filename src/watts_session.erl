@@ -113,7 +113,7 @@ get_rsp(undefined) ->
 get_rsp(Pid) ->
     gen_server:call(Pid, get_rsp).
 
--spec set_redirection(ServiceId :: binary(), Params :: list(),
+-spec set_redirection(ServiceId :: binary(), Params :: map(),
                       ProviderId :: binary(), Pid :: pid()) -> ok.
 set_redirection(ServiceId, Params, ProviderId, Pid) ->
     gen_server:call(Pid, {set_redirection, ServiceId, Params, ProviderId}).

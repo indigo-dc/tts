@@ -1,6 +1,9 @@
 
 %% @doc the OpenID Connect client implementation for WaTTS.
-%% This modules handles the
+%% This modules handles the login trys at the web inteface only, the
+%% logins using the dropdown at the javascript ui, not the logins by
+%% access tokens at the api.
+%% @see watts_http_api
 -module(watts_oidc_client).
 -behaviour(oidcc_client).
 -include("watts.hrl").
@@ -16,6 +19,10 @@
 %% @doc handle the successful login of a user at an oidc provider.
 %% This only handles logins via the java script web interface,
 %% logins at the api using access tokens are handled directly at the api.
+%% This basically calls the watts:login_with_oidcc function and handles
+%% the result.
+%%
+%% @see watts:login_with_oidcc/2
 %% @see watts_http_api
 -spec login_succeeded(TokenMap :: map(), EnvironmentMap :: map())
                      -> {ok, [tuple()]}.
@@ -165,9 +172,11 @@ return_session_type(_) ->
 %% @doc unused function to be compliant with behaviour
 -spec login_succeeded(any()) -> {ok, [tuple()]}.
 login_succeeded(_TokenMap) ->
+    lager:warning("old login_sucess callback called"),
     {ok, [{redirect, watts_http_util:whole_url(<<"/">>)}]}.
 
 %% @doc unused function to be compliant with behaviour
 -spec login_failed(any(), any()) -> {ok, [tuple()]}.
 login_failed(_Reason, _Details) ->
+    lager:warning("old login_sucess callback called"),
     {ok, [{redirect, watts_http_util:whole_url(<<"/">>)}]}.
