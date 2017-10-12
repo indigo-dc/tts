@@ -2,7 +2,7 @@ REPO = tts
 REBAR = $(shell pwd)/rebar3
 
 
-.PHONY: check all cln clean eunit ct elvis compile ui tests rel tar run package clean_package
+.PHONY: check all cln clean eunit ct elvis compile ui tests rel tar run package clean_package gitbook edoc
 
 all: compile
 
@@ -63,7 +63,7 @@ gitbook:
 	rm -rf _book
 
 
-rel: compile edoc gitbook
+rel: compile edoc
 	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
 	cat $(OVERLAY_VARS) >> ./config/vars_gen.config

@@ -1,0 +1,436 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Relying Service Provider (RSP) Guide · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="api.html" />
+    
+    
+    <link rel="prev" href="developer.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="user.html">
+            
+                <a href="user.html">
+            
+                    
+                    User Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="admin.html">
+            
+                <a href="admin.html">
+            
+                    
+                    Deployment And Administration Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="config.html">
+            
+                <a href="config.html">
+            
+                    
+                    Configuration Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="developer.html">
+            
+                <a href="developer.html">
+            
+                    
+                    Developer Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.6" data-path="rsp.html">
+            
+                <a href="rsp.html">
+            
+                    
+                    Relying Service Provider (RSP) Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="api.html">
+            
+                <a href="api.html">
+            
+                    
+                    REST Api
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.8" data-path="service_ref_card.html">
+            
+                <a href="service_ref_card.html">
+            
+                    
+                    WaTTS - Service Reference Card
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Relying Service Provider (RSP) Guide</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="relying-service-provider-rsp-guide">Relying Service Provider (RSP) Guide</h1>
+<h2 id="introduction">Introduction</h2>
+<p>An RSP is a service that relys on WaTTS to either perform tasks or to authenticate users
+for it, or both.</p>
+<p>Any RSP that wants to rely on WaTTS needs to be configured as described in the configuration guide.
+The two important steps are:</p>
+<ul>
+<li>enable RSP support with <code>enable_rsp = true</code></li>
+<li>configure the RSP according to the &apos;Relying Service Provider&apos; configuration</li>
+</ul>
+<h2 id="how-it-works">How it works</h2>
+<p>WaTTS enables an rsp endpoint at <code>/rsp</code> at wich an RSP can redirect its users.
+The full path to redirect to is <code>https://watts-host/rsp/&lt;jwt&gt;</code>.</p>
+<p>The <code>&lt;jwt&gt;</code> is a JSON Web Token (JWT) generated and signed by the RSP.
+WaTTS will verify the JWT and perform the requested actions, if allowed.</p>
+<p>On error or success the user gets redirected back to the RSP.</p>
+<h2 id="what-an-rsp-needs-to-implement">What an RSP needs to implement</h2>
+<h3 id="a-jwk-endpoint">A JWK endpoint</h3>
+<p>WaTTS needs an endpoint to fetch the public keys used to sign the JWT.
+The json format of the plublic keys file must be according to
+<a href="https://tools.ietf.org/html/rfc7517" target="_blank">RFC7517</a>. The following is an example:</p>
+<pre><code>{&quot;keys&quot;:
+       [
+         {&quot;kty&quot;:&quot;RSA&quot;,
+          &quot;use&quot;:&quot;sig&quot;,
+          &quot;n&quot;: &quot;0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx
+     4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMs
+     tn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2
+     QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbI
+     SD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqb
+     w0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw&quot;,
+          &quot;e&quot;:&quot;AQAB&quot;,
+          &quot;alg&quot;:&quot;RS256&quot;,
+          &quot;kid&quot;:&quot;2011-04-29&quot;}
+       ]
+     }
+</code></pre><p>WaTTS expects the following keys to be present:</p>
+<ul>
+<li>kty of &quot;RSA&quot;</li>
+<li>use of &quot;sig&quot;</li>
+<li>alg of &quot;RS256&quot;</li>
+<li>kid which must also be set in the JWT sent by the RSP</li>
+<li>n (part of the public key)</li>
+<li>e (part of the public key)</li>
+</ul>
+<h3 id="generation-of-jwts">Generation of JWTs</h3>
+<p>The RSP must implement or use a JWT library to sign the JWTs with the private part of the keys
+mentioned above.</p>
+<p>The Jwt header <em>MUST</em> contain the key value pair <code>&quot;typ&quot;: &quot;watts-rsp&quot;</code>.</p>
+<p>The following claims in the JWT are supported:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Key</th>
+<th>Description</th>
+<th style="text-align:center">Datatype</th>
+<th style="text-align:center">Mandatory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">iss</td>
+<td>The Id of the RSP in the configuration file at WaTTS</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">sub</td>
+<td>The representation of the user at the RSP</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">exp</td>
+<td>The expiration time of the jwt <a href="https://tools.ietf.org/html/rfc7519#section-4.1.4" target="_blank">see RFC7519</a></td>
+<td style="text-align:center">integer</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">iat</td>
+<td>The time at which the jwt was issued <a href="https://tools.ietf.org/html/rfc7519#section-4.1.6" target="_blank">see RFC7519</a></td>
+<td style="text-align:center">integer</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">watts_service</td>
+<td>The Id of the service to trigger at WaTTS</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">watts_params</td>
+<td>The parameter to pass to the service at WaTTS</td>
+<td style="text-align:center">JSON object</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">watts_provider</td>
+<td>The Id of the OpenID Connect provider to use for logging in</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">success_url</td>
+<td>The url to redirect to in case of success, if not set WaTTs will redirect to the referer</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">failed_url</td>
+<td>The url to redirect to in case of failure, if not set WaTTs will redirect to success_url</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">no</td>
+</tr>
+</tbody>
+</table>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="developer.html" class="navigation navigation-prev " aria-label="Previous page: Developer Guide">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="api.html" class="navigation navigation-next " aria-label="Next page: REST Api">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Relying Service Provider (RSP) Guide","level":"1.6","depth":1,"next":{"title":"REST Api","level":"1.7","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"rsp.md","mtime":"2017-07-11T13:38:43.548Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-12T07:34:05.252Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
