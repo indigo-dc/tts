@@ -106,6 +106,7 @@ rsp_session_if_service_allowed(_, _SessPid) ->
     {error, rsp_service_not_allowed}.
 
 
+-spec session_with_error(Msg :: binary()) -> {ok, Session:: pid()}.
 session_with_error(Msg) ->
     {ok, SessPid} = empty_session(),
     ok = watts_session:set_error(Msg, SessPid),

@@ -57,7 +57,7 @@ create_cookie_opts(MaxAge) ->
     end.
 
 %% @doc create a relative path starting from main path (for web).
--spec relative_path(Append :: binary()) -> WholePath :: binary().
+-spec relative_path(Append :: list()) -> WholePath :: binary().
 relative_path(Append) ->
     AppendBin = list_to_binary(Append),
     Base = ?CONFIG(ep_main),
