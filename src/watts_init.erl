@@ -151,6 +151,27 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
+%% @doc start the configuration of WaTTS if it has not been started before.
+%% If it has been started before, the configuration crashed, which means
+%% that something unexpected happened. As this is a critical issue WaTTS
+%% will be stoppped then.
+-spec start_if_not_started_before() -> ok.
+start_if_not_started_before() ->
+    start_if_undefined(?CONFIG(watts_init_started)).
+
+%% @doc only start if the special configuration `watts_init_started' is not set.
+-spec start_if_undefined(Started :: undefined | any()) -> ok.
+start_if_undefined(undefined) ->
+    ok = ?SETCONFIG(watts_init_started, true),
+    gen_server:cast(self(), start_watts);
+start_if_undefined(_) ->
+    lager:emergency("Init: restarting ... this should not happen!"),
+    erlang:halt(255).
+
+%% @doc start initalization of WaTTS.
+%% This copies the version from keys to environment and enforces security
+%% @see enforce_security/0
+-spec init_watts() -> ok.
 init_watts() ->
     lager:info("Init: starting  "),
     %% copy the version into the config
@@ -165,6 +186,12 @@ init_watts() ->
     lager:debug("Init: config = ~p", [?ALLCONFIG]),
     ok.
 
+%% @doc enforces WaTTS to run in a secure setting.
+%% This includes running as non root user and having SSL configured.
+%% If SSL is not configured it will be forced to localhost.
+%% @see maybe_change_hostname/3
+%% @see error_if_running_as_root/0
+-spec enforce_security() -> ok.
 enforce_security() ->
     SSL = ?CONFIG(ssl),
     Hostname0 = ?CONFIG(hostname),
@@ -174,6 +201,11 @@ enforce_security() ->
     ok = error_if_running_as_root(),
     ok.
 
+%% @doc change the hostname to localhost if not configured well.
+%% It will change to localhost if neither configured to run as a
+%% tor hidden service, nor having SSL configured.
+-spec maybe_change_hostname(HasSSL :: boolean(), IsOnion :: boolean(),
+                            Hostname :: list()) -> NewHostname :: list().
 maybe_change_hostname(false, false, _) ->
     H = "localhost",
     lager:warning("Init: Neither SSL nor Tor is configured; "
@@ -182,19 +214,30 @@ maybe_change_hostname(false, false, _) ->
 maybe_change_hostname(_, _, Hostname) ->
     Hostname.
 
+%% @doc ensure WaTTS is not running as root.
+%% if it is running as root the VM gets stopped.
+%% @see maybe_root_halt/2
+-spec error_if_running_as_root() -> ok.
 error_if_running_as_root() ->
     Uid = list_to_integer(remove_newline(os:cmd("id -u"))),
     User = remove_newline(os:cmd("id -un")),
-    ok = maybe_root_error(User, Uid).
+    ok = maybe_root_halt(User, Uid).
 
-maybe_root_error(User, Uid) when User == "root"; Uid == 0 ->
+%% @doc halt the VM if uid is 0 or user is 'root'.
+-spec maybe_root_halt(User :: list(), Uid :: number()) -> ok.
+maybe_root_halt(User, Uid) when User == "root"; Uid == 0 ->
     lager:critical("Init: do not run WaTTS as root, stopping"),
-    error;
-maybe_root_error(User, Uid) ->
+    erlang:halt(1);
+maybe_root_halt(User, Uid) ->
     lager:info("Init: running as user ~p [~p]", [User, Uid]),
     ok.
 
-
+%% @doc start the databases needed to run WaTTS.
+%% The in ram database is started using watts_data and the
+%% configured persistent database is started with watts_persistent.
+%% @see watts_data:init/0
+%% @see watts_persistent:init/0
+-spec start_database() -> ok.
 start_database() ->
     lager:info("Init: starting ets database"),
     ok = watts_data:init(),
@@ -601,13 +644,3 @@ remove_newline(List) ->
                      true
              end,
     lists:filter(Filter, List).
-
-start_if_not_started_before() ->
-    start_if_undefined(?CONFIG(watts_init_started)).
-
-start_if_undefined(undefined) ->
-    ok = ?SETCONFIG(watts_init_started, true),
-    gen_server:cast(self(), start_watts);
-start_if_undefined(_) ->
-    lager:emergency("Init: restarting ... this should not happen!"),
-    erlang:halt(1).
