@@ -101,7 +101,13 @@ handle_call(_Request, _From, State) ->
 %% <li> add the configured services <em>add_services</em> </li>
 %% <li> start the web interface <em>start_web_interface</em></li>
 %% </ul>
-%%
+%% @see start_if_not_starte_before/0
+%% @see init_watts/0
+%% @see start_database/0
+%% @see add_openid_provider/0
+%% @see maybe_add_rsps/1
+%% @see add_services/0
+%% @see start_web_interface/0
 -spec handle_cast(any(), tuple()) -> {noreply, tuple()} |
                                       {stop, normal, tuple()}.
 handle_cast(check_watts_not_started, State) ->
@@ -251,7 +257,13 @@ start_database() ->
     end,
     ok.
 
-
+%% @doc add the configured openid provider.
+%% this function iterates throught the configured providers and
+%% adds each of them. Then waits for the results so the provider can
+%% read the needed configs from the Internet in parallel.
+%% @see add_openid_provider/2
+%% @see wait_and_log_provider_results/0
+-spec add_openid_provider() -> ok.
 add_openid_provider() ->
     lager:info("Init: adding openid provider"),
     %% force only one try
@@ -261,9 +273,12 @@ add_openid_provider() ->
     lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
-    wait_and_log_provider_results(),
+    ok = wait_and_log_provider_results(),
     ok.
 
+%% @doc take one provider from the list and add it.
+%% This uses the oidcc library to handle the OpenID Connect provider.
+-spec add_openid_provider(Configs:: [map()], LocalEndpoint :: binary()) -> ok.
 add_openid_provider([#{id := Id,
                        config_endpoint := ConfigEndpoint,
                        disable_login := Disable} = Config0 | T],
@@ -280,22 +295,34 @@ add_openid_provider([#{id := Id,
                 lager:info("Init: ~p will not be used for login", [Id]);
             false ->
                 ok
-        end,
-        add_openid_provider(T, LocalEndpoint)
+        end
     catch Error:Reason ->
             Msg = "Init: error occured OpenId Connect provider ~p: '~p' ~p",
             lager:critical(Msg, [Id, Error, Reason])
-    end;
+    end,
+    add_openid_provider(T, LocalEndpoint);
 add_openid_provider([], _) ->
     ok.
 
 
+%% @doc waits for the configured provides to either fail or be ready.
+%% The configuration max_provider_wait sets the max time to wait, the
+%% default is 5 seconds. Reducing this time will speedup the startup.
+%% @see wait_and_log_provider_results/3
+-spec wait_and_log_provider_results() -> ok.
 wait_and_log_provider_results() ->
     {ok, List} = oidcc:get_openid_provider_list(),
     Max = erlang:system_time(seconds) + ?CONFIG(max_provider_wait, 5),
     ok = wait_and_log_provider_results(List, [], Max),
     ok.
 
+%% @doc iterate through the list of oidc provider and check their status.
+%% A new list is set up with pending provider and maybe checked again if
+%% the timeout has not yet been reached.
+%% @see maybe_recheck_provider/3
+-spec wait_and_log_provider_results(Provider :: [{Id::binary(), Pid::pid()}],
+                                    Pending :: [{Id::binary(), Pid::pid()}],
+                                    Timeout :: integer()) -> ok.
 wait_and_log_provider_results([], [], _Max) ->
     ok;
 wait_and_log_provider_results([], List, Max) ->
@@ -319,7 +346,10 @@ wait_and_log_provider_results([{Id, Pid} = H | T], List, Max) ->
         end,
     wait_and_log_provider_results(T, NewList, Max).
 
-
+%% @doc recheck the provider for their status if still in time.
+-spec maybe_recheck_provider(InTime :: boolean(),
+                             ProviderPending :: [{Id::binary(), Pid::pid()}],
+                             MaxTime :: integer()) -> ok.
 maybe_recheck_provider(true, List, Max) ->
     timer:sleep(200),
     wait_and_log_provider_results(List, [], Max);
@@ -332,13 +362,24 @@ maybe_recheck_provider(false, List, _) ->
     lists:foldl(Output, ok, List),
     ok.
 
+
+%% @doc Add RSPs if enabled in the configuration.
+%% Relaying Service Provider are only added if configured, else the
+%% configured RSPs are not added to the running WaTTS instance.
+%% @see add_rsps/0
+-spec maybe_add_rsps(Enabled :: boolean() ) -> ok.
 maybe_add_rsps(true) ->
     add_rsps();
 maybe_add_rsps(_) ->
     ?SETCONFIG(rsp_list, []),
     ok.
 
-
+%% @doc Add the configured RSPs as they are enabled in the config.
+%% The function iterates through the configuration and updates them.
+%% No keys are fetched yet, only the configuration is updated.
+%% @see watts_rsp:new/1
+%% @see watts_rsp
+-spec add_rsps() -> ok.
 add_rsps() ->
     lager:info("Init: adding relying service provider (RSP)"),
     UpdateRsp =
