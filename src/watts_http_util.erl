@@ -56,20 +56,22 @@ create_cookie_opts(MaxAge) ->
             BasicOpts
     end.
 
+%% @doc create a relative path starting from main path (for web).
+-spec relative_path(Append :: binary()) -> WholePath :: binary().
 relative_path(Append) ->
     AppendBin = list_to_binary(Append),
     Base = ?CONFIG(ep_main),
     << Base/binary, AppendBin/binary >>.
 
-%% @doc convert a path into the url to that path
--spec whole_url(Path :: string() | binary()) -> binary().
-whole_url(Path) when is_binary(Path)->
+%% @doc convert an absolute path into the url to that path
+-spec whole_url(AbsPath :: string() | binary()) -> binary().
+whole_url(AbsPath) when is_binary(AbsPath)->
     HostName = binary:list_to_bin(?CONFIG(hostname)),
     Prot = local_protocol(),
     Port = local_port(),
-    << Prot/binary, HostName/binary, Port/binary, Path/binary >>;
-whole_url(Path) when is_list(Path) ->
-    whole_url(list_to_binary(Path)).
+    << Prot/binary, HostName/binary, Port/binary, AbsPath/binary >>;
+whole_url(AbsPath) when is_list(AbsPath) ->
+    whole_url(list_to_binary(AbsPath)).
 
 %% @doc create a redirection for cowboy to the given url.
 -spec redirect_to(Url :: binary(), cowboy_req:req()) ->
@@ -105,7 +107,7 @@ return_port(Port, _) ->
 local_protocol() ->
     return_http(?CONFIG(ssl)).
 
-%% helper function to return the protocol
+%% @doc helper function to return the protocol
 -spec return_http(UseSSL :: boolean()) -> binary().
 return_http(false) ->
     <<"http://">>;
