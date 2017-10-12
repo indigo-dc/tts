@@ -1,4 +1,4 @@
--module(watts_data_mnesia).
+-module(watts_persistent_mnesia).
 %%
 %% Copyright 2016 SCC/KIT
 %%

@@ -1,4 +1,4 @@
--module(watts_data_sqlite).
+-module(watts_persistent_sqlite).
 %%
 %% Copyright 2016 SCC/KIT
 %%
