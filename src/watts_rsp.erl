@@ -66,6 +66,7 @@ exists(RspId) ->
 get_id(#watts_rsp{ id = Id }) ->
     {ok, Id}.
 
+-spec get_provider(rsp()) -> binary() | undefined.
 get_provider(#watts_rsp{session = #watts_rsp_session{ provider = P }}) ->
     P.
 
@@ -238,6 +239,7 @@ jwt_get_success_url(Claims) ->
 jwt_get_failed_url(Claims) ->
     maps:get(failed_url, Claims, undefined).
 
+-spec jwt_get_provider(Claims :: map()) -> binary() | undefined.
 jwt_get_provider(Claims) ->
     maps:get(watts_provider, Claims, undefined).
 

@@ -13,8 +13,8 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%
-%% @doc This module is the main entry point for any kind of translation action
-%% to happen.
+%% @doc This module is the main entry point for any kind action to happen.
+%% Including logggin in, requesting and revoking of credentials.
 -module(watts).
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -include("watts.hrl").
@@ -50,6 +50,10 @@
          stop_debug/0
         ]).
 
+-type session_info() :: #{session_id => SessId :: binary(),
+                          session_token => Token :: binary(),
+                          session_pid => Session :: pid(),
+                          session_type => atom() | tuple()}.
 
 %% @doc perform a login with the openid flow through the ui (not access token).
 %% there are some possible valid cases, if the Token contains the minimal
@@ -59,7 +63,7 @@
 %% calling {@link do_login_if_issuer_enabled/3} </li>
 %% <li> an additional login, then the session type is oidc,
 %% calling {@link do_additional_login/4} </li>
-%% <li> an rsp login, then the session type is {rps, _, login},
+%% <li> an additional login at an rsp session, session type is {rsp, _, login},
 %% calling {@link do_rsp_additional_login/4} </li>
 %% <li> all other session types are considered an error </li>
 %% </ul>
@@ -69,13 +73,11 @@
 %%
 %% The login at the api level with access token is performed using
 %% @{link login_with_access_token/2}.
+%% @see watts_session
 -spec login_with_oidcc(map(),
                        {SessType :: atom() | tuple(),
                         Session :: pid() | undefined })
-                      -> {ok, #{session_id => SessId :: binary(),
-                                session_token => Token :: binary(),
-                                session_pid => Session :: pid(),
-                                session_type => atom() | tuple()}} |
+                      -> {ok, session_info()} |
                          {error, Reason :: atom()}.
 login_with_oidcc(#{id := #{claims := #{ sub := Subject, iss := Issuer}}}
                  = TokenMap, {oidc, Pid} ) when is_pid(Pid) ->
@@ -96,10 +98,7 @@ login_with_oidcc(_BadToken, _) ->
 %% this function in turn calls {@link do_login_if_issuer_enabled/3}.
 -spec login_with_access_token(AccessToken :: binary() | atom(),
                               Issuer :: binary())
-                             -> {ok, #{session_id => SessId :: binary(),
-                                       session_token => Token :: binary(),
-                                       session_pid => Session :: pid(),
-                                       session_type => atom() | tuple()}} |
+                             -> {ok, session_info()} |
                                 {error, Reason :: atom()}.
 login_with_access_token(AccessToken, Issuer) when is_binary(AccessToken),
                                                   is_binary(Issuer) ->
@@ -109,8 +108,12 @@ login_with_access_token(_AccessToken, _Issuer) ->
 
 
 %% @doc setup a session for an rsp, get called when performing rsp logins.
+%% RSP sessions always have a primary login that is coming from the RSP.
+%% If a user needs to authenticate against some OpenID Connect provider this
+%% always is an additional login for an RSP session.
 %% @see watts_rsp:validate_jwt_get_rsp/2
 %% @see watts_http_rsp:handle/2
+%% @see
 -spec session_for_rsp(watts_rsp:rsp()) ->
                              {ok, Session :: pid()} |
                              {error, Reason::atom()}.
@@ -125,7 +128,7 @@ session_for_rsp(Rsp) ->
                             ServiceId, Params, Provider, Rsp, SessType).
 
 
-%% @doc either setup the session or return an error.
+%% @doc either setup the rsp session or return an error.
 -spec rsp_session_or_error(ValidProvider :: boolean(),
                            ServiceId :: binary() | undefined,
                            Params :: map() | undefined,
@@ -152,26 +155,39 @@ rsp_session_or_error(true, ServiceId, Params, Provider, Rsp, SessType) ->
 rsp_session_or_error(false, _, _, _, _, _) ->
     {error, bad_request}.
 
-
+%% @doc return the rsp session, if the first parameter is true.
+%% The first parameter is the boolean value if the service is allowed.
+-spec rsp_session_if_service_allowed(ServiceAllowed :: boolean(),
+                                     Session :: pid())
+                                    -> {ok, Session :: pid()} |
+                                       {error, Reason :: atom()}.
 rsp_session_if_service_allowed(true, SessPid) ->
     {ok, SessPid};
 rsp_session_if_service_allowed(_, _SessPid) ->
     {error, rsp_service_not_allowed}.
 
 
+%% @doc create a basic session that only contains the error message.
 -spec session_with_error(Msg :: binary()) -> {ok, Session:: pid()}.
 session_with_error(Msg) ->
     {ok, SessPid} = empty_session(),
     ok = watts_session:set_error(Msg, SessPid),
     {ok, SessPid}.
 
+%% @doc helper function initializing a session without user.
+-spec empty_session() -> {ok, Session :: pid()}.
 empty_session() ->
     {ok, SessPid} = watts_session_mgr:new_session(),
     false = watts_session:is_logged_in(SessPid),
     {ok, SessPid}.
 
 
-
+%% @doc start the login process but only if the issuer is enabled.
+-spec do_login_if_issuer_enabled(Issuer :: binary(),
+                                 Subject :: binary() | undefined,
+                                 Token :: map() | binary() ) ->
+                                        {ok, session_info()} |
+                                        {error, Reason :: atom()}.
 do_login_if_issuer_enabled(Issuer, Subject, Token) ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
     {ok, #{issuer := Issuer, id := Id}} =
@@ -183,6 +199,13 @@ do_login_if_issuer_enabled(Issuer, Subject, Token) ->
             {error, login_disabled}
     end.
 
+
+%% @doc perform an additional login via oidc for an RSP session
+%% adding additional login information to the session. Enforcing
+%% that the RSP is enabled.
+-spec do_rsp_additional_login(Issuer :: binary(), Subject :: binary(),
+                              TokenMap :: map(), Session :: pid()) ->
+                               {ok, session_info()} | {error, Reason :: atom()}.
 do_rsp_additional_login(Issuer, Subject, TokenMap, Pid) ->
     {ok, #{provider := Provider}} = watts_session:get_redirection(Pid),
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
@@ -191,6 +214,8 @@ do_rsp_additional_login(Issuer, Subject, TokenMap, Pid) ->
     trigger_rsp_additional_login(RspEnabled, Provider, Result, Subject,
                                  TokenMap, Pid).
 
+
+%% @doc check if the RSP is enabled and trigger the additional login.
 
 trigger_rsp_additional_login(false, _, _, _, _, _) ->
     {error, rsp_not_enabled};
@@ -202,11 +227,20 @@ trigger_rsp_additional_login(true, _Provider, _ , _Subject, _TokenMap, _Pid) ->
     {error, bad_issuer}.
 
 
-
+%% @doc start e new login, so setting up a session is needed.
+%% it is not needed for e.g. additional logins.
+-spec new_login(Issuer :: binary(), Subject :: binary() | undefined,
+                Token :: map() | binary()) -> {error, Reason :: atom()} |
+                                              {ok, session_info()}.
 new_login(Issuer, Subject, Token) ->
     {ok, SessPid} = watts_session_mgr:new_session(),
     do_login(Issuer, Subject, Token, SessPid).
 
+
+%% @doc perform a first login, fetching all the information needed.
+-spec do_login(Issuer :: binary(), Subject :: binary() | undefined,
+               Token :: map() | binary(), Session :: pid() ) ->
+                      {ok, session_info()} | {error, Reason :: atom()}.
 do_login(Issuer, Subject0, Token0, SessPid) ->
     SessionId = watts_session:get_id(SessPid),
     ok = update_session_type(Subject0, SessPid),
@@ -306,6 +340,8 @@ get_openid_provider_info(ProviderId) ->
     end.
 
 
+%% @doc return if a provider is disabled, returns true if not found.
+-spec is_provider_disabled(ProviderId :: binary()) -> boolean().
 is_provider_disabled(ProviderId) ->
     ProviderList = ?CONFIG(provider_list),
     ProviderDisabled = fun(#{id := Id, disable_login := Disable}, Current) ->
@@ -524,11 +560,7 @@ update_session(Issuer, IssId, Subject, Token, SessionPid) ->
 
 
 %% @doc generate a session description map from the given session pid.
--spec return_session_info(Session :: pid()) ->
-    {ok, #{session_id => SessId :: binary(),
-           session_token => Token :: binary(),
-           session_pid => Session :: pid(),
-           session_type => atom() | tuple()}}.
+-spec return_session_info(Session :: pid()) -> {ok, session_info()}.
 return_session_info(SessionPid) ->
     {ok, SessId} = watts_session:get_id(SessionPid),
     {ok, SessToken} = watts_session:get_sess_token(SessionPid),

@@ -4,10 +4,11 @@
 succeed_test() ->
     {ok, Meck} = start_meck(),
     try
-        {ok, _} = watts_oidc_client:login_succeeded(#{token => bad}, type),
-        {ok, _} = watts_oidc_client:login_succeeded(#{token => oidc_good}, type),
-        {ok, _} = watts_oidc_client:login_succeeded(#{token => rsp_ui_good}, type),
-        {ok, _} = watts_oidc_client:login_succeeded(#{token => rsp_good}, type),
+        EnvMap = #{req => req},
+        {ok, _} = watts_oidc_client:login_succeeded(#{token => bad}, EnvMap),
+        {ok, _} = watts_oidc_client:login_succeeded(#{token => oidc_good}, EnvMap),
+        {ok, _} = watts_oidc_client:login_succeeded(#{token => rsp_ui_good}, EnvMap),
+        {ok, _} = watts_oidc_client:login_succeeded(#{token => rsp_good}, EnvMap),
         ok
     after
         ok = stop_meck(Meck)
