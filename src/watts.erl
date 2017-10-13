@@ -113,7 +113,6 @@ login_with_access_token(_AccessToken, _Issuer) ->
 %% always is an additional login for an RSP session.
 %% @see watts_rsp:validate_jwt_get_rsp/2
 %% @see watts_http_rsp:handle/2
-%% @see
 -spec session_for_rsp(watts_rsp:rsp()) ->
                              {ok, Session :: pid()} |
                              {error, Reason::atom()}.
