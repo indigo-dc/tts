@@ -1,4 +1,3 @@
--module(watts_http_api).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
 %%
@@ -14,6 +13,11 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%
+%% @doc This module implements the validation of a request and once it is valid
+%% execute the corresponding action, which is always calling the main interface
+%% to actions on the WaTTS system.
+%% @see watts
+-module(watts_http_api).
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 
 -include("watts.hrl").

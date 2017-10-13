@@ -189,11 +189,11 @@
          Type = cuttlefish:conf_get("database_type", Conf),
          case Type of
              mnesia ->
-                 watts_data_mnesia;
+                 watts_persistent_mnesia;
              eleveldb ->
-                 watts_data_leveldb;
+                 watts_persistent_leveldb;
              sqlite ->
-                 watts_data_sqlite;
+                 watts_persistent_sqlite;
              _ ->
                  cuttlefish:invalid("unknown database type")
          end

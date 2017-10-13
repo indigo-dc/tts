@@ -101,7 +101,13 @@ handle_call(_Request, _From, State) ->
 %% <li> add the configured services <em>add_services</em> </li>
 %% <li> start the web interface <em>start_web_interface</em></li>
 %% </ul>
-%%
+%% @see start_if_not_starte_before/0
+%% @see init_watts/0
+%% @see start_database/0
+%% @see add_openid_provider/0
+%% @see maybe_add_rsps/1
+%% @see add_services/0
+%% @see start_web_interface/0
 -spec handle_cast(any(), tuple()) -> {noreply, tuple()} |
                                       {stop, normal, tuple()}.
 handle_cast(check_watts_not_started, State) ->
@@ -151,6 +157,27 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
+%% @doc start the configuration of WaTTS if it has not been started before.
+%% If it has been started before, the configuration crashed, which means
+%% that something unexpected happened. As this is a critical issue WaTTS
+%% will be stoppped then.
+-spec start_if_not_started_before() -> ok.
+start_if_not_started_before() ->
+    start_if_undefined(?CONFIG(watts_init_started)).
+
+%% @doc only start if the special configuration `watts_init_started' is not set.
+-spec start_if_undefined(Started :: undefined | any()) -> ok.
+start_if_undefined(undefined) ->
+    ok = ?SETCONFIG(watts_init_started, true),
+    gen_server:cast(self(), start_watts);
+start_if_undefined(_) ->
+    lager:emergency("Init: restarting ... this should not happen!"),
+    erlang:halt(255).
+
+%% @doc start initalization of WaTTS.
+%% This copies the version from keys to environment and enforces security
+%% @see enforce_security/0
+-spec init_watts() -> ok.
 init_watts() ->
     lager:info("Init: starting  "),
     %% copy the version into the config
@@ -165,6 +192,12 @@ init_watts() ->
     lager:debug("Init: config = ~p", [?ALLCONFIG]),
     ok.
 
+%% @doc enforces WaTTS to run in a secure setting.
+%% This includes running as non root user and having SSL configured.
+%% If SSL is not configured it will be forced to localhost.
+%% @see maybe_change_hostname/3
+%% @see error_if_running_as_root/0
+-spec enforce_security() -> ok.
 enforce_security() ->
     SSL = ?CONFIG(ssl),
     Hostname0 = ?CONFIG(hostname),
@@ -174,6 +207,11 @@ enforce_security() ->
     ok = error_if_running_as_root(),
     ok.
 
+%% @doc change the hostname to localhost if not configured well.
+%% It will change to localhost if neither configured to run as a
+%% tor hidden service, nor having SSL configured.
+-spec maybe_change_hostname(HasSSL :: boolean(), IsOnion :: boolean(),
+                            Hostname :: list()) -> NewHostname :: list().
 maybe_change_hostname(false, false, _) ->
     H = "localhost",
     lager:warning("Init: Neither SSL nor Tor is configured; "
@@ -182,19 +220,30 @@ maybe_change_hostname(false, false, _) ->
 maybe_change_hostname(_, _, Hostname) ->
     Hostname.
 
+%% @doc ensure WaTTS is not running as root.
+%% if it is running as root the VM gets stopped.
+%% @see maybe_root_halt/2
+-spec error_if_running_as_root() -> ok.
 error_if_running_as_root() ->
     Uid = list_to_integer(remove_newline(os:cmd("id -u"))),
     User = remove_newline(os:cmd("id -un")),
-    ok = maybe_root_error(User, Uid).
+    ok = maybe_root_halt(User, Uid).
 
-maybe_root_error(User, Uid) when User == "root"; Uid == 0 ->
+%% @doc halt the VM if uid is 0 or user is 'root'.
+-spec maybe_root_halt(User :: list(), Uid :: number()) -> ok.
+maybe_root_halt(User, Uid) when User == "root"; Uid == 0 ->
     lager:critical("Init: do not run WaTTS as root, stopping"),
-    error;
-maybe_root_error(User, Uid) ->
+    erlang:halt(1);
+maybe_root_halt(User, Uid) ->
     lager:info("Init: running as user ~p [~p]", [User, Uid]),
     ok.
 
-
+%% @doc start the databases needed to run WaTTS.
+%% The in ram database is started using watts_data and the
+%% configured persistent database is started with watts_persistent.
+%% @see watts_data:init/0
+%% @see watts_persistent:init/0
+-spec start_database() -> ok.
 start_database() ->
     lager:info("Init: starting ets database"),
     ok = watts_data:init(),
@@ -208,7 +257,13 @@ start_database() ->
     end,
     ok.
 
-
+%% @doc add the configured openid provider.
+%% this function iterates throught the configured providers and
+%% adds each of them. Then waits for the results so the provider can
+%% read the needed configs from the Internet in parallel.
+%% @see add_openid_provider/2
+%% @see wait_and_log_provider_results/0
+-spec add_openid_provider() -> ok.
 add_openid_provider() ->
     lager:info("Init: adding openid provider"),
     %% force only one try
@@ -218,9 +273,12 @@ add_openid_provider() ->
     lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
-    wait_and_log_provider_results(),
+    ok = wait_and_log_provider_results(),
     ok.
 
+%% @doc take one provider from the list and add it.
+%% This uses the oidcc library to handle the OpenID Connect provider.
+-spec add_openid_provider(Configs:: [map()], LocalEndpoint :: binary()) -> ok.
 add_openid_provider([#{id := Id,
                        config_endpoint := ConfigEndpoint,
                        disable_login := Disable} = Config0 | T],
@@ -237,22 +295,34 @@ add_openid_provider([#{id := Id,
                 lager:info("Init: ~p will not be used for login", [Id]);
             false ->
                 ok
-        end,
-        add_openid_provider(T, LocalEndpoint)
+        end
     catch Error:Reason ->
             Msg = "Init: error occured OpenId Connect provider ~p: '~p' ~p",
             lager:critical(Msg, [Id, Error, Reason])
-    end;
+    end,
+    add_openid_provider(T, LocalEndpoint);
 add_openid_provider([], _) ->
     ok.
 
 
+%% @doc waits for the configured provides to either fail or be ready.
+%% The configuration max_provider_wait sets the max time to wait, the
+%% default is 5 seconds. Reducing this time will speedup the startup.
+%% @see wait_and_log_provider_results/3
+-spec wait_and_log_provider_results() -> ok.
 wait_and_log_provider_results() ->
     {ok, List} = oidcc:get_openid_provider_list(),
     Max = erlang:system_time(seconds) + ?CONFIG(max_provider_wait, 5),
     ok = wait_and_log_provider_results(List, [], Max),
     ok.
 
+%% @doc iterate through the list of oidc provider and check their status.
+%% A new list is set up with pending provider and maybe checked again if
+%% the timeout has not yet been reached.
+%% @see maybe_recheck_provider/3
+-spec wait_and_log_provider_results(Provider :: [{Id::binary(), Pid::pid()}],
+                                    Pending :: [{Id::binary(), Pid::pid()}],
+                                    Timeout :: integer()) -> ok.
 wait_and_log_provider_results([], [], _Max) ->
     ok;
 wait_and_log_provider_results([], List, Max) ->
@@ -276,7 +346,10 @@ wait_and_log_provider_results([{Id, Pid} = H | T], List, Max) ->
         end,
     wait_and_log_provider_results(T, NewList, Max).
 
-
+%% @doc recheck the provider for their status if still in time.
+-spec maybe_recheck_provider(InTime :: boolean(),
+                             ProviderPending :: [{Id::binary(), Pid::pid()}],
+                             MaxTime :: integer()) -> ok.
 maybe_recheck_provider(true, List, Max) ->
     timer:sleep(200),
     wait_and_log_provider_results(List, [], Max);
@@ -289,13 +362,24 @@ maybe_recheck_provider(false, List, _) ->
     lists:foldl(Output, ok, List),
     ok.
 
+
+%% @doc Add RSPs if enabled in the configuration.
+%% Relaying Service Provider are only added if configured, else the
+%% configured RSPs are not added to the running WaTTS instance.
+%% @see add_rsps/0
+-spec maybe_add_rsps(Enabled :: boolean() ) -> ok.
 maybe_add_rsps(true) ->
     add_rsps();
 maybe_add_rsps(_) ->
     ?SETCONFIG(rsp_list, []),
     ok.
 
-
+%% @doc Add the configured RSPs as they are enabled in the config.
+%% The function iterates through the configuration and updates them.
+%% No keys are fetched yet, only the configuration is updated.
+%% @see watts_rsp:new/1
+%% @see watts_rsp
+-spec add_rsps() -> ok.
 add_rsps() ->
     lager:info("Init: adding relying service provider (RSP)"),
     UpdateRsp =
@@ -309,7 +393,10 @@ add_rsps() ->
     ok.
 
 
-
+%% @doc add the services to the server and log the results.
+%% @see watts_service:add/1
+%% @see watts_service:update_params/1
+-spec add_services() -> ok.
 add_services() ->
     AddService =
         fun(#{id := Id} = ConfigMap, _) ->
@@ -329,7 +416,15 @@ add_services() ->
     ok.
 
 
-
+%% @doc start the web interface of WaTTS.
+%% This starts the main web server with the API, the static file serving of
+%% the java script SPA and, if configured, the documentations. The redirection
+%% from http to https endpoint is also started if configured.
+%%
+%% To configure SSL first the files are read and if that fails SSL is disabled.
+%% @see create_dispatch_list/0
+%% @see add_options/5
+-spec start_web_interface() -> ok.
 start_web_interface() ->
     lager:info("Init: starting web interface"),
     oidcc_client:register(watts_oidc_client),
@@ -399,6 +494,17 @@ start_web_interface() ->
 
     ok.
 
+
+%% @doc try to read the SSL files and return if successful.
+%% This function is reading
+%% <ul>
+%% <li> the certificat </li>
+%% <li> the private key </li>
+%% <li> the ca chain </li>
+%% <li> the dh params </li>
+%% </ul>
+%% SSL gets disable if one of them fails.
+-spec read_ssl_files(ShouldBeRead :: boolean()) -> UseSSL :: boolean().
 read_ssl_files(true) ->
     CertOK = read_certificate(?CONFIG_(cert_file)),
     KeyOK = read_key(?CONFIG_(key_file)),
@@ -408,7 +514,8 @@ read_ssl_files(true) ->
 read_ssl_files(_) ->
     false.
 
-
+%% @doc read the certificate for SSL
+-spec read_certificate(any()) -> Success :: boolean().
 read_certificate({ok, Path}) ->
     case read_pem_entries(Path) of
         [{'Certificate', Certificate, not_encrypted}] ->
@@ -421,6 +528,8 @@ read_certificate({ok, Path}) ->
 read_certificate(_) ->
     false.
 
+%% @doc read the private key for SSL
+-spec read_key(any()) -> Success :: boolean().
 read_key({ok, Path}) ->
     case read_pem_entries(Path) of
         [{Type, PrivateKey, not_encrypted}]
@@ -435,6 +544,8 @@ read_key({ok, Path}) ->
 read_key(_) ->
     false.
 
+%% @doc read the ca chain for SSL
+-spec read_cachain(any()) -> Success :: boolean().
 read_cachain({ok, Path}) ->
     case read_pem_entries(Path) of
         [] ->
@@ -456,6 +567,8 @@ read_cachain(_) ->
     ?UNSETCONFIG(cachain),
     true.
 
+%% @doc read the dh params for SSL
+-spec read_dhparam(any()) -> Success :: boolean().
 read_dhparam({ok, none}) ->
     lager:warning("Init: no dh-file configured [dh_file]!"),
     ?UNSETCONFIG(dhparam),
@@ -475,9 +588,13 @@ read_dhparam(_) ->
     ?UNSETCONFIG(dhparam),
     true.
 
+%% @doc helper function to read pem encoded files
+-spec read_pem_entries(Path :: binary()) -> [tuple()].
 read_pem_entries(Path) ->
     extract_pem(file:read_file(Path), Path).
 
+%% @doc helper function to decode pem entries
+-spec extract_pem({ok, binary()} | any(), binary()) -> [tuple()].
 extract_pem({ok, PemBin}, _) ->
     public_key:pem_decode(PemBin);
 extract_pem(Error, Path) ->
@@ -485,7 +602,15 @@ extract_pem(Error, Path) ->
     [].
 
 
-
+%% @doc create the dispatch list for the web interface.
+%% This is the list of endpoints and the corresponding action to happen,
+%% this could be either calling a function or serving static files.
+%%
+%% The function creates a basic dispatch list for the javascript to be served,
+%% the OpenID connect handling (login) and the api.
+%% Then calls the create_dispatch_list/2 function to configure the dynamic part.
+%% @see create_dispatch_list/2
+-spec create_dispatch_list() -> [tuple()].
 create_dispatch_list() ->
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
@@ -505,6 +630,16 @@ create_dispatch_list() ->
                           {privacy, ?CONFIG(privacy_doc)} ],
                          BaseDispatchList).
 
+%% @doc handle each configuration and transform it into a dispatch entry.
+%% The handled settings include
+%% <ul>
+%% <li> user documentation </li>
+%% <li> code documentation </li>
+%% <li> rps endpoint </li>
+%% <li> privacy statement </li>
+%% </ul>
+-spec create_dispatch_list(Config:: [tuple()], DispatchList :: [tuple()])
+                          -> [tuple()].
 create_dispatch_list([], List) ->
      List;
 create_dispatch_list([{doc_user, true} | T], List) ->
@@ -551,17 +686,20 @@ create_dispatch_list([_ | T], List) ->
 
 
 
-
-add_options(Options, {ok, CaChain}, DhParam, Hostname, IPv6) ->
+%% @doc dynamically generate the list of options for the webserver.
+-spec add_options(Options :: [tuple()], CaChainSetting :: tuple() | ok,
+                  DhParamSetting :: tuple() | ok, IsOnion :: boolean() | ok,
+                  IPv6Setting :: tuple() | ok) -> [tuple()].
+add_options(Options, {ok, CaChain}, DhParam, IsOnion, IPv6) ->
     NewOptions = [ {cacerts, CaChain} | Options ],
-    add_options(NewOptions, ok, DhParam, Hostname, IPv6);
-add_options(Options, undefined, DhParam, Hostname, IPv6) ->
-    add_options(Options, ok, DhParam, Hostname, IPv6);
-add_options(Options, CaChain,  undefined, Hostname, IPv6) ->
-    add_options(Options, CaChain, ok, Hostname, IPv6);
-add_options(Options, CaChain, {ok, DhParam}, Hostname, IPv6) ->
+    add_options(NewOptions, ok, DhParam, IsOnion, IPv6);
+add_options(Options, undefined, DhParam, IsOnion, IPv6) ->
+    add_options(Options, ok, DhParam, IsOnion, IPv6);
+add_options(Options, CaChain,  undefined, IsOnion, IPv6) ->
+    add_options(Options, CaChain, ok, IsOnion, IPv6);
+add_options(Options, CaChain, {ok, DhParam}, IsOnion, IPv6) ->
     NewOptions = [ {dh, DhParam} | Options ],
-    add_options(NewOptions, CaChain, ok, Hostname, IPv6);
+    add_options(NewOptions, CaChain, ok, IsOnion, IPv6);
 add_options(Options, CaChain, DhParam, true, {ok, true}) ->
     lager:info("Init: listening only at ::1 (onion)"),
     NewOptions = [ {ip, {0, 0, 0, 0, 0, 0, 0, 1}} | Options ],
@@ -570,23 +708,25 @@ add_options(Options, CaChain, DhParam, true, IPv6) ->
     lager:info("Init: listening only at 127.0.0.1 (onion)"),
     NewOptions = [ {ip, {127, 0, 0, 1}} | Options ],
     add_options(NewOptions, CaChain, DhParam, ok, IPv6);
-add_options(Options, CaChain, DhParam, Hostname, {ok, true}) ->
+add_options(Options, CaChain, DhParam, IsOnion, {ok, true}) ->
     NewOptions =  [ inet6 | Options],
-    add_options(NewOptions, CaChain, DhParam, Hostname, ok);
-add_options(Options, CaChain, DhParam, Hostname, {ok, false}) ->
+    add_options(NewOptions, CaChain, DhParam, IsOnion, ok);
+add_options(Options, CaChain, DhParam, IsOnion, {ok, false}) ->
     NewOptions =  [ inet | Options],
-    add_options(NewOptions, CaChain, DhParam, Hostname, ok);
+    add_options(NewOptions, CaChain, DhParam, IsOnion, ok);
 add_options(Options, _, _, _, _) ->
     Options.
 
 
 
 
-
+%% @doc return the local endpoint
+-spec local_endpoint() -> binary().
 local_endpoint() ->
     watts_http_util:whole_url(watts_http_util:relative_path("oidc")).
 
-
+%% @doc gracefully stop the configuration process when done.
+-spec stop() -> ok.
 stop() ->
     lager:info("Init: done"),
     lager:info("Init: startup took ~p seconds",
@@ -594,6 +734,8 @@ stop() ->
     lager:info("WaTTS ready"),
     stop(self()).
 
+%% @doc helperfunction to remove newlines from data
+-spec remove_newline(string()) -> string().
 remove_newline(List) ->
     Filter = fun($\n) ->
                      false;
@@ -601,13 +743,3 @@ remove_newline(List) ->
                      true
              end,
     lists:filter(Filter, List).
-
-start_if_not_started_before() ->
-    start_if_undefined(?CONFIG(watts_init_started)).
-
-start_if_undefined(undefined) ->
-    ok = ?SETCONFIG(watts_init_started, true),
-    gen_server:cast(self(), start_watts);
-start_if_undefined(_) ->
-    lager:emergency("Init: restarting ... this should not happen!"),
-    erlang:halt(1).

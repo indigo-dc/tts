@@ -1,4 +1,4 @@
--module(watts_data_leveldb).
+-module(watts_persistent_leveldb).
 %%
 %% Copyright 2017 SCC/KIT
 %%
@@ -54,27 +54,27 @@ initialize() ->
                      AllowNonUniqueStates::boolean())
 -> {ok, CredentialID ::binary()} | {error, Reason :: atom()}.
 credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
-    watts_data_mnesia:credential_add(UserId, ServiceId, Interface, CredState,
-                                    SameStateAllowed).
+    watts_persistent_mnesia:credential_add(UserId, ServiceId, Interface,
+                                           CredState, SameStateAllowed).
 
 -spec credential_get_list(UserId::binary()) -> {ok, [watts:cred()]}.
 credential_get_list(UserId) ->
-    watts_data_mnesia:credential_get_list(UserId).
+    watts_persistent_mnesia:credential_get_list(UserId).
 
 -spec credential_get_count(UserId::binary(), ServiceId::binary()) ->
                                   {ok, integer()}.
 credential_get_count(UserId, ServiceId) ->
-    watts_data_mnesia:credential_get_count(UserId, ServiceId).
+    watts_persistent_mnesia:credential_get_count(UserId, ServiceId).
 
 -spec credential_get(CredId::binary()) -> {ok, watts:cred()} |
                                           {error, not_found}.
 credential_get(Uuid) ->
-    watts_data_mnesia:credential_get(Uuid).
+    watts_persistent_mnesia:credential_get(Uuid).
 
 -spec credential_remove(UserId::binary(), CredentialId::binary()) ->
     ok | {error, Reason :: atom()}.
 credential_remove(UserId, CredId) ->
-    watts_data_mnesia:credential_remove(UserId, CredId).
+    watts_persistent_mnesia:credential_remove(UserId, CredId).
 
 -spec is_ready() -> ok | {error, not_running}.
 is_ready() ->

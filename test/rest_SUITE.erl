@@ -155,15 +155,15 @@ setup_group(DbType) ->
 
 config_db(sqlite) ->
     ?SETCONFIG(database_type, sqlite),
-    ?SETCONFIG(persistent_module, watts_data_sqlite),
+    ?SETCONFIG(persistent_module, watts_persistent_sqlite),
     ?SETCONFIG(sqlite_db, "/tmp/watts_common_test/watts_ct.db");
 config_db(mnesia) ->
     ?SETCONFIG(database_type, mnesia),
-    ?SETCONFIG(persistent_module, watts_data_mnesia),
+    ?SETCONFIG(persistent_module, watts_persistent_mnesia),
     ?SETCONFIG(mnesia_dir, "/tmp/watts_common_test/mnesia");
 config_db(eleveldb) ->
     ?SETCONFIG(database_type, eleveldb),
-    ?SETCONFIG(persistent_module, watts_data_leveldb),
+    ?SETCONFIG(persistent_module, watts_persistent_leveldb),
     ?SETCONFIG(eleveldb_dir, "/tmp/watts_common_test/eleveldb").
 
 service_config(_Config) ->

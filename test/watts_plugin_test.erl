@@ -171,7 +171,7 @@ start_meck() ->
     UserId1 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoic3ViIn0">>,
     UserId2 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoic3UifQ">>,
     %% UserId3 =  <<"eyJpc3N1ZXIiOiJpc3MiLCJzdWJqZWN0Ijoi3ViIn0">>,
-    MeckModules = [watts_data_sqlite, watts_plugin_sup, watts_plugin_runner,
+    MeckModules = [watts_persistent_sqlite, watts_plugin_sup, watts_plugin_runner,
                    watts_service],
     ok = test_util:meck_new(MeckModules),
     GetFun = fun(_User) ->
@@ -322,11 +322,11 @@ start_meck() ->
     Exists = fun(ServiceId) ->
                     not( (ServiceId == Service6))
              end,
-    ok = meck:expect(watts_data_sqlite, credential_get_list, GetFun),
-    ok = meck:expect(watts_data_sqlite, credential_get, GetCredFun),
-    ok = meck:expect(watts_data_sqlite, credential_get_count, GetCountFun),
-    ok = meck:expect(watts_data_sqlite, credential_add, AddFun),
-    ok = meck:expect(watts_data_sqlite, credential_remove, DelFun),
+    ok = meck:expect(watts_persistent_sqlite, credential_get_list, GetFun),
+    ok = meck:expect(watts_persistent_sqlite, credential_get, GetCredFun),
+    ok = meck:expect(watts_persistent_sqlite, credential_get_count, GetCountFun),
+    ok = meck:expect(watts_persistent_sqlite, credential_add, AddFun),
+    ok = meck:expect(watts_persistent_sqlite, credential_remove, DelFun),
     ok = meck:expect(watts_plugin_sup, new_worker, NewRunner),
     ok = meck:expect(watts_plugin_runner, request_action, ActionFun),
     ok = meck:expect(watts_service, get_queue, GetQueue),

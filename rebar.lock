@@ -36,13 +36,19 @@
   {git,"https://github.com/manopapad/proper.git",
        {ref,"430c05585188b6f96b9d8a18a4a4c400154b80cf"}},
   1},
- {<<"quickrand">>,{pkg,<<"quickrand">>,<<"1.7.2">>},1},
+ {<<"quickrand">>,
+  {git,"https://github.com/okeuday/quickrand.git",
+       {ref,"1c60daa4b0edcec0a6b8310443574baac962ea88"}},
+  1},
  {<<"ranch">>,{pkg,<<"ranch">>,<<"1.3.2">>},1},
  {<<"syslog">>,
   {git,"https://github.com/basho/erlang-syslog",
        {ref,"e24c9ee8f7bb3f066ec152c210af10c2c712759a"}},
   1},
- {<<"uuid">>,{pkg,<<"uuid_erl">>,<<"1.7.0">>},0}]}.
+ {<<"uuid">>,
+  {git,"https://github.com/okeuday/uuid",
+       {ref,"23167ed8689f656ea6765572215a40b9856d7886"}},
+  0}]}.
 [
 {pkg_hash,[
  {<<"base64url">>, <<"36A90125F5948E3AFD7BE97662A1504B934DD5DAC78451CA6E9ABF85A10286BE">>},
@@ -58,7 +64,5 @@
  {<<"lager">>, <<"63897A61AF646C59BB928FEE9756CE8BDD02D5A1A2F3551D4A5E38386C2CC071">>},
  {<<"oidcc">>, <<"77235CB84B813C9A9AE04518776EA763BA80562D21C86847E238F58E427DBF73">>},
  {<<"oidcc_cowboy">>, <<"3FF2CC7D326A461B5E455CA4997189253CE0392C6C88B91A2135153806A60151">>},
- {<<"quickrand">>, <<"E856F3C69FEC00D1ACCA8E56CB452B650E838D3A9720811410F439121EFAFE59">>},
- {<<"ranch">>, <<"E4965A144DC9FBE70E5C077C65E73C57165416A901BD02EA899CFD95AA890986">>},
- {<<"uuid">>, <<"EB803855E12D57B1CC10522781D1B42064FA2E4C576731700EE48D84A9283292">>}]}
+ {<<"ranch">>, <<"E4965A144DC9FBE70E5C077C65E73C57165416A901BD02EA899CFD95AA890986">>}]}
 ].

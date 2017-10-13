@@ -17,33 +17,36 @@
          get_list/0
         ]).
 
+-export_type([rsp/0]).
 
 -record(watts_rsp_session, {
-          referer = undefined,
-          success_url = undefined,
-          failed_url = undefined,
-          iss = undefined,
-          sub = undefined,
-          service_id = undefined,
-          params = undefined,
-          provider = undefined
+          referer = undefined :: undefined | binary(),
+          success_url = undefined :: undefined | binary(),
+          failed_url = undefined :: undefined | binary(),
+          iss = undefined :: undefined | binary(),
+          sub = undefined :: undefined | binary(),
+          service_id = undefined :: undefined | binary(),
+          params = undefined :: undefined | map(),
+          provider = undefined :: undefined | binary()
          }).
 
 -record(watts_rsp, {
-          id = undefined,
-          key_location = undefined,
-          key_pid = undefined,
-          perform_login = true,
-          show_ui = true,
-          base_url = undefined,
+          id = undefined :: undefined | pid(),
+          key_location = undefined :: undefined | binary(),
+          key_pid = undefined :: undefined | pid(),
+          perform_login = true :: boolean(),
+          show_ui = true :: boolean(),
+          base_url = undefined :: undefined | binary(),
 
           session = #watts_rsp_session{}
          }).
 
+-type rsp() :: #watts_rsp{}.
 
 get_list() ->
     {ok, ?CONFIG(rsp_list)}.
 
+-spec new(map()) -> {ok, rsp()}.
 new(#{id := Id, key_location := Location, show_ui := Ui,
       perform_login := Login, base_url := BaseUrl} = Map) ->
     {ok, Pid} = watts_rsp_keys:new(Map),
@@ -63,6 +66,7 @@ exists(RspId) ->
 get_id(#watts_rsp{ id = Id }) ->
     {ok, Id}.
 
+-spec get_provider(rsp()) -> binary() | undefined.
 get_provider(#watts_rsp{session = #watts_rsp_session{ provider = P }}) ->
     P.
 
@@ -73,6 +77,7 @@ get_iss_sub(#watts_rsp{session = #watts_rsp_session{ iss = I, sub = S }}) ->
 get_return_urls(#watts_rsp{session = Session}) ->
     session_return_urls(Session).
 
+-spec session_return_urls(tuple()) -> {binary(), binary()}.
 session_return_urls(#watts_rsp_session{ referer=R, success_url=undefined,
                                        failed_url=undefined }) ->
     {R, R};
@@ -234,6 +239,7 @@ jwt_get_success_url(Claims) ->
 jwt_get_failed_url(Claims) ->
     maps:get(failed_url, Claims, undefined).
 
+-spec jwt_get_provider(Claims :: map()) -> binary() | undefined.
 jwt_get_provider(Claims) ->
     maps:get(watts_provider, Claims, undefined).
 

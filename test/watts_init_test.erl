@@ -14,7 +14,7 @@ basic_init_test() ->
         ?SETCONFIG( enable_ipv6, false),
         ?SETCONFIG( redirection_enable, false),
         ?SETCONFIG( redirection_port, 443),
-        ?SETCONFIG( persistent_module, watts_data_sqlite),
+        ?SETCONFIG( persistent_module, watts_persistent_sqlite),
         {ok, Pid} = watts_init:start_link(),
         test_util:wait_for_process_to_die(Pid, 300)
     after
@@ -48,7 +48,7 @@ advanced_init_test() ->
         ?SETCONFIG( redirection_port, 443),
         ?SETCONFIG( service_list, ServiceList),
         ?SETCONFIG( provider_list, ProviderList),
-        ?SETCONFIG( persistent_module, watts_data_sqlite),
+        ?SETCONFIG( persistent_module, watts_persistent_sqlite),
         {ok, Pid} = watts_init:start_link(),
         test_util:wait_for_process_to_die(Pid, 300)
     after
@@ -57,7 +57,7 @@ advanced_init_test() ->
     ok.
 
 start_meck() ->
-    MeckModules = [watts_data_sqlite, cowboy, oidcc, oidcc_client,
+    MeckModules = [watts_persistent_sqlite, cowboy, oidcc, oidcc_client,
                    watts_service],
     Initialize = fun() ->
                           ok
@@ -93,8 +93,8 @@ start_meck() ->
                                end
                        end,
     ok = test_util:meck_new(MeckModules),
-    ok = meck:expect(watts_data_sqlite, initialize, Initialize),
-    ok = meck:expect(watts_data_sqlite, is_ready, Initialize),
+    ok = meck:expect(watts_persistent_sqlite, initialize, Initialize),
+    ok = meck:expect(watts_persistent_sqlite, is_ready, Initialize),
     ok = meck:expect(watts_service, add, AddService),
     ok = meck:expect(watts_service, update_params, UpdateParams),
     ok = meck:expect(oidcc_client, register, RegisterClient),

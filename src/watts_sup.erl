@@ -70,7 +70,7 @@ init_worker() ->
 
 sqlite_worker() ->
     #{ id => sqlite,
-       start => {watts_data_sqlite, start_link, []}
+       start => {watts_persistent_sqlite, start_link, []}
      }.
 
 temp_cred() ->
