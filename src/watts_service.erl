@@ -31,9 +31,12 @@
 -export([get_credential_limit/1]).
 -export([get_queue/1]).
 
+-spec get_list() -> {ok, [map()]}.
 get_list() ->
      watts_data:service_get_list().
 
+-spec get_list(UserInfo :: watts_userinfo:userinfo()) ->
+                      {ok, [map()]}.
 get_list(UserInfo) ->
     {ok, ServiceList} = get_list(),
     UpdateLimit
@@ -109,6 +112,8 @@ allows_same_state(ServiceId) ->
         _ -> false
     end.
 
+-spec is_allowed(UserInfo :: watts_userinfo:userinfo(), ServiceId :: binary())
+                -> boolean().
 is_allowed(UserInfo, ServiceId) ->
     case get_info(ServiceId) of
         {ok, #{authz := AuthzConf} } ->
@@ -117,6 +122,9 @@ is_allowed(UserInfo, ServiceId) ->
             false
     end.
 
+-spec is_allowed( ServiceId :: binary(), UserInfo :: watts_userinfo:userinfo(),
+                  AuthzConf :: watts_service_authz:config())
+                -> boolean().
 is_allowed(ServiceId, UserInfo, AuthzConf) ->
     watts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
 

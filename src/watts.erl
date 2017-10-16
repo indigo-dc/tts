@@ -354,10 +354,15 @@ is_provider_disabled(ProviderId) ->
     lists:foldl(ProviderDisabled, true, ProviderList).
 
 
+%% @doc returns the list of services for the given Session
+-spec get_service_list_for(Session :: pid()) -> {ok, [Service::map()]}.
 get_service_list_for(Session) ->
     {ok, SessType} = watts_session:get_type(Session),
     return_service_list(Session, SessType).
 
+%% @doc returns the list of services for the given Session unless it is RSP
+-spec return_service_list(Session :: pid(), Type :: atom() | {rsp, _, _})
+                          -> {ok, [Service::map()]}.
 return_service_list(Session, Type)
   when Type == oidc; Type == rest->
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -367,11 +372,15 @@ return_service_list(_, _) ->
     {ok, []}.
 
 
-
+%% @doc get the list of credentials for the given session
+-spec get_credential_list_for(Session :: pid()) -> {ok, [Credential :: map()]}.
 get_credential_list_for(Session) ->
     {ok, SessType} = watts_session:get_type(Session),
     return_credential_list(Session, SessType).
 
+%% @doc get the list of credentials for the given session unless it is RSP
+-spec return_credential_list(Session :: pid(),  Type :: atom() | tuple()) ->
+                                    {ok, [Credential :: map()]}.
 return_credential_list(Session,  Type)
   when Type == oidc; Type == rest->
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -381,6 +390,15 @@ return_credential_list(_,  _) ->
     {ok, []}.
 
 
+%% @doc start a translation request at the given Service for the given Session.
+%% This is using the params passed.
+%% A plugin will be triggered to run with all the needed parameter.
+%% After running the plugin the result will get parsed and send to the user.
+%% @see watts_plugin:request/4
+%% @see watts_plugin
+%% @see watts_plugin_runner
+-spec request_credential_for(ServiceId :: binary(), Session :: pid(),
+                             Params :: [map()]) -> {ok, map()} | {error, map()}.
 request_credential_for(ServiceId, Session, Params) ->
     IFace =  get_interface_description(watts_session:get_type(Session)),
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -389,6 +407,8 @@ request_credential_for(ServiceId, Session, Params) ->
     handle_credential_result(Result, ServiceId, Session, Params).
 
 
+%% @doc convert interface type in human readable string.
+-spec get_interface_description({ok, atom() | tuple()}) -> binary().
 get_interface_description({ok, oidc}) ->
     <<"Web App">>;
 get_interface_description({ok, rest}) ->
@@ -398,6 +418,13 @@ get_interface_description({ok, {rsp, _, _}}) ->
     <<"RSP interface">>.
 
 
+%% @doc handle the result of a translation.
+%% this is the result part of the {@link request_credential_for/3} call.
+%% -spec handle_credential_result({ok, Credential::map()} |
+%%                                {error, Reason :: atom()},
+%%                                 ServiceId :: binary(),
+%%                                Session :: pid(), Params :: [map()]) ->
+%%                                       {ok, map()} | {error, map()}.
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),

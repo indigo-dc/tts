@@ -45,6 +45,7 @@ sessions_supervisor() ->
        type => supervisor
      }.
 
+%% @todo: only start if RSP is enabled
 rsp_keys_supervisor() ->
     #{ id => rsp_keys_sup,
        start => {watts_rsp_keys_sup, start_link, []},

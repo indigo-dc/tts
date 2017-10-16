@@ -1,8 +1,11 @@
 REPO = tts
 REBAR = $(shell pwd)/rebar3
+MODULES = watts_init watts watts_app watts_sup watts_http_api watts_oidc_client \
+		watts_persistent watts_plugin watts_plugin_runner watts_service \
+		watts_service_authz watts_temp_cred watts_temp_cred_data watts_data
 
 
-.PHONY: check all cln clean eunit ct elvis compile ui tests rel tar run package clean_package gitbook edoc
+.PHONY: check all cln clean eunit ct elvis compile ui tests rel tar run package clean_package gitbook edoc callgraph
 
 all: compile
 
@@ -61,6 +64,13 @@ gitbook:
 	mkdir -p priv/docs/user
 	cp -r _book/* priv/docs/user
 	rm -rf _book
+
+plt:
+	dialyzer --build_plt --apps erts kernel stdlib crypto mnesia sasl common_test eunit ssl public_key
+
+callgraph:
+	dialyzer --dump_callgraph priv/docs/graphs/watts.dot src/*.erl; \
+	dot priv/docs/graphs/watts.dot -Tpng -opriv/docs/graphs/watts.png; \
 
 
 rel: compile edoc

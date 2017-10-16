@@ -1,3 +1,8 @@
+
+%% @doc this module takes care of running a plugin in an environment and
+%% controlling and validating its results.
+%% It is implemented as a gen_server so that each run of a plugin has a
+%% corresponding process in the VM.
 -module(watts_plugin_runner).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
