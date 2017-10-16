@@ -421,7 +421,8 @@ get_interface_description({ok, {rsp, _, _}}) ->
 %% @doc handle the result of a translation.
 %% this is the result part of the {@link request_credential_for/3} call.
 %% -spec handle_credential_result({ok, Credential::map()} |
-%%                                {error, Reason :: atom()}, ServiceId :: binary(),
+%%                                {error, Reason :: atom()},
+%%                                 ServiceId :: binary(),
 %%                                Session :: pid(), Params :: [map()]) ->
 %%                                       {ok, map()} | {error, map()}.
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->

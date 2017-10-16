@@ -252,7 +252,8 @@ get_provider_id(Issuer) ->
 
 %% @doc return the provider if passed a valid pid
 -spec return_provider_id_if_found({ok, pid} | any())
-                                 -> {ok, binary()} | {error, provider_not_found}.
+                                 -> {ok, binary()} |
+                                    {error, provider_not_found}.
 return_provider_id_if_found({ok, Pid}) ->
     {ok, #{id := ProviderId}} = oidcc:get_openid_provider_info(Pid),
     {ok, ProviderId};
