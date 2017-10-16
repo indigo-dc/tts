@@ -31,7 +31,7 @@
          }).
 
 -record(watts_rsp, {
-          id = undefined :: undefined | pid(),
+          id = undefined :: undefined | binary(),
           key_location = undefined :: undefined | binary(),
           key_pid = undefined :: undefined | pid(),
           perform_login = true :: boolean(),
@@ -63,6 +63,7 @@ exists(RspId) ->
             true
     end.
 
+-spec get_id(rsp()) -> {ok, binary()}.
 get_id(#watts_rsp{ id = Id }) ->
     {ok, Id}.
 

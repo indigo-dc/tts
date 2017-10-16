@@ -71,7 +71,7 @@
 
 -spec start_link(Token :: binary()) -> {ok, pid()}.
 start_link(Token) ->
-    gen_server:start_link(?MODULE, [Token], []).
+    gen_server:start_link(?MODULE, Token, []).
 
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
@@ -159,7 +159,7 @@ get_error(Pid) ->
 set_error(Error, Pid) ->
     gen_server:call(Pid, {set_error, Error}).
 
--spec get_user_info(Pid :: pid()) -> {ok, UserInfo::map()}.
+-spec get_user_info(Pid :: pid()) -> {ok, UserInfo::watts_userinfo:userinfo()}.
 get_user_info(Pid) ->
     gen_server:call(Pid, get_user_info).
 
@@ -192,22 +192,24 @@ is_same_ip(IP, Pid) ->
 %% gen_server.
 -include("watts.hrl").
 -record(state, {
-          id = unkonwn,
-          creation = undefined,
+          id = unkonwn :: unknown | pid(),
+          creation = -1 :: integer(),
           type = undefined :: atom(),
-          issuer_id = undefined,
-          sess_token = undefined,
-          user_agent = undefined,
+          issuer_id = undefined :: undefined | binary(),
+          sess_token = undefined :: undefined | binary(),
+          user_agent = undefined :: undefined | binary(),
           rsp = undefined,
           ip = undefined,
           error = <<"">>,
-          user_info = undefined,
-          max_age = 10,
+          user_info = undefined :: undefined | watts_userinfo:userinfo(),
+          max_age = 10 :: pos_integer(),
           redirection = undefined
          }).
 
+-type session() :: #state{}.
 
-init([Token]) ->
+-spec init(Token :: binary()) -> {ok, session()}.
+init(Token) ->
     Id = self(),
     lager:info("SESS~p starting", [Id]),
     MaxAge = ?CONFIG(session_timeout, 10000),

@@ -29,22 +29,31 @@
          return/2
         ]).
 
+-export_type([userinfo/0]).
+
 -record(user_info, {
-          issuer = undefined,
-          subject = undefined,
-          id_token = #{},
-          id_info = #{},
-          access_token = #{},
-          plugin_info = #{},
-          token_info = #{},
-          additional_logins = [],
-          scope = #{}
+          issuer = undefined :: undefined | binary(),
+          subject = undefined :: undefined | binary(),
+          id_token = #{} :: map(),
+          id_info = #{} :: map(),
+          access_token = #{} :: map(),
+          plugin_info = #{} :: map(),
+          token_info = #{} :: map(),
+          additional_logins = [] :: [additional_login()],
+          scope = #{} :: map()
          }).
 
+-type userinfo() :: #user_info{}.
+-type additional_login() :: {{ServiceId :: binary(),
+                              IssuerId :: binary()}, UserInfo :: userinfo()}.
+
+-spec new() -> {ok, userinfo()}.
 new() ->
     {ok, #user_info{}}.
 
 
+-spec update_with_token(Token :: map(), UserInfo :: userinfo()) ->
+                               {ok, UpdatedInfo :: userinfo()}.
 update_with_token(Token, UserInfo) ->
     IdInfo = maps:get(user_info, Token, undefined),
     IdToken = maps:get(id, Token, undefined),
@@ -94,7 +103,11 @@ update_with_token(Token, UserInfo) ->
         end,
     {ok, Info5}.
 
-
+-spec update_iss_sub(Issuer :: binary() | undefined,
+                     Subject :: binary() | undefined,
+                     UserInfo :: userinfo()) ->
+                            {ok, UpdatedInfo :: userinfo()} |
+                            {error, Reason :: atom()}.
 update_iss_sub(Issuer, Subject,
                #user_info{issuer=undefined, subject=undefined} = Info)
   when is_binary(Issuer), is_binary(Subject)->
@@ -125,6 +138,9 @@ update_id_token(IdToken, Info) ->
             {error, not_match}
     end.
 
+-spec update_access_token(TokenMap :: map(), UserInfo :: userinfo()) ->
+                            {ok, UpdatedInfo :: userinfo()} |
+                            {error, Reason :: atom()}.
 update_access_token(#{token := Token} = AccessToken,
                     #user_info{id_token = IdToken}=Info) ->
     Claims = maps:get(claims, IdToken, #{}),
@@ -140,6 +156,9 @@ update_access_token(#{token := Token} = AccessToken,
             {error, not_match}
     end.
 
+-spec update_id_info(IdInfo :: map(), UserInfo :: userinfo()) ->
+                            {ok, UpdatedInfo :: userinfo()} |
+                            {error, Reason :: atom()}.
 update_id_info(IdInfo, Info) ->
     Sub = maps:get(sub, IdInfo),
     Iss = undefined,
@@ -150,6 +169,9 @@ update_id_info(IdInfo, Info) ->
             {error, not_match}
     end.
 
+-spec update_token_info(TokenInfo :: map(), UserInfo :: userinfo()) ->
+                               {ok, UpdatedInfo :: userinfo()} |
+                               {error, Reason :: atom()}.
 update_token_info(TokenInfo, Info) ->
     Sub = maps:get(sub, TokenInfo, undefined),
     Iss = undefined,
@@ -165,9 +187,16 @@ update_token_info(TokenInfo, Info) ->
             {error, not_match}
     end.
 
+-spec update_scope(Scope :: map(), UserInfo :: userinfo()) ->
+                          {ok, UpdatedInfo :: userinfo()}.
 update_scope(#{scope := _, list := _} =Scope, Info) ->
     {ok, update_plugin_info(Info#user_info{scope=Scope})}.
 
+
+
+-spec add_additional_login(ServiceId :: binary(), IssuerId :: binary(),
+                           Token :: map(), UserInfo :: userinfo()) ->
+                                  UpdatedInfo :: userinfo().
 add_additional_login(ServiceId, IssuerId, Token,
                      #user_info{additional_logins=AddLogins} = Info) ->
     {ok, EmptyInfo} = new(),
@@ -177,6 +206,10 @@ add_additional_login(ServiceId, IssuerId, Token,
                      lists:keydelete({ServiceId, IssuerId}, 1, AddLogins)],
     Info#user_info{additional_logins = NewAddLogins}.
 
+
+
+-spec clear_additional_logins(ServiceId :: binary(), UserInfo :: userinfo())
+                             -> UpdatedInfo :: userinfo().
 clear_additional_logins(ServiceId,
                        #user_info{additional_logins=AddLogins} = Info) ->
     Filter = fun({{Id, _}, _}) ->
@@ -185,6 +218,9 @@ clear_additional_logins(ServiceId,
     NewAddLogins = lists:filter(Filter, AddLogins),
     Info#user_info{additional_logins = NewAddLogins}.
 
+
+-spec has_additional_login(ServiceId :: binary(), IssuerId :: binary(),
+                           UserInfo :: userinfo()) -> boolean().
 has_additional_login(ServiceId, IssuerId,
                      #user_info{additional_logins=AddLogins}) ->
     case lists:keyfind({ServiceId, IssuerId}, 1, AddLogins) of
@@ -194,6 +230,14 @@ has_additional_login(ServiceId, IssuerId,
             true
     end.
 
+
+-spec return(Key :: atom() |
+                    {key, Key :: binary()} |
+                    {additional_logins, ServiceId :: binary(),
+                     WithAccessToken :: boolean()}
+            , UserInfo :: userinfo()) ->
+                    {ok, Data :: any()} | {ok, Iss :: binary(), Sub :: binary}
+                        | boolean() | {error, Reason :: atom()}.
 return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     Key = maybe_to_atom(Key0),
     case maps:is_key(Key, PluginInfo) of
@@ -204,14 +248,14 @@ return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     end;
 return(plugin_info, #user_info{plugin_info=PluginInfo}) ->
     {ok, PluginInfo};
-return({additional_logins, ServiceId, AddAccessToken},
+return({additional_logins, ServiceId, WithAccessToken},
        #user_info{additional_logins = AddLogins}) ->
     Extract = fun({{SrvId, _}, Info}, List) when SrvId == ServiceId ->
                       {ok, UInfo} = return(plugin_info, Info),
                       {ok, PAccT} = return(access_token, Info),
                       Base = #{user_info => UInfo},
                       Update =
-                          case AddAccessToken of
+                          case WithAccessToken of
                               true ->
                                   #{access_token => PAccT};
                               false ->
@@ -243,6 +287,8 @@ return( logged_in, Info) ->
 
 
 
+-spec userid(UserInfo :: userinfo()) -> {ok, Id :: binary} |
+                                        {error, Reason :: atom()}.
 userid(#user_info{issuer=Issuer, subject=Subject})
   when is_binary(Issuer), is_binary(Subject) ->
     Id = base64url:encode(jsone:encode(#{issuer => Issuer,
@@ -251,6 +297,8 @@ userid(#user_info{issuer=Issuer, subject=Subject})
 userid(_) ->
     {error, not_set}.
 
+-spec display_name(UserInfo :: userinfo()) -> {ok, Name :: binary} |
+                                        {error, Reason :: atom()}.
 display_name(#user_info{subject=Subject, issuer=Issuer, id_info=IdInfo})
   when is_binary(Subject), is_binary(Issuer)->
     case maps:get(name, IdInfo, undefined) of
@@ -260,17 +308,21 @@ display_name(#user_info{subject=Subject, issuer=Issuer, id_info=IdInfo})
 display_name(_) ->
     {error, not_set}.
 
+-spec logged_in(UserInfo :: userinfo()) -> boolean().
 logged_in(#user_info{subject=Subject, issuer=Issuer})
   when is_binary(Subject), is_binary(Issuer)->
     true;
 logged_in(_) ->
     false.
 
+-spec access_token(UserInfo :: userinfo()) -> {ok, AccessToken :: binary} |
+                                        {error, Reason :: atom()}.
 access_token(#user_info{access_token=#{token := AccessToken}}) ->
     {ok, AccessToken};
 access_token(_) ->
     {error, not_set}.
 
+-spec set_scope_if_empty(UserInfo :: userinfo()) -> UpdatedInfo :: userinfo().
 set_scope_if_empty(#user_info{token_info=TokenInfo, scope= ScopeMap} = Info) ->
     case maps:is_key(scope, ScopeMap) of
         true ->
@@ -280,6 +332,8 @@ set_scope_if_empty(#user_info{token_info=TokenInfo, scope= ScopeMap} = Info) ->
             Info#user_info{scope = maps:get(scope, TokenInfo, Empty)}
     end.
 
+
+-spec update_plugin_info(UserInfo :: userinfo()) -> UpdatedInfo :: userinfo().
 update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken,
                               token_info=TokenInfo,
                               issuer=Issuer, subject=Subject,
@@ -305,6 +359,7 @@ update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken,
     PluginInfo9 = maps:merge(PluginInfo3, IssSubUpdate),
     UserInfo#user_info{plugin_info=PluginInfo9}.
 
+-spec maybe_to_atom(Binary :: binary()) -> atom() | binary().
 maybe_to_atom(Bin) ->
     try
         binary_to_existing_atom(Bin, utf8)

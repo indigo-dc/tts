@@ -64,8 +64,9 @@ exists(UserInfo, CredId) ->
         _ -> false
     end.
 
-%% -spec request(binary(), binary(), watts:user_info(), binary(), map()|atom(),
-%%               list()) -> {ok, map(), list()} | {error, any(), list()}.
+-spec request(ServiceId :: binary(), UserInfo :: watts_userinfo:userinfo(),
+              Interface :: binary(), Params:: [map()]) ->
+                     {ok, map()} | {error, ReasonDetails :: atom() | map()}.
 request(ServiceId, UserInfo, Interface, Params) ->
     {ok, Limit} = watts_service:get_credential_limit(ServiceId),
     {ok, QueueName} = watts_service:get_queue(ServiceId),
