@@ -1,3 +1,4 @@
+%% @doc supervisor module for the temporary credential store
 -module(watts_temp_cred_sup).
 %%
 %% Copyright 2016 SCC/KIT
@@ -22,13 +23,27 @@
 -export([init/1]).
 -export([new_temp_cred/1]).
 
+%% @doc start_link implementation, starting the supervisor
+-spec start_link() -> {ok, pid()}.
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, noparams).
 
+%% @doc start a new data process and supervise it
+-spec new_temp_cred(Credential :: watts:credential()) -> {ok, pid()}.
 new_temp_cred(Credential) ->
     supervisor:start_child(?MODULE, [Credential]).
 
-init([]) ->
+
+%% spec failing ... skipping it
+%% -spec init(noparams)
+%%           -> {ok, {
+%%                 #{ strategy => simple_one_for_one  }
+%%                   ,[#{id => temp_cred,
+%%                       start => {watts_temp_cred_data, start_link, []},
+%%                       restart => transient}
+%%                    ]}}.
+%% @doc initialize the supervisor with the process type to start
+init(noparams) ->
     TempCred = #{
       id => temp_cred,
       start => {watts_temp_cred_data, start_link, []},

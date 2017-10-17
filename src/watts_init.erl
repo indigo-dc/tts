@@ -239,18 +239,19 @@ maybe_root_halt(User, Uid) ->
     ok.
 
 %% @doc start the databases needed to run WaTTS.
-%% The in ram database is started using watts_data and the
+%% The in ram database is started using watts_ets and the
 %% configured persistent database is started with watts_persistent.
-%% @see watts_data:init/0
+%% @see watts_ets:init/0
 %% @see watts_persistent:init/0
 -spec start_database() -> ok.
 start_database() ->
-    lager:info("Init: starting ets database"),
-    ok = watts_data:init(),
+    lager:info("Init: starting ram database"),
+    ok = watts_ets:init(),
+    lager:info("Init: starting persistence database"),
     ok = watts_persistent:init(),
     case watts_persistent:is_ready() of
-        ok -> ok;
-        {error, R} ->
+        true -> ok;
+        {false, R} ->
             Msg = io_lib:format("unable to start persistence layer: ~p", [R]),
             lager:critical(Msg),
             erlang:error(no_database)

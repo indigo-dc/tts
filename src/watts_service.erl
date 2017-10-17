@@ -33,7 +33,7 @@
 
 -spec get_list() -> {ok, [map()]}.
 get_list() ->
-     watts_data:service_get_list().
+     watts_ets:service_get_list().
 
 -spec get_list(UserInfo :: watts_userinfo:userinfo()) ->
                       {ok, [map()]}.
@@ -74,20 +74,20 @@ get_list(UserInfo) ->
 
 
 get_info(ServiceId) ->
-    case watts_data:service_get(ServiceId) of
+    case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, Info};
         Other -> Other
     end.
 
 get_credential_limit(ServiceId) ->
-    case watts_data:service_get(ServiceId) of
+    case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, maps:get(cred_limit, Info, 0)};
         _ -> {ok, 0}
     end.
 
 
 exists(ServiceId) ->
-    case watts_data:service_get(ServiceId) of
+    case watts_ets:service_get(ServiceId) of
         {ok, _} ->
             true;
         _ ->
@@ -95,19 +95,19 @@ exists(ServiceId) ->
      end.
 
 get_queue(ServiceId) ->
-    case watts_data:service_get(ServiceId) of
+    case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, maps:get(queue, Info, undefined)};
         _ -> {ok, undefined}
     end.
 
 is_enabled(ServiceId) ->
-    case watts_data:service_get(ServiceId) of
+    case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> maps:get(enabled, Info, false);
         _ -> false
     end.
 
 allows_same_state(ServiceId) ->
-    case watts_data:service_get(ServiceId) of
+    case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> maps:get(allow_same_state, Info, false);
         _ -> false
     end.
@@ -183,14 +183,14 @@ add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     {ok, AuthzConf} = watts_service_authz:validate_config(ServiceId,
                                                           AuthzConf0),
     Update = #{enabled => false, authz => AuthzConf},
-    ok = watts_data:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
+    ok = watts_ets:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
     {ok, ServiceId};
 add(_ServiceMap)  ->
     {error, invalid_config}.
 
 
 update_params(Id) ->
-    Service = watts_data:service_get(Id),
+    Service = watts_ets:service_get(Id),
     get_and_validate_parameter(Service).
 
 get_and_validate_parameter({ok, {Id, Info}}) ->
@@ -439,7 +439,7 @@ start_runner_queue_if_needed(Info) ->
 
 
 update_service(Id, NewInfo) when is_map(NewInfo) ->
-    watts_data:service_update(Id, NewInfo);
+    watts_ets:service_update(Id, NewInfo);
 update_service( _, _) ->
     {error, invalid_config}.
 

@@ -73,7 +73,7 @@ credential_get_list(UserId) ->
     gen_server:call(?MODULE, {credential_get_list, UserId}).
 
 -spec credential_get_count(UserId::binary(), ServiceId::binary()) ->
-                                  {ok, integer()}.
+                                  {ok, pos_integer()}.
 credential_get_count(UserId, ServiceId) ->
     gen_server:call(?MODULE, {credential_get_count, UserId, ServiceId}).
 
@@ -86,7 +86,7 @@ credential_get(CredId) ->
 credential_remove(UserId, CredId) ->
     gen_server:call(?MODULE, {credential_remove, UserId, CredId}).
 
--spec is_ready() -> ok | {error, Reason :: atom()}.
+-spec is_ready() -> true | {false, Reason :: atom()}.
 is_ready() ->
     gen_server:call(?MODULE, is_ready).
 
@@ -123,9 +123,9 @@ handle_call({credential_remove, UserId, CredentialId}, _From
 handle_call(is_ready, _From, #state{con=Con} = State) ->
     Result = case Con of
                  undefined ->
-                     {error, not_ready};
+                     {false, not_ready};
                  _ ->
-                     ok
+                      true
              end,
     {reply, Result, State};
 handle_call(_Request, _From, State) ->

@@ -116,7 +116,7 @@ credential_get_list(UserId) ->
     convert_result(Result).
 
 -spec credential_get_count(UserId::binary(), ServiceId::binary()) ->
-                                  {ok, integer()}.
+                                  {ok, pos_integer()}.
 credential_get_count(UserId, ServiceId) ->
     MatchSpec = [{#credential{user_id=UserId, service_id=ServiceId,
                               uuid='$1', _='_'}, [], ['$1']}],
@@ -169,12 +169,12 @@ credential_remove(UserId, CredId) ->
     Result = mnesia:transaction(Delete),
     convert_result(Result).
 
--spec is_ready() -> ok | {error, not_running}.
+-spec is_ready() -> true | {false, not_running}.
 is_ready() ->
     case mnesia:table_info(credential, type) of
-        set -> ok;
+        set -> true;
         _ ->
-            {error, not_running}
+            {false, not_running}
     end.
 
 
