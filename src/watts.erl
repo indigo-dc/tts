@@ -50,11 +50,14 @@
          stop_debug/0
         ]).
 
+-export_type([credential/0]).
+
 -type session_info() :: #{session_id => SessId :: binary(),
                           session_token => Token :: binary(),
                           session_pid => Session :: pid(),
-                          session_type => atom() | tuple()}.
+                          session_type => watts_session:type()}.
 
+-type credential() :: map().
 %% @doc perform a login with the openid flow through the ui (not access token).
 %% there are some possible valid cases, if the Token contains the minimal
 %% needed information:
@@ -75,7 +78,7 @@
 %% @{link login_with_access_token/2}.
 %% @see watts_session
 -spec login_with_oidcc(map(),
-                       {SessType :: atom() | tuple(),
+                       {SessType :: watts_session:type(),
                         Session :: pid() | undefined })
                       -> {ok, session_info()} |
                          {error, Reason :: atom()}.
@@ -133,7 +136,7 @@ session_for_rsp(Rsp) ->
                            Params :: map() | undefined,
                            Provider :: binary() | undefined,
                            Rsp :: watts_rsp:rsp(),
-                           SessType :: atom() | tuple()) ->
+                           SessType :: watts_session:type()) ->
                              {ok, Session :: pid()} |
                              {error, Reason::atom()}.
 rsp_session_or_error(true, ServiceId, Params, Provider, Rsp, SessType) ->

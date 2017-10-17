@@ -127,8 +127,8 @@ garbage_test() ->
 
 start_meck() ->
     MeckModules = [watts_session_sup],
-    watts_data:destroy(),
-    watts_data:init(),
+    watts_ets:destroy(),
+    watts_ets:init(),
     ok = test_util:meck_new(MeckModules),
     NewSession = fun(ID) ->
                          watts_session:start_link(ID)
@@ -138,6 +138,6 @@ start_meck() ->
 
 
 stop_meck({MeckModules}) ->
-    watts_data:destroy(),
+    watts_ets:destroy(),
     ok = test_util:meck_done(MeckModules),
     ok.

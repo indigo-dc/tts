@@ -62,7 +62,7 @@ credential_get_list(UserId) ->
     watts_persistent_mnesia:credential_get_list(UserId).
 
 -spec credential_get_count(UserId::binary(), ServiceId::binary()) ->
-                                  {ok, integer()}.
+                                  {ok, pos_integer()}.
 credential_get_count(UserId, ServiceId) ->
     watts_persistent_mnesia:credential_get_count(UserId, ServiceId).
 
@@ -76,12 +76,12 @@ credential_get(Uuid) ->
 credential_remove(UserId, CredId) ->
     watts_persistent_mnesia:credential_remove(UserId, CredId).
 
--spec is_ready() -> ok | {error, not_running}.
+-spec is_ready() -> true | {false, not_running}.
 is_ready() ->
     case mnesia:table_info(credential, type) of
-        set -> ok;
+        set -> true;
         _ ->
-            {error, not_running}
+            {false, not_running}
     end.
 
 

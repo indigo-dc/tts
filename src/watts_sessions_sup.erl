@@ -1,3 +1,4 @@
+%% @doc the supervisor watching the session manager and the session supervisor
 -module(watts_sessions_sup).
 %%
 %% Copyright 2016 SCC/KIT
@@ -21,10 +22,13 @@
 -export([start_link/0]).
 -export([init/1]).
 
+%% @doc start the supervisor
+-spec start_link() -> {ok, pid()}.
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, noparams).
 
-init([]) ->
+%% @doc intialize the supervisor
+init(noparams) ->
     SessionSup = #{
       id => session_sup,
       start => {watts_session_sup, start_link, []},

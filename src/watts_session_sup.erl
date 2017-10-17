@@ -1,3 +1,4 @@
+%% @doc the supervisor to dynamically start sessions
 -module(watts_session_sup).
 %%
 %% Copyright 2016 SCC/KIT
@@ -22,13 +23,18 @@
 -export([init/1]).
 -export([new_session/1]).
 
+%% @doc start the supervisor
+-spec start_link() -> {ok, pid()}.
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, noparams).
 
+%% @doc start a new session
+-spec new_session(Token :: binary()) -> {ok, pid()}.
 new_session(Token) ->
     supervisor:start_child(?MODULE, [Token]).
 
-init([]) ->
+%% @doc intialize the supervisor
+init(noparams) ->
     Session = #{
       id => session,
       start => {watts_session, start_link, []},

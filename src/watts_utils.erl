@@ -19,6 +19,7 @@
 -export([random_string/1]).
 
 
+%% @doc generate a random base64url encoded string of given Length
 -spec random_string(Lenght :: non_neg_integer()) -> binary().
 random_string(Length) ->
     Random = try crypto:strong_rand_bytes(Length) of

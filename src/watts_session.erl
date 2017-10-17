@@ -1,3 +1,6 @@
+
+%% @doc this module handles one session. One process exists per session and the
+%% running process keeps track of the timeout.
 -module(watts_session).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
@@ -58,6 +61,9 @@
 -export([is_same_ip/2]).
 -export([is_logged_in/1]).
 
+-type type() :: oidc | rest | {rsp, Ui:: ui | no_ui, Login :: login | no_login}.
+-export_type([type/0]).
+
 %% gen_server.
 -export([init/1]).
 -export([handle_call/3]).
@@ -67,125 +73,153 @@
 -export([code_change/3]).
 
 
+
 %% API.
 
+%% @doc start the session process with the token, linked
 -spec start_link(Token :: binary()) -> {ok, pid()}.
 start_link(Token) ->
     gen_server:start_link(?MODULE, Token, []).
 
+%% @doc send a cast to stop the session
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
     gen_server:cast(Pid, close).
 
--spec get_id(Pid :: pid()) -> {ok, ID::binary()}.
+%% @doc call the process to return the id
+-spec get_id(Pid :: pid() | undefined) -> {ok, ID::binary() | undefined}.
 get_id(undefined) ->
     {ok, undefined};
 get_id(Pid) ->
     gen_server:call(Pid, get_id).
 
+%% @doc get the session token by calling the process
 -spec get_sess_token(Pid :: pid()) -> {ok, Token::binary()}.
 get_sess_token(undefined) ->
     {ok, undefined};
 get_sess_token(Pid) ->
     gen_server:call(Pid, get_sess_token).
 
--spec set_type(Type :: atom() | tuple(), Pid :: pid()) -> ok.
+%% @doc set the session type
+-spec set_type(Type :: type(), Pid :: pid()) -> ok.
 set_type(_, undefined) ->
     ok;
 set_type(Type, Pid) ->
     gen_server:call(Pid, {set_type, Type}).
 
--spec get_type(Pid :: pid()) -> {ok, atom() | tuple()}.
+%% @doc get the session type
+-spec get_type(Pid :: pid()) -> {ok, type() | undefined}.
 get_type(undefined) ->
     {ok, undefined};
 get_type(Pid) ->
     gen_server:call(Pid, get_type).
 
+%% @doc set the rsp data for the session
 -spec set_rsp(watts_rsp:rsp(), Pid :: pid()) -> ok.
 set_rsp(_, undefined) ->
     ok;
 set_rsp(Client, Pid) ->
     gen_server:call(Pid, {set_rsp, Client}).
 
--spec get_rsp(Pid :: pid()) -> {ok, watts_rsp:rsp()}.
+%% @doc get the rsp data from the ssession
+-spec get_rsp(Pid :: pid()) -> {ok, watts_rsp:rsp() | undefined}.
 get_rsp(undefined) ->
     {ok, undefined};
 get_rsp(Pid) ->
     gen_server:call(Pid, get_rsp).
 
+%% @doc set the redirection for login, used for additional logins (also RSP)
 -spec set_redirection(ServiceId :: binary(), Params :: map(),
                       ProviderId :: binary(), Pid :: pid()) -> ok.
 set_redirection(ServiceId, Params, ProviderId, Pid) ->
     gen_server:call(Pid, {set_redirection, ServiceId, Params, ProviderId}).
 
+%% @doc get the redirection config
 -spec get_redirection(Pid :: pid()) -> {ok, Redirection :: map()}.
 get_redirection(Pid) ->
     gen_server:call(Pid, get_redirection).
 
+%% @doc clear the redirection in the session
 -spec clear_redirection(Pid :: pid()) -> ok.
 clear_redirection(Pid) ->
     gen_server:call(Pid, clear_redirection).
 
+%% @doc add an additional login to the session
 -spec add_additional_login(IssuerId :: binary(), Token :: map(),
                            Pid :: pid()) -> ok.
 add_additional_login(IssuerId, Token, Pid) ->
     gen_server:call(Pid, {add_additional_login, IssuerId, Token}).
 
+%% @doc clear additional logins for the given service
 -spec clear_additional_logins(ServiceId :: binary(), Pid :: pid()) -> ok.
 clear_additional_logins(ServiceId, Pid) ->
     gen_server:call(Pid, {clear_additional_logins, ServiceId}).
 
+%% @doc get the WaTTS userid
 -spec get_userid(Pid :: pid()) -> {ok, ID::binary()}.
 get_userid(Pid) ->
     gen_server:call(Pid, get_userid).
 
+%% @doc get the max age of this session
 -spec get_max_age(Pid :: pid()) -> {ok, MaxAge::non_neg_integer()}.
 get_max_age(Pid) ->
     gen_server:call(Pid, get_max_age).
 
+%% @doc set the max age for this session
 -spec set_max_age(MaxAge :: pos_integer(), Pid :: pid()) -> ok.
 set_max_age(MaxAge, Pid) ->
     gen_server:call(Pid, {set_max_age, MaxAge}).
 
+%% @doc set an id token and update information
 -spec set_token(Token :: map(), Pid :: pid()) -> ok.
 set_token(Token, Pid) ->
     gen_server:call(Pid, {set_token, Token}).
 
--spec get_error(Pid :: pid()) -> {ok, Token::map()}.
+%% @doc get the error used for displaying login error messages at the UI
+-spec get_error(Pid :: pid()) -> {ok, Error::binary()}.
 get_error(Pid) ->
     gen_server:call(Pid, get_error).
 
+%% @doc set an error to be displayed to the user
 -spec set_error(Error :: binary(), Pid :: pid()) -> ok.
 set_error(Error, Pid) ->
     gen_server:call(Pid, {set_error, Error}).
 
+%% @doc get the userinfo data from the session
 -spec get_user_info(Pid :: pid()) -> {ok, UserInfo::watts_userinfo:userinfo()}.
 get_user_info(Pid) ->
     gen_server:call(Pid, get_user_info).
 
+%% @doc get the display name of the user
 -spec get_display_name(Pid :: pid()) -> {ok, Name::binary()}.
 get_display_name(Pid) ->
     gen_server:call(Pid, get_display_name).
 
+%% @doc get the Issuer id
 -spec get_iss_id(Pid :: pid()) -> {ok, IssId::binary()}.
 get_iss_id(Pid) ->
     gen_server:call(Pid, get_issuer_id).
 
+%% @doc set issuer and subject
 -spec set_iss_sub(Issuer :: binary(), Subject::binary(), Pid :: pid()) -> ok.
 set_iss_sub(Issuer, Subject, Pid) ->
     gen_server:call(Pid, {set_iss_sub, Issuer, Subject}).
 
+%% @doc set the issuer id
 -spec set_iss_id(IssuerId :: binary(), Pid :: pid()) -> ok.
 set_iss_id(IssuerId, Pid) ->
     gen_server:call(Pid, {set_iss_id, IssuerId}).
 
+%% @doc check if the user in this session is logged in; web ui only
 -spec is_logged_in(Pid :: pid()) -> true | false.
 is_logged_in(Pid) ->
     gen_server:call(Pid, is_logged_in).
 
+%% @doc check if the user agent is the same as used before
 is_user_agent(UserAgent, Pid) ->
     gen_server:call(Pid, {is_user_agent, UserAgent}).
 
+%% @doc check if the peer ip is the same as used before
 is_same_ip(IP, Pid) ->
     gen_server:call(Pid, {is_same_ip, IP}).
 
@@ -194,7 +228,7 @@ is_same_ip(IP, Pid) ->
 -record(state, {
           id = unkonwn :: unknown | pid(),
           creation = -1 :: integer(),
-          type = undefined :: atom(),
+          type = undefined :: undefined | type(),
           issuer_id = undefined :: undefined | binary(),
           sess_token = undefined :: undefined | binary(),
           user_agent = undefined :: undefined | binary(),
@@ -208,6 +242,9 @@ is_same_ip(IP, Pid) ->
 
 -type session() :: #state{}.
 
+
+%% @doc intialize the session with the given token.
+%% Also setting the max age
 -spec init(Token :: binary()) -> {ok, session()}.
 init(Token) ->
     Id = self(),
@@ -218,6 +255,9 @@ init(Token) ->
     {ok, #state{id = Id, sess_token=Token, max_age=MaxAge, user_info=UserInfo,
                 creation = Now}}.
 
+%% @doc implement the handle call to handle all the public function
+-spec handle_call(any(), any(), session())
+                 -> {reply, any(), session(), pos_integer()}.
 handle_call(get_id, _From, #state{id=Id, max_age=MA}=State) ->
     {reply, {ok, Id}, State, MA};
 handle_call(get_sess_token, _From, #state{sess_token=Token,
@@ -315,26 +355,38 @@ handle_call({is_same_ip, IP}, _From,
     {reply, true, State, MA};
 handle_call({is_same_ip, _IP}, _From, #state{max_age=MA}=State) ->
     {reply, false, State, MA};
-handle_call(_Request, _From, State) ->
-    {reply, ignored, State}.
+handle_call(_Request, _From, #state{max_age=MA}=State) ->
+    {reply, ignored, State, MA}.
 
+
+%% @doc handle cast reacts only to the stop cast
+-spec handle_cast(close | any(), session())
+                 -> {stop, normal, session()}  |
+                    {noreply, session(), pos_integer()}.
 handle_cast(close, #state{id=ID} = State) ->
     lager:debug("SESS~p stopping", [ID]),
     {stop, normal, State};
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+handle_cast(_Msg, #state{max_age=MA}=State) ->
+    {noreply, State, MA}.
 
+%% @doc handle the timeout
+-spec handle_info(timeout | any(), session())
+                 -> {noreply, session(), pos_integer()}.
 handle_info(timeout, #state{id=ID, sess_token=Token} = State) ->
     lager:info("SESS~p timeout, asking for termination", [ID]),
     watts_session_mgr:session_wants_to_close(Token),
     {noreply, State, 5000};
-handle_info(_Info, State) ->
-    {noreply, State}.
+handle_info(_Info, #state{max_age = MA} = State) ->
+    {noreply, State, MA}.
 
+%% @doc termination, just log a message and tell the manager
+-spec terminate(any(), session()) -> ok.
 terminate(_Reason, #state{id=ID, sess_token=Token}) ->
     lager:info("SESS~p terminating", [ID]),
     watts_session_mgr:session_terminating(Token),
     ok.
 
+%% @doc code change does nothing
+-spec code_change(any(), session(), any()) -> {ok, session()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.

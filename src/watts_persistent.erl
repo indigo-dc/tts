@@ -1,3 +1,9 @@
+%% @doc This module defines the needed callbacks for WaTTS persistent storage.
+%% Any module implementing these can be used to store credentials. So extending
+%% the supported databases woule mean to implement a new watts_persistent_xxx
+%% module.
+%% Also the config/schema/watts.schema needs to be adjusted to supporte the new
+%% database and its config.
 -module(watts_persistent).
 %%
 %% Copyright 2017 SCC/KIT
@@ -39,7 +45,7 @@
     {ok, [watts:cred()]}.
 
 -callback credential_get_count(UserId::binary(), ServiceId::binary()) ->
-    {ok, integer()}.
+    {ok, pos_integer()}.
 
 -callback credential_get(CredId::binary()) ->
     {ok, watts:cred()} | {error, Reason :: atom()}.
@@ -47,14 +53,23 @@
 -callback credential_remove(UserId::binary(), CredentialId::binary()) ->
     ok | {error, Reason :: atom()}.
 
--callback is_ready() ->
-    ok | {error, Reason::atom()}.
+-callback is_ready() -> true | {false, Reason :: any()}.
 
-
+%% @doc this gets called during initialization.
+%% The function calls the initalize function of the configured
+%% database.
+-spec init() -> ok | {error, Reason::atom()}.
 init() ->
     Mod = mod(),
     Mod:initialize().
 
+%% @doc storing a credential, this is done by calling the configured
+%% database and credential_add there.
+-spec credential_store(UserId :: binary(), ServiceId :: binary(),
+                       Interface :: binary(), CredState :: any(),
+                       AllowNonUniqueStates :: boolean()) ->
+                              {ok, CredentialId :: binary()} |
+                              {error, Reason :: atom()}.
 credential_store(UserId, ServiceId, Interface, CredState,
                  AllowNonUniqueStates) ->
     Mod = mod(),
@@ -62,28 +77,46 @@ credential_store(UserId, ServiceId, Interface, CredState,
                        AllowNonUniqueStates).
 
 
+%% @doc fetch the list of all credentials for a user.
+%% using the configured database.
+-spec credential_fetch_list(UserId :: binary()) -> {ok, [watts:cred()]}.
 credential_fetch_list(UserId) ->
     Mod = mod(),
     Mod:credential_get_list(UserId).
 
+%% @doc get the number of credentials of the user at the service.
+%% using the configured database.
+-spec credential_service_count(UserId :: binary(), ServiceId :: binary())
+                              -> {ok, pos_integer()}.
 credential_service_count(UserId, ServiceId) ->
     Mod = mod(),
     Mod:credential_get_count(UserId, ServiceId).
 
+%% @doc get the credential with the Id.
+%% using the configured database.
+-spec credential_fetch(CredId :: binary())
+                      -> {ok, watts:cred()} | {error, Reason :: atom()}.
 credential_fetch(CredId) ->
     Mod = mod(),
     Mod:credential_get(CredId).
 
+%% @doc delete the credential with the Id.
+%% using the configured database.
+-spec credential_delete(UserId :: binary(), CredentialId :: binary())
+                       -> ok | {error, Reason :: atom()}.
 credential_delete(UserId, CredentialId) ->
     Mod = mod(),
     Mod:credential_remove(UserId, CredentialId).
 
+%% @doc check if the configured database is ready.
+-spec is_ready() -> true | {false, Reason :: any()}.
 is_ready() ->
     Mod = mod(),
     Mod:is_ready().
 
 
-
+%% @doc get the configured database module.
+-spec mod() -> atom().
 mod() ->
    {ok, Mod} = ?CONFIG_(?MOD),
     Mod.

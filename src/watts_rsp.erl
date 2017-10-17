@@ -108,7 +108,7 @@ get_info(Id) ->
 validate_jwt_get_rsp(JwtData, Referer) ->
     update_rsp_on_success(validate_jwt(JwtData), Referer).
 
-
+-spec session_type(rsp()) -> watts_session:type().
 session_type(#watts_rsp{ show_ui = false, perform_login = false} ) ->
     {rsp, no_ui, no_login};
 session_type(#watts_rsp{ show_ui = false, perform_login = true} ) ->

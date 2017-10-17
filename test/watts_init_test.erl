@@ -60,8 +60,11 @@ start_meck() ->
     MeckModules = [watts_persistent_sqlite, cowboy, oidcc, oidcc_client,
                    watts_service],
     Initialize = fun() ->
-                          ok
-                  end,
+                         ok
+                 end,
+    IsReady = fun() ->
+                      true
+              end,
     AddService = fun(_) ->
                          {ok, id}
                   end,
@@ -94,7 +97,7 @@ start_meck() ->
                        end,
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(watts_persistent_sqlite, initialize, Initialize),
-    ok = meck:expect(watts_persistent_sqlite, is_ready, Initialize),
+    ok = meck:expect(watts_persistent_sqlite, is_ready, IsReady),
     ok = meck:expect(watts_service, add, AddService),
     ok = meck:expect(watts_service, update_params, UpdateParams),
     ok = meck:expect(oidcc_client, register, RegisterClient),

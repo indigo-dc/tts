@@ -1,3 +1,5 @@
+%% @doc This module implements the userinfo data structure and the functions
+%% to access it
 -module(watts_userinfo).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
@@ -47,11 +49,13 @@
 -type additional_login() :: {{ServiceId :: binary(),
                               IssuerId :: binary()}, UserInfo :: userinfo()}.
 
+%% @doc create a new userinfo structure (record).
 -spec new() -> {ok, userinfo()}.
 new() ->
     {ok, #user_info{}}.
 
 
+%% @doc update the structure with the information from the Token
 -spec update_with_token(Token :: map(), UserInfo :: userinfo()) ->
                                {ok, UpdatedInfo :: userinfo()}.
 update_with_token(Token, UserInfo) ->
@@ -103,6 +107,7 @@ update_with_token(Token, UserInfo) ->
         end,
     {ok, Info5}.
 
+%% @doc update issuer and subject of the userinfo, if valid.
 -spec update_iss_sub(Issuer :: binary() | undefined,
                      Subject :: binary() | undefined,
                      UserInfo :: userinfo()) ->
@@ -127,6 +132,10 @@ update_iss_sub(undefined, undefined, Info) ->
 update_iss_sub(_Issuer, _Subject, _Info) ->
     {error, bad_iss_sub}.
 
+
+%% @doc claims and iss/sub coming from an Id Token
+-spec update_id_token(IdToken :: map(), Info ::userinfo())
+                     ->  {ok, userinfo()} | {error, not_match}.
 update_id_token(IdToken, Info) ->
     Claims = maps:get(claims, IdToken, #{}),
     Iss = maps:get(iss, Claims),
@@ -138,6 +147,8 @@ update_id_token(IdToken, Info) ->
             {error, not_match}
     end.
 
+
+%% @doc update the access token in the userinfo, if it is valid.
 -spec update_access_token(TokenMap :: map(), UserInfo :: userinfo()) ->
                             {ok, UpdatedInfo :: userinfo()} |
                             {error, Reason :: atom()}.
@@ -156,6 +167,7 @@ update_access_token(#{token := Token} = AccessToken,
             {error, not_match}
     end.
 
+%% @doc update subject from the Userinfo Endpoint, if matching the userinfo.
 -spec update_id_info(IdInfo :: map(), UserInfo :: userinfo()) ->
                             {ok, UpdatedInfo :: userinfo()} |
                             {error, Reason :: atom()}.
@@ -169,6 +181,7 @@ update_id_info(IdInfo, Info) ->
             {error, not_match}
     end.
 
+%% @doc update subject from the Tokeninfo Endpoint and set scopes.
 -spec update_token_info(TokenInfo :: map(), UserInfo :: userinfo()) ->
                                {ok, UpdatedInfo :: userinfo()} |
                                {error, Reason :: atom()}.
@@ -187,13 +200,14 @@ update_token_info(TokenInfo, Info) ->
             {error, not_match}
     end.
 
+%% @doc set the scope in the userinfo
 -spec update_scope(Scope :: map(), UserInfo :: userinfo()) ->
                           {ok, UpdatedInfo :: userinfo()}.
 update_scope(#{scope := _, list := _} =Scope, Info) ->
     {ok, update_plugin_info(Info#user_info{scope=Scope})}.
 
 
-
+%% @doc add an additional login
 -spec add_additional_login(ServiceId :: binary(), IssuerId :: binary(),
                            Token :: map(), UserInfo :: userinfo()) ->
                                   UpdatedInfo :: userinfo().
@@ -207,7 +221,7 @@ add_additional_login(ServiceId, IssuerId, Token,
     Info#user_info{additional_logins = NewAddLogins}.
 
 
-
+%% @doc delete all additional logins for a service
 -spec clear_additional_logins(ServiceId :: binary(), UserInfo :: userinfo())
                              -> UpdatedInfo :: userinfo().
 clear_additional_logins(ServiceId,
@@ -219,6 +233,7 @@ clear_additional_logins(ServiceId,
     Info#user_info{additional_logins = NewAddLogins}.
 
 
+%% @doc check if an additional login for the service and issuer exists.
 -spec has_additional_login(ServiceId :: binary(), IssuerId :: binary(),
                            UserInfo :: userinfo()) -> boolean().
 has_additional_login(ServiceId, IssuerId,
@@ -226,11 +241,26 @@ has_additional_login(ServiceId, IssuerId,
     case lists:keyfind({ServiceId, IssuerId}, 1, AddLogins) of
         false ->
             false;
-        _ ->
+        {{ServiceId, IssuerId}, _} ->
             true
     end.
 
 
+%% @doc generic function to return needed information.
+%% The returned values are:
+%% <ul>
+%% <il> {key, Key}: get a certain key from the plugin info, used for service
+%% authz </il>
+%% <il> plugin_info: get the plugin info map </il>
+%% <il> additional_logins: get the additional logins </il>
+%% <il> issuer_subject: get the Issuer and Subject  </il>
+%% <il> issuer: get the issuer used to login </il>
+%% <il> subject: get the subject of the user </il>
+%% <il> id: return the WaTTS userid </il>
+%% <il> access_token: return the access token </il>
+%% <il> display_name: return the display name of the user </il>
+%% <il> logged_in: return if the user is logged in </il>
+%% </ul>
 -spec return(Key :: atom() |
                     {key, Key :: binary()} |
                     {additional_logins, ServiceId :: binary(),
@@ -286,7 +316,7 @@ return( logged_in, Info) ->
     logged_in(Info).
 
 
-
+%% @doc generate the userid
 -spec userid(UserInfo :: userinfo()) -> {ok, Id :: binary} |
                                         {error, Reason :: atom()}.
 userid(#user_info{issuer=Issuer, subject=Subject})
@@ -297,6 +327,7 @@ userid(#user_info{issuer=Issuer, subject=Subject})
 userid(_) ->
     {error, not_set}.
 
+%% @doc generate the display name
 -spec display_name(UserInfo :: userinfo()) -> {ok, Name :: binary} |
                                         {error, Reason :: atom()}.
 display_name(#user_info{subject=Subject, issuer=Issuer, id_info=IdInfo})
@@ -308,6 +339,7 @@ display_name(#user_info{subject=Subject, issuer=Issuer, id_info=IdInfo})
 display_name(_) ->
     {error, not_set}.
 
+%% @doc return if the user is logged in
 -spec logged_in(UserInfo :: userinfo()) -> boolean().
 logged_in(#user_info{subject=Subject, issuer=Issuer})
   when is_binary(Subject), is_binary(Issuer)->
@@ -315,6 +347,7 @@ logged_in(#user_info{subject=Subject, issuer=Issuer})
 logged_in(_) ->
     false.
 
+%% @doc return the access token, if present
 -spec access_token(UserInfo :: userinfo()) -> {ok, AccessToken :: binary} |
                                         {error, Reason :: atom()}.
 access_token(#user_info{access_token=#{token := AccessToken}}) ->
@@ -322,6 +355,7 @@ access_token(#user_info{access_token=#{token := AccessToken}}) ->
 access_token(_) ->
     {error, not_set}.
 
+%% @doc set an empty scope if no scope is set
 -spec set_scope_if_empty(UserInfo :: userinfo()) -> UpdatedInfo :: userinfo().
 set_scope_if_empty(#user_info{token_info=TokenInfo, scope= ScopeMap} = Info) ->
     case maps:is_key(scope, ScopeMap) of
@@ -332,7 +366,7 @@ set_scope_if_empty(#user_info{token_info=TokenInfo, scope= ScopeMap} = Info) ->
             Info#user_info{scope = maps:get(scope, TokenInfo, Empty)}
     end.
 
-
+%% @doc update the prepared information for the plugin about the user.
 -spec update_plugin_info(UserInfo :: userinfo()) -> UpdatedInfo :: userinfo().
 update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken,
                               token_info=TokenInfo,
@@ -359,6 +393,7 @@ update_plugin_info(#user_info{id_info=IdInfo, id_token=IdToken,
     PluginInfo9 = maps:merge(PluginInfo3, IssSubUpdate),
     UserInfo#user_info{plugin_info=PluginInfo9}.
 
+%% @doc convert a binary to atom, if the atom exists
 -spec maybe_to_atom(Binary :: binary()) -> atom() | binary().
 maybe_to_atom(Bin) ->
     try
