@@ -41,7 +41,7 @@
 -define(WATTS_OIDCP, watts_oidcp).
 -define(WATTS_SERVICE, watts_service).
 
-%% @doc the list of tables to automatically create/delete ... etc
+%% the list of tables to automatically create/delete ... etc
 -define(WATTS_TABLES, [
                      ?WATTS_SESSIONS
                     , ?WATTS_OIDCP
