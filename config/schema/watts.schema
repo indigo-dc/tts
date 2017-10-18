@@ -1,32 +1,32 @@
-    %% store the current system time at starting of parsing the config
-    %% this is a more accurate value than at start of the init gen_server
-    {mapping, "watts.start_time", "watts.start_time", [
-            {default, 0},
-            {datatype, integer},
-            hidden
-            ]}.
+%% store the current system time at starting of parsing the config
+%% this is a more accurate value than at start of the init gen_server
+{mapping, "watts.start_time", "watts.start_time", [
+                                                   {default, 0},
+                                                   {datatype, integer},
+                                                   hidden
+                                                  ]}.
 
-    {translation, "watts.start_time",
-    fun(Conf) ->
-            erlang:system_time(seconds)
-    end}.
+{translation, "watts.start_time",
+ fun(Conf) ->
+         erlang:system_time(seconds)
+ end}.
 
 
-    %% @doc the duration to wait for OpenID Connect provider
-    %% results to log them. The result for OpenID Connect provider
-    %% finishing after that period won't be logged.
-    {mapping, "max_provider_wait", "watts.max_provider_wait", [
-            {commented, "30s"},
-            {default, "30s"},
-            {datatype, {duration, s}}
-            ]}.
+%% @doc the duration to wait for OpenID Connect provider
+%% results to log them. The result for OpenID Connect provider
+%% finishing after that period won't be logged.
+{mapping, "max_provider_wait", "watts.max_provider_wait", [
+        {commented, "30s"},
+        {default, "30s"},
+        {datatype, {duration, s}}
+        ]}.
 
-    %% @doc the hostname of watts, use localhost
-    %% for development
-    {mapping, "hostname", "watts.hostname", [
-            {commented, "localhost"},
-            {default, "localhost"}
-            ]}.
+%% @doc the hostname of watts, use localhost
+%% for development
+{mapping, "hostname", "watts.hostname", [
+        {commented, "localhost"},
+        {default, "localhost"}
+        ]}.
 
 {translation, "watts.hostname",
  fun(Conf) ->
@@ -263,6 +263,35 @@
           {commented, "{{platform_data_dir}}/watts.db"},
           {datatype, file}
           ]}.
+
+%% @doc the directory to use for e.g. the jwt signing key
+{mapping, "secret_dir", "watts.private_dir", [
+          {default, "{{platform_data_dir}}/secret/"},
+          {commented, "{{platform_data_dir}}/secret/"},
+          {datatype, string}
+          ]}.
+
+{translation, "watts.secret_dir",
+ fun(Conf) ->
+         KeyDir = cuttlefish:conf_get("secret_dir", Conf),
+         case file:make_dir(KeyDir) of
+             ok ->
+                 ok;
+             {error, eexist} ->
+                 ok;
+             {error, Error1} ->
+                 Msg1 = io_lib:format("unable to create secret directory: ~p", [Error1]),
+                 cuttlefish:invalid(Msg1)
+         end,
+         case file:change_mode(KeyDir, 8#00700) of
+             ok ->
+                 ok;
+             {error, Error2} ->
+                 Msg2 = io_lib:format("unable to change mode of secret directory: ~p", [Error2]),
+                 cuttlefish:invalid(Msg2)
+         end,
+         KeyDir
+ end}.
 
 %% @doc set to true to enable redirection
 {mapping, "redirection.enable", "watts.redirection_enable", [

@@ -173,16 +173,16 @@ start_meck() ->
                      ok
              end,
 
-    Token = fun(sess1) ->
-                    {ok, token1};
+    CookieData = fun(sess1) ->
+                    {ok, 900, token1};
                (sess2) ->
-                    {ok, token2};
+                    {ok, 900, token2};
                (sess3) ->
-                    {ok, token3};
+                    {ok, 900, token3};
                (sess4) ->
-                    {ok, token4};
+                    {ok, 900, token4};
                (sess7) ->
-                    {ok, token7}
+                    {ok, 900, token7}
             end,
 
     Redir = fun(url_good1, req1) ->
@@ -228,7 +228,7 @@ start_meck() ->
                       throw(bad_rel_path)
               end,
 
-    MeckModules = [cowboy_req, watts_rsp, watts, watts_session, watts_http_util],
+    MeckModules = [cowboy_req, watts_rsp, watts, watts_session_mgr, watts_http_util],
     ok = test_util:meck_new(MeckModules),
     ok = meck:expect(cowboy_req, path, Path),
     ok = meck:expect(cowboy_req, header, Header),
@@ -241,8 +241,7 @@ start_meck() ->
     ok = meck:expect(watts, session_for_rsp, Session),
     ok = meck:expect(watts, request_credential_for, ReqCred),
     ok = meck:expect(watts, logout, Logout),
-    ok = meck:expect(watts_session, get_max_age, fun(_) -> {ok, 900} end ),
-    ok = meck:expect(watts_session, get_sess_token, Token ),
+    ok = meck:expect(watts_session_mgr, get_cookie_data, CookieData ),
     ok = meck:expect(watts_http_util, redirect_to, Redir ),
     ok = meck:expect(watts_http_util, perform_cookie_action, CookieAction ),
     ok = meck:expect(watts_http_util, relative_path, RelPath ),

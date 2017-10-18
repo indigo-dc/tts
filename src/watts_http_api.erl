@@ -607,8 +607,7 @@ keep_session_alive(_, _) ->
 update_cookie_or_end_session(true, Session, SessType, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
-            {ok, Max} = watts_session:get_max_age(Session),
-            {ok, Token} = watts_session:get_sess_token(Session),
+            {ok, Max, Token} = watts_session_mgr:get_cookie_data(Session),
             watts_http_util:perform_cookie_action(update, Max, Token, Req);
         _ ->
             perform_logout(Session, SessType, Req)

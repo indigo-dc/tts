@@ -74,6 +74,15 @@ start_meck() ->
     ReturnSession = fun(_) ->
                             {ok, Pid1}
                     end,
+
+    ReturnCookieData = fun(Pid) ->
+                               case Pid of
+                                   Pid1 -> {ok, 900, <<"1">>};
+                                   Pid2 -> {ok, 900, <<"2">>};
+                                   Pid3 -> {ok, 900, <<"3">>};
+                                   _ -> {error, not_found}
+                               end
+                       end,
     Cookies = fun(Req) -> {[{watts_http_util:cookie_name(), <<"data">>}], Req} end,
     Peer = fun(Req) -> {{{127, 0, 0 , 1},234}, Req} end,
     Header = fun(_Name, Req) -> {<<>>, Req} end,
@@ -85,6 +94,7 @@ start_meck() ->
     ok = meck:expect(watts_rsp, get_return_urls, RetUrls),
     ok = meck:expect(watts_session_mgr, session_terminating, fun(_) -> ok end),
     ok = meck:expect(watts_session_mgr, get_session, ReturnSession),
+    ok = meck:expect(watts_session_mgr, get_cookie_data, ReturnCookieData),
     ok = meck:expect(cowboy_req, cookies, Cookies),
     ok = meck:expect(cowboy_req, peer, Peer),
     ok = meck:expect(cowboy_req, header, Header),

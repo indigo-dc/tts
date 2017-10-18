@@ -100,8 +100,7 @@ set_cookie(SessPid, #{req := Req}) when is_pid(SessPid) ->
     true = watts_session:is_same_ip(Ip, SessPid),
     {Agent, _} = cowboy_req:header(<<"user-agent">>, Req1),
     true = watts_session:is_user_agent(Agent, SessPid),
-    {ok, SessToken} = watts_session:get_sess_token(SessPid),
-    {ok, MaxAge} = watts_session:get_max_age(SessPid),
+    {ok, MaxAge, SessToken} = watts_session_mgr:get_cookie_data(SessPid),
     Opts = watts_http_util:create_cookie_opts(MaxAge),
     CookieName = watts_http_util:cookie_name(),
     {cookie, CookieName, SessToken, Opts};

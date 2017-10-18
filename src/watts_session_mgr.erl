@@ -17,7 +17,7 @@
 %% limitations under the License.
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
-
+-include("watts.hrl").
 -behaviour(gen_server).
 
 %% API.
@@ -29,6 +29,7 @@
 -export([close_all_sessions/0]).
 -export([session_wants_to_close/1]).
 -export([session_terminating/1]).
+-export([get_cookie_data/1]).
 
 %% gen_server.
 -export([init/1]).
@@ -60,17 +61,37 @@ stop() ->
 new_session() ->
     gen_server:call(?MODULE, new_session).
 
-%% @doc get a session by the token, just a simple ets lookup
--spec get_session(Token :: binary() | undefined) -> {ok, pid() | undefined}.
+
+%% @doc get a session by the cookie data, just a simple ets lookup
+-spec get_session(Cookie :: binary() | undefined) -> {ok, pid() | undefined}.
 get_session(undefined) ->
     {ok, undefined};
-get_session(Token) ->
-    lookup_session_pid(Token).
+get_session(Jwt) ->
+    Key = ?CONFIG(jwt_key),
+    case erljwt:validate(Jwt, [rs256], #{}, Key) of
+        {ok, #{claims := #{ token := Token }}} ->
+            lookup_session_pid(Token);
+        _ ->
+            {ok, undefined}
+    end.
+
+
+%% @doc get the max age and the content of the cookie for the session.
+-spec get_cookie_data(Session :: pid())
+                             -> {ok, MaxAge :: pos_integer(),
+                                 CookieData :: binary()}.
+get_cookie_data(Session) ->
+    {ok, Max} = watts_session:get_max_age(Session),
+    {ok, Token} = watts_session:get_sess_token(Session),
+    Key = ?CONFIG(jwt_key),
+    Jwt = erljwt:create(rs256, #{token => Token}, Max, Key),
+    {ok, Max, Jwt}.
+
 
 %% @doc a session wants to close, remove it and send a close back
 -spec session_wants_to_close(Token :: binary()) -> ok.
 session_wants_to_close(Token) ->
-    gen_server:call(?MODULE, {delete_session, Token}).
+    gen_server:call(?MODULE, {close_session, Token}).
 
 
 %% @doc a session died purge it
@@ -95,8 +116,8 @@ init(noparams) ->
 handle_call(new_session, _From, State) ->
     Result = create_new_session(),
     {reply, Result, State};
-handle_call({delete_session, ID}, _From, State) ->
-    ok = delete_close_session(ID),
+handle_call({close_session, ID}, _From, State) ->
+    ok = close_session(ID),
     {reply, ok, State};
 handle_call({purge_session, ID}, _From, State) ->
     delete_session(ID),
@@ -123,10 +144,9 @@ handle_info(_Info, State) ->
     {noreply, State}.
 
 
-%% @doc delete all sessions on closing
+%% @doc do nothing, just stop
 -spec terminate(any(), state()) -> ok.
 terminate(_Reason, _State) ->
-    do_delete_all_sessions(),
     ok.
 
 %% @doc does nothting
@@ -143,8 +163,8 @@ create_new_session() ->
     {ok, Pid}.
 
 %% @doc delete and trigger a close at the session
--spec delete_close_session(ID :: any()) -> ok.
-delete_close_session(ID) ->
+-spec close_session(ID :: any()) -> ok.
+close_session(ID) ->
     {ok, Pid} = lookup_session_pid(ID),
     delete_session(ID),
     watts_session:close(Pid),
@@ -162,8 +182,8 @@ do_delete_all_sessions() ->
 delete_sessions([]) ->
     ok;
 delete_sessions([#{id:= Id, pid:= Pid}|T]) ->
+    watts_session:kill(Pid),
     delete_session(Id),
-    watts_session:close(Pid),
     delete_sessions(T).
 
 
