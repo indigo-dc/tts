@@ -22,13 +22,22 @@
 
 -include("watts.hrl").
 
-
+%% @doc convert a maybe relative path to an absolute path
+-spec to_abs(FileName :: string() | binary()) ->  string() | binary().
 to_abs(FileName) ->
     combine_or_home(FileName, undefined).
 
+%% @doc convert a maybe relative path to an absolute path, Base beeing the root.
+-spec to_abs(Path :: string() | binary(),
+                      BasePath :: string() | binary() | undefined)
+            ->  string() | binary().
 to_abs(FileName, BaseDirectory) ->
     combine_or_home(FileName, BaseDirectory).
 
+%% @doc check if the path starts with ~ and use home as root then.
+-spec combine_or_home(Path :: string() | binary(),
+                      BasePath :: string() | binary() | undefined)
+                     ->  string() | binary().
 combine_or_home([ $~, $/  | Relative ], _BaseDir) ->
     convert_home(Relative);
 combine_or_home(<< $~:8, $/:8, Relative/binary >>, _BaseDir) ->
@@ -38,6 +47,8 @@ combine_or_home(NonHome, undefined) ->
 combine_or_home(NonHome, BaseDir) ->
     filename:join(BaseDir, NonHome).
 
+%% @doc append the path to the home dir.
+-spec convert_home(RelativePath :: string() | binary()) -> string() | binary().
 convert_home(Relative) ->
     {ok, [[Home]]} =  init:get_argument(home),
     filename:join(Home, Relative).

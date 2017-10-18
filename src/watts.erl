@@ -57,7 +57,11 @@
                           session_pid => Session :: pid(),
                           session_type => watts_session:type()}.
 
--type credential() :: map().
+-type credential() :: #{cred_id => CredId :: binary(),
+                        ctime => CTime :: binary() ,
+                        interface => Interface :: binary(),
+                        service_id => ServiceId :: binary(),
+                        cred_state => CredState :: binary()}.
 %% @doc perform a login with the openid flow through the ui (not access token).
 %% there are some possible valid cases, if the Token contains the minimal
 %% needed information:
