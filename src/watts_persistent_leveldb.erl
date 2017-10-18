@@ -1,3 +1,8 @@
+%% @doc this module implements the persistent storage for a leveldb database.
+%% It heavily uses the mnesia implementation.
+%% The difference is in the setup phase, the callback uses directly the
+%% mnesia implementation.
+%% @see watts_persistent_mnesia
 -module(watts_persistent_leveldb).
 %%
 %% Copyright 2017 SCC/KIT
@@ -39,6 +44,9 @@
           state = undefined
          }).
 
+%% @doc initialize the sqlite database.
+%% A callback from the watts_persistent behaviour.
+-spec initialize() -> ok.
 initialize() ->
     %% check if the leveldb directory exists
     Dir = ?CONFIG(eleveldb_dir),
@@ -49,6 +57,8 @@ initialize() ->
     ok = start_mnesia(),
     ok.
 
+%% @doc store a credential for a user
+%% A callback from the watts_persistent behaviour.
 -spec credential_add(UserId::binary(), ServiceId::binary(),
                      Interface ::binary(), CredState :: any(),
                      AllowNonUniqueStates::boolean())
@@ -57,26 +67,36 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
     watts_persistent_mnesia:credential_add(UserId, ServiceId, Interface,
                                            CredState, SameStateAllowed).
 
+%% @doc get the list of credentials for a user
+%% A callback from the watts_persistent behaviour.
 -spec credential_get_list(UserId::binary()) -> {ok, [watts:cred()]}.
 credential_get_list(UserId) ->
     watts_persistent_mnesia:credential_get_list(UserId).
 
+%% @doc get the number of credentials for a user at a service.
+%% A callback from the watts_persistent behaviour.
 -spec credential_get_count(UserId::binary(), ServiceId::binary()) ->
                                   {ok, pos_integer()}.
 credential_get_count(UserId, ServiceId) ->
     watts_persistent_mnesia:credential_get_count(UserId, ServiceId).
 
--spec credential_get(CredId::binary()) -> {ok, watts:cred()} |
-                                          {error, not_found}.
+%% @doc get a specific credential.
+%% A callback from the watts_persistent behaviour.
+-spec credential_get(CredId::binary())
+                    -> {ok, watts:cred()} | {error, Reason::atom()}.
 credential_get(Uuid) ->
     watts_persistent_mnesia:credential_get(Uuid).
 
+%% @doc remove a credential of a user
+%% A callback from the watts_persistent behaviour.
 -spec credential_remove(UserId::binary(), CredentialId::binary()) ->
     ok | {error, Reason :: atom()}.
 credential_remove(UserId, CredId) ->
     watts_persistent_mnesia:credential_remove(UserId, CredId).
 
--spec is_ready() -> true | {false, not_running}.
+%% @doc return if the database is ready.
+%% A callback from the watts_persistent behaviour.
+-spec is_ready() -> true | {false, Reason :: atom()}.
 is_ready() ->
     case mnesia:table_info(credential, type) of
         set -> true;
@@ -85,7 +105,8 @@ is_ready() ->
     end.
 
 
-
+%% @doc setup the leveldb datbase in mnesia if needed
+-spec setup_mnesia_if_needed(boolean()) -> ok.
 setup_mnesia_if_needed(true) ->
     ok;
 setup_mnesia_if_needed(false) ->
@@ -98,10 +119,20 @@ setup_mnesia_if_needed(false) ->
     stop_mnesia(),
     ok.
 
+%% @doc create the needed tables
+-spec create_tables() -> ok |
+                         {timeout, [atom()]} |
+                         {error, Reason :: any()}.
 create_tables() ->
     create_table(credential, record_info(fields, credential),
                  [uuid, user_id, service_id, state] ).
 
+%% @doc create a single table and wait for it to be ready.
+-spec create_table(TableName :: atom(), Attributes :: list(),
+                   Indexes :: [atom()])
+                  -> ok |
+                     {timeout, [atom()]} |
+                     {error, Reason :: any()}.
 create_table(TableName, Attributes, Indexes) ->
     {ok, TableList} = list_tables(),
     Nodes = [ node() | nodes() ],
@@ -118,14 +149,20 @@ create_table(TableName, Attributes, Indexes) ->
             mnesia:wait_for_tables([TableName], 10000)
     end.
 
+%% @doc list all tables
+-spec list_tables() -> {ok, [any()]}.
 list_tables() ->
     {ok, mnesia:system_info(local_tables)}.
 
+%% @doc stop the mensia application
+-spec stop_mnesia() -> ok.
 stop_mnesia() ->
     application:stop(mnesia),
     application:set_env(mnesia, dir, ?CONFIG(eleveldb_dir)),
     ok.
 
+%% @doc start the mensia application
+-spec start_mnesia() -> ok.
 start_mnesia() ->
     {ok, _} = application:ensure_all_started(mnesia),
     {ok, _} = mnesia_eleveldb:register(),

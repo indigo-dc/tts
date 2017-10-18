@@ -1,3 +1,8 @@
+%% @doc this module implement the persistent storage for the internal
+%% Erlang database called mnesia.
+%% As there is an extension for mnesia that uses leveldb, this also enables
+%% support for the leveldb.
+%% @see watts_persistent_leveldb
 -module(watts_persistent_mnesia).
 %%
 %% Copyright 2016 SCC/KIT
@@ -39,6 +44,9 @@
           state = undefined
          }).
 
+%% @doc initialize the sqlite database.
+%% A callback from the watts_persistent behaviour.
+-spec initialize() -> ok.
 initialize() ->
     %% check if the mnesia directory exists
     Dir = ?CONFIG(mnesia_dir),
@@ -49,6 +57,9 @@ initialize() ->
     ok = start_mnesia(),
     ok.
 
+
+%% @doc store a credential for a user
+%% A callback from the watts_persistent behaviour.
 -spec credential_add(UserId::binary(), ServiceId::binary(),
                      Interface ::binary(), CredState :: any(),
                      AllowNonUniqueStates::boolean())
@@ -90,6 +101,8 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
 
 
 
+%% @doc get the list of credentials for a user
+%% A callback from the watts_persistent behaviour.
 -spec credential_get_list(UserId::binary()) -> {ok, [watts:cred()]}.
 credential_get_list(UserId) ->
     MatchSpec = [{#credential{user_id=UserId, _='_'}, [],
@@ -115,6 +128,8 @@ credential_get_list(UserId) ->
              end,
     convert_result(Result).
 
+%% @doc get the number of credentials for a user at a service.
+%% A callback from the watts_persistent behaviour.
 -spec credential_get_count(UserId::binary(), ServiceId::binary()) ->
                                   {ok, pos_integer()}.
 credential_get_count(UserId, ServiceId) ->
@@ -126,8 +141,11 @@ credential_get_count(UserId, ServiceId) ->
         end,
     convert_result(mnesia:transaction(GetList)).
 
--spec credential_get(CredId::binary()) -> {ok, watts:cred()} |
-                                          {error, not_found}.
+
+%% @doc get a specific credential.
+%% A callback from the watts_persistent behaviour.
+-spec credential_get(CredId::binary())
+                    -> {ok, watts:cred()} | {error, Reason::atom()}.
 credential_get(Uuid) ->
     Get =
         fun() ->
@@ -152,6 +170,10 @@ credential_get(Uuid) ->
              end,
     convert_result(Result).
 
+
+
+%% @doc remove a credential of a user
+%% A callback from the watts_persistent behaviour.
 -spec credential_remove(UserId::binary(), CredentialId::binary()) ->
     ok | {error, Reason :: atom()}.
 credential_remove(UserId, CredId) ->
@@ -169,7 +191,11 @@ credential_remove(UserId, CredId) ->
     Result = mnesia:transaction(Delete),
     convert_result(Result).
 
--spec is_ready() -> true | {false, not_running}.
+
+
+%% @doc return if the database is ready.
+%% A callback from the watts_persistent behaviour.
+-spec is_ready() -> true | {false, Reason :: atom()}.
 is_ready() ->
     case mnesia:table_info(credential, type) of
         set -> true;
@@ -178,7 +204,8 @@ is_ready() ->
     end.
 
 
-
+%% @doc create the schema for the mnesia database if needed
+-spec setup_mnesia_if_needed(boolean()) -> ok.
 setup_mnesia_if_needed(true) ->
     ok;
 setup_mnesia_if_needed(false) ->
@@ -188,6 +215,8 @@ setup_mnesia_if_needed(false) ->
     ok = create_tables(),
     ok.
 
+%% @doc create the needed tables
+-spec create_tables() -> ok.
 create_tables() ->
     Nodes = [ node() | nodes() ],
     {atomic, ok} =
@@ -198,15 +227,21 @@ create_tables() ->
                             ]),
     ok.
 
+%% @doc stop the mnesia application
+-spec stop_mnesia() -> ok.
 stop_mnesia() ->
     application:stop(mnesia),
     application:set_env(mnesia, dir, ?CONFIG(mnesia_dir)),
     ok.
 
+%% @doc start the mnesia application
+-spec start_mnesia() -> ok.
 start_mnesia() ->
     {ok, _} = application:ensure_all_started(mnesia),
     ok.
 
+%% @doc create a random uuid for the credential
+-spec create_random_uuid() -> binary().
 create_random_uuid() ->
     Uuid = list_to_binary(uuid:uuid_to_string(uuid:get_v4(strong))),
     case mnesia:select(credential, match_spec(Uuid, undefined), write) of
@@ -216,14 +251,17 @@ create_random_uuid() ->
             create_random_uuid()
     end.
 
-
+%% @doc match specifications to search within the mnesia database
+-spec match_spec(CredentialUuid :: binary(),
+                 UserId :: binary() | undefined) -> [tuple()].
 match_spec(Uuid, undefined) ->
     [{#credential{uuid=Uuid, _='_'}, [], ['$_']}];
 match_spec(Uuid, UserId) ->
     [{#credential{uuid=Uuid, user_id = UserId, _='_'}, [], ['$_']}].
 
 
-
+%% @doc convert the result to a common return value
+-spec convert_result(tuple()) -> {ok, any()} | {error, Reason :: atom()}.
 convert_result({atomic, Result}) ->
     Result;
 convert_result({ok, Result}) ->

@@ -15,6 +15,7 @@
 %%
 %% @doc this is just starting the supervisor tree nothing more.
 %% The main supervisor is watts_sup.
+%% This implements the 'application' behaviour.
 %% @see watts_sup
 -module(watts_app).
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
@@ -25,11 +26,13 @@
 -export([start/2]).
 -export([stop/1]).
 
+%% @doc start the OTP application 'watts'.
 -spec start(any(), any()) ->  {ok, pid()} | {error, Reason::term()}.
 start(_Type, _Args) ->
     lager:info("WaTTS starting ..."),
     watts_sup:start_link().
 
+%% @doc this is called at stop.
 -spec stop(any()) -> ok.
 stop(_State) ->
     ok.

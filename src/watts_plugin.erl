@@ -311,21 +311,11 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 get_credential(UserId, CredentialId) ->
-    case get_credential(CredentialId) of
-        {ok, Cred} ->
-            case maps:get(user_id, Cred, undefined) of
-                UserId -> {ok, Cred};
-                _ -> {error, bad_user}
-            end;
-        Other -> Other
-    end.
+    watts_persistent:credential_fetch(CredentialId, UserId).
 
 % functions with data access
 get_credential_count(UserId, ServiceId) ->
     watts_persistent:credential_service_count(UserId, ServiceId).
-
-get_credential(CredId) ->
-    watts_persistent:credential_fetch(CredId).
 
 get_credential_list(UserId) ->
     watts_persistent:credential_fetch_list(UserId).

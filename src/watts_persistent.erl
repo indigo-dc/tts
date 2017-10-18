@@ -28,7 +28,7 @@
 -export([credential_store/5]).
 -export([credential_fetch_list/1]).
 -export([credential_service_count/2]).
--export([credential_fetch/1]).
+-export([credential_fetch/2]).
 -export([credential_delete/2]).
 -export([is_ready/0]).
 
@@ -92,13 +92,28 @@ credential_service_count(UserId, ServiceId) ->
     Mod = mod(),
     Mod:credential_get_count(UserId, ServiceId).
 
-%% @doc get the credential with the Id.
+
+%% @doc get the credential with the Id for the given User.
 %% using the configured database.
--spec credential_fetch(CredId :: binary())
+-spec credential_fetch(CredId :: binary(), UserId :: binary())
                       -> {ok, watts:cred()} | {error, Reason :: atom()}.
-credential_fetch(CredId) ->
+credential_fetch(CredId, UserId) ->
     Mod = mod(),
-    Mod:credential_get(CredId).
+    CredResult = Mod:credential_get(CredId),
+    ensure_credential_of_user(CredResult, UserId).
+
+%% @doc this function ensures that credentials are only returned to their owner.
+-spec ensure_credential_of_user({ok, watts:cred()} |
+                                {error, Reason:: atom()}, UserId :: binary())
+                               -> {ok, watts:cred()} |
+                                  {error, Reason :: atom()}.
+ensure_credential_of_user({ok, #{user_id := UserId}} = Result, UserId) ->
+    Result;
+ensure_credential_of_user({ok, _}, _UserId) ->
+    {error, bad_user};
+ensure_credential_of_user({error, _} = Error, _UserId) ->
+    Error.
+
 
 %% @doc delete the credential with the Id.
 %% using the configured database.

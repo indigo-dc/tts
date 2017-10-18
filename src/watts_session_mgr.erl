@@ -221,7 +221,7 @@ lookup_session_pid(ID) ->
 set_token_for_session(Token, Pid) ->
     watts_ets:sessions_update_pid(Token, Pid).
 
-%% @delete the session with the given id
+%% @doc delete the session with the given id
 -spec delete_session(ID :: any()) -> ok.
 delete_session(ID) ->
     watts_ets:sessions_delete(ID),
