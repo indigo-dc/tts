@@ -41,6 +41,7 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
 
+-include_lib("public_key/include/public_key.hrl").
 -include("watts.hrl").
 
 %% API.
@@ -131,6 +132,10 @@ handle_cast(add_rsps, State) ->
     {noreply, State};
 handle_cast(add_services, State) ->
     add_services(),
+    gen_server:cast(self(), update_jwt_keys),
+    {noreply, State};
+handle_cast(update_jwt_keys, State) ->
+    update_jwt_keys(),
     gen_server:cast(self(), start_http),
     {noreply, State};
 handle_cast(start_http, State) ->
@@ -149,8 +154,14 @@ handle_info(_Info, State) ->
 
 %% @doc just a dummy to be compliant with the behaviour, no functionality.
 -spec terminate(any(), tuple()) -> ok.
-terminate(_Reason, _State) ->
+terminate(normal, _State) ->
+    ok;
+terminate(Reason, _State) ->
+    lager:error("Init: terminated with reason ~p", [Reason]),
+    timer:sleep(1000),
+    erlang:halt(254),
     ok.
+
 
 %% @doc just a dummy to be compliant with the behaviour, no functionality.
 -spec code_change(any(), tuple(), any()) -> {ok, tuple()}.
@@ -171,7 +182,8 @@ start_if_undefined(undefined) ->
     ok = ?SETCONFIG(watts_init_started, true),
     gen_server:cast(self(), start_watts);
 start_if_undefined(_) ->
-    lager:emergency("Init: restarting ... this should not happen!"),
+    lager:critical("Init: restarting ... this should never happen!"),
+    timer:sleep(1000),
     erlang:halt(255).
 
 %% @doc start initalization of WaTTS.
@@ -415,6 +427,68 @@ add_services() ->
     ServiceList = ?CONFIG(service_list, []),
     lists:foldl(AddService, ok, ServiceList),
     ok.
+
+%% @doc generate new signing keys for jwt
+-spec update_jwt_keys() -> ok.
+update_jwt_keys() ->
+    KeyDir = ?CONFIG(secret_dir),
+    KeyFile = filename:join(KeyDir, <<"jwt.key">>),
+    ok = maybe_update_jwt_key(KeyFile),
+    ok = read_jwt_key(KeyFile),
+    ok.
+
+%% @doc this function decides if a new key needs to be generated
+%% @todo implement the decission
+-spec maybe_update_jwt_key(KeyFile :: binary()) -> ok | error.
+maybe_update_jwt_key(KeyFile) ->
+    regenerate_jwt_key(KeyFile).
+
+
+%% @doc generate a new rsa private key for jwt signing
+-spec regenerate_jwt_key(KeyFile :: binary()) -> ok | error.
+regenerate_jwt_key(KeyFile) ->
+    Bits = ?CONFIG(jwt_key_bits, <<"2048">>),
+    lager:info("Init: generating new RSA key for jwt signing in ~p", [KeyFile]),
+    Cmd = << <<"openssl genpkey -algorithm rsa -outform PEM">>/binary,
+             <<" -pkeyopt rsa_keygen_bits:">>/binary, Bits/binary,
+             <<" -out ">>/binary, KeyFile/binary >>,
+    case exec:run(binary_to_list(Cmd), [sync, stdout, stderr]) of
+        {ok, _} ->
+            ok;
+        {error, Reason} ->
+            lager:info("Init: jwt key generation failed: ~p", [Reason]),
+            error
+    end.
+
+
+%% @doc read the jwt key file
+-spec read_jwt_key(binary()) -> ok | error.
+read_jwt_key(Path) ->
+    case read_pem_entries(Path) of
+        [{Type, _, not_encrypted} = KeyData]
+          when Type == 'RSAPrivateKey'; Type == 'PrivateKeyInfo'->
+            KeyInfo = public_key:pem_entry_decode(KeyData),
+            Decoded = KeyInfo#'PrivateKeyInfo'.privateKey,
+            Key = public_key:der_decode('RSAPrivateKey', Decoded),
+            E = encode_key_value(Key#'RSAPrivateKey'.publicExponent),
+            N = encode_key_value(Key#'RSAPrivateKey'.modulus),
+            D = encode_key_value(Key#'RSAPrivateKey'.privateExponent),
+            JwtKey = #{kty => <<"RSA">>, n => N, e => E, d => D},
+            ?SETCONFIG(jwt_key, JwtKey),
+            lager:info("Init: loaded jwt key ~p", [Path]),
+            ok;
+        _ ->
+            lager:error("Init: jwt key ~p invalid", [Path]),
+            error
+    end.
+
+
+%% @doc convert an unsigned integer in base64 encoded value
+-spec encode_key_value(pos_integer()) -> binary().
+encode_key_value(Value) ->
+    Bin = binary:encode_unsigned(Value),
+    base64url:encode(Bin).
+
 
 
 %% @doc start the web interface of WaTTS.

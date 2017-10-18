@@ -58,7 +58,7 @@ advanced_init_test() ->
 
 start_meck() ->
     MeckModules = [watts_persistent_sqlite, cowboy, oidcc, oidcc_client,
-                   watts_service],
+                   watts_service, exec],
     Initialize = fun() ->
                          ok
                  end,
@@ -107,9 +107,13 @@ start_meck() ->
     ok = meck:expect(oidcc_openid_provider, get_error, GetProviderError),
     ok = meck:expect(cowboy, start_http, StartHttp),
     ok = meck:expect(cowboy, start_https, StartHttp),
+    ok = meck:expect(exec, run, fun(_, _) -> {ok, noresult} end),
+    TestDir = filename:dirname(code:where_is_file("jwt.key")),
+    ?SETCONFIG( secret_dir, TestDir),
     {ok, {MeckModules}}.
 
 
 stop_meck({MeckModules}) ->
     ok = test_util:meck_done(MeckModules),
+    ?UNSETCONFIG( secret_dir ),
     ok.

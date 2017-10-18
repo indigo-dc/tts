@@ -52,9 +52,7 @@
 
 -export_type([credential/0]).
 
--type session_info() :: #{session_id => SessId :: binary(),
-                          session_token => Token :: binary(),
-                          session_pid => Session :: pid(),
+-type session_info() :: #{session_pid => Session :: pid(),
                           session_type => watts_session:type()}.
 
 -type credential() :: #{cred_id => CredId :: binary(),
@@ -595,11 +593,8 @@ update_session(Issuer, IssId, Subject, Token, SessionPid) ->
 %% @doc generate a session description map from the given session pid.
 -spec return_session_info(Session :: pid()) -> {ok, session_info()}.
 return_session_info(SessionPid) ->
-    {ok, SessId} = watts_session:get_id(SessionPid),
-    {ok, SessToken} = watts_session:get_sess_token(SessionPid),
     {ok, SessType} = watts_session:get_type(SessionPid),
-    {ok, #{session_id => SessId, session_token => SessToken,
-           session_pid => SessionPid, session_type => SessType}}.
+    {ok, #{session_pid => SessionPid, session_type => SessType}}.
 
 
 retrieve_information(Issuer, Subject, Token, Session) ->

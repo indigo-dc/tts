@@ -67,8 +67,7 @@ redirect_to_provider(Session, Rsp, Req) ->
     watts_http_util:redirect_to(Url, Req2).
 
 set_cookie(Session, Req) ->
-    {ok, Max} = watts_session:get_max_age(Session),
-    {ok, Token} = watts_session:get_sess_token(Session),
+    {ok, Max, Token} = watts_session_mgr:get_cookie_data(Session),
     watts_http_util:perform_cookie_action(update, Max, Token, Req).
 
 

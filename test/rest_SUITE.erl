@@ -132,6 +132,7 @@ setup_group(DbType) ->
                    disable_login => false,
                    scopes => [<<"openid">>,<<"profile">>]}],
     ?SETCONFIG(start_time, erlang:system_time(seconds)),
+    ?SETCONFIG(secret_dir, secret_dir()),
     ?SETCONFIG(max_provider_wait, 1),
     ?SETCONFIG(service_list, ServiceList),
     ?SETCONFIG(provider_list, ProviderList),
@@ -361,3 +362,6 @@ unmock_oidcc() ->
 
 ca_file() ->
     code:where_is_file("cacert.pem").
+
+secret_dir() ->
+    filename:dirname(code:where_is_file("jwt.key")).

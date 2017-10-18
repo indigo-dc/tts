@@ -24,6 +24,7 @@
 
 %% API.
 -export([start_link/1]).
+-export([kill/1]).
 -export([close/1]).
 
 -export([get_id/1]).
@@ -85,6 +86,11 @@ start_link(Token) ->
 -spec close(Pid :: pid()) -> ok.
 close(Pid) ->
     gen_server:cast(Pid, close).
+
+%% @doc send a cast to kill the session
+-spec kill(Pid :: pid()) -> ok.
+kill(Pid) ->
+    gen_server:cast(Pid, kill).
 
 %% @doc call the process to return the id
 -spec get_id(Pid :: pid() | undefined) -> {ok, ID::binary() | undefined}.
@@ -237,6 +243,7 @@ is_same_ip(IP, Pid) ->
           error = <<"">>,
           user_info = undefined :: undefined | watts_userinfo:userinfo(),
           max_age = 10 :: pos_integer(),
+          killed = false :: boolean(),
           redirection = undefined
          }).
 
@@ -366,6 +373,9 @@ handle_call(_Request, _From, #state{max_age=MA}=State) ->
 handle_cast(close, #state{id=ID} = State) ->
     lager:debug("SESS~p stopping", [ID]),
     {stop, normal, State};
+handle_cast(kill, #state{id=ID} = State) ->
+    lager:debug("SESS~p got killed", [ID]),
+    {stop, normal, State#state{killed = true}};
 handle_cast(_Msg, #state{max_age=MA}=State) ->
     {noreply, State, MA}.
 
@@ -381,6 +391,9 @@ handle_info(_Info, #state{max_age = MA} = State) ->
 
 %% @doc termination, just log a message and tell the manager
 -spec terminate(any(), session()) -> ok.
+terminate(_Reason, #state{id=ID, killed = true}) ->
+    lager:info("SESS~p terminating", [ID]),
+    ok;
 terminate(_Reason, #state{id=ID, sess_token=Token}) ->
     lager:info("SESS~p terminating", [ID]),
     watts_session_mgr:session_terminating(Token),
