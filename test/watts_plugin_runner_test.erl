@@ -496,6 +496,7 @@ start_meck() ->
     ok = meck:expect(ssh_connection, exec, ExecFun),
     ok = meck:expect(exec, run, ErlexecRun),
     ok = meck:expect(exec, stop, fun(_) -> ok end),
+    ok = meck:expect(exec, status, fun(_) -> {status, 0} end),
 
     {ok, {SshPid, ExecPid, MeckModules}}.
 

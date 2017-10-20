@@ -146,6 +146,7 @@ setup_group(DbType) ->
     ?SETCONFIG(num_acceptors, 100),
     ?SETCONFIG(listen_port, 8080),
     ?SETCONFIG(ep_main, <<"/">>),
+    ?SETCONFIG(jwt_key_rotation_interval, 3600),
     ?SETCONFIG(hostname, "localhost"),
     ?UNSETCONFIG(watts_init_started),
     application:set_env(oidcc, cert_depth, 5),
