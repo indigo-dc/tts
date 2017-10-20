@@ -50,6 +50,7 @@ And for production use:
 | log_dir | The path where the log files will be put | path | /var/log/watts |
 | syslog_facility | The facility to use for syslog | 'daemon','local0'-'local7'  | 'daemon' |
 | enable_rsp | Enable support for RSP (relying service provider) at WaTTS. This will enable support for other services to rely on WaTTS to perform certain taks e.g. run plugins for them. | boolean | false |
+| privacy_doc | The html file containing the privacy statement for you WaTTS instance | file | none |
 | debug_mode | enable debug output, this adds a lot of load. debug_mode is only allowed when running on localhost as it might log senstive data. | boolean  | false |
 
 

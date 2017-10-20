@@ -78,7 +78,10 @@ autorotation_test() ->
     end,
     ok.
 
-autodelete_test() ->
+autodelete_test_() ->
+    {timeout, 30, ?_assertEqual(ok, run_autodelete())}.
+
+run_autodelete() ->
     {ok, Meck} = start_meck(),
     try
         ?SETCONFIG(session_timeout, 2000),
