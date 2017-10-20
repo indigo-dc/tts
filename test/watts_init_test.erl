@@ -58,7 +58,7 @@ advanced_init_test() ->
 
 start_meck() ->
     MeckModules = [watts_persistent_sqlite, cowboy, oidcc, oidcc_client,
-                   watts_service, exec],
+                   watts_service, watts_jwt_keys],
     Initialize = fun() ->
                          ok
                  end,
@@ -100,6 +100,7 @@ start_meck() ->
     ok = meck:expect(watts_persistent_sqlite, is_ready, IsReady),
     ok = meck:expect(watts_service, add, AddService),
     ok = meck:expect(watts_service, update_params, UpdateParams),
+    ok = meck:expect(watts_jwt_keys, initial_read, fun() -> ok end),
     ok = meck:expect(oidcc_client, register, RegisterClient),
     ok = meck:expect(oidcc, add_openid_provider, AddProvider),
     ok = meck:expect(oidcc, get_openid_provider_list, GetProviderList),
@@ -107,13 +108,14 @@ start_meck() ->
     ok = meck:expect(oidcc_openid_provider, get_error, GetProviderError),
     ok = meck:expect(cowboy, start_http, StartHttp),
     ok = meck:expect(cowboy, start_https, StartHttp),
-    ok = meck:expect(exec, run, fun(_, _) -> {ok, noresult} end),
     TestDir = filename:dirname(code:where_is_file("jwt.key")),
     ?SETCONFIG( secret_dir, TestDir),
+    ?SETCONFIG(jwt_key_rotation_interval, 3600),
     {ok, {MeckModules}}.
 
 
 stop_meck({MeckModules}) ->
     ok = test_util:meck_done(MeckModules),
     ?UNSETCONFIG( secret_dir ),
+    ?UNSETCONFIG( jwt_key_rotation_interval ),
     ok.

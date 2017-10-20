@@ -139,12 +139,12 @@ start_meck() ->
   e => <<"AQAB">>,kty => <<"RSA">>,
   n =>
       <<"xw3lyt9tLzjghDCfZQZW0tgKFpReQvOVsJtgQQIF-HQxmBQqHa7e1xMkMgq3Kmwn0kIIJZ-NkXwKuEX9PubdrSaoc7BxcQon9R_2TneaE8wsgtCxVx7uTD4vgUZcZ-Z-7ZIotq1DOvbVDQtpPzobvIC4JXotbsGI9deouFlHbQA6mw9Cvh32ylB43C6NFJCFEpfB2-fBuat5gOSm02CIs1qASd9C0g3WPf7HvR9f3Ot3G7JaH6PA5u7AnKcQ1UtGI1zfX5m6qBj7mhaRFtEood8Jo_lUqYQP4pr_lk3UQLhpWETdMv_QVGsRFqSwuGLbOmRQOoMuC1eifuXcKeXtUw">>},
-    ?SETCONFIG(jwt_key, Key),
+    ?SETCONFIG(jwt_keys, [Key]),
     {ok, {MeckModules}}.
 
 
 stop_meck({MeckModules}) ->
-    ?UNSETCONFIG(jwt_key),
+    ?UNSETCONFIG(jwt_keys),
     watts_ets:destroy(),
     ok = test_util:meck_done(MeckModules),
     ok.

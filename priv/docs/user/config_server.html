@@ -1,0 +1,655 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Server Settings · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="config_provider.html" />
+    
+    
+    <link rel="prev" href="config_example.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="user.html">
+            
+                <a href="user.html">
+            
+                    
+                    User Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="admin.html">
+            
+                <a href="admin.html">
+            
+                    
+                    Deployment And Administration Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="config.html">
+            
+                <a href="config.html">
+            
+                    
+                    Configuration Guide
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.4.1" data-path="config_example.html">
+            
+                <a href="config_example.html">
+            
+                    
+                    Config Example
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.4.2" data-path="config_server.html">
+            
+                <a href="config_server.html">
+            
+                    
+                    Server Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.3" data-path="config_provider.html">
+            
+                <a href="config_provider.html">
+            
+                    
+                    OpenId Connect Provider Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.4" data-path="config_service.html">
+            
+                <a href="config_service.html">
+            
+                    
+                    Service Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.5" data-path="config_rsp.html">
+            
+                <a href="config_rsp.html">
+            
+                    
+                    RSP Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.6" data-path="config_ssh.html">
+            
+                <a href="config_ssh.html">
+            
+                    
+                    SSH for WaTTS
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="developer.html">
+            
+                <a href="developer.html">
+            
+                    
+                    Developer Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="rsp.html">
+            
+                <a href="rsp.html">
+            
+                    
+                    Relying Service Provider (RSP) Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="api.html">
+            
+                <a href="api.html">
+            
+                    
+                    REST Api
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.8" data-path="service_ref_card.html">
+            
+                <a href="service_ref_card.html">
+            
+                    
+                    WaTTS - Service Reference Card
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Server Settings</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="watts-server-settings">WaTTS server settings</h1>
+<h2 id="introduction">Introduction</h2>
+<p>This section will describe the general settings of the WaTTS server. This will include options like
+ports, hostname and SSL.</p>
+<p>Typical values that should be changed during the initial setup are:</p>
+<ul>
+<li><code>hostname</code>, change it to an actual fully qualified hostname</li>
+<li><code>port</code>, which can be removed if the incoming traffic arrives at port <em>80</em> for <em>http</em> or <em>443</em> for <em>https</em></li>
+<li><code>listen_port</code>, it will be set to the internal port WaTTS is listening at</li>
+</ul>
+<p>And for production use:</p>
+<ul>
+<li><code>ssl</code>, set to &apos;true&apos;</li>
+<li><code>cachain_file</code>, set to the path to the file</li>
+<li><code>dh_file</code>, set to the path to the file</li>
+<li><code>cert_file</code>, set to the path to the file</li>
+<li><code>key_file</code>, set to the path to the file</li>
+</ul>
+<h2 id="settings">Settings</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Key</th>
+<th>Description</th>
+<th style="text-align:center">Datatype</th>
+<th style="text-align:center">Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">nodename</td>
+<td>The name of the Erlang distrubuted node. Do not change unless really needed.</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">watts@127.0.0.1</td>
+</tr>
+<tr>
+<td style="text-align:center">distributed_cookie</td>
+<td>The cookie of the Erlang distrubution. Do not change unless really needed.</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">watts</td>
+</tr>
+<tr>
+<td style="text-align:center">hostname</td>
+<td>Hostname of the web server</td>
+<td style="text-align:center">host</td>
+<td style="text-align:center">localhost</td>
+</tr>
+<tr>
+<td style="text-align:center">port</td>
+<td>Port number where clients seem to connect to; default is port 80 for non SSL, 443 for SSL. In production systems this should be left &apos;default&apos;</td>
+<td style="text-align:center">port number or &apos;default&apos;</td>
+<td style="text-align:center">8080</td>
+</tr>
+<tr>
+<td style="text-align:center">listen_port</td>
+<td>Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privileged ports to the listen_port usually by the firewall. The value &apos;port&apos; means using the same value as <code>port</code></td>
+<td style="text-align:center">port or &apos;port&apos;</td>
+<td style="text-align:center">&apos;port&apos;</td>
+</tr>
+<tr>
+<td style="text-align:center">web_acceptors</td>
+<td>The number of parallel waiting processes for incomming connection</td>
+<td style="text-align:center">integer</td>
+<td style="text-align:center">100</td>
+</tr>
+<tr>
+<td style="text-align:center">ssl</td>
+<td>Whether SSL should be used</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">true</td>
+</tr>
+<tr>
+<td style="text-align:center">cachain_file</td>
+<td>Location of the ca chain for the server</td>
+<td style="text-align:center">file</td>
+<td style="text-align:center">none</td>
+</tr>
+<tr>
+<td style="text-align:center">cert_file</td>
+<td>Location of the certificate</td>
+<td style="text-align:center">file</td>
+<td style="text-align:center">/etc/watts/watts.crt</td>
+</tr>
+<tr>
+<td style="text-align:center">key_file</td>
+<td>Path to the private key file</td>
+<td style="text-align:center">file</td>
+<td style="text-align:center">/etc/watts/watts.key</td>
+</tr>
+<tr>
+<td style="text-align:center">dh_file</td>
+<td>Path to the file containing the diffie hellman parameter. To generate it simply run <code>openssl dhparam -out watts_dh.pem 2048</code></td>
+<td style="text-align:center">file</td>
+<td style="text-align:center">none</td>
+</tr>
+<tr>
+<td style="text-align:center">session_timeout</td>
+<td>The duration for which a session at the web-app is valid during inactivity</td>
+<td style="text-align:center">duration</td>
+<td style="text-align:center">15m</td>
+</tr>
+<tr>
+<td style="text-align:center">session_max_duration</td>
+<td>The maximum duration of a session at the web interface, even if active. After this time an additional Login is required</td>
+<td style="text-align:center">duration</td>
+<td style="text-align:center">30m</td>
+</tr>
+<tr>
+<td style="text-align:center">database_type</td>
+<td>The type of database to user</td>
+<td style="text-align:center">&apos;sqlite&apos;, &apos;mnesia&apos;, &apos;eleveldb&apos;</td>
+<td style="text-align:center">&apos;sqlite&apos;</td>
+</tr>
+<tr>
+<td style="text-align:center">sqlite_file</td>
+<td>Path to the sqlite database, used if database_type is &apos;sqlite&apos;</td>
+<td style="text-align:center">file</td>
+<td style="text-align:center">/etc/watts/watts.db</td>
+</tr>
+<tr>
+<td style="text-align:center">mnesia_dir</td>
+<td>Base directory of the mnesia database, used if database_type is &apos;mnesia&apos;</td>
+<td style="text-align:center">dir</td>
+<td style="text-align:center">/var/lib/watts/mnesia</td>
+</tr>
+<tr>
+<td style="text-align:center">eleveldb_dir</td>
+<td>Base directory of the eleveldb database, used if database_type is &apos;eleveldb&apos;</td>
+<td style="text-align:center">dir</td>
+<td style="text-align:center">/var/lib/watts/eleveldb</td>
+</tr>
+<tr>
+<td style="text-align:center">redirection.enable</td>
+<td>Whether redirection should be enabled</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
+</tr>
+<tr>
+<td style="text-align:center">redirection.listen_port</td>
+<td>The port to listen on for browsers to redirect</td>
+<td style="text-align:center">port</td>
+<td style="text-align:center">8080</td>
+</tr>
+<tr>
+<td style="text-align:center">secret_dir</td>
+<td>A directory to contain sensible secrets. WaTTS creates the directory if it does not yet exist and forces it to have the permissions 700 on it.</td>
+<td style="text-align:center">dir</td>
+<td style="text-align:center">/var/lib/watts/secret/</td>
+</tr>
+<tr>
+<td style="text-align:center">jwt_key_rotation_interval</td>
+<td>The interval at which the RSA keys for signing the session info (stored in cookies of the user) will be rotated.</td>
+<td style="text-align:center">duration</td>
+<td style="text-align:center">14d</td>
+</tr>
+<tr>
+<td style="text-align:center">jwt_key_bits</td>
+<td>The number of bits to use in the RSA key.</td>
+<td style="text-align:center">integer</td>
+<td style="text-align:center">2014</td>
+</tr>
+<tr>
+<td style="text-align:center">allow_dropping_credentials</td>
+<td>Whether credentials of unknown services can be silently dropped</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
+</tr>
+<tr>
+<td style="text-align:center">enable_user_doc</td>
+<td>Whether the user documentation is reachable at /docs/user/</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
+</tr>
+<tr>
+<td style="text-align:center">enable_code_doc</td>
+<td>Whether the code documentation is reachable at /docs/code/</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
+</tr>
+<tr>
+<td style="text-align:center">max_provider_wait</td>
+<td>The duration to wait for provider results. If the duration is passed the results of OpenID Connect provider won&apos;t be logged, the provider will still function.</td>
+<td style="text-align:center">duration</td>
+<td style="text-align:center">30s</td>
+</tr>
+<tr>
+<td style="text-align:center">log_dir</td>
+<td>The path where the log files will be put</td>
+<td style="text-align:center">path</td>
+<td style="text-align:center">/var/log/watts</td>
+</tr>
+<tr>
+<td style="text-align:center">syslog_facility</td>
+<td>The facility to use for syslog</td>
+<td style="text-align:center">&apos;daemon&apos;,&apos;local0&apos;-&apos;local7&apos;</td>
+<td style="text-align:center">&apos;daemon&apos;</td>
+</tr>
+<tr>
+<td style="text-align:center">enable_rsp</td>
+<td>Enable support for RSP (relying service provider) at WaTTS. This will enable support for other services to rely on WaTTS to perform certain taks e.g. run plugins for them.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
+</tr>
+<tr>
+<td style="text-align:center">debug_mode</td>
+<td>enable debug output, this adds a lot of load. debug_mode is only allowed when running on localhost as it might log senstive data.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">false</td>
+</tr>
+</tbody>
+</table>
+<h2 id="listenport-redirection-explained">Listen_Port, Redirection Explained</h2>
+<p>The idea is to run WaTTS as a dedicated <em>non root</em> user for security reasons.
+The drawback of not beeing root is that ports 1-1024 are not available to WaTTS.
+To still be able to have WaTTS running at port 80 or 443 several settings are needed.</p>
+<p>As an image tells more than a thousand words, soma ascii art:</p>
+<pre><code>client --[port]---&gt; firewall rules --[listen_port]--&gt; WaTTS
+</code></pre><p>In the picture above the client connects to the port <code>port</code> and firewall rules
+redirect the packages arriving at <code>port</code> to the <code>listen_port</code> at which WaTTS is actually listen.
+The corresponding firewall rule is:</p>
+<pre><code>iptables -t nat -A PREROUTING -i eth0 -p tcp --dport `port` -j REDIRECT --to-port `listen_port`
+</code></pre><p>Redirection is needed when using SSL and http traffic should be forwarded to the https endpoint.
+The problem is that http and https work completely different, so a pure redirection using the
+firewall does not work, instead a valid http-redirection message needs to be send. Sending
+this valid http message is the task of the redirection and needs to be listening at a different port:</p>
+<pre><code>client --[some port]--&gt; firewall rules --[redirection.listen_port]--&gt; redirection endpoint
+                                                                           |
+       &lt;-------[ valid http message, redirecting to the http endpoint ]----/
+</code></pre><p>The redirection follows the same idea as the port and listen_port above. So WaTTS is listening
+at redirection.listen_port for incomming traffic and sending a valid http redirection message back,
+which tells the browser to go tho the ssl endpoint: <a href="https://`hostname`:`port`" target="_blank">https://`hostname`:`port`</a>.</p>
+<p>For the redirection another firewall rule is needed:</p>
+<pre><code># redirecting all traffic arriving at the default http port, 80, to the the listen port
+# for redirection
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port `redirection.listen_port`
+</code></pre><h2 id="example">Example</h2>
+<p>The following example is the basic SSL setup.</p>
+<pre><code>hostname = my-watts.example.com
+listen_port = 8443
+port = 443
+ssl = true
+# using default values for cachain_file, cert_file and key_file
+session_timeout = 10m
+redirection.enable = true
+redirection.listen_port = 8000
+</code></pre><p>and the firewall rules</p>
+<pre><code># for the ssl traffic forwarding from 443 to the listen port of WaTTS
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 8443
+
+# for the non ssl traffic trying port 80 forwarding it to the redirection.listen_port of WaTTS
+iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 8000
+</code></pre>
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="config_example.html" class="navigation navigation-prev " aria-label="Previous page: Config Example">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="config_provider.html" class="navigation navigation-next " aria-label="Next page: OpenId Connect Provider Settings">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Server Settings","level":"1.4.2","depth":2,"next":{"title":"OpenId Connect Provider Settings","level":"1.4.3","depth":2,"path":"config_provider.md","ref":"config_provider.md","articles":[]},"previous":{"title":"Config Example","level":"1.4.1","depth":2,"path":"config_example.md","ref":"config_example.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_server.md","mtime":"2017-10-19T12:20:20.566Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

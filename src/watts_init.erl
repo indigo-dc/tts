@@ -41,7 +41,6 @@
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
 
--include_lib("public_key/include/public_key.hrl").
 -include("watts.hrl").
 
 %% API.
@@ -431,63 +430,12 @@ add_services() ->
 %% @doc generate new signing keys for jwt
 -spec update_jwt_keys() -> ok.
 update_jwt_keys() ->
-    KeyDir = ?CONFIG(secret_dir),
-    KeyFile = filename:join(KeyDir, <<"jwt.key">>),
-    ok = maybe_update_jwt_key(KeyFile),
-    ok = read_jwt_key(KeyFile),
+    lager:info("Init: reading JWT keys"),
+    ok = watts_jwt_keys:initial_read(),
+    Duration = round(?CONFIG(jwt_key_rotation_interval)/60),
+    lager:info("Init: JWT key will rotate about every ~p minutes",
+               [Duration]),
     ok.
-
-%% @doc this function decides if a new key needs to be generated
-%% @todo implement the decission
--spec maybe_update_jwt_key(KeyFile :: binary()) -> ok | error.
-maybe_update_jwt_key(KeyFile) ->
-    regenerate_jwt_key(KeyFile).
-
-
-%% @doc generate a new rsa private key for jwt signing
--spec regenerate_jwt_key(KeyFile :: binary()) -> ok | error.
-regenerate_jwt_key(KeyFile) ->
-    Bits = ?CONFIG(jwt_key_bits, <<"2048">>),
-    lager:info("Init: generating new RSA key for jwt signing in ~p", [KeyFile]),
-    Cmd = << <<"openssl genpkey -algorithm rsa -outform PEM">>/binary,
-             <<" -pkeyopt rsa_keygen_bits:">>/binary, Bits/binary,
-             <<" -out ">>/binary, KeyFile/binary >>,
-    case exec:run(binary_to_list(Cmd), [sync, stdout, stderr]) of
-        {ok, _} ->
-            ok;
-        {error, Reason} ->
-            lager:info("Init: jwt key generation failed: ~p", [Reason]),
-            error
-    end.
-
-
-%% @doc read the jwt key file
--spec read_jwt_key(binary()) -> ok | error.
-read_jwt_key(Path) ->
-    case read_pem_entries(Path) of
-        [{Type, _, not_encrypted} = KeyData]
-          when Type == 'RSAPrivateKey'; Type == 'PrivateKeyInfo'->
-            KeyInfo = public_key:pem_entry_decode(KeyData),
-            Decoded = KeyInfo#'PrivateKeyInfo'.privateKey,
-            Key = public_key:der_decode('RSAPrivateKey', Decoded),
-            E = encode_key_value(Key#'RSAPrivateKey'.publicExponent),
-            N = encode_key_value(Key#'RSAPrivateKey'.modulus),
-            D = encode_key_value(Key#'RSAPrivateKey'.privateExponent),
-            JwtKey = #{kty => <<"RSA">>, n => N, e => E, d => D},
-            ?SETCONFIG(jwt_key, JwtKey),
-            lager:info("Init: loaded jwt key ~p", [Path]),
-            ok;
-        _ ->
-            lager:error("Init: jwt key ~p invalid", [Path]),
-            error
-    end.
-
-
-%% @doc convert an unsigned integer in base64 encoded value
--spec encode_key_value(pos_integer()) -> binary().
-encode_key_value(Value) ->
-    Bin = binary:encode_unsigned(Value),
-    base64url:encode(Bin).
 
 
 
@@ -592,7 +540,7 @@ read_ssl_files(_) ->
 %% @doc read the certificate for SSL
 -spec read_certificate(any()) -> Success :: boolean().
 read_certificate({ok, Path}) ->
-    case read_pem_entries(Path) of
+    case watts_file_util:read_pem_entries(Path) of
         [{'Certificate', Certificate, not_encrypted}] ->
             ?SETCONFIG(cert, Certificate),
             true;
@@ -606,7 +554,7 @@ read_certificate(_) ->
 %% @doc read the private key for SSL
 -spec read_key(any()) -> Success :: boolean().
 read_key({ok, Path}) ->
-    case read_pem_entries(Path) of
+    case watts_file_util:read_pem_entries(Path) of
         [{Type, PrivateKey, not_encrypted}]
         when Type == 'RSAPrivateKey'; Type == 'DSAPrivateKey';
              Type =='ECPrivateKey'; Type == 'PrivateKeyInfo'->
@@ -622,7 +570,7 @@ read_key(_) ->
 %% @doc read the ca chain for SSL
 -spec read_cachain(any()) -> Success :: boolean().
 read_cachain({ok, Path}) ->
-    case read_pem_entries(Path) of
+    case watts_file_util:read_pem_entries(Path) of
         [] ->
             lager:error("Init: ca chain ~p is empty", [Path]),
             ?UNSETCONFIG(cachain),
@@ -649,7 +597,7 @@ read_dhparam({ok, none}) ->
     ?UNSETCONFIG(dhparam),
     true;
 read_dhparam({ok, Path}) ->
-    case read_pem_entries(Path) of
+    case watts_file_util:read_pem_entries(Path) of
         [{'DHParameter', DhParam, not_encrypted}] ->
             ?SETCONFIG(dhparam, DhParam),
             true;
@@ -663,21 +611,6 @@ read_dhparam(_) ->
     ?UNSETCONFIG(dhparam),
     true.
 
-%% @doc helper function to read pem encoded files
--spec read_pem_entries(Path :: binary()) -> [tuple()].
-read_pem_entries(Path) ->
-    extract_pem(file:read_file(Path), Path).
-
-%% @doc helper function to decode pem entries
--spec extract_pem({ok, binary()} | any(), binary()) -> [tuple()].
-extract_pem({ok, PemBin}, _) ->
-    public_key:pem_decode(PemBin);
-extract_pem(Error, Path) ->
-    lager:error("Init: error reading file ~p: ~p", [Path, Error]),
-    [].
-
-
-%% @doc create the dispatch list for the web interface.
 %% This is the list of endpoints and the corresponding action to happen,
 %% this could be either calling a function or serving static files.
 %%

@@ -16,6 +16,7 @@
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 
+-export([read_pem_entries/1]).
 -export([to_abs/1]).
 -export([to_abs/2]).
 
@@ -52,3 +53,16 @@ combine_or_home(NonHome, BaseDir) ->
 convert_home(Relative) ->
     {ok, [[Home]]} =  init:get_argument(home),
     filename:join(Home, Relative).
+
+%% @doc helper function to read pem encoded files
+-spec read_pem_entries(Path :: binary()) -> [tuple()].
+read_pem_entries(Path) ->
+    extract_pem(file:read_file(Path), Path).
+
+%% @doc helper function to decode pem entries
+-spec extract_pem({ok, binary()} | any(), binary()) -> [tuple()].
+extract_pem({ok, PemBin}, _) ->
+    public_key:pem_decode(PemBin);
+extract_pem(Error, Path) ->
+    lager:error("Init: error reading file ~p: ~p", [Path, Error]),
+    [].

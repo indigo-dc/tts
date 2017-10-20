@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>WaTTS - Service Reference Card · GitBook</title>
+        <title>SSH for WaTTS · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.2">
@@ -57,8 +57,10 @@
     <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
 
     
+    <link rel="next" href="developer.html" />
     
-    <link rel="prev" href="api.html" />
+    
+    <link rel="prev" href="config_rsp.html" />
     
 
     </head>
@@ -205,7 +207,7 @@
             
         </li>
     
-        <li class="chapter " data-level="1.4.6" data-path="config_ssh.html">
+        <li class="chapter active" data-level="1.4.6" data-path="config_ssh.html">
             
                 <a href="config_ssh.html">
             
@@ -262,7 +264,7 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.8" data-path="service_ref_card.html">
+        <li class="chapter " data-level="1.8" data-path="service_ref_card.html">
             
                 <a href="service_ref_card.html">
             
@@ -305,7 +307,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href="." >WaTTS - Service Reference Card</a>
+        <a href="." >SSH for WaTTS</a>
     </h1>
 </div>
 
@@ -320,89 +322,31 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="watts---service-reference-card">WaTTS - Service Reference Card</h1>
-<ul>
-<li>Daemons running:<ul>
-<li>watts - The INDIGO Token Translation service<ul>
-<li>run_erl</li>
-<li>beam.smp (can be multiple, usually #cores + 1)</li>
-</ul>
-</li>
-<li>epmd - erlang distribution daemon</li>
-</ul>
-</li>
-<li>Init scripts and options:<ul>
-<li>watts start - starts WaTTS</li>
-<li>watts stop - stops WaTTS</li>
-<li>watts restart - restarts WaTTS</li>
-<li>watts ping - check if WaTTS is up and running, prints &quot;pong&quot; if up</li>
-<li>watts getpid - prints the pid of WaTTS</li>
-<li>watts version - prints out the verison of WaTTS</li>
-<li>watts console - starts WaTTS in forground mode, e.g. for debugging</li>
-<li>watts attach - connects to the shell of a running WaTTS, use with caution</li>
-</ul>
-</li>
-<li>Configuration files location:<ul>
-<li>/etc/watts/watts.conf - the main configuration file</li>
-</ul>
-</li>
-<li>Logfile locations (and management) and other useful audit information:<ul>
-<li>/var/log/watts/* - all differnet logs</li>
-</ul>
-</li>
-<li>Open ports:<ul>
-<li>8080 - in default config</li>
-<li>4369 - epmd, can be blocked by firewall</li>
-</ul>
-</li>
-<li>Possible unit test of the service:<ul>
-<li>configure at least one OpenID Connect Provider</li>
-<li>configure the info service</li>
-<li>login to WaTTS and request the Info credentials</li>
-<li>a list of informations should be shown</li>
-<li>revoke the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
-username/password for ssh">credential</a></li>
-<li>the screen should look like in the beginning</li>
-</ul>
-</li>
-<li>Where is service state held (and can it be rebuilt):<ul>
-<li>/var/lib/watts - this directory contains all data/state</li>
-<li>/etc/watts - this directory contains all settings</li>
-</ul>
-</li>
-<li>Cron jobs:<ul>
-<li>none</li>
-</ul>
-</li>
-<li>Security information:<ul>
-<li>Access control Mechanism description (authentication &amp; authorization):<ul>
-<li>done via OpenID Connect library, oidcc</li>
-</ul>
-</li>
-<li>How to block/ban a user:<ul>
-<li>either configuer the service authz (see configuration documentation)</li>
-<li>or done in the plugins (see developer documentation)</li>
-</ul>
-</li>
-<li>Network Usage:<ul>
-<li>http connections for the REST/Web interface</li>
-<li>outgoing https connections to OpenId Connect Provider</li>
-<li>other outgoing connections depend upon services/plugins in use</li>
-</ul>
-</li>
-<li>Firewall configuration:<ul>
-<li>only open listen_port and redirect_port configured in watts.conf, in default config port 8080</li>
-</ul>
-</li>
-<li>Security recommendations:<ul>
-<li>run as a dedicated, non-root user</li>
-<li>set up SSL before running in production</li>
-<li>do not use self-signed certificates in production</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
+                                <h1 id="configuring-ssh-for-watts">Configuring SSH for WaTTS</h1>
+<p>WaTTS does not yet support hashed hosts in the <code>known_hosts</code> file. As the
+connection to the remote host is done without user interaction, the host MUST be
+listed in the <code>known_hosts</code> file.</p>
+<p>To add a host to the list of known hosts in a way readable for WaTTS, the
+<code>ssh_config</code> (usually located in <code>/etc/ssh/ssh_config</code>) must have the setting
+<code>HashKnownHosts no</code>. After checking and eventually updating the configuration,
+one can login as a WaTTS user.</p>
+<p>As a WaTTS user, one connects to remote hosts using the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> specified in the
+service configuration, with potentially using the verbose flag (-v). During the
+connection there are two possibilities:</p>
+<ol>
+<li>The client asks whether the host should be added. In the case it is a host that
+should be accessible by WaTTS, the user should answer with yes, and then
+can go on with the next host.</li>
+<li>The client silently connects without asking. If this is the case, the host is
+already in the <code>~/.ssh/known_hosts</code> file. In the verbose connection, the
+output will tell which line in the file belongs to the remote host. In this
+case you can edit the <code>known_hosts</code> file and delete the line at the number
+printed before. Save the file and start the connection again, and the
+situation described above will happen.</li>
+</ol>
+<p>After adding all the hosts, the <code>ssh_config</code> should be modified. Open the
+<code>ssh_config</code> and change the hash hosts setting to <code>HashKnownHosts yes</code>.</p>
 
                                 
                                 </section>
@@ -430,10 +374,14 @@ username/password for ssh">credential</a></li>
 
             
                 
-                <a href="api.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page: REST Api">
+                <a href="config_rsp.html" class="navigation navigation-prev " aria-label="Previous page: RSP Settings">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
+                
+                <a href="developer.html" class="navigation navigation-next " aria-label="Next page: Developer Guide">
+                    <i class="fa fa-angle-right"></i>
+                </a>
                 
             
         
@@ -442,7 +390,7 @@ username/password for ssh">credential</a></li>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"WaTTS - Service Reference Card","level":"1.8","depth":1,"previous":{"title":"REST Api","level":"1.7","depth":1,"path":"api.md","ref":"api.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"service_ref_card.md","mtime":"2017-02-08T09:25:59.814Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"SSH for WaTTS","level":"1.4.6","depth":2,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"previous":{"title":"RSP Settings","level":"1.4.5","depth":2,"path":"config_rsp.md","ref":"config_rsp.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_ssh.md","mtime":"2017-10-19T12:13:18.204Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
