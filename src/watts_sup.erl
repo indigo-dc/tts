@@ -37,6 +37,7 @@ init(noparams) ->
              sqlite_worker(),
              temp_cred_sup(),
              temp_cred(),
+             jwt_key_worker(),
              init_worker()
             ],
     Flags = #{},
@@ -81,6 +82,13 @@ init_worker() ->
     #{ id => init,
        start => {watts_init, start_link, []},
        restart => transient
+     }.
+
+%% @doc the jwt key worker configuration
+-spec jwt_key_worker() -> map().
+jwt_key_worker() ->
+    #{ id => jwt_key_worker,
+       start => {watts_jwt_keys, start_link, []}
      }.
 
 %% @doc the sqlite worker configuration

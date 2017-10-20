@@ -67,8 +67,8 @@ new_session() ->
 get_session(undefined) ->
     {ok, undefined};
 get_session(Jwt) ->
-    Key = ?CONFIG(jwt_key),
-    case erljwt:validate(Jwt, [rs256], #{}, Key) of
+    Keys = ?CONFIG(jwt_keys),
+    case erljwt:validate(Jwt, [rs256], #{}, Keys) of
         {ok, #{claims := #{ token := Token }}} ->
             lookup_session_pid(Token);
         _ ->
@@ -83,7 +83,7 @@ get_session(Jwt) ->
 get_cookie_data(Session) ->
     {ok, Max} = watts_session:get_max_age(Session),
     {ok, Token} = watts_session:get_sess_token(Session),
-    Key = ?CONFIG(jwt_key),
+    [Key | _] = ?CONFIG(jwt_keys),
     Jwt = erljwt:create(rs256, #{token => Token}, Max, Key),
     {ok, Max, Jwt}.
 
