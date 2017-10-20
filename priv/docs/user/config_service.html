@@ -1,0 +1,655 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Service Settings · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="config_rsp.html" />
+    
+    
+    <link rel="prev" href="config_provider.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="user.html">
+            
+                <a href="user.html">
+            
+                    
+                    User Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="admin.html">
+            
+                <a href="admin.html">
+            
+                    
+                    Deployment And Administration Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="config.html">
+            
+                <a href="config.html">
+            
+                    
+                    Configuration Guide
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.4.1" data-path="config_example.html">
+            
+                <a href="config_example.html">
+            
+                    
+                    Config Example
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.2" data-path="config_server.html">
+            
+                <a href="config_server.html">
+            
+                    
+                    Server Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.3" data-path="config_provider.html">
+            
+                <a href="config_provider.html">
+            
+                    
+                    OpenId Connect Provider Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.4.4" data-path="config_service.html">
+            
+                <a href="config_service.html">
+            
+                    
+                    Service Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.5" data-path="config_rsp.html">
+            
+                <a href="config_rsp.html">
+            
+                    
+                    RSP Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.6" data-path="config_ssh.html">
+            
+                <a href="config_ssh.html">
+            
+                    
+                    SSH for WaTTS
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="developer.html">
+            
+                <a href="developer.html">
+            
+                    
+                    Developer Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="rsp.html">
+            
+                <a href="rsp.html">
+            
+                    
+                    Relying Service Provider (RSP) Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="api.html">
+            
+                <a href="api.html">
+            
+                    
+                    REST Api
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.8" data-path="service_ref_card.html">
+            
+                <a href="service_ref_card.html">
+            
+                    
+                    WaTTS - Service Reference Card
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Service Settings</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="services">Services</h1>
+<h2 id="introduction">Introduction</h2>
+<p>A service is a single entity for which a user can request credentials.
+The configuration of a service consists of one group of <em>service</em> settings.</p>
+<p>To create credentials, WaTTS connects to the service, either locally or
+remotely using <em>ssh</em>. After the connection is established, a command is
+executed and the subsequent result is parsed and interpreted.</p>
+<p>The executed commands are also called <em>plugins</em>; for further information on how
+the plugins work and how to implement them, see the documentation for developers.</p>
+<p>The plugins are not part of WaTTS, so they can be changed independant of WaTTS and
+also maintained by the community.</p>
+<p>Known plugins(use them at your own risk):</p>
+<ul>
+<li><a href="https://github.com/indigo-dc/tts_plugin_info" target="_blank">Info plugin</a></li>
+<li><a href="https://github.com/indigo-dc/tts_plugin_opennebula" target="_blank">OpenNebula</a></li>
+<li><a href="https://github.com/indigo-dc/tts_plugin_ca" target="_blank">Simple CA</a></li>
+</ul>
+<p>Feel free to add an issue to get your plugin listed above.</p>
+<h2 id="settings">Settings</h2>
+<p>Each setting is prefixed with &apos;service.<code>id</code>.&apos; where <code>id</code> must be replaced by the id
+you want to give to the service.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Key</th>
+<th>Description</th>
+<th style="text-align:center">Datatype</th>
+<th style="text-align:center">Mandatory</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">description</td>
+<td>A description of the service for the user</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">cmd</td>
+<td>The command to execute after connecting, needs to be executable/readable by the user WaTTS is running as</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">cmd_env_use</td>
+<td>The parameter will not be passed at the command line but put into an environment variable. The default is &apos;false&apos;.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">cmd_env_var</td>
+<td>The name of the environment variable containing the parameter, only used if <code>cmd_env_use</code> is true</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">credential_limit</td>
+<td>The maximum number of retrievable credentials</td>
+<td style="text-align:center">integer or &apos;infinite&apos;</td>
+<td style="text-align:center">no (infinite)</td>
+</tr>
+<tr>
+<td style="text-align:center">parallel_runner</td>
+<td>The number of parallel runs of the plugin for the service</td>
+<td style="text-align:center">integer or &apos;infinite&apos;</td>
+<td style="text-align:center">no, (1)</td>
+</tr>
+<tr>
+<td style="text-align:center">allow_same_state</td>
+<td>Whether the plugin is allowed to return the same state more than once</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no, (false)</td>
+</tr>
+<tr>
+<td style="text-align:center">plugin_timeout</td>
+<td>The time after which WaTTS won&apos;t wait for the result of the plugin execution anymore</td>
+<td style="text-align:center">duration or &apos;infinity&apos;</td>
+<td style="text-align:center">no (infinity)</td>
+</tr>
+<tr>
+<td style="text-align:center">pass_access_token</td>
+<td>Whether the  access token should be passed to the plugin. Enabling this is adding a security risk!</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no (false)</td>
+</tr>
+<tr>
+<td style="text-align:center">connection.type</td>
+<td>Either local or ssh</td>
+<td style="text-align:center">&apos;local&apos; or &apos;ssh&apos;</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">connection.user</td>
+<td>The user name to use when connecting e.g. with ssh</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">connection.password</td>
+<td>The password to use when connecting e.g. with ssh</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">connection.host</td>
+<td>The hostname to connect to e.g. with ssh</td>
+<td style="text-align:center">host</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">connection.port</td>
+<td>The port number to connect to e.g. with ssh</td>
+<td style="text-align:center">port</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">connection.ssh_dir</td>
+<td>The ssh_dir to use with ssh</td>
+<td style="text-align:center">port</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">connection.ssh_key_pass</td>
+<td>The password of the private key to use with ssh</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">plugin.<code>key</code></td>
+<td>A setting to send to the plugin, the name of the parameter will be <code>key</code>. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs</td>
+<td style="text-align:center">any</td>
+<td style="text-align:center">no</td>
+</tr>
+<tr>
+<td style="text-align:center">authz.allow.<code>p</code>.<code>k</code>.<code>o</code></td>
+<td>See the Authorization section</td>
+<td style="text-align:center">other</td>
+<td style="text-align:center">no ([])</td>
+</tr>
+<tr>
+<td style="text-align:center">authz.forbid.<code>p</code>.<code>k</code>.<code>o</code></td>
+<td>See the Authorization section</td>
+<td style="text-align:center">other</td>
+<td style="text-align:center">no ([])</td>
+</tr>
+<tr>
+<td style="text-align:center">authz.hide</td>
+<td>Hide the service if the user is not allowed</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no (false)</td>
+</tr>
+<tr>
+<td style="text-align:center">authz.tooltip</td>
+<td>Message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no (false)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="authorization">Authorization</h2>
+<p>Authorization follows a few simple steps:</p>
+<ol>
+<li>at first everyone is forbidden</li>
+<li>if an <code>allow</code> rule that matches the user evaluates to true, she is allowed</li>
+<li>if a <code>forbid</code> rule that matches the user evaluates to true, he is forbidden</li>
+</ol>
+<p>So a for a user to access a service she:</p>
+<ul>
+<li>MUST match at least one <code>allow</code> rule</li>
+<li>MUST NOT match any <code>forbid</code> rule</li>
+</ul>
+<p>Each rule is exactly one line long. A rule always consists of five parts:
+<code>authz.allow.p.k.o = v</code>, where the values are:</p>
+<ul>
+<li><code>p</code>: the Id of the provider, this can either be an OpenID Connect provider or an rsp</li>
+<li><code>k</code>: the key within the OpenId Connect Id-Token or user information</li>
+<li><code>info</code>: the information in the Id Token or user information with the key <code>k</code></li>
+<li><code>o</code>: the operation to perform</li>
+<li><code>v</code>: the value</li>
+</ul>
+<p>The provider Id for an OpenID Connect provider is the same as was given during the configuration,
+in the provider example above the <em>id</em> was <code>iam</code>, so using that for <code>p</code> allows making decisions
+on users coming from <code>iam</code>.</p>
+<p>The provider Id for an RSP is the id of the RSP prefixed with an &apos;rsp-&apos;. So the simple RSP in
+the example above would have the <em>id</em> <code>rsp-simple</code>. All connections from an RSP get logged in
+by the information sent by the RSP, an additional login at configured OpenID Connect providers
+can be performed.</p>
+<p>There is a special provider <em>id</em> value, <code>any</code>, which matches any provider, meaning any OpenID
+Connect or RSP provider.</p>
+<p>The key <code>k</code> has to match a value of the <em>id</em> token or the user info. The value of the
+<em>Id Token</em> offers <em>Userinfo</em>, i.e. having the key <code>k</code> is the <code>info</code>.
+If the key is not present:</p>
+<ul>
+<li><code>allow</code> rule evaluates to <em>false</em></li>
+<li><code>forbid</code> rule evaluates to <em>true</em></li>
+</ul>
+<p>The operation <code>o</code> can be one of the following list:</p>
+<ul>
+<li><code>contains</code>: the <code>info</code> can either be a list or a string<ul>
+<li>a <em>list</em>: the value <code>v</code> must be a member of the list <code>info</code></li>
+<li>a <em>string</em>: the value <code>v</code> must be part of the string <code>info</code></li>
+</ul>
+</li>
+<li><code>is_member_of</code>: the value <code>v</code> must be a comma separated list (with no spaces!) and <code>info</code> needs to be a member of that list</li>
+<li><code>equals</code>: <code>v</code> and <code>info</code> need to be equal</li>
+<li><code>regexp</code>: <code>v</code> is a regular expression and <code>info</code> needs to satisfy the expression</li>
+<li><code>any</code>: evaluates to <code>v</code>, so to make this pass set <code>v</code> to &apos;true&apos;</li>
+</ul>
+<h2 id="examples">Examples</h2>
+<pre><code># &apos;p&apos; is any, so matching all providers
+# &apos;k&apos; is sub, the subject of the id token, this is always present
+# &apos;info&apos; can be ignored due to
+  # &apos;o&apos; being &apos;any&apos;
+  # &apos;v&apos; is true
+# The following line is an example allowing anyone from any provider:
+service.info.authz.allow.any.sub.any = true
+
+
+# &apos;p&apos; is iam, so matching only the provider with the id iam
+# &apos;k&apos; is sub, the subject of the id token, which for sure is always present
+# &apos;info&apos; can be ignored due to
+  # &apos;o&apos; being &apos;any&apos;
+  # &apos;v&apos; is true
+# The next line shows an example allowing anyone from the iam provider:
+service.info.authz.allow.iam.sub.any = true
+
+# The examples below will concentrate on the operations.
+
+# &apos;k&apos; is a group, i.e. the groups the user belongs to
+# &apos;info&apos; should be a list
+# &apos;o&apos; has value &apos;contains&apos;
+# &apos;v&apos; is &apos;Developer&apos;
+# The following line allows anyone whose group list contains &apos;Developer&apos; and is
+# from the iam provider
+service.info.authz.allow.iam.group.contains = Developer
+
+# &apos;k&apos; is sub
+# &apos;info&apos; is the subject within iam
+# &apos;o&apos; being &apos;is_member_of&apos;
+# &apos;v&apos; is a comma separated list of subjects
+# The following line allows sub1, sub2 and sub3 from the provider iam
+service.info.authz.allow.iam.sub.is_member_of = sub1,sub3,sub2
+</code></pre><h2 id="complete-example">Complete Example</h2>
+<pre><code>service.info.description = Simple Info Service
+service.info.credential_limit = 1
+service.info.connection.type = local
+service.info.cmd = /home/watts/.config/watts/info.py
+service.info.parallel_runner = infinite
+service.info.authz.allow.any.sub.any = true
+# the following will be sent to the plugin
+service.plugin.path = /tmp/data
+</code></pre>
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="config_provider.html" class="navigation navigation-prev " aria-label="Previous page: OpenId Connect Provider Settings">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="config_rsp.html" class="navigation navigation-next " aria-label="Next page: RSP Settings">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Service Settings","level":"1.4.4","depth":2,"next":{"title":"RSP Settings","level":"1.4.5","depth":2,"path":"config_rsp.md","ref":"config_rsp.md","articles":[]},"previous":{"title":"OpenId Connect Provider Settings","level":"1.4.3","depth":2,"path":"config_provider.md","ref":"config_provider.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_service.md","mtime":"2017-10-19T12:12:27.043Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+

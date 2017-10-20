@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>WaTTS - Service Reference Card · GitBook</title>
+        <title>RSP Settings · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.2">
@@ -57,8 +57,10 @@
     <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
 
     
+    <link rel="next" href="config_ssh.html" />
     
-    <link rel="prev" href="api.html" />
+    
+    <link rel="prev" href="config_service.html" />
     
 
     </head>
@@ -192,7 +194,7 @@
             
         </li>
     
-        <li class="chapter " data-level="1.4.5" data-path="config_rsp.html">
+        <li class="chapter active" data-level="1.4.5" data-path="config_rsp.html">
             
                 <a href="config_rsp.html">
             
@@ -262,7 +264,7 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.8" data-path="service_ref_card.html">
+        <li class="chapter " data-level="1.8" data-path="service_ref_card.html">
             
                 <a href="service_ref_card.html">
             
@@ -305,7 +307,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href="." >WaTTS - Service Reference Card</a>
+        <a href="." >RSP Settings</a>
     </h1>
 </div>
 
@@ -320,90 +322,56 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="watts---service-reference-card">WaTTS - Service Reference Card</h1>
-<ul>
-<li>Daemons running:<ul>
-<li>watts - The INDIGO Token Translation service<ul>
-<li>run_erl</li>
-<li>beam.smp (can be multiple, usually #cores + 1)</li>
-</ul>
-</li>
-<li>epmd - erlang distribution daemon</li>
-</ul>
-</li>
-<li>Init scripts and options:<ul>
-<li>watts start - starts WaTTS</li>
-<li>watts stop - stops WaTTS</li>
-<li>watts restart - restarts WaTTS</li>
-<li>watts ping - check if WaTTS is up and running, prints &quot;pong&quot; if up</li>
-<li>watts getpid - prints the pid of WaTTS</li>
-<li>watts version - prints out the verison of WaTTS</li>
-<li>watts console - starts WaTTS in forground mode, e.g. for debugging</li>
-<li>watts attach - connects to the shell of a running WaTTS, use with caution</li>
-</ul>
-</li>
-<li>Configuration files location:<ul>
-<li>/etc/watts/watts.conf - the main configuration file</li>
-</ul>
-</li>
-<li>Logfile locations (and management) and other useful audit information:<ul>
-<li>/var/log/watts/* - all differnet logs</li>
-</ul>
-</li>
-<li>Open ports:<ul>
-<li>8080 - in default config</li>
-<li>4369 - epmd, can be blocked by firewall</li>
-</ul>
-</li>
-<li>Possible unit test of the service:<ul>
-<li>configure at least one OpenID Connect Provider</li>
-<li>configure the info service</li>
-<li>login to WaTTS and request the Info credentials</li>
-<li>a list of informations should be shown</li>
-<li>revoke the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
-username/password for ssh">credential</a></li>
-<li>the screen should look like in the beginning</li>
-</ul>
-</li>
-<li>Where is service state held (and can it be rebuilt):<ul>
-<li>/var/lib/watts - this directory contains all data/state</li>
-<li>/etc/watts - this directory contains all settings</li>
-</ul>
-</li>
-<li>Cron jobs:<ul>
-<li>none</li>
-</ul>
-</li>
-<li>Security information:<ul>
-<li>Access control Mechanism description (authentication &amp; authorization):<ul>
-<li>done via OpenID Connect library, oidcc</li>
-</ul>
-</li>
-<li>How to block/ban a user:<ul>
-<li>either configuer the service authz (see configuration documentation)</li>
-<li>or done in the plugins (see developer documentation)</li>
-</ul>
-</li>
-<li>Network Usage:<ul>
-<li>http connections for the REST/Web interface</li>
-<li>outgoing https connections to OpenId Connect Provider</li>
-<li>other outgoing connections depend upon services/plugins in use</li>
-</ul>
-</li>
-<li>Firewall configuration:<ul>
-<li>only open listen_port and redirect_port configured in watts.conf, in default config port 8080</li>
-</ul>
-</li>
-<li>Security recommendations:<ul>
-<li>run as a dedicated, non-root user</li>
-<li>set up SSL before running in production</li>
-<li>do not use self-signed certificates in production</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-
+                                <h1 id="relying-service-providers">Relying Service Providers</h1>
+<h2 id="introduction">Introduction</h2>
+<p>A relying service provider (RSP) is a service that relys on WaTTS for either performing some
+task or even completely for authentication.</p>
+<h2 id="settings">Settings</h2>
+<p>Each setting is prefixed with &apos;rsp.<code>id</code>.&apos; where <code>id</code> must be replaced by the id
+you want to give to the relying service provider.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Key</th>
+<th>Description</th>
+<th style="text-align:center">Datatype</th>
+<th style="text-align:center">Mandatory (Default)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">keys_location</td>
+<td>the location of the file / web-page containing the json object with the public keys (see below). the location must be a url with either &apos;https://&apos; or &apos;file://&apos; scheme.</td>
+<td style="text-align:center">url</td>
+<td style="text-align:center">yes</td>
+</tr>
+<tr>
+<td style="text-align:center">show_ui</td>
+<td>if set to &apos;false&apos; no user-interface will be shown.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no (true)</td>
+</tr>
+<tr>
+<td style="text-align:center">perform_login</td>
+<td>If set to &apos;false&apos; the user won&apos;t be redirected to a login.</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">no (true)</td>
+</tr>
+<tr>
+<td style="text-align:center">base_url</td>
+<td>The url each url passed to WaTTS in the JWT must start with.</td>
+<td style="text-align:center">string</td>
+<td style="text-align:center">yes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="example">Example</h2>
+<p>An example for an RSP, setting its id to <code>simple</code>:</p>
+<pre><code>rsp.simple.keys_location = https://simple-rsp.kit.edu/jwk
+rsp.simple.perform_login = false
+rsp.simple.show_ui = true
+rsp.simple.base_url = https://simple-rsp.kit.edu
+</code></pre>
                                 
                                 </section>
                             
@@ -430,10 +398,14 @@ username/password for ssh">credential</a></li>
 
             
                 
-                <a href="api.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page: REST Api">
+                <a href="config_service.html" class="navigation navigation-prev " aria-label="Previous page: Service Settings">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
+                
+                <a href="config_ssh.html" class="navigation navigation-next " aria-label="Next page: SSH for WaTTS">
+                    <i class="fa fa-angle-right"></i>
+                </a>
                 
             
         
@@ -442,7 +414,7 @@ username/password for ssh">credential</a></li>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"WaTTS - Service Reference Card","level":"1.8","depth":1,"previous":{"title":"REST Api","level":"1.7","depth":1,"path":"api.md","ref":"api.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"service_ref_card.md","mtime":"2017-02-08T09:25:59.814Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"RSP Settings","level":"1.4.5","depth":2,"next":{"title":"SSH for WaTTS","level":"1.4.6","depth":2,"path":"config_ssh.md","ref":"config_ssh.md","articles":[]},"previous":{"title":"Service Settings","level":"1.4.4","depth":2,"path":"config_service.md","ref":"config_service.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_rsp.md","mtime":"2017-10-19T12:11:27.019Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>

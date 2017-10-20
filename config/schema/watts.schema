@@ -265,7 +265,7 @@
           ]}.
 
 %% @doc the directory to use for e.g. the jwt signing key
-{mapping, "secret_dir", "watts.private_dir", [
+{mapping, "secret_dir", "watts.secret_dir", [
           {default, "{{platform_data_dir}}/secret/"},
           {commented, "{{platform_data_dir}}/secret/"},
           {datatype, string}
@@ -291,6 +291,32 @@
                  cuttlefish:invalid(Msg2)
          end,
          KeyDir
+ end}.
+
+%% @doc the interval in which the jwt signing key will be changed
+{mapping, "jwt_key_rotation_interval", "watts.jwt_key_rotation_interval", [
+          {default, "14d"},
+          {commented, "14d"},
+          {datatype, {duration, s}}
+          ]}.
+
+%% @doc the number of bits to use in the key
+{mapping, "jwt_key_bits", "watts.jwt_key_bits", [
+          {default, 2048},
+          {commented, 2048},
+          {datatype, integer}
+          ]}.
+
+{translation, "watts.jwt_key_bits",
+ fun(Conf) ->
+         Bits = cuttlefish:conf_get("jwt_key_bits", Conf),
+         case Bits < 1024 of
+             true ->
+                 Msg = io_lib:format("the number of bits of the jwt key should at least be 1024"),
+                 cuttlefish:invalid(Msg);
+             _ ->
+                 list_to_binary(io_lib:format("~p",[Bits]))
+         end
  end}.
 
 %% @doc set to true to enable redirection

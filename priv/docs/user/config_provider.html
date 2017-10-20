@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>Relying Service Provider (RSP) Guide · GitBook</title>
+        <title>OpenId Connect Provider Settings · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.2">
@@ -57,10 +57,10 @@
     <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
 
     
-    <link rel="next" href="api.html" />
+    <link rel="next" href="config_service.html" />
     
     
-    <link rel="prev" href="developer.html" />
+    <link rel="prev" href="config_server.html" />
     
 
     </head>
@@ -168,7 +168,7 @@
             
         </li>
     
-        <li class="chapter " data-level="1.4.3" data-path="config_provider.html">
+        <li class="chapter active" data-level="1.4.3" data-path="config_provider.html">
             
                 <a href="config_provider.html">
             
@@ -238,7 +238,7 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.6" data-path="rsp.html">
+        <li class="chapter " data-level="1.6" data-path="rsp.html">
             
                 <a href="rsp.html">
             
@@ -307,7 +307,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href="." >Relying Service Provider (RSP) Guide</a>
+        <a href="." >OpenId Connect Provider Settings</a>
     </h1>
 </div>
 
@@ -322,123 +322,152 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="relying-service-provider-rsp-guide">Relying Service Provider (RSP) Guide</h1>
+                                <h1 id="openid-connect-provider">OpenId Connect Provider</h1>
 <h2 id="introduction">Introduction</h2>
-<p>An RSP is a service that relys on WaTTS to either perform tasks or to authenticate users
-for it, or both.</p>
-<p>Any RSP that wants to rely on WaTTS needs to be configured as described in the configuration guide.
-The two important steps are:</p>
+<p>To provide a login mechanism for the user, at least one OpenId Connect Provider
+is needed.</p>
+<p>WaTTS needs to be registered as a client with OpenId Connect Provider. For this,
+you need to perform the registration process at the Provider of your choice. The
+registration process depends heavily on the Provider and is out of the scope of this
+documentation, if you are unsure you can ask the provider.</p>
+<p>During the registration, some information needs to be provided.
+The redirect <em>uri</em> is created from three settings:</p>
 <ul>
-<li>enable RSP support with <code>enable_rsp = true</code></li>
-<li>configure the RSP according to the &apos;Relying Service Provider&apos; configuration</li>
+<li><code>ssl</code>: http:// (false, default) or https:// (true)</li>
+<li><code>hostname</code>: localhost (default)</li>
+<li><code>port</code>: 8080 (default)</li>
+<li>fix path: /oidc</li>
 </ul>
-<h2 id="how-it-works">How it works</h2>
-<p>WaTTS enables an rsp endpoint at <code>/rsp</code> at wich an RSP can redirect its users.
-The full path to redirect to is <code>https://watts-host/rsp/&lt;jwt&gt;</code>.</p>
-<p>The <code>&lt;jwt&gt;</code> is a JSON Web Token (JWT) generated and signed by the RSP.
-WaTTS will verify the JWT and perform the requested actions, if allowed.</p>
-<p>On error or success the user gets redirected back to the RSP.</p>
-<h2 id="what-an-rsp-needs-to-implement">What an RSP needs to implement</h2>
-<h3 id="a-jwk-endpoint">A JWK endpoint</h3>
-<p>WaTTS needs an endpoint to fetch the public keys used to sign the JWT.
-The json format of the plublic keys file must be according to
-<a href="https://tools.ietf.org/html/rfc7517" target="_blank">RFC7517</a>. The following is an example:</p>
-<pre><code>{&quot;keys&quot;:
-       [
-         {&quot;kty&quot;:&quot;RSA&quot;,
-          &quot;use&quot;:&quot;sig&quot;,
-          &quot;n&quot;: &quot;0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx
-     4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMs
-     tn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2
-     QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbI
-     SD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqb
-     w0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw&quot;,
-          &quot;e&quot;:&quot;AQAB&quot;,
-          &quot;alg&quot;:&quot;RS256&quot;,
-          &quot;kid&quot;:&quot;2011-04-29&quot;}
-       ]
-     }
-</code></pre><p>WaTTS expects the following keys to be present:</p>
-<ul>
-<li>kty of &quot;RSA&quot;</li>
-<li>use of &quot;sig&quot;</li>
-<li>alg of &quot;RS256&quot;</li>
-<li>kid which must also be set in the JWT sent by the RSP</li>
-<li>n (part of the public key)</li>
-<li>e (part of the public key)</li>
-</ul>
-<h3 id="generation-of-jwts">Generation of JWTs</h3>
-<p>The RSP must implement or use a JWT library to sign the JWTs with the private part of the keys
-mentioned above.</p>
-<p>The Jwt header <em>MUST</em> contain the key value pair <code>&quot;typ&quot;: &quot;watts-rsp&quot;</code>.</p>
-<p>The following claims in the JWT are supported:</p>
+<p>For the default settings this results in the redirect uri:
+<a href="http://localhost:8080/oidc" target="_blank">http://localhost:8080/oidc</a>.</p>
+<p>The redirect uri for the settings &apos;SSL = true&apos;, &apos;Port = 443&apos;, &apos;HostName=<a href="GLOSSARY.html#tts" class="glossary-term" title="shortage for Token Translation Service">tts</a>.example.com&apos;
+would be <a href="https://tts.example.com/oidc" target="_blank">https://tts.example.com/oidc</a> (the port is not added as it is the default
+port for https, it would be the same for port 80 on SSL = false).</p>
+<p>If you are unsure, just start the WaTTS and check the logs. During the start of WaTTS, it prints
+some messages starting with <code>Init:</code>, one of them is <code>Init: using local endpoint ....</code>
+telling you which uri to use.</p>
+<p>WaTTS uses the &apos;code-auth-flow&apos; and is a &apos;web-application&apos;.</p>
+<h4 id="general-settings">General Settings</h4>
+<p>WaTTS verifies the complete SSL chain if https is used and is very strict to ensure the
+integrity for the user using WaTTS.</p>
+<p>To be able to verify a remote certificate WaTTS needs to know where the supported certification
+authority certificates are stored. The second information WaTTS needs is the allowed depth of
+CA and intermediate CAs to have before reaching the server certificate.</p>
 <table>
 <thead>
 <tr>
 <th style="text-align:center">Key</th>
 <th>Description</th>
 <th style="text-align:center">Datatype</th>
-<th style="text-align:center">Mandatory</th>
+<th style="text-align:center">Default</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align:center">iss</td>
-<td>The Id of the RSP in the configuration file at WaTTS</td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">yes</td>
+<td style="text-align:center">oidc.cacertfile</td>
+<td>The file containing all trusted CAs</td>
+<td style="text-align:center">file</td>
+<td style="text-align:center">none</td>
 </tr>
 <tr>
-<td style="text-align:center">sub</td>
-<td>The representation of the user at the RSP</td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">yes</td>
-</tr>
-<tr>
-<td style="text-align:center">exp</td>
-<td>The expiration time of the jwt <a href="https://tools.ietf.org/html/rfc7519#section-4.1.4" target="_blank">see RFC7519</a></td>
+<td style="text-align:center">oidc.cert_depth</td>
+<td>The number of intermediate CAs allowd</td>
 <td style="text-align:center">integer</td>
-<td style="text-align:center">yes</td>
+<td style="text-align:center">1</td>
 </tr>
 <tr>
-<td style="text-align:center">iat</td>
-<td>The time at which the jwt was issued <a href="https://tools.ietf.org/html/rfc7519#section-4.1.6" target="_blank">see RFC7519</a></td>
+<td style="text-align:center">oidc.cache_duration</td>
+<td>The time, in seconds, http request to userinfo/tokeninfo are allowed to get cacheed. The purpose is to keep high load from the OpenId Connect Provider. Yet this also means that there is a 90 second window in which a user might still be allowed to perform actions although he has been blocked at the IdP</td>
+<td style="text-align:center">integer, &apos;none&apos;</td>
+<td style="text-align:center">90</td>
+</tr>
+<tr>
+<td style="text-align:center">oidc.cache_clean</td>
+<td>The amount of time (in seconds) to wait before cleaning up the cache</td>
 <td style="text-align:center">integer</td>
-<td style="text-align:center">yes</td>
+<td style="text-align:center">300</td>
 </tr>
 <tr>
-<td style="text-align:center">watts_service</td>
-<td>The Id of the service to trigger at WaTTS</td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">yes</td>
+<td style="text-align:center">oidc.request_timeout</td>
+<td>The number of seconds an http request is allowed to take</td>
+<td style="text-align:center">integer</td>
+<td style="text-align:center">300</td>
 </tr>
 <tr>
-<td style="text-align:center">watts_params</td>
-<td>The parameter to pass to the service at WaTTS</td>
-<td style="text-align:center">JSON object</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">oidc.use_cookie</td>
+<td>If cookies should be used to identify the user during login</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">true</td>
 </tr>
 <tr>
-<td style="text-align:center">watts_provider</td>
-<td>The Id of the OpenID Connect provider to use for logging in</td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">oidc.check_user_agent</td>
+<td>Wether the user agent identifier should be verified</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">true</td>
 </tr>
 <tr>
-<td style="text-align:center">success_url</td>
-<td>The url to redirect to in case of success, if not set WaTTs will redirect to the referer</td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">no</td>
-</tr>
-<tr>
-<td style="text-align:center">failed_url</td>
-<td>The url to redirect to in case of failure, if not set WaTTs will redirect to success_url</td>
-<td style="text-align:center">string</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">oidc.check_peer_ip</td>
+<td>Should the remote IP be checked when logging in the user</td>
+<td style="text-align:center">boolean</td>
+<td style="text-align:center">true</td>
 </tr>
 </tbody>
 </table>
+<h2 id="example">Example</h2>
+<pre><code># this should be the setting on debian based systems if you want to trust the default bundle
+oidc.cacertfile = /etc/ssl/certs/ca-certificates.crt
+# this should be the setting on centos systems if you want to trust the default bundle
+oidc.cacertfile = /etc/ssl/certs/ca-bundle.crt
 
+# on both systems you can cange the allowed depth by
+oidc.cert_depth = 5
+</code></pre><h2 id="provider-settings">Provider Settings</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Key</th>
+<th>Description</th>
+<th style="text-align:center">Datatype</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">description</td>
+<td>A description of the Provider, shown at the login Screen</td>
+<td style="text-align:center">string</td>
+</tr>
+<tr>
+<td style="text-align:center">client_id</td>
+<td>The client id received at the registration</td>
+<td style="text-align:center">string</td>
+</tr>
+<tr>
+<td style="text-align:center">client_secret</td>
+<td>The client secret received at the registration</td>
+<td style="text-align:center">string</td>
+</tr>
+<tr>
+<td style="text-align:center">config_endpoint</td>
+<td>The configuration endpoint of the provider, ensure you are using ssl</td>
+<td style="text-align:center">url</td>
+</tr>
+<tr>
+<td style="text-align:center">request_scopes</td>
+<td>the scopes to request</td>
+<td style="text-align:center">comma separated list</td>
+</tr>
+</tbody>
+</table>
+<p>Each setting is prefixed with &apos;openid.<code>id</code>.&apos; where <code>id</code> must be replaced by the id
+you want to give to the provider. The <code>id</code> MUST not be &apos;any&apos; or start with &apos;rsp&apos;.</p>
+<h2 id="example">Example</h2>
+<p>An example for the IAM OpenId Connect Provider, setting its id to <code>iam</code>:</p>
+<pre><code>openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)
+openid.iam.client_id = &lt;insert the client id&gt;
+opemid.iam.client_secret =  &lt;insert the client secret&gt;
+openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration
+openid.iam.request_scopes = openid, profile
+</code></pre>
                                 
                                 </section>
                             
@@ -465,12 +494,12 @@ mentioned above.</p>
 
             
                 
-                <a href="developer.html" class="navigation navigation-prev " aria-label="Previous page: Developer Guide">
+                <a href="config_server.html" class="navigation navigation-prev " aria-label="Previous page: Server Settings">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
                 
-                <a href="api.html" class="navigation navigation-next " aria-label="Next page: REST Api">
+                <a href="config_service.html" class="navigation navigation-next " aria-label="Next page: Service Settings">
                     <i class="fa fa-angle-right"></i>
                 </a>
                 
@@ -481,7 +510,7 @@ mentioned above.</p>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Relying Service Provider (RSP) Guide","level":"1.6","depth":1,"next":{"title":"REST Api","level":"1.7","depth":1,"path":"api.md","ref":"api.md","articles":[]},"previous":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"rsp.md","mtime":"2017-07-11T13:38:43.548Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"OpenId Connect Provider Settings","level":"1.4.3","depth":2,"next":{"title":"Service Settings","level":"1.4.4","depth":2,"path":"config_service.md","ref":"config_service.md","articles":[]},"previous":{"title":"Server Settings","level":"1.4.2","depth":2,"path":"config_server.md","ref":"config_server.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_provider.md","mtime":"2017-10-19T12:10:47.159Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-10-20T10:53:46.253Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
