@@ -1,4 +1,3 @@
-
 %% @doc this module takes care of running a plugin in an environment and
 %% controlling and validating its results.
 %% It is implemented as a gen_server so that each run of a plugin has a
@@ -56,22 +55,44 @@
           cmd_output = undefined,
           error = undefined
          }).
+-export_type([config/0]).
 
+-type state() :: #state{}.
+
+-type config() :: #{action =>  parameter | request | revoke ,
+                    service_id => binary(),
+                    queue => atom(),
+                    user_info => watts_userinfo:userinfo(),
+                    cred_state => binary() | undefined,
+                    params => map() | undefined
+                   }.
 %% API.
 
+
+%% @doc start the gen_server process in a linked manner.
 -spec start_link() -> {ok, pid()}.
 start_link() ->
-    gen_server:start_link(?MODULE, [], []).
+    gen_server:start_link(?MODULE, noparams, []).
 
+%% @doc start the gen_server process (not linked).
 -spec start() -> {ok, pid()}.
 start() ->
-    gen_server:start(?MODULE, [], []).
+    gen_server:start(?MODULE, noparams, []).
 
+%% @doc stop the gen_server.
 -spec stop(Pid::pid()) -> ok.
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
 
+%% @doc Request the action configured in the config passed.
+%% The action can be one of the suppoerted actions:
+%% <ul>
+%% <li> parameter </li>
+%% <li> request </li>
+%% <li> revoke </li>
+%% </ul>
+-spec request_action(config(), pid()) -> ok.
 request_action(#{action := Action, service_id := ServiceId} = ConfigIn, Pid) ->
     try
         {ok, ServiceInfo} = watts_service:get_info(ServiceId),
@@ -87,7 +108,8 @@ request_action(#{action := Action, service_id := ServiceId} = ConfigIn, Pid) ->
 
 %% gen_server.
 
-init([]) ->
+-spec init(noparams) -> {ok, state()}.
+init(noparams) ->
     {ok, #state{}}.
 
 handle_call({request_action,
