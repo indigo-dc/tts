@@ -31,61 +31,123 @@
 -export([get_credential_limit/1]).
 -export([get_queue/1]).
 
--spec get_list() -> {ok, [map()]}.
+
+-export_type([info/0, limited_info/0, connection/0]).
+
+-type info() :: #{ id => binary(),
+                   description => binary(),
+                   cmd => binary(),
+                   cmd_env_use => boolean(),
+                   cmd_env_var => string(),
+                   cred_limit => infinite | integer(),
+                   allow_same_state => boolean(),
+                   plugin_conf => map(),
+                   plugin_version => undefined | binary(),
+                   params => [parameter_set()],
+                   parallel_runner => infinite | integer(),
+                   pass_access_token => boolean(),
+                   plugin_timeout => infinity | integer(),
+                   connection => connection(),
+                   authz => watts_service_authz:config(),
+                   queue => atom(),
+                   enabled => boolean()
+                 }.
+
+-type parameter_set() :: #{ key => binary(),
+                            name => binary(),
+                            description => binary(),
+                            type => atom(),
+                            mandatory => boolean() }.
+
+-type limited_info() :: #{ id => binary(),
+                           description => binary(),
+                           cred_limit => infinite | integer(),
+                           pass_access_token => boolean(),
+                           enabled => boolean(),
+                           params => [],
+
+                           limit_reached => boolean(),
+                           cred_count => integer(),
+                           authorized => boolean(),
+                           authz_tooltip => binary()
+                         }.
+
+-type connection() :: #{ type => local | ssh,
+                         user => undefined | string(),
+                         passwd => undefined | string(),
+                         host => undefined | string(),
+                         port => undefined | integer(),
+                         ssh_dir => undefined | string(),
+                         ssh_key_pass => undefined | string()
+                       }.
+
+
+-spec get_list() -> {ok, [info()]}.
 get_list() ->
      watts_ets:service_get_list().
 
 -spec get_list(UserInfo :: watts_userinfo:userinfo()) ->
-                      {ok, [map()]}.
+                      {ok, [limited_info()]}.
 get_list(UserInfo) ->
     {ok, ServiceList} = get_list(),
+    {ok, ServicesOfUser} = filter_list_for_user(UserInfo, ServiceList),
+    update_limits_for_user(UserInfo, ServicesOfUser).
+
+
+-spec filter_list_for_user(watts_userinfo:info(), [info()]) ->
+                                  {ok, [info()]}.
+filter_list_for_user(UserInfo, ServiceList) ->
+    Filter = fun(#{ id := ServiceId, authz := AuthzConf} ) ->
+                     Show = not maps:get(hide, AuthzConf, false),
+                     Show orelse is_allowed(ServiceId, UserInfo, AuthzConf)
+             end,
+    {ok, lists:filter(Filter, ServiceList)}.
+
+
+-spec update_limits_for_user(watts_userinfo:info(), [info()])
+                            -> {ok, [limited_info()]}.
+update_limits_for_user(UserInfo, ServiceList) ->
     UpdateLimit
         = fun(Service, List) ->
                   #{ id := ServiceId,
-                     authz := #{hide := Hide,
-                                tooltip := Tooltip
-                               } = AuthzConf
+                     cred_limit := Limit,
+                     authz := AuthzConf
                    } = Service,
-                  Limit = maps:get(cred_limit, Service, 0),
-                  {ok, Count} = watts_plugin:get_count(UserInfo,
-                                                     ServiceId),
-                  LimitReached = (Count >= Limit),
+                  Tooltip = maps:get(tooltip, AuthzConf),
                   Authz = is_allowed(ServiceId, UserInfo, AuthzConf),
-
+                  {ok, Count} = watts_plugin:get_count(UserInfo, ServiceId),
+                  LimitReached = (Count >= Limit),
                   Update = #{ limit_reached => LimitReached,
-                              cred_limit => Limit,
                               cred_count => Count,
                               authorized => Authz,
                               authz_tooltip => Tooltip
                             },
-                  Show = Authz or (not Hide),
-                  case Show of
-                      true ->
-                          Keys = [id, description, type, host, port, enabled,
-                                  cred_count, cred_limit, limit_reached, params,
-                                  authorized, authz_tooltip, pass_access_token],
-                          Entry = maps:with(Keys, maps:merge(Service, Update)),
-                          [ Entry | List];
-                      _ ->
-                          List
-                  end
+                  Keys = [id, description, enabled, params,
+                          pass_access_token, cred_limit,
+                          cred_count, limit_reached,
+                          authorized, authz_tooltip],
+                  Entry = maps:with(Keys, maps:merge(Service, Update)),
+                  [ Entry | List]
           end,
     {ok, lists:reverse(lists:foldl(UpdateLimit, [], ServiceList))}.
 
 
+
+-spec get_info(binary()) -> {ok, info()} | {error, Reason :: atom()}.
 get_info(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, Info};
         Other -> Other
     end.
 
+-spec get_credential_limit(binary()) -> {ok, integer()}.
 get_credential_limit(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, maps:get(cred_limit, Info, 0)};
         _ -> {ok, 0}
     end.
 
-
+-spec exists(binary()) -> boolean().
 exists(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
         {ok, _} ->
@@ -94,18 +156,21 @@ exists(ServiceId) ->
             false
      end.
 
+-spec get_queue(binary()) -> {ok, atom()}.
 get_queue(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, maps:get(queue, Info, undefined)};
         _ -> {ok, undefined}
     end.
 
+-spec is_enabled(binary()) -> boolean().
 is_enabled(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> maps:get(enabled, Info, false);
         _ -> false
     end.
 
+-spec allows_same_state(binary()) -> boolean().
 allows_same_state(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> maps:get(allow_same_state, Info, false);
@@ -129,6 +194,7 @@ is_allowed(ServiceId, UserInfo, AuthzConf) ->
     watts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
 
 
+-spec are_params_valid(map(), info() | limited_info()) -> boolean().
 are_params_valid(Params, #{params := ParamSets})
   when is_map(Params) ->
     ToBinary = fun(Key, List) when is_binary(Key) ->
@@ -153,6 +219,8 @@ are_params_valid(_Params, _Service) ->
     false.
 
 
+
+-spec fulfills_paramset([binary()], [parameter_set()]) -> boolean().
 fulfills_paramset([], []) ->
     true;
 fulfills_paramset(_, []) ->
@@ -418,6 +486,9 @@ list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
     maps:remove(plugin_conf_config, Info).
 
 
+%% @doc start the runnuner queue if needed.
+%% stores the name of the queue at 'queue'.
+-spec start_runner_queue_if_needed(info()) -> {ok, info()}.
 start_runner_queue_if_needed(#{enabled := true,
                                parallel_runner := NumRunner,
                                id := Id
@@ -436,13 +507,16 @@ start_runner_queue_if_needed(Info) ->
     {ok, Info}.
 
 
-
-
+%% @doc update the config of the service in the ets.
+-spec update_service(binary(), info()) -> ok | {error, Reason :: atom()}.
 update_service(Id, NewInfo) when is_map(NewInfo) ->
     watts_ets:service_update(Id, NewInfo);
 update_service( _, _) ->
     {error, invalid_config}.
 
+
+%% @doc convert the valut to the given type.
+-spec convert_to_type(binary(), atom()) -> {ok, binary() | atom()}.
 convert_to_type(Value, string)
   when is_binary(Value) ->
     {ok, Value};
@@ -463,7 +537,8 @@ convert_to_type(_, _) ->
     {error, bad_value}.
 
 
-
+%% @doc convert the binary to an existing atom or unknown.
+-spec to_atom(binary()) -> atom().
 to_atom(Type) ->
     try
         binary_to_existing_atom(Type, utf8)
@@ -471,14 +546,20 @@ to_atom(Type) ->
             unknown
     end.
 
+%% @doc convert the type to a configuration type.
+-spec to_conf_type(binary()) -> atom().
 to_conf_type(Type) ->
     ValidTypes = [boolean, string],
     to_valid_type(Type, ValidTypes).
 
+%% @doc convert the type to a request type.
+-spec to_request_type(binary()) -> atom().
 to_request_type(Type) ->
     ValidTypes = [textarea],
     to_valid_type(Type, ValidTypes).
 
+%% @doc try to convert the type to an atom and find it in the given list.
+-spec to_valid_type(binary(), [atom()]) -> atom().
 to_valid_type(Type, ValidTypes) ->
     AType = to_atom(Type),
     case lists:member(AType, ValidTypes) of
@@ -488,12 +569,17 @@ to_valid_type(Type, ValidTypes) ->
             unknown
     end.
 
+%% @doc generate the name of a queue: the atom 'watts_service-ID'.
+%% Where ID is the id of the service.
+-spec gen_queue_name(binary()) -> atom().
 gen_queue_name(Id) when is_binary(Id) ->
     Dash = <<"-">>,
     Module = atom_to_binary(?MODULE, utf8),
     QueueName = << Module/binary, Dash/binary, Id/binary >>,
     binary_to_atom(QueueName, utf8).
 
+%% @doc return if a key is valid.
+-spec is_valid_key(binary()) -> boolean().
 is_valid_key(Key) when is_binary(Key) ->
     CharList = binary_to_list(Key),
     IsValid = fun(Char, Current) ->
@@ -502,6 +588,8 @@ is_valid_key(Key) when is_binary(Key) ->
     lists:foldl(IsValid, true, CharList).
 
 
+%% @doc ceck if the character is valid within a key
+-spec is_valid_key_char(integer()) -> boolean().
 is_valid_key_char($a) ->
     true;
 is_valid_key_char($b) ->
