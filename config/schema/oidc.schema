@@ -1,3 +1,5 @@
+%% -*- erlang -*-
+
 %% @doc the description of the OpenId Connect provider
 %% this description is shown to the user
 {mapping, "openid.$id.description", "watts.provider_list", [

@@ -1,3 +1,5 @@
+%% -*- erlang -*-
+
 %% @doc the description of the service, as shown to the user
 {mapping, "service.$id.description", "watts.service_list", [
           {datatype, string}
@@ -435,6 +437,9 @@
                                   cred_limit => CredLimit,
                                   allow_same_state => SameState,
                                   plugin_conf_config => PluginConf,
+                                  plugin_conf => #{},
+                                  plugin_version => undefined,
+                                  params => [],
                                   parallel_runner => ParaRunner,
                                   pass_access_token => PassAccToken,
                                   plugin_timeout => PluginTimeout,
