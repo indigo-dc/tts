@@ -103,7 +103,7 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
 
 %% @doc get the list of credentials for a user
 %% A callback from the watts_persistent behaviour.
--spec credential_get_list(UserId::binary()) -> {ok, [watts:cred()]}.
+-spec credential_get_list(UserId::binary()) -> {ok, [watts:credential()]}.
 credential_get_list(UserId) ->
     MatchSpec = [{#credential{user_id=UserId, _='_'}, [],
                   ['$_']}],
@@ -145,7 +145,7 @@ credential_get_count(UserId, ServiceId) ->
 %% @doc get a specific credential.
 %% A callback from the watts_persistent behaviour.
 -spec credential_get(CredId::binary())
-                    -> {ok, watts:cred()} | {error, Reason::atom()}.
+                    -> {ok, watts:credential()} | {error, Reason::atom()}.
 credential_get(Uuid) ->
     Get =
         fun() ->

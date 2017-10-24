@@ -42,13 +42,13 @@
     {ok, CredentialID ::binary()} | {error, Reason :: atom()}.
 
 -callback credential_get_list(UserId::binary()) ->
-    {ok, [watts:cred()]}.
+    {ok, [watts:credential()]}.
 
 -callback credential_get_count(UserId::binary(), ServiceId::binary()) ->
     {ok, pos_integer()}.
 
 -callback credential_get(CredId::binary()) ->
-    {ok, watts:cred()} | {error, Reason :: atom()}.
+    {ok, watts:credential()} | {error, Reason :: atom()}.
 
 -callback credential_remove(UserId::binary(), CredentialId::binary()) ->
     ok | {error, Reason :: atom()}.
@@ -79,7 +79,7 @@ credential_store(UserId, ServiceId, Interface, CredState,
 
 %% @doc fetch the list of all credentials for a user.
 %% using the configured database.
--spec credential_fetch_list(UserId :: binary()) -> {ok, [watts:cred()]}.
+-spec credential_fetch_list(UserId :: binary()) -> {ok, [watts:credential()]}.
 credential_fetch_list(UserId) ->
     Mod = mod(),
     Mod:credential_get_list(UserId).
@@ -96,16 +96,16 @@ credential_service_count(UserId, ServiceId) ->
 %% @doc get the credential with the Id for the given User.
 %% using the configured database.
 -spec credential_fetch(CredId :: binary(), UserId :: binary())
-                      -> {ok, watts:cred()} | {error, Reason :: atom()}.
+                      -> {ok, watts:credential()} | {error, Reason :: atom()}.
 credential_fetch(CredId, UserId) ->
     Mod = mod(),
     CredResult = Mod:credential_get(CredId),
     ensure_credential_of_user(CredResult, UserId).
 
 %% @doc this function ensures that credentials are only returned to their owner.
--spec ensure_credential_of_user({ok, watts:cred()} |
+-spec ensure_credential_of_user({ok, watts:credential()} |
                                 {error, Reason:: atom()}, UserId :: binary())
-                               -> {ok, watts:cred()} |
+                               -> {ok, watts:credential()} |
                                   {error, Reason :: atom()}.
 ensure_credential_of_user({ok, #{user_id := UserId}} = Result, UserId) ->
     Result;

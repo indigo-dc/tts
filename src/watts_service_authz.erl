@@ -19,7 +19,7 @@
 -export([is_authorized/3]).
 -export([validate_config/2]).
 
--export_type([config/0]).
+-export_type([config/0, rule/0]).
 
 -type operation() :: contains | is_member_of | equals | regexp | any.
 -type value() :: binary() | [binary()] | re:mp() | boolean().
@@ -29,7 +29,8 @@
                  ConfigValue :: value()
                 }.
 -type rules() :: [ rule() ].
--type config() :: #{allow => rules(), forbid => rules()}.
+-type config() :: #{allow => rules(), forbid => rules(), tooltip => binary(),
+                    hide => boolean()}.
 
 
 

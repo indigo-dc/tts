@@ -166,9 +166,9 @@ request_timeout_test() ->
                       params => Params,
                       queue => undefined},
 
-        {ok, Map, _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
+        {error, timeout} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
         ok = test_util:wait_for_process_to_die(ReqPid,100),
-        ?assertEqual(error, maps:get(result, Map, undefined))
+        ok
     after
         ok = stop_meck(Meck)
     end,

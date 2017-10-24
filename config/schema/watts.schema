@@ -1,3 +1,5 @@
+%% -*- erlang -*-
+
 %% store the current system time at starting of parsing the config
 %% this is a more accurate value than at start of the init gen_server
 {mapping, "watts.start_time", "watts.start_time", [

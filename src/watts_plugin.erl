@@ -1,3 +1,13 @@
+%% @doc this module implements the high level view of a plugin and service.
+%% It exports the high level functions like
+%% <ul>
+%% <li> request </li>
+%% <li> revoke </li>
+%% </ul>
+%% So triggering a plugin runner for a given service and validating the result
+%% afterwards.
+%% This module is not aware of the actual run binary.
+
 -module(watts_plugin).
 %%
 %% Copyright 2016 - 2017 SCC/KIT
@@ -14,6 +24,7 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%
+
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -behaviour(gen_server).
 -include("watts.hrl").
@@ -38,25 +49,58 @@
 -export([terminate/2]).
 -export([code_change/3]).
 
+-export_type([result/0]).
+
+-type cred_entry() :: #{ name => binary(),
+                         type => binary(),
+                         valye => binary(),
+                         _ => _
+                       }.
+
+-type result() :: {ok, #{id => binary(), entries => [cred_entry()] }}|
+                  {ok, #{version => binary(),
+                         request_params => [any()],
+                         conf_params => [any()] }}|
+                  {oidc_login, map()}|
+                  {error, atom() | tuple()}.
+
+-type config() :: #{action =>  parameter | request | revoke ,
+                    service_id => binary(),
+                    queue => atom(),
+                    user_id => undefined | binary(),
+                    user_info => watts_userinfo:userinfo() | undefined,
+                    cred_state => binary() | undefined,
+                    params => map() | undefined,
+                    cred_id => binary() | undefined,
+                    _ => _
+                   }.
+
+
+%% @doc start the gen_server process linked to the supervisor
 -spec start_link() -> {ok, pid()}.
 start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, noparams, []).
 
+
+%% @doc stop the process
 -spec stop() -> ok.
 stop() ->
     gen_server:cast(?MODULE, stop).
 
-%% -spec get_list(binary()) -> {ok, [watts:cred()]}.
+%% @doc get the list of all credentials for the given user.
+-spec get_cred_list(watts_userinfo:info()) -> {ok, [watts:credential()]}.
 get_cred_list(UserInfo) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     get_credential_list(UserId).
 
-%% -spec get_count(binary(), binary()) -> {ok, non_neg_integer()}.
+%% @doc return the number of credentials of a user for a specific service.
+-spec get_count(watts_userinfo:info(), binary()) -> {ok, non_neg_integer()}.
 get_count(UserInfo, ServiceId) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     get_credential_count(UserId, ServiceId).
 
-%% -spec exists(binary(), binary()) -> true | false.
+%% @doc checks if the credential for the given user exists.
+-spec exists(watts_userinfo:info(), binary()) -> true | false.
 exists(UserInfo, CredId) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     case get_credential(UserId, CredId) of
@@ -64,9 +108,9 @@ exists(UserInfo, CredId) ->
         _ -> false
     end.
 
+%% @doc perform a request at the service for the user.
 -spec request(ServiceId :: binary(), UserInfo :: watts_userinfo:userinfo(),
-              Interface :: binary(), Params:: [map()]) ->
-                     {ok, map()} | {error, ReasonDetails :: atom() | map()}.
+              Interface :: binary(), Params:: map()) -> result().
 request(ServiceId, UserInfo, Interface, Params) ->
     {ok, Limit} = watts_service:get_credential_limit(ServiceId),
     {ok, QueueName} = watts_service:get_queue(ServiceId),
@@ -77,14 +121,13 @@ request(ServiceId, UserInfo, Interface, Params) ->
     ParamsValid = watts_service:are_params_valid(Params, ServiceId),
     case { Allowed, Enabled, ParamsValid, Count < Limit } of
         {true, true, true, true} ->
-            {ok, Pid} = watts_plugin_sup:new_worker(),
-            Config = #{ action => request,
-                        queue => QueueName,
-                        service_id => ServiceId,
-                        user_info => UserInfo,
-                        interface => Interface,
-                        params => Params},
-            Result = watts_plugin_runner:request_action(Config, Pid),
+            Config = config(#{ action => request,
+                               queue => QueueName,
+                               service_id => ServiceId,
+                               user_info => UserInfo,
+                               interface => Interface,
+                               params => Params}),
+            Result = run_plugin(Config),
             handle_result(Result, Config);
         {false, _, _, _} ->
             {error, user_not_allowed};
@@ -96,14 +139,19 @@ request(ServiceId, UserInfo, Interface, Params) ->
             {error, limit_reached}
     end.
 
-%% -spec revoke(binary(), binary(), map()) ->
-%%     {ok, watts:cred(), list()} | {error, any(), list()}.
+%% @doc try to revoke the given credential for the user
+-spec revoke(binary(), watts_userinfo:info()) -> result().
 revoke(CredentialId, UserInfo) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
     CredentialInfo = get_credential(UserId, CredentialId),
     revoke_credential(CredentialInfo, UserInfo).
 
 
+%% @doc revoke the credential for user, if found.
+-spec revoke_credential( MaybeCredential, watts_userinfo:info())
+                       -> result()
+                              when MaybeCredential:: {ok, watts:credential()} |
+                                                     {error, atom()}.
 revoke_credential({ok, #{ service_id := ServiceId, cred_state := _CredState,
                           cred_id := _CredId } = Credential}, UserInfo) ->
     ServiceExists = watts_service:exists(ServiceId),
@@ -112,43 +160,45 @@ revoke_credential({ok, #{ service_id := ServiceId, cred_state := _CredState,
                           queue => QueueName,
                           user_info => UserInfo
                          }, Credential),
-    revoke_or_drop(ServiceExists, Config);
+    revoke_or_drop(ServiceExists, config(Config));
 revoke_credential({error, Reason}, _UserInfo) ->
     {error, Reason}.
 
-
+%% @doc perform the revocation or maybe drop the credential.
+-spec revoke_or_drop(boolean(), config()) -> result().
 revoke_or_drop(true, Config) ->
-    {ok, Pid} = watts_plugin_sup:new_worker(),
-    Result=watts_plugin_runner:request_action(Config, Pid),
+    Result = run_plugin(Config),
     handle_result(Result, Config);
-revoke_or_drop(false, #{service_id := ServiceId,
-                        user_info := UserInfo,
-                        cred_id := CredId} ) ->
+revoke_or_drop(false, Config) ->
+    DropEnabled = ?CONFIG(allow_dropping_credentials, false),
+    maybe_drop(DropEnabled, Config).
+
+
+%% @doc drop the credential if allowed, else error.
+-spec maybe_drop(boolean(), config()) -> result().
+maybe_drop(true, #{service_id := ServiceId, user_info := UserInfo,
+                   cred_id := CredId} ) ->
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
-    DropEnabled = ?CONFIG(allow_dropping_credentials),
+    lager:warning("service ~p: dropping revocation request for ~p",
+                  [ServiceId, CredId]),
+    remove_credential(UserId, CredId);
+maybe_drop(false, #{service_id := ServiceId, cred_id := CredId} ) ->
     UMsg = "the service does not exist, please contact the administrator",
-    case DropEnabled of
-        true ->
-            lager:warning("service ~p: dropping revocation request for ~p",
-                          [ServiceId, CredId]),
-            remove_credential(UserId, CredId);
-        _ ->
-            Msg = "service ~p does not exist, revocation impossible",
-            LogMsg = io_lib:format(Msg, [ServiceId]),
-            return(error, #{user_msg => UMsg, log_msg => LogMsg})
-    end.
+    Msg = "service ~p does not exist, revocation of ~p impossible",
+    LogMsg = io_lib:format(Msg, [ServiceId, CredId]),
+    return(error, #{user_msg => UMsg, log_msg => LogMsg}).
 
 
-
+%% @doc perform the 'parameter' request at the plugin for the service.
+-spec get_params(binary()) -> result().
 get_params(ServiceId) ->
-    {ok, Pid} = watts_plugin_sup:new_worker(),
-    Config = #{ action => parameter,
-                service_id => ServiceId},
-    %% Result = watts_plugin_runner:get_params(ServiceId, Pid),
-    Result = watts_plugin_runner:request_action(Config, Pid),
+    Config = config(#{ action => parameter,
+                       service_id => ServiceId}),
+    Result = run_plugin(Config),
     handle_result(Result, Config).
 
-
+%% @doc handle the results or a plugin run, including validation
+-spec handle_result(watts_plugin_runner:result(), config()) -> result().
 handle_result({ok, #{result := Result}=Map, Log}, Info) ->
     AResult = result_to_atom(Result),
     handle_result(AResult, Map, Log, Info);
@@ -162,6 +212,9 @@ handle_result({error, Map, Log}, Info) ->
     return(error, #{user_msg => UMsg, log_msg=>LogMsg}).
 
 
+%% @doc handle the results or a plugin run, including validation
+-spec handle_result(ok | error | oidc_login, map(),
+                    watts_plugin_runner:output(), config()) -> result().
 %% REQUEST handling
 handle_result(ok, #{credential := Cred0, state := CredState}, _Log,
               #{action := request} = Info) ->
@@ -221,8 +274,10 @@ handle_result(error, Map, Log, #{ action := revoke})->
 
 %% PARAMETER handling
 handle_result(ok,
-              #{conf_params := _, request_params := _, version := _} = Result,
-              _Log, #{ action := parameter } ) ->
+              #{conf_params := ConfParams, request_params := ReqParams,
+                version := Version} = Result,
+              _Log, #{ action := parameter } )
+  when is_list(ConfParams), is_list(ReqParams), is_binary(Version)  ->
     %% valid parameter response
     return(result, maps:with([conf_params, request_params, version], Result));
 handle_result(ok, Result, _Log, #{ action := parameter } ) ->
@@ -230,7 +285,7 @@ handle_result(ok, Result, _Log, #{ action := parameter } ) ->
     NeededKeys = [conf_params, request_params, version, result],
     Keys = maps:keys(Result),
     MissingKeys = lists:subtract(NeededKeys, Keys),
-    LogMsg = io_lib:format("bad parameter response: ~p missing keys ~p",
+    LogMsg = io_lib:format("bad parameter response: ~p missing keys ~p (type?)",
                            [Result, MissingKeys]),
     UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{log_msg => LogMsg, user_msg => UMsg});
@@ -250,12 +305,15 @@ handle_result(Result, Map, _Log, Info) ->
     UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg => LogMsg}).
 
-
+%% @doc generate a log message, if needed from the user message
+-spec log_msg(#{log_msg => binary(), _ => _}, binary()) -> binary().
 log_msg(Map, UMsg) ->
     maps:get(log_msg, Map, io_lib:format("error response: ~p", [UMsg])).
 
 
-
+%% @doc convert the result to the result data type.
+-spec return(result |  oidc_login | error,
+             map() | atom() | tuple()) -> result().
 return(result, Result) ->
     {ok, Result};
 return(oidc_login, Result) ->
@@ -263,6 +321,8 @@ return(oidc_login, Result) ->
 return(error, Data) ->
     {error, Data}.
 
+%% @doc convert the result of the plugin "ok", "error" or "oidc_login" to atom.
+-spec result_to_atom(atom() | binary()) -> atom().
 result_to_atom(Result)
   when is_atom(Result) ->
     Result;
@@ -276,18 +336,24 @@ result_to_atom(Result) ->
 
 
 
-
+%% @doc serialize storing of the credential state in the database.
+-spec sync_store_credential(binary(), binary(), binary(), binary()) ->
+                                   {ok, binary()} | {error, Reason :: atom()}.
 sync_store_credential(UserId, ServiceId, Interface, CredState) ->
     gen_server:call(?MODULE, {store_credential, UserId, ServiceId, Interface,
                               CredState}).
 
 -record(state, {
          }).
+-type state() :: #state{}.
 
-
-init([]) ->
+%% @doc initialize the gen_server, doing nothing.
+-spec init(noparams) -> {ok, state()}.
+init(noparams) ->
     {ok, #state{}}.
 
+%% @doc handle calls, the only one is to serialize storing or credential.
+-spec handle_call(any(), any(), state()) -> {reply, any(), state()}.
 handle_call({store_credential, UserId, ServiceId, Interface, CredState}, _From,
             State) ->
     Result = store_credential(UserId, ServiceId, Interface,
@@ -296,35 +362,68 @@ handle_call({store_credential, UserId, ServiceId, Interface, CredState}, _From,
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+
+%% @doc handle casts, the only one is to stop the gen_server.
+-spec handle_cast(any(), state())
+                 -> {noreply, state()} | {stop, normal, state()}.
 handle_cast(stop, State) ->
     {stop, normal, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
+%% @doc nothing done here
+-spec handle_info(any(), state()) -> {noreply, state()}.
 handle_info(_Info, State) ->
     {noreply, State}.
 
+%% @doc nothing done here
+-spec terminate(any(), state()) -> ok.
 terminate(_Reason, _State) ->
     ok.
 
+%% @doc nothing done here
+-spec code_change(any(), state(), any()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% functions with data access
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% @doc lookup a credential for the user
+-spec get_credential(binary(), binary())
+                    -> {ok, watts:credential()} | {error, atom()}.
 get_credential(UserId, CredentialId) ->
     watts_persistent:credential_fetch(CredentialId, UserId).
 
-% functions with data access
+%% @doc get the number of credentials of user at service
+-spec get_credential_count(binary(), binary()) -> {ok, integer()}.
 get_credential_count(UserId, ServiceId) ->
     watts_persistent:credential_service_count(UserId, ServiceId).
 
+%% @doc get the list of credenials for a user
+-spec get_credential_list(binary()) -> {ok, [watts:credential()]}.
 get_credential_list(UserId) ->
     watts_persistent:credential_fetch_list(UserId).
 
+%% @doc store credential information.
+%% The only information stored are:
+%% <ul>
+%% <li> the ID of credential (returned from persistent layer) </li>
+%% <li> the ID of the user </li>
+%% <li> the ID of the service </li>
+%% <li> the interface that has been used </li>
+%% <li> the state returned by the plugin </li>
+%% </ul>
+-spec store_credential(binary(), binary(), binary(), binary())
+                      -> {ok, binary()} | {error, atom()}.
 store_credential(UserId, ServiceId, Interface, CredentialState) ->
     SameStateAllowed = watts_service:allows_same_state(ServiceId),
     watts_persistent:credential_store(UserId, ServiceId, Interface,
                                    CredentialState, SameStateAllowed).
 
+%% @doc delete the credential for the user
+-spec remove_credential(binary(), binary()) -> result().
 remove_credential(UserId, CredentialId) ->
     case watts_persistent:credential_delete(UserId, CredentialId) of
         ok ->
@@ -333,10 +432,13 @@ remove_credential(UserId, CredentialId) ->
             return(error, {deleting, Error})
     end.
 
-
+%% @doc validate the credential entries returned from the plugin
+-spec validate_credential_values([map()]) -> [cred_entry()].
 validate_credential_values(Credential) ->
     validate_credential_values(Credential, []).
 
+%% @doc validate the credential entries returned from the plugin
+-spec validate_credential_values([map()], [cred_entry()]) -> [cred_entry()].
 validate_credential_values([], ValidatedCredential) ->
     lists:reverse(ValidatedCredential);
 validate_credential_values([#{type:=<<"text">>, value:=Val0}=Entry|T],
@@ -362,12 +464,15 @@ validate_credential_values([Entry|T], ValCred) ->
     lager:critical("no type in Entry ~p *SKIPPING*", [Entry]),
     validate_credential_values(T, ValCred).
 
-
+%% @doc convert a value to binary
+-spec value_to_binary(any()) -> binary().
 value_to_binary(Val) when is_binary(Val)->
     Val;
 value_to_binary(Val) ->
     list_to_binary(io_lib:format("~p", [Val])).
 
+%% @doc convert a value to file
+-spec value_to_file(any()) -> binary().
 value_to_file(Val) when is_binary(Val)->
     Val;
 value_to_file(Val) when is_list(Val)->
@@ -376,8 +481,43 @@ value_to_file(Val) ->
     list_to_binary(io_lib:format("~p", [Val])).
 
 
+%% @doc convert a list to binary
+-spec file_lines_to_binary([any()], binary()) -> binary().
 file_lines_to_binary([], File) ->
     File;
 file_lines_to_binary([H | T], File) ->
     NewLine = value_to_binary(H),
     file_lines_to_binary(T, << File/binary, NewLine/binary >>).
+
+
+%% @doc generate a new config map, ensuring no field is missing.
+-spec config(map()) -> config().
+config(#{action := _, service_id := _} = Config) ->
+    BasicConfig = #{
+      action =>  parameter,
+      queue => undefined,
+      user_id => undefined,
+      user_info => undefined,
+      cred_state => undefined,
+      cred_id => undefined,
+      params => undefined
+     },
+    maps:merge(BasicConfig, Config).
+
+
+%% @doc create a minimal valid runner config
+-spec runner_config(map()) -> watts_plugin_runner:config().
+runner_config(#{action := _, service_id := _} = Config) ->
+    BasicConfig = #{
+      queue => undefined,
+      user_info => undefined,
+      cred_state => undefined,
+      params => undefined},
+    Keys = [action, service_id, queue, user_info, cred_state, params],
+    maps:with(Keys, maps:merge(BasicConfig, Config)).
+
+%% @doc run a plugin
+-spec run_plugin(config()) -> watts_plugin_runner:result().
+run_plugin(Config) ->
+    {ok, Pid} = watts_plugin_sup:new_worker(),
+    watts_plugin_runner:request_action(runner_config(Config), Pid).

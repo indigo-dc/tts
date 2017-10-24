@@ -430,6 +430,8 @@ get_interface_description({ok, {rsp, _, _}}) ->
 %%                                 ServiceId :: binary(),
 %%                                Session :: pid(), Params :: [map()]) ->
 %%                                       {ok, map()} | {error, map()}.
+%% -spec handle_credential_result(watts_plugin:result(), binary(), pid(), map())
+%% -> ok.
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
