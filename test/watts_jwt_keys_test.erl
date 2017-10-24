@@ -94,11 +94,13 @@ run_autodelete() ->
                 end,
         ok = test_util:wait_for_true(Check1, 200),
         Check2 = fun() ->
-                        2 == length(?CONFIG(jwt_keys))
-                end,
+                         NumKeys = length(?CONFIG(jwt_keys)),
+                         io:format("got ~p keys~n", [NumKeys]),
+                         2 == NumKeys
+                 end,
         ok = test_util:wait_for_true(Check2, 200),
         timer:sleep(2000),
-        ok = test_util:wait_for_true(Check2, 200),
+        ok = test_util:wait_for_true(Check2, 500),
         ok = watts_jwt_keys:stop(),
         test_util:wait_for_process_to_die(Pid, 300)
     after
