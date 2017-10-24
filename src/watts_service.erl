@@ -194,7 +194,7 @@ is_allowed(ServiceId, UserInfo, AuthzConf) ->
     watts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
 
 
--spec are_params_valid(map(), info() | limited_info()) -> boolean().
+-spec are_params_valid(map(), info() | limited_info() | binary()) -> boolean().
 are_params_valid(Params, #{params := ParamSets})
   when is_map(Params) ->
     ToBinary = fun(Key, List) when is_binary(Key) ->

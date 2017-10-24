@@ -22,14 +22,18 @@
 -export([start_link/0]).
 -export([init/1]).
 
-
+%% @doc start a new plugin runner server
+-spec new_worker() -> {ok, pid()}.
 new_worker() ->
     supervisor:start_child(?MODULE, []).
 
+%% @doc start the supervisor linked to its supervisor
+-spec start_link() -> {ok, pid()}.
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, noparams).
 
-init([]) ->
+%% @doc set up the supervisor and its chilren
+init(noparams) ->
     CredWorker = #{
       id => cred_worker,
       start => {watts_plugin_runner, start_link, []},

@@ -24,8 +24,6 @@
 -include("watts.hrl").
 
 %% API.
--define(TIMEOUT, 20000).
-
 -export([start_link/0]).
 -export([start/0]).
 -export([stop/1]).
@@ -56,21 +54,21 @@
           error = undefined
          }).
 
--export_type([config/0, result/0]).
+-export_type([config/0, result/0, output/0]).
 
 -type state() :: #state{}.
 
 -type config() :: #{action =>  parameter | request | revoke ,
                     service_id => binary(),
                     queue => atom(),
-                    user_info => watts_userinfo:userinfo(),
+                    user_info => watts_userinfo:userinfo() | undefined,
                     cred_state => binary() | undefined,
                     params => map() | undefined
                    }.
 
 -type result() ::
-        {ok, Result :: map(), Output :: map()} |
-        {error, Reason::atom() | tuple(), Output :: map()} |
+        {ok, Result :: map(), Output :: output()} |
+        {error, Reason::atom() | tuple(), Output :: output()} |
         {error, Reason::atom() | tuple()}.
 
 -type env() ::[{string(), string()}].
@@ -78,7 +76,8 @@
 -type output() :: #{ channel_id => any(), process_id => any(),
                      cmd => string() | undefined,
                      env => env(),
-                     std_out => [binary()], std_err => [binary()],
+                     std_out => [binary()],
+                     std_err => [binary()],
                      exit_status => any()
                    }.
 %% API.
@@ -165,22 +164,22 @@ handle_call(_Request, _From, State) ->
                          {noreply, state()} |
                          {stop, normal, state()}.
 handle_cast(request_slot, #state{action = parameter}=State) ->
-    gen_server:cast(self(), perform_action),
+    gen_server:cast(self(), run_plugin),
     {noreply, State};
 handle_cast(request_slot, #state{queue = undefined}=State) ->
-    gen_server:cast(self(), perform_action),
+    gen_server:cast(self(), run_plugin),
     {noreply, State};
 handle_cast(request_slot, #state{queue = Queue}=State) ->
     case jobs:ask(Queue) of
         {ok, JobId} ->
-            gen_server:cast(self(), perform_action),
+            gen_server:cast(self(), run_plugin),
             {noreply, State#state{job_id=JobId}};
         {error, rejected} ->
             {ok, NewState} = send_reply({error, rejected}, State),
             {stop, normal, NewState}
     end;
-handle_cast(perform_action, State) ->
-    {ok, NewState} = execute_command(State),
+handle_cast(run_plugin, State) ->
+    {ok, NewState} = run_plugin(State),
     {noreply, NewState};
 handle_cast(send_result, State) ->
     send_result(State);
@@ -192,6 +191,8 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %% @doc handle the responses from either ssh or the executed plugin.
+%% @see handle_exec_message/3
+%% @see handle_ssh_message/3
 -spec handle_info(any(), state()) -> {noreply, state()} |
                                      {stop, normal, state()}.
 handle_info({ssh_cm, SshCon, SshMsg}
@@ -209,9 +210,6 @@ handle_info({'DOWN', ProcessId, process, _, Reason}
                  cmd_output = #{ process_id := ProcessId}}=State) ->
     {ok, NewState} = handle_exec_message(down, Reason, State),
     {noreply, NewState};
-handle_info(timeout, State) ->
-    {ok, NewState} = send_reply({error, timeout}, State),
-    {stop, normal, NewState};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -229,15 +227,15 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 %% @doc prepare and run a plugin
--spec execute_command(state()) -> {ok, state()}.
-execute_command(State) ->
+-spec run_plugin(state()) -> {ok, state()}.
+run_plugin(State) ->
     {ok, NewState} = prepare_action(State),
     #state{ cmd_line = Cmd,
             cmd_env = Env,
             connection = Connection,
             con_type = ConType
           } = NewState,
-    execute_command(Cmd, Env, ConType, Connection, NewState).
+    run_plugin(Cmd, Env, ConType, Connection, NewState).
 
 
 %% @doc prepare the execution by creating the command line and connecting.
@@ -305,29 +303,21 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
   when is_binary(Cmd) ->
     #state{
        action = Action,
-       params = Params,
        user_info = UserInfo,
        cred_state = CredState
       } = State,
-    ConfParams = maps:get(plugin_conf, ServiceInfo, #{}),
     ServiceId = maps:get(id, ServiceInfo),
     ConnInfo = maps:get(connection, ServiceInfo, #{}),
     AddAccessToken = maps:get(pass_access_token, ServiceInfo, false),
     ConnType = maps:get(type, ConnInfo, local),
     {ok, Version} = ?CONFIG_(vsn),
-    ParamUpdate =
-        case Action == parameter of
-            false ->
-                #{conf_params => ConfParams,
-                  params => Params};
-            _ -> #{}
-        end,
-    ScriptParam0 = maps:merge(
-                     #{
+    BasicParameter = #{
                         watts_version => list_to_binary(Version),
                         action => Action,
                         cred_state => CredState
-                      }, ParamUpdate),
+                      },
+    ParamUpdate = parameter_update(Action, ServiceInfo, State),
+    ScriptParam0 = maps:merge( BasicParameter, ParamUpdate),
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo,
                                            ServiceId, AddAccessToken),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
@@ -340,6 +330,17 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
     {ok, State#state{cmd_line=CmdLine, cmd_env = Env,
                      connection = Connection, con_type = ConnType}}.
 
+
+%% @doc return the config and request parameter, if not performing parameter.
+-spec parameter_update(atom(), watts_service:info(), state()) -> map().
+parameter_update(parameter, _ServiceInfo, _State) ->
+    #{};
+parameter_update(_, ServiceInfo, #state{ params = Params }) ->
+    ConfParams = maps:get(plugin_conf, ServiceInfo, #{}),
+    #{conf_params => ConfParams,
+      params => Params}.
+
+
 %% @doc return the environment variable
 -spec get_env_var( watts_service:info() ) -> string() | undefined.
 get_env_var(#{cmd_env_use := true, cmd_env_var := Var}) when is_list(Var) ->
@@ -350,13 +351,13 @@ get_env_var(_) ->
 
 
 %% @doc create the command to execute and the environment
--spec create_cmd_and_env(binary(), binary(), undefined | string()) ->
-                                {binary(), [{string(), string()}]}.
+-spec create_cmd_and_env(binary(), binary(), undefined | string())
+                        -> {string(), env()}.
 create_cmd_and_env(Cmd, EncJson, undefined) ->
-    {<< Cmd/binary, <<" ">>/binary, EncJson/binary >>,
+    {binary_to_list(<< Cmd/binary, <<" ">>/binary, EncJson/binary >>),
      []};
 create_cmd_and_env(Cmd, Json, VarName) ->
-    {Cmd, [{VarName, binary_to_list(Json)}]}.
+    {binary_to_list(Cmd), [{VarName, binary_to_list(Json)}]}.
 
 
 
@@ -382,25 +383,23 @@ add_user_info_if_present(ScriptParam, UserInfo, ServiceId, AddAccessToken) ->
     maps:merge(ScriptParam, Update).
 
 %% @doc run the plugin with its parameter.
-%%
--spec execute_command(string(), env(), ssh | local, any(), state()) ->
+%% The results will be sent async to this process and are handled by the
+%% {@link handle_info/2} function.
+-spec run_plugin(string(), env(), ssh | local, any(), state()) ->
                              {ok, state()}.
-execute_command(Cmd, _Env, ssh, Connection, State) when is_list(Cmd) ->
+run_plugin(Cmd, _Env, ssh, Connection, State) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection, infinity),
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     success = ssh_connection:exec(Connection, ChannelId, Cmd, infinity),
     CmdOutput =  #{channel_id => ChannelId, cmd => Cmd},
     {ok, State#state{ cmd_output = output(CmdOutput) }};
-execute_command(Cmd, Env, local, _Connection, State) when is_list(Cmd) ->
+run_plugin(Cmd, Env, local, _Connection, State) ->
     lager:debug("runner ~p: executing ~p ~p", [self(), Cmd, Env]),
     {ok, _Pid, Id} = exec:run(Cmd, [{env, Env}, stdout, stderr, monitor,
                                     {kill_timeout, 1}]),
     CmdOutput =  #{process_id => Id, cmd => Cmd, env => Env},
     NewState = State#state{ cmd_output = output(CmdOutput)},
-    {ok, NewState};
-execute_command(Cmd, Env, ConType, Connection, State)
-  when is_binary(Cmd) ->
-    execute_command(binary_to_list(Cmd), Env, ConType, Connection, State).
+    {ok, NewState}.
 
 
 
@@ -416,18 +415,19 @@ send_result(#state{ cmd_output = CmdOutput, connection = Connection,
     {stop, normal, NewState}.
 
 
+%% @doc kill this process and the execution.
+%% this is called after a timeout.
 kill(#state{con_type = local,
             cmd_output = #{process_id := ProcessId}} = State) ->
     ok = exec:stop(ProcessId),
     {stop, normal, State#state{client = undefined}};
 kill(#state{con_type = ssh, connection = Connection} = State) ->
-    %% TODO: does it need to be killed somehow?
     close_connection(Connection, ssh),
     {stop, normal, State#state{client = undefined}}.
 
 
-%% @doc create the
--spec create_result(map()) -> result().
+%% @doc create the result from the command output.
+-spec create_result(output()) -> result().
 create_result(#{exit_status := 0, std_out := []} = Output) ->
     {error, no_json, Output};
 create_result(#{exit_status := 0, std_out := StdOut} = Output) ->
@@ -447,8 +447,8 @@ create_result(Output) ->
     create_result(maps:put(exit_status, -1, Output)).
 
 
-%% @doc handle the messages from the exec module, running the plugin.
-%% -spec handle_exec_message(atom(),
+%% @doc handle the messages from the exec module, when done send the result.
+-spec handle_exec_message(atom(), binary(), state()) -> {ok, state()}.
 handle_exec_message(stdout, Data, State) ->
     % data on std out
     update_std_out_err(Data, <<>>, State);
@@ -467,6 +467,8 @@ handle_exec_message(down, ExitStatus, State) ->
     update_exit_and_send(ExitStatus, State).
 
 
+%% @doc handle the incomming ssh messages and when done trigger sending result.
+-spec handle_ssh_message(tuple(), any(), state()) -> {ok, state()}.
 handle_ssh_message({data, ChannelId, 0, Data}, ChannelId, State) ->
     % data on std out
     update_std_out_err(Data, <<>>, State);
@@ -491,7 +493,8 @@ handle_ssh_message({closed, ChannelId}, ChannelId, State) ->
     {ok, State}.
 
 
-
+%% @doc update the std out or error list of inputs.
+-spec update_std_out_err(binary(), binary(), state()) -> {ok, state()}.
 update_std_out_err(Out, Err, #state{ cmd_output = CmdOutput } = State) ->
     StdOut = [Out | maps:get(std_out, CmdOutput, [])],
     StdErr = [Err | maps:get(std_err, CmdOutput, [])],

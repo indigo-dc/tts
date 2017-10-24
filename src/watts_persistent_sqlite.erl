@@ -78,7 +78,7 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateAllowed) ->
 
 %% @doc get the list of credentials for a user
 %% A callback from the watts_persistent behaviour.
--spec credential_get_list(UserId::binary()) -> {ok, [watts:cred()]}.
+-spec credential_get_list(UserId::binary()) -> {ok, [watts:credential()]}.
 credential_get_list(UserId) ->
     gen_server:call(?MODULE, {credential_get_list, UserId}).
 
@@ -93,7 +93,7 @@ credential_get_count(UserId, ServiceId) ->
 %% @doc get a specific credential.
 %% A callback from the watts_persistent behaviour.
 -spec credential_get(CredId::binary())
-                    -> {ok, watts:cred()} | {error, Reason::atom()}.
+                    -> {ok, watts:credential()} | {error, Reason::atom()}.
 credential_get(CredId) ->
     gen_server:call(?MODULE, {credential_get, CredId}).
 
@@ -221,7 +221,7 @@ credential_add(UserId, ServiceId, Interface, CredState, SameStateOk, Con) ->
 
 %% @doc return the list of credentials for a given user
 -spec credential_get_list(UserId :: binary(), Con :: esqlite:connection())
-                         -> [watts:cred()].
+                         -> [watts:credential()].
 credential_get_list(UserId, Con) ->
     CredList = esqlite3:q("SELECT credential_id, ctime, interface, service_id,
                            credstate FROM tts_cred WHERE  user_id IS ?"
@@ -246,7 +246,7 @@ credential_get_count(UserId, ServiceId, Con) ->
 
 %% @doc return a specific credential
 -spec credential_get(CredentialId :: binary(), Con :: esqlite:connection())
-                         -> {ok, watts:cred()} |
+                         -> {ok, watts:credential()} |
                             {error, Reason :: atom()}.
 credential_get(CredId, Con) ->
     Result = esqlite3:q("SELECT credential_id, ctime, interface, service_id,
