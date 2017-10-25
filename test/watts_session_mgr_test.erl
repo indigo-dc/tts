@@ -127,6 +127,7 @@ garbage_test() ->
 
 start_meck() ->
     MeckModules = [watts_session_sup],
+    {ok, _} = watts_ets:start_link(),
     watts_ets:destroy(),
     watts_ets:init(),
     ok = test_util:meck_new(MeckModules),
@@ -147,4 +148,5 @@ stop_meck({MeckModules}) ->
     ?UNSETCONFIG(jwt_keys),
     watts_ets:destroy(),
     ok = test_util:meck_done(MeckModules),
+    ok = watts_ets:stop(),
     ok.
