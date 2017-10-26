@@ -66,7 +66,9 @@ reread(Pid) ->
     gen_server:cast(Pid, read_keys).
 
 %% @doc return the chached keys
--spec get_keys(pid()) -> {ok, keys()}.
+-spec get_keys(pid() | undefined) -> {ok, keys()}.
+get_keys(undefined) ->
+    {ok, []};
 get_keys(Pid) ->
     gen_server:call(Pid, get_keys).
 
