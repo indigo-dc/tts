@@ -1,13 +1,23 @@
 # WaTTS - The INDIGO Token Translation Service
-WaTTS is using the [OpenId Connect certified library oidcc](https://github.com/indigo-dc/oidcc).
 
+WaTTS allows using any legacy service with federated identities, such as
+eduGain or google.
 
-## Purpose
-WaTTS creates credentials for services that do not natively support OpenID Connect.
-Such services are for example ssh, S3 storage, OpenNebula or certificate authorities, CAs.
+For this, WaTTS accepts federated identities (via OpenID Connect) and uses
+a plugin scheme to generate credentials for your service. This allows you
+to provide services that do not normally support federated identities to
+federated users.
 
-WaTTS creates credentials for these services by using plugins. Plugins are scripts
-that can be adapted by a site-administrator.
+And the best is that plugins for common services already exist. They can
+be used as examples to support additional services.
+
+Existing plugins are available for 
+- SSH
+- S3 storage (commercial DDN appliance)
+- OpenNebula cloud middleware
+- X.509 online certificate authorities (CAs)
+
+WaTTS uses the [OpenId Connect certified library oidcc](https://github.com/indigo-dc/oidcc).
 
 ## Quickstart
 ### Using Releases
