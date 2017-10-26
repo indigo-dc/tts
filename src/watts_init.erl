@@ -455,12 +455,14 @@ start_web_interface() ->
     SSL = ?CONFIG(ssl),
     UseSSL = read_ssl_files(SSL),
     ListenPort = ?CONFIG(listen_port),
+    MaxConns = ?CONFIG(num_parallel_conns),
     case UseSSL of
         true ->
             Cert = ?CONFIG(cert),
             Key = ?CONFIG(key),
             BasicOptions =
                 [ {port, ListenPort},
+                  {max_connections, MaxConns},
                   {cert, Cert},
                   {key, Key}
                 ],
@@ -483,11 +485,11 @@ start_web_interface() ->
                         lager:warning("Init: listening only at ::1"),
                         {0, 0, 0, 0, 0, 0, 0, 1}
                 end,
-
             {ok, _} = cowboy:start_http( http_handler
                                          , ?CONFIG(num_acceptors)
                                          , [ {port, ListenPort},
-                                             {ip, LocalIp}
+                                             {ip, LocalIp},
+                                             {max_connections, MaxConns}
                                              ]
                                          , [{env, [{dispatch, Dispatch}]}]
                                        )
@@ -508,8 +510,9 @@ start_web_interface() ->
                        false -> []
                    end,
             {ok, _} = cowboy:start_http( redirect_handler
-                                       , 10
-                                       , [ {port, RedirectPort} | IPv6  ]
+                                       , 5
+                                       , [ {port, RedirectPort},
+                                           {max_connections, 10} | IPv6]
                                        , [{env, [{dispatch, RedirDispatch}]}]
                                        );
         _ -> ok

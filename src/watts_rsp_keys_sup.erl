@@ -1,3 +1,4 @@
+%% @doc supervisor to start the rsp key gen_server
 -module(watts_rsp_keys_sup).
 %%
 %% Copyright 2016 SCC/KIT
@@ -22,13 +23,19 @@
 -export([init/1]).
 -export([new_rsp_keys/1]).
 
+%% @doc start the supverisor linked to its parent
+-spec start_link() -> {ok, pid()}.
 start_link() ->
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    supervisor:start_link({local, ?MODULE}, ?MODULE, noparams).
 
+%% @doc start a new linked rsp key gen_server child
+-spec new_rsp_keys(watts_rsp_keys:config()) -> {ok, pid()}.
 new_rsp_keys(Map) ->
     supervisor:start_child(?MODULE, [Map]).
 
-init([]) ->
+
+%% @doc setup the simple_one_for_one supervisor
+init(noparams) ->
     RspKeys = #{
       id => rsp_keys,
       start => {watts_rsp_keys, start_link, []},

@@ -9,6 +9,7 @@ session_test() ->
     %%            sessions_get_pid/1,
     %%            sessions_update_pid/2,
     %%            sessions_delete/1
+    {ok, _} = watts_ets:start_link(),
     ok = watts_ets:init(),
     ID1 = 1234,
     ID2 = 5678,
@@ -36,6 +37,7 @@ session_test() ->
     ?assertEqual(ok, watts_ets:sessions_delete(ID2)),
     ?assertEqual([], watts_ets:sessions_get_list()),
     ok = watts_ets:destroy(),
+    ok = watts_ets:stop(),
     ok.
 
 service_test() ->
@@ -44,6 +46,7 @@ service_test() ->
     %%     service_update/2,
     %%     service_get/1,
     %%     service_get_list/0
+    {ok, _} = watts_ets:start_link(),
     ok = watts_ets:init(),
     ID1 = 1234,
     ID2 = 5678,
@@ -66,4 +69,5 @@ service_test() ->
     ?assertEqual([], lists:foldl(Find, [ID1, ID2], List)),
 
     ok = watts_ets:destroy(),
+    ok = watts_ets:stop(),
     ok.

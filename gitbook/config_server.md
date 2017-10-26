@@ -26,7 +26,8 @@ And for production use:
 | hostname | Hostname of the web server | host | localhost |
 | port | Port number where clients seem to connect to; default is port 80 for non SSL, 443 for SSL. In production systems this should be left 'default' | port number or 'default' | 8080 |
 | listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privileged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
-| web_acceptors | The number of parallel waiting processes for incomming connection | integer | 100 |
+| web_acceptors | The number of parallel waiting processes for incomming connection | integer | 5 |
+| web_parallel_conns | The number of maximal parallel connections at the rest interface | integer | 50 |
 | ssl | Whether SSL should be used | boolean | true |
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
@@ -44,14 +45,15 @@ And for production use:
 | jwt_key_rotation_interval | The interval at which the RSA keys for signing the session info (stored in cookies of the user) will be rotated. | duration |  14d |
 | jwt_key_bits | The number of bits to use in the RSA key.  |  integer | 2014 |
 | allow_dropping_credentials | Whether credentials of unknown services can be silently dropped | boolean | false |
-| enable_user_doc | Whether the user documentation is reachable at /docs/user/ | boolean | false |
-| enable_code_doc | Whether the code documentation is reachable at /docs/code/ | boolean | false |
+| enable_user_doc | Whether the user documentation is reachable at /docs/user/ | boolean | true |
+| enable_code_doc | Whether the code documentation is reachable at /docs/code/ | boolean | true |
 | max_provider_wait | The duration to wait for provider results. If the duration is passed the results of OpenID Connect provider won't be logged, the provider will still function. | duration | 30s |
 | log_dir | The path where the log files will be put | path | /var/log/watts |
 | syslog_facility | The facility to use for syslog | 'daemon','local0'-'local7'  | 'daemon' |
 | enable_rsp | Enable support for RSP (relying service provider) at WaTTS. This will enable support for other services to rely on WaTTS to perform certain taks e.g. run plugins for them. | boolean | false |
 | privacy_doc | The html file containing the privacy statement for you WaTTS instance | file | none |
 | debug_mode | enable debug output, this adds a lot of load. debug_mode is only allowed when running on localhost as it might log senstive data. | boolean  | false |
+| max_error_msg_per_sec | The number of error messages that should be log at max, if there are more messages per second they will be dropped. If the number is negative nothing will be dropped. | integer | -1 |
 
 
 

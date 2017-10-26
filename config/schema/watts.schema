@@ -67,9 +67,9 @@
     end}.
 
 
-%% the number of acceptors
+%% @doc the number of acceptors
 {mapping, "web_acceptors", "watts.num_acceptors", [
-          {default, 100},
+          {default, 5},
           {datatype,  [integer]}
           ]}.
 
@@ -83,6 +83,21 @@
         end
     end}.
 
+%% @doc the number of paralell connections
+{mapping, "web_parallel_conns", "watts.num_parallel_conns", [
+          {default, 50},
+          {datatype,  [integer]}
+          ]}.
+
+{translation, "watts.num_parallel_conns",
+    fun(Conf) ->
+        Num = cuttlefish:conf_get("web_parallel_conns", Conf),
+        case Num of
+            Good when is_integer(Good), Good >= 1 ->
+                Good;
+             _ -> cuttlefish:invalid("invalid number of web_parallel_conns, need to be at least one")
+        end
+    end}.
 
 %% wether IPv6 should be used.
 {mapping, "enable_ipv6", "watts.enable_ipv6", [
@@ -374,14 +389,14 @@
 {mapping, "enable_user_doc", "watts.enable_user_doc", [
           {datatype ,    {enum ,  [true, false]}},
           {commented, true},
-          {default, false}
+          {default, true}
           ]}.
 
 %% @doc publish code documentation at ./docs/code if enabled
 {mapping, "enable_code_doc", "watts.enable_code_doc", [
           {datatype ,    {enum ,  [true, false]}},
           {commented, true},
-          {default, false}
+          {default, true}
           ]}.
 
 %% @doc enable the relying service provider (RSP) endpoint ./rsp/

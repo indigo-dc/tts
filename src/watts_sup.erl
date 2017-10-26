@@ -34,6 +34,7 @@ init(noparams) ->
              rsp_keys_supervisor(),
              plugin_supervisor(),
              plugin_worker(),
+             ets_worker(),
              sqlite_worker(),
              temp_cred_sup(),
              temp_cred(),
@@ -89,6 +90,13 @@ init_worker() ->
 jwt_key_worker() ->
     #{ id => jwt_key_worker,
        start => {watts_jwt_keys, start_link, []}
+     }.
+
+%% @doc the ets worker configuration
+-spec ets_worker() -> map().
+ets_worker() ->
+    #{ id => ets,
+       start => {watts_ets, start_link, []}
      }.
 
 %% @doc the sqlite worker configuration
