@@ -111,11 +111,13 @@ start_meck() ->
     TestDir = filename:dirname(code:where_is_file("jwt.key")),
     ?SETCONFIG( secret_dir, TestDir),
     ?SETCONFIG(jwt_key_rotation_interval, 3600),
+    {ok, _} = watts_ets:start_link(),
     {ok, {MeckModules}}.
 
 
 stop_meck({MeckModules}) ->
     ok = test_util:meck_done(MeckModules),
+    ok = watts_ets:stop(),
     ?UNSETCONFIG( secret_dir ),
     ?UNSETCONFIG( jwt_key_rotation_interval ),
     ok.

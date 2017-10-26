@@ -3,7 +3,7 @@
 -include("watts.hrl").
 
 init_test() ->
-    {ok, b, []} = watts_http_rsp:init(a, b, c).
+    {ok, b, state} = watts_http_rsp:init(a, b, c).
 
 terminate_test() ->
    ok = watts_http_rsp:terminate(a, b, c).
@@ -109,7 +109,7 @@ start_meck() ->
                   (<<"jwt5">>, _) ->
                        {error, bad_jwt, url_bad5};
                   (<<"jwt6">>, _) ->
-                       totally_bad_jwt;
+                       {error, bad_content, url_bad6};
                   (<<"jwt7">>, _) ->
                        {ok, rsp7}
                end,
@@ -194,6 +194,8 @@ start_meck() ->
                (url_prov4, req4) ->
                     ok;
                (url_bad5, req5) ->
+                    ok;
+               (url_bad6, req6) ->
                     ok;
                (url_bad7, req7) ->
                     ok;

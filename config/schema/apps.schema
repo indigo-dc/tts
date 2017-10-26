@@ -1,4 +1,4 @@
-
+%% -*- erlang -*-
 
 %% lager settings
 %% {lager, [
@@ -11,10 +11,29 @@
 %%     ]}
 
 
+%% @doc the dropping of error messages if there are too many
+{mapping, "max_error_msg_per_sec", "lager.error_logger_hwm", [
+          {default, -1},
+          {datatype,  [integer]}
+          ]}.
+
+{translation, "lager.error_logger_hwm",
+ fun(Conf) ->
+         Number = cuttlefish:conf_get("max_error_msg_per_sec", Conf),
+         case Number >= 0 of
+             true ->
+                 Number;
+             _ ->
+                 undefined
+         end
+ end}.
+
+
 %% the path to store the log files
 {mapping, "log_dir", "lager.log_root", [
           {default, "{{runner_log_dir}}"}
           ]}.
+
 
 {mapping, "debug_mode", "lager.handlers", [
           hidden,
@@ -51,7 +70,7 @@
              true ->
                  case DebugModeAllowed of
                      true ->
-                         [ {lager_console_backend, debug},
+                         [ {lager_console_backend, [{level, debug}]},
                            {lager_file_backend, [{file, "debug.log"},
                                                  {level, debug}]}
                          ] ++ Default ;
@@ -60,7 +79,7 @@
                          cuttlefish:invalid(Msg)
                      end;
              _ ->
-                [{lager_console_backend, info} | Default]
+                [{lager_console_backend, [{level, info}]} | Default]
          end
  end}.
 

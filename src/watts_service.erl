@@ -1,3 +1,6 @@
+
+%% @doc this module handles the services. It validates the parameter coming from
+%% the plugin as as the configuration itself.
 -module(watts_service).
 %%
 %% Copyright 2016 SCC/KIT
@@ -15,7 +18,6 @@
 %% limitations under the License.
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
-
 
 -export([get_list/0]).
 -export([get_list/1]).
@@ -50,14 +52,21 @@
                    connection => connection(),
                    authz => watts_service_authz:config(),
                    queue => atom(),
-                   enabled => boolean()
+                   enabled => boolean(),
+                   _ => _
                  }.
 
--type parameter_set() :: #{ key => binary(),
+-type parameter_set() :: [parameter()].
+-type parameter() :: #{ key => binary(),
                             name => binary(),
                             description => binary(),
                             type => atom(),
                             mandatory => boolean() }.
+
+-type conf_parameters() :: [conf_parameter()].
+-type conf_parameter() :: #{ name => binary(),
+                             type => binary(),
+                             default => any() }.
 
 -type limited_info() :: #{ id => binary(),
                            description => binary(),
@@ -82,10 +91,13 @@
                        }.
 
 
+%% @doc get a list of all services currently configured.
 -spec get_list() -> {ok, [info()]}.
 get_list() ->
      watts_ets:service_get_list().
 
+
+%% @doc get the list of all services for a user
 -spec get_list(UserInfo :: watts_userinfo:userinfo()) ->
                       {ok, [limited_info()]}.
 get_list(UserInfo) ->
@@ -94,6 +106,7 @@ get_list(UserInfo) ->
     update_limits_for_user(UserInfo, ServicesOfUser).
 
 
+%% @doc filter the list of services for a user, to hide them.
 -spec filter_list_for_user(watts_userinfo:info(), [info()]) ->
                                   {ok, [info()]}.
 filter_list_for_user(UserInfo, ServiceList) ->
@@ -103,7 +116,7 @@ filter_list_for_user(UserInfo, ServiceList) ->
              end,
     {ok, lists:filter(Filter, ServiceList)}.
 
-
+%% @doc update the list for the user with limits and permissions
 -spec update_limits_for_user(watts_userinfo:info(), [info()])
                             -> {ok, [limited_info()]}.
 update_limits_for_user(UserInfo, ServiceList) ->
@@ -133,6 +146,7 @@ update_limits_for_user(UserInfo, ServiceList) ->
 
 
 
+%% @doc get the info for a sepcific service id
 -spec get_info(binary()) -> {ok, info()} | {error, Reason :: atom()}.
 get_info(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
@@ -140,13 +154,15 @@ get_info(ServiceId) ->
         Other -> Other
     end.
 
--spec get_credential_limit(binary()) -> {ok, integer()}.
+%% @doc get the credential limit for a service
+-spec get_credential_limit(binary()) -> {ok, integer() | infinite}.
 get_credential_limit(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
         {ok, {_Id, Info}} -> {ok, maps:get(cred_limit, Info, 0)};
         _ -> {ok, 0}
     end.
 
+%% @doc return if a service with the given id exists
 -spec exists(binary()) -> boolean().
 exists(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
@@ -156,6 +172,7 @@ exists(ServiceId) ->
             false
      end.
 
+%% @doc get the queue name (an atom) for a service id
 -spec get_queue(binary()) -> {ok, atom()}.
 get_queue(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
@@ -163,6 +180,7 @@ get_queue(ServiceId) ->
         _ -> {ok, undefined}
     end.
 
+%% @doc return if a service, given by the id, is enabled
 -spec is_enabled(binary()) -> boolean().
 is_enabled(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
@@ -170,6 +188,8 @@ is_enabled(ServiceId) ->
         _ -> false
     end.
 
+
+%% @doc wether the plugin may return the same state twice
 -spec allows_same_state(binary()) -> boolean().
 allows_same_state(ServiceId) ->
     case watts_ets:service_get(ServiceId) of
@@ -177,6 +197,8 @@ allows_same_state(ServiceId) ->
         _ -> false
     end.
 
+%% @doc checks if a user is allowed to use the given service
+%% @see is_allowed/3
 -spec is_allowed(UserInfo :: watts_userinfo:userinfo(), ServiceId :: binary())
                 -> boolean().
 is_allowed(UserInfo, ServiceId) ->
@@ -187,6 +209,8 @@ is_allowed(UserInfo, ServiceId) ->
             false
     end.
 
+%% @doc checking the service authorization rules
+%% see watts_service_authz
 -spec is_allowed( ServiceId :: binary(), UserInfo :: watts_userinfo:userinfo(),
                   AuthzConf :: watts_service_authz:config())
                 -> boolean().
@@ -194,6 +218,7 @@ is_allowed(ServiceId, UserInfo, AuthzConf) ->
     watts_service_authz:is_authorized(ServiceId, UserInfo, AuthzConf).
 
 
+%% @doc check if the passed request parameters are valid for the service
 -spec are_params_valid(map(), info() | limited_info() | binary()) -> boolean().
 are_params_valid(Params, #{params := ParamSets})
   when is_map(Params) ->
@@ -203,9 +228,10 @@ are_params_valid(Params, #{params := ParamSets})
                        [ atom_to_binary(Atom, utf8) | List ]
                end,
     ParamList = lists:foldl(ToBinary, [], maps:keys(Params)),
-    ExistsMatching = fun(ParamSet, Current) ->
-                             Current or fulfills_paramset(ParamList, ParamSet)
-                     end,
+    ExistsMatching =
+        fun(ParamSet, Current) ->
+                Current or fulfills_paramset(ParamList, ParamSet)
+        end,
     lists:foldl(ExistsMatching, false, ParamSets);
 are_params_valid(Params, ServiceId)
   when is_map(Params), is_binary(ServiceId) ->
@@ -219,8 +245,8 @@ are_params_valid(_Params, _Service) ->
     false.
 
 
-
--spec fulfills_paramset([binary()], [parameter_set()]) -> boolean().
+%% @doc check if the list of keys are fullfilling the given parameter set
+-spec fulfills_paramset([binary()], parameter_set()) -> boolean().
 fulfills_paramset([], []) ->
     true;
 fulfills_paramset(_, []) ->
@@ -244,8 +270,8 @@ fulfills_paramset(Params, [#{key := Key, mandatory := Mandatory} | ParamSet]) ->
 
 
 
-
-
+%% @doc add a service to the ets database, used during initialization
+-spec add(info()) -> {ok, binary()} | {error, invalid_config}.
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     AuthzConf0 = maps:get(authz, ServiceInfo, #{allow => [], forbid => []}),
     {ok, AuthzConf} = watts_service_authz:validate_config(ServiceId,
@@ -257,106 +283,98 @@ add(_ServiceMap)  ->
     {error, invalid_config}.
 
 
+%% @doc update the parameter of a service by running the plugin
+-spec update_params(binary()) -> ok | {error, not_found}.
 update_params(Id) ->
     Service = watts_ets:service_get(Id),
     get_and_validate_parameter(Service).
 
+%% @doc get and validate the parameter from the plugin.
+-spec get_and_validate_parameter({ok, {binary(), info()}} | any())
+                                -> ok | {error, not_found}.
 get_and_validate_parameter({ok, {Id, Info}}) ->
     Result = watts_plugin:get_params(Id),
     validate_params_and_update_db(Id, Info, Result);
 get_and_validate_parameter(_) ->
     {error, not_found}.
 
-
-validate_params_and_update_db(Id, Info, {ok, ParamMap}) ->
+%% @doc validate the parameter returned from the plugin and maybe update the ets
+-spec validate_params_and_update_db(binary(), info(), {ok, map()} | any())
+                                   -> ok | {error, not_found}.
+validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
+                                               request_params := RequestParams,
+                                               version := Version}}) ->
+    lager:info("service ~p: plugin version ~p", [Id, Version]),
+    Ensure = #{plugin_conf => #{},
+               params => [],
+               plugin_version => Version
+              },
+    Info0 = maps:merge(Info, Ensure),
+    {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
+    {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
+    Info3 = list_skipped_parameter_and_delete_config(Info2),
+    IsValid = ValidConfParam and ValidCallParam,
+    Update = #{enabled => IsValid},
+    NewInfo = maps:merge(Info3, Update),
+    {ok, QueueName} = start_runner_queue_if_needed(NewInfo),
+    update_service(Id, maps:put(queue, QueueName, NewInfo));
+validate_params_and_update_db(Id, _, {ok, ParamMap}) ->
     NeededKeys = [conf_params, request_params, version],
     MissingKeys = NeededKeys -- maps:keys(ParamMap),
-    case MissingKeys of
-        [] ->
-            #{conf_params := ConfParams,
-              request_params := RequestParams,
-              version := Version} = ParamMap,
-            Ensure = #{plugin_conf => #{},
-                       params => [],
-                       plugin_version => Version
-                      },
-            Info0 = maps:merge(Info, Ensure),
-            lager:info("service ~p: plugin version ~p", [Id, Version]),
-            {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
-            {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams,
-                                                                 Info1),
-            Info3 = list_skipped_parameter_and_delete_config(Info2),
-            IsValid = ValidConfParam and ValidCallParam,
-            Update = #{enabled => IsValid},
-            NewInfo = maps:merge(Info3, Update),
-            start_runner_queue_if_needed(NewInfo),
-            update_service(Id, NewInfo);
-        _ ->
-            lager:error("service ~p: missing keys in parameter response: ~p",
-                        [Id, MissingKeys]),
-            {error, bad_config}
-    end;
+    lager:error("service ~p: missing keys in parameter response: ~p",
+                [Id, MissingKeys]),
+    {error, bad_config};
 validate_params_and_update_db(Id, _, {error, Result}) ->
-    case maps:get(log_msg, Result, undefined) of
-        undefined ->
-            lager:error("service ~p: bad parameter response (from plugin)",
-                        [Id]);
-        Msg ->
-            lager:error("service ~p: ~s", [Id, Msg])
-    end,
+    lager:error("service ~p: bad parameter response: ~p (from plugin)",
+                [Id, Result]),
     {error, bad_config}.
 
+
+
+%% @doc validate configuration parameter
+-spec validate_conf_parameter(conf_parameters(), info()) -> {boolean(), info()}.
 validate_conf_parameter(Params, Info) ->
     validate_conf_parameter(Params, Info, true).
+
+%% @doc validate the configuration parameter and keep track of the result.
+-spec validate_conf_parameter(conf_parameters(), info(), boolean())
+                             -> {boolean(), info()}.
 validate_conf_parameter([], Info, Result) ->
     {Result, Info};
-validate_conf_parameter([ Entry | T ], #{ id:= Id, cmd:= Cmd} =Info, Current) ->
+validate_conf_parameter([#{name := Name, default := Def , type := Type } | T ],
+                        Info, Current) ->
+    ValidName = is_valid_key(Name),
+    AtomType = to_conf_type(Type),
+    Default = convert_to_type(Def, AtomType),
+    {Res, NewInfo} = update_conf_parameter(Name, ValidName, Default,
+                                           AtomType, Info),
+    validate_conf_parameter(T, NewInfo, Res and Current);
+validate_conf_parameter([ Entry | T ], #{ id:= Id, cmd:= Cmd}=Info, _Current) ->
     RequiredKeys = [name, default, type],
     MissingKeys =  RequiredKeys -- maps:keys(Entry),
-    case MissingKeys of
-        [] ->
-            #{name := Name, default := Def, type := Type} = Entry,
-            ValidName = is_valid_key(Name),
-            AtomType = to_conf_type(Type),
-            Default = convert_to_type(Def, AtomType),
-            {Res, NewInfo} = update_conf_parameter(Name, ValidName, Default,
-                                                   AtomType, Info),
-            validate_conf_parameter(T, NewInfo, Res and Current);
-        _ ->
-            lager:error("service ~p: conf parameter missing keys ~p [~p]",
-                        [Id, MissingKeys, Cmd]),
-            {false, Info}
-    end;
+    lager:error("service ~p: conf parameter missing keys ~p [~p]",
+                [Id, MissingKeys, Cmd]),
+    validate_conf_parameter(T, Info, false);
 validate_conf_parameter(_, #{id := Id, cmd := Cmd} = Info, _) ->
     lager:error("service ~p: bad conf parameter for plugin ~p", [Id, Cmd]),
     {false, Info}.
 
-
+%% @doc check the conversion results and update the config if all okay.
+-spec update_conf_parameter(binary(), boolean(), {ok, any()} | {error, any()},
+                            atom(), info()) -> {boolean(), info()}.
+update_conf_parameter(Name, true, {ok, Default}, Type,
+                      #{id := Id, plugin_conf_config:=RawConf,
+                        plugin_conf:= Conf} = Info) when Type /= unknown ->
+    UseDefault = not maps:is_key(Name, RawConf),
+    ok = maybe_warn_default(UseDefault, Id, Name, Default),
+    RawValue = maps:get(Name, RawConf, Default),
+    {ok, Value} = convert_to_type(RawValue, Type),
+    NewConf = maps:put(Name, Value, Conf),
+    {true, maps:put(plugin_conf, NewConf, Info)};
 update_conf_parameter(Name, _Valid, _Default, unknown, #{id := Id} = Info) ->
     Msg = "service ~p: unsupported datatype at conf parameter ~p (from plugin)",
     lager:error(Msg, [Id, Name]),
     {false, Info};
-update_conf_parameter(Name, true, {ok, Default}, Type,
-                      #{id := Id, plugin_conf_config:=RawConf,
-                        plugin_conf:= Conf} = Info) ->
-    EMsg = "service ~p: bad configuration ~p: ~p, using default: ~p",
-    WMsg = "service ~p: plugin config ~p not set, using default: ~p",
-    Value =
-        case maps:is_key(Name, RawConf) of
-            true ->
-                Val = maps:get(Name, RawConf),
-                case convert_to_type(Val, Type) of
-                    {ok, V} -> V;
-                    _ ->
-                        lager:warning(EMsg, [Id, Name, Val, Default]),
-                        Default
-                end;
-            false ->
-                lager:warning(WMsg, [Id, Name, Default]),
-                Default
-        end,
-    NewConf = maps:put(Name, Value, Conf),
-    {true, maps:put(plugin_conf, NewConf, Info)};
 update_conf_parameter(Name, true, _, _Type, #{id := Id} = Info) ->
     lager:error("service ~p: bad default at conf parameter ~p (from plugin)",
                 [Id, Name]),
@@ -366,15 +384,30 @@ update_conf_parameter(Name, false, _, _Type, #{id := Id} = Info) ->
                 [Id, Name]),
     {false, Info}.
 
+%% @doc print a warning if using the default value from the plugin
+-spec maybe_warn_default(boolean(), binary(), binary(), any()) -> ok.
+maybe_warn_default(true, Id, Name, Default) ->
+    WMsg = "service ~p: plugin config ~p not set, using default: ~p",
+    lager:warning(WMsg, [Id, Name, Default]),
+    ok;
+maybe_warn_default(false, _Id, _Name, _Default) ->
+    ok.
+
+
+%% @doc validate the call parameter sets
+-spec validate_call_parameter_sets([parameter_set()], info())
+                                  -> {boolean(), info()}.
 validate_call_parameter_sets(Params, Info) ->
     validate_call_parameter_sets(Params, Info, true).
 
+%% @doc validate the call parameter sets and keep track of the result
+%% Itterate through each parameter set, validating it.
+-spec validate_call_parameter_sets([parameter_set()], info(), boolean())
+                                  -> {boolean(), info()}.
+validate_call_parameter_sets([], #{params := []} =Info, Result) ->
+    {Result, maps:put(params, [[]], Info)};
 validate_call_parameter_sets([], #{params := Params} =Info, Result) ->
-    ValidInfo = case Params of
-                    [] -> maps:put(params, [[]], Info);
-                    _ -> maps:put(params, lists:reverse(Params), Info)
-                end,
-    {Result, ValidInfo};
+    {Result, maps:put(params, lists:reverse(Params), Info)};
 validate_call_parameter_sets([ H | T ], Info, Current)
   when is_list(H) ->
     {Result, NewInfo} = validate_call_parameter_set(H, Info),
@@ -385,57 +418,56 @@ validate_call_parameter_sets([ H | T ], #{id := Id} = Info, _) ->
     validate_call_parameter_sets(T, Info, false).
 
 
+%% @doc validate a single parameter set.
+%% a singe set is a list of maps, each containing the specificaiton of
+%% one parameter
+-spec validate_call_parameter_set(parameter_set(), info())
+                                 -> {boolean(), info()}.
 validate_call_parameter_set(Set, Info) ->
     validate_call_parameter_set(Set, Info, [], [], true).
-validate_call_parameter_set([], #{params := Params} = Info, ParamSet,
-                            _Keys, Result)->
-    NewParams = [ParamSet | Params ],
+
+%% @doc validate a call parameter set and keep track of the result.
+%% also update at the end the params list within the info with each new set.
+-spec validate_call_parameter_set(parameter_set(), info(), parameter_set(),
+                                  [binary()], boolean()) -> {boolean(), info()}.
+validate_call_parameter_set([], Info, ParamSet, _Keys, Result)->
+    Params = maps:get(params, Info),
+    NewParams = [ ParamSet | Params ],
     NewInfo = maps:put(params, NewParams, Info),
     {Result, NewInfo};
-validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Keys,
-                            Current) when is_map(Param) ->
+validate_call_parameter_set([#{key := Key, name := Name, description := Desc,
+                               type := Type} = Param | T], #{id := Id} = Info,
+                            ParamSet, Keys, Current) ->
+    ValidKey = is_valid_key(Key),
+    KeyExists = lists:member(Key, Keys),
+    {Result, NewParamSet}=validate_call_parameter(Key, ValidKey, KeyExists,
+                                                  Name, Desc, Type, Param, Id,
+                                                  ParamSet),
+    validate_call_parameter_set(T, Info, NewParamSet, Keys, Current and Result);
+validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Keys, _)
+  when is_map(Param) ->
     RequiredKeys = [description, name, key, type],
     MissingKeys = RequiredKeys -- maps:keys(Param),
-    case MissingKeys of
-        [] ->
-            #{ key := Key,
-               name := Name,
-               description := Desc,
-               type:= Type} = Param,
-            ValidKey = is_valid_key(Key),
-            KeyExists = lists:member(Key, Keys),
-            {Result, NewParamSet}=validate_call_parameter(Key, ValidKey,
-                                                          KeyExists, Name,
-                                                          Desc, Type, Param, Id,
-                                                          ParamSet),
-            validate_call_parameter_set(T, Info, NewParamSet, Keys,
-                                        Current and Result);
-        _ ->
-            EMsg = "service ~p: request parameter ~p is missing keys ~p",
-            lager:error(EMsg, [Id, Param, MissingKeys]),
-            validate_call_parameter_set(T, Info, ParamSet, Keys, false)
-    end;
-validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet,
-                            Keys, _Current) ->
+    EMsg = "service ~p: request parameter ~p is missing keys ~p",
+    lager:error(EMsg, [Id, Param, MissingKeys]),
+    validate_call_parameter_set(T, Info, ParamSet, Keys, false);
+validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet, Keys, _) ->
     EMsg = "service ~p: bad request parameter ~p (from plugin)",
     lager:error(EMsg, [Id, H]),
     validate_call_parameter_set(T, Info, ParamSet, Keys, false).
 
 
+%% @doc validate one parameter for a call (part of a parameter set)
+-dialyzer({nowarn_function, validate_call_parameter/9}).
+-spec validate_call_parameter(binary(), boolean(), boolean(), binary(),
+                              binary(), atom(), map(), binary(),
+                              parameter_set()) -> {boolean(), parameter_set()}.
 validate_call_parameter(Key, true, false, Name, Desc, Type, Param, Id,
                         ParamSet) when is_binary(Key), is_binary(Name),
                                        is_binary(Desc) ->
     EMsg = "service ~p: parameter ~p: bad type ~p (from plugin)",
-    WMsg = "service ~p: parameter ~p:bad mandatory value ~p, using false",
     Mdtory = maps:get(mandatory, Param, false),
-    Mandatory =
-        case convert_to_type(Mdtory, boolean) of
-            {error, _} ->
-                lager:warning(WMsg, [Id, Name, Mdtory]),
-                false;
-            {ok, Bool} -> Bool
-        end,
-
+    {ok, Mandatory} = convert_to_type(Mdtory, boolean),
     {Result, NewParamSet } =
         case to_request_type(Type) of
             unknown ->
@@ -450,15 +482,15 @@ validate_call_parameter(Key, true, false, Name, Desc, Type, Param, Id,
                          } | ParamSet]}
         end,
     {Result, NewParamSet };
-validate_call_parameter(Key, false, false,  _N, _D, _T, Param, Id, ParamSet) ->
-    EMsg = "service ~p: key ~p of parameter contains spaces: ~p",
-    lager:error(EMsg, [Id, Key, Param]),
-    {false, ParamSet};
-validate_call_parameter(Key, _, true,  _N, _D, _T, Param, Id, ParamSet) ->
+validate_call_parameter(Key, _, true, _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: key ~p exists multiple times: ~p",
     lager:error(EMsg, [Id, Key, Param]),
     {false, ParamSet};
-validate_call_parameter(_,  true, false,  _, _, _, Param, Id, ParamSet) ->
+validate_call_parameter(Key, false, false, _N, _D, _T, Param, Id, ParamSet) ->
+    EMsg = "service ~p: key ~p of parameter contains spaces: ~p",
+    lager:error(EMsg, [Id, Key, Param]),
+    {false, ParamSet};
+validate_call_parameter(_,  true, false, _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: bad request parameter values ~p (not strings)",
     lager:error(EMsg, [Id, Param]),
     {false, ParamSet}.
@@ -466,6 +498,8 @@ validate_call_parameter(_,  true, false,  _, _, _, Param, Id, ParamSet) ->
 
 
 
+%% @doc list the skipped parameter from the config and delete the raw config
+-spec list_skipped_parameter_and_delete_config(info()) -> info().
 list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
                                            plugin_conf_config := RawConf,
                                            id := Id
@@ -487,43 +521,44 @@ list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
 
 
 %% @doc start the runnuner queue if needed.
-%% stores the name of the queue at 'queue'.
--spec start_runner_queue_if_needed(info()) -> {ok, info()}.
+-spec start_runner_queue_if_needed(info()) -> {ok, atom()}.
 start_runner_queue_if_needed(#{enabled := true,
                                parallel_runner := NumRunner,
                                id := Id
-                              } = Info)
+                              })
   when is_number(NumRunner) ->
     QueueId = gen_queue_name(Id),
-    ok = jobs:add_queue(QueueId, [{regulators, [
-                                           {counter, [{limit, NumRunner}]}
-                                          ]},
-                             {type, fifo}
-                            ]),
+    ok = add_queue(QueueId, NumRunner),
     Msg = "service ~p: queue ~p started with max ~p parallel runners",
     lager:info(Msg, [Id, QueueId, NumRunner]),
-    {ok, maps:put(queue, QueueId, Info)};
-start_runner_queue_if_needed(Info) ->
-    {ok, Info}.
+    {ok, QueueId} ;
+start_runner_queue_if_needed(_) ->
+    {ok, undefined}.
+
+%% @doc add a queue to jobs
+-spec add_queue(binary(), integer()) -> ok.
+-dialyzer({nowarn_function, add_queue/2}).
+add_queue(Id, NumRunner) ->
+    Options = [{counter, [{limit, NumRunner}]}, {type, fifo}],
+    ok = jobs:add_queue(Id, Options),
+    ok.
 
 
 %% @doc update the config of the service in the ets.
 -spec update_service(binary(), info()) -> ok | {error, Reason :: atom()}.
 update_service(Id, NewInfo) when is_map(NewInfo) ->
-    watts_ets:service_update(Id, NewInfo);
-update_service( _, _) ->
-    {error, invalid_config}.
-
+    watts_ets:service_update(Id, NewInfo).
 
 %% @doc convert the valut to the given type.
--spec convert_to_type(binary(), atom()) -> {ok, binary() | atom()}.
+-spec convert_to_type(binary(), atom())
+                     -> {ok, binary() | atom()} | {error, bad_value}.
 convert_to_type(Value, string)
   when is_binary(Value) ->
     {ok, Value};
 convert_to_type(Value, boolean) ->
-    TrueValues = [true, <<"True">>, <<"true">>],
+    TrueValues = [true, <<"True">>, <<"true">>, 1],
     IsTrue = lists:member(Value, TrueValues),
-    FalseValues = [false, <<"False">>, <<"false">>],
+    FalseValues = [false, <<"False">>, <<"false">>, 0],
     IsFalse = lists:member(Value, FalseValues),
     case {IsTrue, IsFalse} of
         {true, false} ->

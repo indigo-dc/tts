@@ -1,4 +1,5 @@
-%% @doc This module implements storage and lookup of data in ETS tables
+%% @doc This module implements storage and lookup of data in ETS tables.
+%% Including a minimal gen_server to stay owner of the ets tables.
 -module(watts_ets).
 %%
 %% Copyright 2016 SCC/KIT
@@ -17,6 +18,7 @@
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 -include("watts.hrl").
+-behaviour(gen_server).
 
 -export([init/0,
          destroy/0
@@ -37,6 +39,17 @@
          service_get_list/0
         ]).
 
+
+-export([
+         start_link/0,
+         stop/0,
+         init/1,
+         handle_call/3,
+         handle_cast/2,
+         handle_info/2,
+         terminate/2,
+         code_change/3]).
+
 -define(WATTS_SESSIONS, watts_sessions).
 -define(WATTS_OIDCP, watts_oidcp).
 -define(WATTS_SERVICE, watts_service).
@@ -51,13 +64,12 @@
 %% @doc create the ets tables
 -spec init() -> ok.
 init() ->
-    create_tables().
+    gen_server:call(?MODULE, create_tables).
 
 %% @doc delete all ets tables
 -spec destroy() -> ok.
 destroy() ->
-    delete_tables().
-
+    gen_server:call(?MODULE, delete_tables).
 
 % functions for session management
 %% @doc get the list of all sessions
@@ -241,3 +253,57 @@ create_lookup_result([Element]) ->
     {ok, Element};
 create_lookup_result([]) ->
     {error, not_found}.
+
+
+%% @doc start the minimal gen_server linked
+-spec start_link() -> {ok, pid()}.
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, noparams, []).
+
+stop() ->
+    gen_server:cast(?MODULE, stop).
+
+%% @doc no initilization needed
+-spec init(noparams) -> {ok, nothing}.
+init(noparams) ->
+    {ok, nothing}.
+
+%% @doc create or delete tables
+-spec handle_call(any(), any(), nothing)
+                 -> {reply, ok, nothing} |
+                    {reply, ignored, nothing}.
+handle_call(create_tables, _From, State) ->
+    ok = create_tables(),
+    {reply, ok, State};
+handle_call(delete_tables, _From, State) ->
+    ok = delete_tables(),
+    {reply, ok, State};
+handle_call(_, _, State) ->
+    {reply, ignored, State}.
+
+%% @doc handles stop and does ignore everything else
+-spec handle_cast(any(), nothing) ->
+                         {stop, normal, noting} |
+                         {noreply, nothing}.
+handle_cast(stop, State) ->
+    {stop, normal, State};
+handle_cast(_, State) ->
+    {noreply, State}.
+
+%% @doc does ignore everything
+-spec handle_info(any(), nothing) -> {noreply, nothing}.
+handle_info(_, State) ->
+    {noreply, State}.
+
+%% @doc log on termination due to error
+-spec terminate(any(), nothing) -> ok.
+terminate(normal, _) ->
+    ok;
+terminate(Reason, _) ->
+    lager:error("ETS-db crashed: ~p", [Reason]),
+    ok.
+
+%% @doc just return back the state 'nothing'
+-spec code_change(any(), nothing, any()) -> {ok, nothing}.
+code_change(_, State, _) ->
+    {ok, State}.
