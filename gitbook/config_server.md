@@ -54,7 +54,10 @@ And for production use:
 | privacy_doc | The html file containing the privacy statement for you WaTTS instance | file | none |
 | debug_mode | enable debug output, this adds a lot of load. debug_mode is only allowed when running on localhost as it might log senstive data. | boolean  | false |
 | max_error_msg_per_sec | The number of error messages that should be log at max, if there are more messages per second they will be dropped. If the number is negative nothing will be dropped. | integer | -1 |
-
+| web_connection_rate | The number of connection per seccond that will be allowed to pass, every additional connection gets a '503 - service not available' available error. A negative value or zero changes it to unlimited, which should be used with caution. | integer | 10 |
+| rsp_connection_rate | same as the web_connection_rate but for the rsp endpoint | integer | 10 |
+| web_queue_max_wait | The maximum amount of time to wait until the request get cancelled while waiting in the queue | duration | 100ms |
+| rsp_queue_max_wait | Same as web_queue_max_wait but for the rsp | duration | 1s |
 
 
 ## Listen_Port, Redirection Explained

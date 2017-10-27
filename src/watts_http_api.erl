@@ -25,6 +25,8 @@
 
 -export([init/3]).
 -export([rest_init/2]).
+-export([rest_terminate/2]).
+-export([service_available/2]).
 -export([allowed_methods/2]).
 -export([allow_missing_post/2]).
 -export([content_types_provided/2]).
@@ -54,10 +56,12 @@ init(_, _Req, _Opts) ->
     {upgrade, protocol, cowboy_rest}.
 
 -record(state, {
+          in = #{},
           method = undefined,
           version = undefined,
           type = undefined,
           id = undefined,
+          queue_token = undefined,
 
           token = undefined,
           issuer = undefined,
@@ -65,9 +69,38 @@ init(_, _Req, _Opts) ->
           session_pid = undefined
          }).
 
-rest_init(Req, _Opts) ->
-    Req2 = cowboy_req:set_resp_header(<<"Cache-control">>, <<"no-cache">>, Req),
-    {ok, Req2, #state{}}.
+rest_init(Req0, _Opts) ->
+    {State, Req1} = extract_info(Req0),
+    Req2 = cowboy_req:set_resp_header(<<"Cache-control">>, <<"no-cache">>, Req1),
+    {ok, Req2, State}.
+
+rest_terminate(_Req, #state{queue_token = undefined}) ->
+    ok;
+rest_terminate(_Req, #state{queue_token = Token}) ->
+    jobs:done(Token),
+    ok.
+
+service_available(Req, #state{in = #{type := cred_data}} = State) ->
+    %% they for sure need to get their data
+    {true, Req, State};
+service_available(Req, #state{in = #{type := undefined}} = State) ->
+    %% get them out
+    {true, Req, State};
+service_available(Req, State) ->
+    QueueUsed = ?CONFIG(watts_web_queue, undefined),
+    {Result, NewState} = request_queue_if_configured(QueueUsed, State),
+    {Result, Req, NewState}.
+
+request_queue_if_configured(true, State) ->
+    Result = jobs:ask(watts_web_queue),
+    handle_queue_result(Result, State);
+request_queue_if_configured(_, State) ->
+    {true, State}.
+
+handle_queue_result({ok, Token}, State) ->
+    {true, State#state{queue_token = Token}};
+handle_queue_result(_, State) ->
+    {false, State}.
 
 
 allowed_methods(Req, State) ->
@@ -77,10 +110,10 @@ allowed_methods(Req, State) ->
 allow_missing_post(Req, State) ->
     {false, Req, State}.
 
-malformed_request(Req, State) ->
+extract_info(Req) ->
     CookieName = watts_http_util:cookie_name(),
     {CookieSessionToken, Req2} = cowboy_req:cookie(CookieName, Req),
-    CookieSession = watts_session_mgr:get_session(CookieSessionToken),
+    InCookieSession = watts_session_mgr:get_session(CookieSessionToken),
 
     {PathInfo, Req3} = cowboy_req:path_info(Req2),
     {InToken, Req4} = cowboy_req:header(<<"authorization">>, Req3),
@@ -88,8 +121,8 @@ malformed_request(Req, State) ->
                                          Req4),
     {InVersion, InIssuer, InType, InId, HeaderUsed} =
         case {PathInfo, HIssuer} of
-            {[V, Iss, T, Id], undefined} ->
-                {V, Iss, T, Id, false};
+            {[V, Iss, T, IdIn], undefined} ->
+                {V, Iss, T, IdIn, false};
             {[V, Iss, T], undefined} ->
                 {V, Iss, T, undefined, false};
             {[V, T], undefined} ->
@@ -98,30 +131,50 @@ malformed_request(Req, State) ->
                 {no_version, undefined, undefined, undefined, false};
             {[V, T], Iss} ->
                 {V, Iss, T, undefined, true};
-            {[V, T, Id], Iss} ->
-                {V, Iss, T, Id, true};
+            {[V, T, IdIn], Iss} ->
+                {V, Iss, T, IdIn, true};
             _ ->
                 {no_version, undefined, undefined, undefined, false}
         end,
-    {Res, ContentType, Req6} = cowboy_req:parse_header(<<"content-type">>,
+    {Res, InContentType, Req6} = cowboy_req:parse_header(<<"content-type">>,
                                                        Req5),
-    {Method, Req7} = cowboy_req:method(Req6),
+    {InMethod, Req7} = cowboy_req:method(Req6),
     {ok, InBody, Req8} = cowboy_req:body(Req7),
+    Version = verify_version(InVersion),
+    Type = verify_type(InType),
+    Id = verify_id(InId),
+    Token = verify_token(InToken),
+    Issuer = verify_issuer(InIssuer),
+    CookieSession = verify_session(InCookieSession),
+    Method = verify_method(InMethod),
+    ContentType = verify_content_type({Res, InContentType}),
+    Body = verify_body(InBody),
+    {#state{
+        in = #{version => Version,
+               type => Type,
+               id => Id,
+               token => Token,
+               issuer => Issuer,
+               session => CookieSession,
+               method => Method,
+               content => ContentType,
+               body => Body,
+               header_used => HeaderUsed}
+       }, Req8}.
 
-    {Result, NewState} = is_malformed(Method, {Res, ContentType}, InVersion,
-                                      InType , InId, InBody, InToken,
-                                      InIssuer, HeaderUsed, CookieSession,
-                                      State),
-    Req99 =
+
+malformed_request(Req, State) ->
+    {Result, NewState} = is_malformed(State),
+    NewReq =
         case Result of
             true ->
                 Msg = <<"Bad request, please check all parameter">>,
                 Body = jsone:encode(#{result => error, user_msg => Msg}),
-                cowboy_req:set_resp_body(Body, Req8);
+                cowboy_req:set_resp_body(Body, Req);
             false ->
-                Req8
+                Req
         end,
-    {Result, Req99, NewState}.
+    {Result, NewReq, NewState}.
 
 
 is_authorized(Req, #state{type=oidcp} = State) ->
@@ -405,26 +458,31 @@ return_json_credential_list(Credentials, Version)->
     List = lists:reverse(lists:foldl(Adjust, [], Credentials)),
     jsone:encode(#{credential_list => List}).
 
-is_malformed(InMethod, InContentType, InVersion, InType, InId, InBody, InToken,
-             InIssuer, HeaderUsed, InCookieSession, State) ->
-    Version = verify_version(InVersion),
-    Type = verify_type(InType),
-    Id = verify_id(InId),
-    Token = verify_token(InToken),
-    Issuer = verify_issuer(InIssuer),
-    CookieSession = verify_session(InCookieSession),
-    Method = verify_method(InMethod),
-    ContentType = verify_content_type(InContentType),
-    Body = verify_body(InBody),
+is_malformed(#state{in = #{
+                      version := Version,
+                      type := Type,
+                      id := Id,
+                      token := Token,
+                      issuer := Issuer,
+                      method := Method,
+                      session := CookieSession,
+                      content := ContentType,
+                      body := Body,
+                      header_used := HeaderUsed
+                     }} = State) ->
     case is_bad_version(Version, HeaderUsed) of
         true -> {true, State#state{method=Method, version=Version, type=Type,
                                    id=Id, token=Token, issuer=Issuer,
-                                   session_pid=CookieSession, json=Body}};
+                                   session_pid=CookieSession, json=Body,
+                                   in = #{}
+                                  }};
         false -> Result = is_malformed(Method, ContentType, Type, Id, Issuer,
                                        Body),
                  {Result, State#state{method=Method, version=Version, type=Type,
                                       id=Id, token=Token, issuer=Issuer,
-                                      session_pid=CookieSession, json=Body}}
+                                      session_pid=CookieSession, json=Body,
+                                      in = #{}
+                                     }}
     end.
 
 verify_version(<<"latest">>) ->
