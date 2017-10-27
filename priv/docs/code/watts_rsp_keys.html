@@ -1,0 +1,210 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_rsp_keys</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_rsp_keys</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>this module implements a gen_server that keeps the public keys of
+  an RSP up to date.
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+
+<h2><a name="description">Description</a></h2>this module implements a gen_server that keeps the public keys of
+  an RSP up to date.
+  So the signed jwts can always be validated.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-config">config()</a></h3>
+<p><tt>config() = #{id =&gt; binary(), key_location =&gt; binary(), term() =&gt; term()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-key">key()</a></h3>
+<p><tt>key() = #{}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-keys">keys()</a></h3>
+<p><tt>keys() = [<a href="#type-key">key()</a>]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #state{id = undefined | binary(), keys = any(), key_location = undefined | binary(), location_type = none | file | url, http_req_id = any(), http_result = any(), reading_keys = any(), last_error = any(), next_try = any()}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td>do nothing.</td></tr>
+<tr><td valign="top"><a href="#deadline_in-1">deadline_in/1*</a></td><td>calculate the next deadline.</td></tr>
+<tr><td valign="top"><a href="#extract_rsp_keys-1">extract_rsp_keys/1*</a></td><td>extract the keys from the data (either file or http response).</td></tr>
+<tr><td valign="top"><a href="#fetch_rsp_keys-2">fetch_rsp_keys/2*</a></td><td>trigger the async http request.</td></tr>
+<tr><td valign="top"><a href="#get_keys-1">get_keys/1</a></td><td>return the chached keys.</td></tr>
+<tr><td valign="top"><a href="#get_last_error-1">get_last_error/1</a></td><td>return the last error.</td></tr>
+<tr><td valign="top"><a href="#get_location_type-1">get_location_type/1*</a></td><td>get the location type, either file or url of the keys.</td></tr>
+<tr><td valign="top"><a href="#get_rsp_keys-1">get_rsp_keys/1*</a></td><td>get the keys by reading the file or triggering the http request.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td>handle the get error/keys calls.</td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td>handle the request to reread keys or stop.</td></tr>
+<tr><td valign="top"><a href="#handle_decode_result-1">handle_decode_result/1*</a></td><td>handle the decode result.</td></tr>
+<tr><td valign="top"><a href="#handle_http_client_crash-2">handle_http_client_crash/2*</a></td><td>handle crashing of the http client.</td></tr>
+<tr><td valign="top"><a href="#handle_http_result-1">handle_http_result/1*</a></td><td>handle the http response.</td></tr>
+<tr><td valign="top"><a href="#handle_http_result-4">handle_http_result/4*</a></td><td>handle a  http result and extract rsp keys.</td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td>handle the async incoming http responses when fetching keys.</td></tr>
+<tr><td valign="top"><a href="#handle_key_result-1">handle_key_result/1*</a></td><td>handle the decoding result, either store the keys in stat or skip.</td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td>initilize the process.</td></tr>
+<tr><td valign="top"><a href="#maybe_cancel_request-2">maybe_cancel_request/2*</a></td><td>maybe cancel a current running http request.</td></tr>
+<tr><td valign="top"><a href="#maybe_trigger_key_read-1">maybe_trigger_key_read/1*</a></td><td>maybe trigger reading the keys again.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>start a new rsp gen_server process.</td></tr>
+<tr><td valign="top"><a href="#reread-1">reread/1</a></td><td>triger a reading of the keys.</td></tr>
+<tr><td valign="top"><a href="#reread_keys_if_needed-1">reread_keys_if_needed/1*</a></td><td>rereadkeys if deadline reached.</td></tr>
+<tr><td valign="top"><a href="#result_or_default-2">result_or_default/2*</a></td><td>return either value if present, if not default.</td></tr>
+<tr><td valign="top"><a href="#safe_decode-2">safe_decode/2*</a></td><td>safely decode any data by returning on success or default on failure.</td></tr>
+<tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>start the gen_server linked to the supervisor.</td></tr>
+<tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>stop the process.</td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td>do nothing.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(X1::any(), State::<a href="#type-state">state()</a>, X3::any()) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>do nothing</p>
+
+<h3 class="function"><a name="deadline_in-1">deadline_in/1 *</a></h3>
+<div class="spec">
+<p><tt>deadline_in(Seconds::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>calculate the next deadline</p>
+
+<h3 class="function"><a name="extract_rsp_keys-1">extract_rsp_keys/1 *</a></h3>
+<div class="spec">
+<p><tt>extract_rsp_keys(X1::{ok | integer(), string() | binary()} | {error, any()}) -&gt; {ok, <a href="#type-keys">keys()</a>} | {error, any()}</tt><br></p>
+</div><p>extract the keys from the data (either file or http response)</p>
+
+<h3 class="function"><a name="fetch_rsp_keys-2">fetch_rsp_keys/2 *</a></h3>
+<div class="spec">
+<p><tt>fetch_rsp_keys(Url::binary(), State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>trigger the async http request</p>
+
+<h3 class="function"><a name="get_keys-1">get_keys/1</a></h3>
+<div class="spec">
+<p><tt>get_keys(Pid::pid() | undefined) -&gt; {ok, <a href="#type-keys">keys()</a>}</tt><br></p>
+</div><p>return the chached keys</p>
+
+<h3 class="function"><a name="get_last_error-1">get_last_error/1</a></h3>
+<div class="spec">
+<p><tt>get_last_error(Pid::pid()) -&gt; {ok, any()}</tt><br></p>
+</div><p>return the last error</p>
+
+<h3 class="function"><a name="get_location_type-1">get_location_type/1 *</a></h3>
+<div class="spec">
+<p><tt>get_location_type(Url::binary()) -&gt; {binary(), file | url} | {none, unknown}</tt><br></p>
+</div><p>get the location type, either file or url of the keys</p>
+
+<h3 class="function"><a name="get_rsp_keys-1">get_rsp_keys/1 *</a></h3>
+<div class="spec">
+<p><tt>get_rsp_keys(State::<a href="#type-state">state()</a>) -&gt; {{ok, <a href="#type-keys">keys()</a>} | {error, any()}, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>get the keys by reading the file or triggering the http request</p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request::any(), From::any(), State::<a href="#type-state">state()</a>) -&gt; {reply, any(), <a href="#type-state">state()</a>, non_neg_integer()}</tt><br></p>
+</div><p>handle the get error/keys calls</p>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Request::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>, non_neg_integer()} | {stop, normal, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the request to reread keys or stop</p>
+
+<h3 class="function"><a name="handle_decode_result-1">handle_decode_result/1 *</a></h3>
+<div class="spec">
+<p><tt>handle_decode_result(X1::#{} | any()) -&gt; {ok, <a href="#type-keys">keys()</a>} | {error, bad_data}</tt><br></p>
+</div><p>handle the decode result</p>
+
+<h3 class="function"><a name="handle_http_client_crash-2">handle_http_client_crash/2 *</a></h3>
+<div class="spec">
+<p><tt>handle_http_client_crash(Reason::any(), State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>handle crashing of the http client</p>
+
+<h3 class="function"><a name="handle_http_result-1">handle_http_result/1 *</a></h3>
+<div class="spec">
+<p><tt>handle_http_result(State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>handle the http response.</p>
+
+<h3 class="function"><a name="handle_http_result-4">handle_http_result/4 *</a></h3>
+<div class="spec">
+<p><tt>handle_http_result(X1::boolean(), Status::integer(), Body::binary(), State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>handle a  http result and extract rsp keys</p>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Request::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>, non_neg_integer()}</tt><br></p>
+</div><p>handle the async incoming http responses when fetching keys</p>
+
+<h3 class="function"><a name="handle_key_result-1">handle_key_result/1 *</a></h3>
+<div class="spec">
+<p><tt>handle_key_result(X1::{{ok, <a href="#type-keys">keys()</a>} | {error, any()}, <a href="#type-state">state()</a>}) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>handle the decoding result, either store the keys in stat or skip</p>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1::<a href="#type-config">config()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>initilize the process</p>
+
+<h3 class="function"><a name="maybe_cancel_request-2">maybe_cancel_request/2 *</a></h3>
+<div class="spec">
+<p><tt>maybe_cancel_request(X1::boolean(), Id::any()) -&gt; ok</tt><br></p>
+</div><p>maybe cancel a current running http request</p>
+
+<h3 class="function"><a name="maybe_trigger_key_read-1">maybe_trigger_key_read/1 *</a></h3>
+<div class="spec">
+<p><tt>maybe_trigger_key_read(X1::boolean()) -&gt; ok</tt><br></p>
+</div><p>maybe trigger reading the keys again</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(Map::<a href="#type-config">config()</a>) -&gt; {ok, pid()}</tt><br></p>
+</div><p>start a new rsp gen_server process</p>
+
+<h3 class="function"><a name="reread-1">reread/1</a></h3>
+<div class="spec">
+<p><tt>reread(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>triger a reading of the keys</p>
+
+<h3 class="function"><a name="reread_keys_if_needed-1">reread_keys_if_needed/1 *</a></h3>
+<div class="spec">
+<p><tt>reread_keys_if_needed(State::<a href="#type-state">state()</a>) -&gt; ok</tt><br></p>
+</div><p>rereadkeys if deadline reached</p>
+
+<h3 class="function"><a name="result_or_default-2">result_or_default/2 *</a></h3>
+<div class="spec">
+<p><tt>result_or_default(X1::{ok, any()} | any(), Default::any()) -&gt; any()</tt><br></p>
+</div><p>return either value if present, if not default</p>
+
+<h3 class="function"><a name="safe_decode-2">safe_decode/2 *</a></h3>
+<div class="spec">
+<p><tt>safe_decode(Data::binary(), Default::any()) -&gt; any()</tt><br></p>
+</div><p>safely decode any data by returning on success or default on failure</p>
+
+<h3 class="function"><a name="start_link-1">start_link/1</a></h3>
+<div class="spec">
+<p><tt>start_link(Map::<a href="#type-config">config()</a>) -&gt; {ok, pid()}</tt><br></p>
+</div><p>start the gen_server linked to the supervisor</p>
+
+<h3 class="function"><a name="stop-1">stop/1</a></h3>
+<div class="spec">
+<p><tt>stop(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>stop the process</p>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason::any(), State::<a href="#type-state">state()</a>) -&gt; ok</tt><br></p>
+</div><p>do nothing</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

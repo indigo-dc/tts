@@ -1,0 +1,278 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_plugin</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_plugin</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>this module implements the high level view of a plugin and service.
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+
+<h2><a name="description">Description</a></h2>this module implements the high level view of a plugin and service.
+  It exports the high level functions like
+  <ul>
+  <li> request </li>
+  <li> revoke </li>
+  </ul>
+  So triggering a plugin runner for a given service and validating the result
+  afterwards.
+  This module is not aware of the actual run binary.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-config">config()</a></h3>
+<p><tt>config() = #{action =&gt; parameter | request | revoke, service_id =&gt; binary(), queue =&gt; atom(), user_id =&gt; undefined | binary(), user_info =&gt; <a href="watts_userinfo.html#type-userinfo">watts_userinfo:userinfo()</a> | undefined, cred_state =&gt; binary() | undefined, params =&gt; #{} | undefined, cred_id =&gt; binary() | undefined, term() =&gt; term()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-cred_entry">cred_entry()</a></h3>
+<p><tt>cred_entry() = #{name =&gt; binary(), type =&gt; binary(), valye =&gt; binary(), term() =&gt; term()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-result">result()</a></h3>
+<p><tt>result() = {ok, #{id =&gt; binary(), entries =&gt; [<a href="#type-cred_entry">cred_entry()</a>]}} | {ok, #{version =&gt; binary(), request_params =&gt; [any()], conf_params =&gt; [any()]}} | {oidc_login, #{}} | {error, atom() | tuple()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #state{}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td>nothing done here.</td></tr>
+<tr><td valign="top"><a href="#config-1">config/1*</a></td><td>generate a new config map, ensuring no field is missing.</td></tr>
+<tr><td valign="top"><a href="#exists-2">exists/2</a></td><td>checks if the credential for the given user exists.</td></tr>
+<tr><td valign="top"><a href="#file_lines_to_binary-2">file_lines_to_binary/2*</a></td><td>convert a list to binary.</td></tr>
+<tr><td valign="top"><a href="#get_count-2">get_count/2</a></td><td>return the number of credentials of a user for a specific service.</td></tr>
+<tr><td valign="top"><a href="#get_cred_list-1">get_cred_list/1</a></td><td>get the list of all credentials for the given user.</td></tr>
+<tr><td valign="top"><a href="#get_credential-2">get_credential/2*</a></td><td>lookup a credential for the user.</td></tr>
+<tr><td valign="top"><a href="#get_credential_count-2">get_credential_count/2*</a></td><td>get the number of credentials of user at service.</td></tr>
+<tr><td valign="top"><a href="#get_credential_list-1">get_credential_list/1*</a></td><td>get the list of credenials for a user.</td></tr>
+<tr><td valign="top"><a href="#get_params-1">get_params/1</a></td><td>perform the 'parameter' request at the plugin for the service.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td>handle calls, the only one is to serialize storing or credential.</td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td>handle casts, the only one is to stop the gen_server.</td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td>nothing done here.</td></tr>
+<tr><td valign="top"><a href="#handle_result-2">handle_result/2*</a></td><td>handle the results or a plugin run, including validation.</td></tr>
+<tr><td valign="top"><a href="#handle_result-4">handle_result/4*</a></td><td>handle the results or a plugin run, including validation.</td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td>initialize the gen_server, doing nothing.</td></tr>
+<tr><td valign="top"><a href="#log_msg-2">log_msg/2*</a></td><td>generate a log message, if needed from the user message.</td></tr>
+<tr><td valign="top"><a href="#maybe_drop-2">maybe_drop/2*</a></td><td>drop the credential if allowed, else error.</td></tr>
+<tr><td valign="top"><a href="#remove_credential-2">remove_credential/2*</a></td><td>delete the credential for the user.</td></tr>
+<tr><td valign="top"><a href="#request-4">request/4</a></td><td>perform a request at the service for the user.</td></tr>
+<tr><td valign="top"><a href="#result_to_atom-1">result_to_atom/1*</a></td><td>convert the result of the plugin "ok", "error" or "oidc_login" to atom.</td></tr>
+<tr><td valign="top"><a href="#return-2">return/2*</a></td><td>convert the result to the result data type.</td></tr>
+<tr><td valign="top"><a href="#revoke-2">revoke/2</a></td><td>try to revoke the given credential for the user.</td></tr>
+<tr><td valign="top"><a href="#revoke_credential-2">revoke_credential/2*</a></td><td>revoke the credential for user, if found.</td></tr>
+<tr><td valign="top"><a href="#revoke_or_drop-2">revoke_or_drop/2*</a></td><td>perform the revocation or maybe drop the credential.</td></tr>
+<tr><td valign="top"><a href="#run_plugin-1">run_plugin/1*</a></td><td>run a plugin.</td></tr>
+<tr><td valign="top"><a href="#runner_config-1">runner_config/1*</a></td><td>create a minimal valid runner config.</td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>start the gen_server process linked to the supervisor.</td></tr>
+<tr><td valign="top"><a href="#stop-0">stop/0</a></td><td>stop the process.</td></tr>
+<tr><td valign="top"><a href="#store_credential-4">store_credential/4*</a></td><td>store credential information.</td></tr>
+<tr><td valign="top"><a href="#sync_store_credential-4">sync_store_credential/4*</a></td><td>serialize storing of the credential state in the database.</td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td>nothing done here.</td></tr>
+<tr><td valign="top"><a href="#validate_credential_values-1">validate_credential_values/1*</a></td><td>validate the credential entries returned from the plugin.</td></tr>
+<tr><td valign="top"><a href="#validate_credential_values-2">validate_credential_values/2*</a></td><td>validate the credential entries returned from the plugin.</td></tr>
+<tr><td valign="top"><a href="#value_to_binary-1">value_to_binary/1*</a></td><td>convert a value to binary.</td></tr>
+<tr><td valign="top"><a href="#value_to_file-1">value_to_file/1*</a></td><td>convert a value to file.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn::any(), State::<a href="#type-state">state()</a>, Extra::any()) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>nothing done here</p>
+
+<h3 class="function"><a name="config-1">config/1 *</a></h3>
+<div class="spec">
+<p><tt>config(Config::#{}) -&gt; <a href="#type-config">config()</a></tt><br></p>
+</div><p>generate a new config map, ensuring no field is missing.</p>
+
+<h3 class="function"><a name="exists-2">exists/2</a></h3>
+<div class="spec">
+<p><tt>exists(UserInfo::<a href="watts_userinfo.html#type-info">watts_userinfo:info()</a>, CredId::binary()) -&gt; true | false</tt><br></p>
+</div><p>checks if the credential for the given user exists.</p>
+
+<h3 class="function"><a name="file_lines_to_binary-2">file_lines_to_binary/2 *</a></h3>
+<div class="spec">
+<p><tt>file_lines_to_binary(T::[any()], File::binary()) -&gt; binary()</tt><br></p>
+</div><p>convert a list to binary</p>
+
+<h3 class="function"><a name="get_count-2">get_count/2</a></h3>
+<div class="spec">
+<p><tt>get_count(UserInfo::<a href="watts_userinfo.html#type-info">watts_userinfo:info()</a>, ServiceId::binary()) -&gt; {ok, non_neg_integer()}</tt><br></p>
+</div><p>return the number of credentials of a user for a specific service.</p>
+
+<h3 class="function"><a name="get_cred_list-1">get_cred_list/1</a></h3>
+<div class="spec">
+<p><tt>get_cred_list(UserInfo::<a href="watts_userinfo.html#type-info">watts_userinfo:info()</a>) -&gt; {ok, [<a href="watts.html#type-credential">watts:credential()</a>]}</tt><br></p>
+</div><p>get the list of all credentials for the given user.</p>
+
+<h3 class="function"><a name="get_credential-2">get_credential/2 *</a></h3>
+<div class="spec">
+<p><tt>get_credential(UserId::binary(), CredentialId::binary()) -&gt; {ok, <a href="watts.html#type-credential">watts:credential()</a>} | {error, atom()}</tt><br></p>
+</div><p>lookup a credential for the user</p>
+
+<h3 class="function"><a name="get_credential_count-2">get_credential_count/2 *</a></h3>
+<div class="spec">
+<p><tt>get_credential_count(UserId::binary(), ServiceId::binary()) -&gt; {ok, integer()}</tt><br></p>
+</div><p>get the number of credentials of user at service</p>
+
+<h3 class="function"><a name="get_credential_list-1">get_credential_list/1 *</a></h3>
+<div class="spec">
+<p><tt>get_credential_list(UserId::binary()) -&gt; {ok, [<a href="watts.html#type-credential">watts:credential()</a>]}</tt><br></p>
+</div><p>get the list of credenials for a user</p>
+
+<h3 class="function"><a name="get_params-1">get_params/1</a></h3>
+<div class="spec">
+<p><tt>get_params(ServiceId::binary()) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>perform the 'parameter' request at the plugin for the service.</p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request::any(), From::any(), State::<a href="#type-state">state()</a>) -&gt; {reply, any(), <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle calls, the only one is to serialize storing or credential.</p>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Msg::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>} | {stop, normal, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle casts, the only one is to stop the gen_server.</p>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>nothing done here</p>
+
+<h3 class="function"><a name="handle_result-2">handle_result/2 *</a></h3>
+<div class="spec">
+<p><tt>handle_result(X1::<a href="watts_plugin_runner.html#type-result">watts_plugin_runner:result()</a>, Info::<a href="#type-config">config()</a>) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>handle the results or a plugin run, including validation</p>
+
+<h3 class="function"><a name="handle_result-4">handle_result/4 *</a></h3>
+<div class="spec">
+<p><tt>handle_result(Result::ok | error | oidc_login, Map::#{}, Log::<a href="watts_plugin_runner.html#type-output">watts_plugin_runner:output()</a>, Info::<a href="#type-config">config()</a>) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>handle the results or a plugin run, including validation</p>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1::noparams) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>initialize the gen_server, doing nothing.</p>
+
+<h3 class="function"><a name="log_msg-2">log_msg/2 *</a></h3>
+<div class="spec">
+<p><tt>log_msg(Map::#{log_msg =&gt; binary(), term() =&gt; term()}, UMsg::binary()) -&gt; binary()</tt><br></p>
+</div><p>generate a log message, if needed from the user message</p>
+
+<h3 class="function"><a name="maybe_drop-2">maybe_drop/2 *</a></h3>
+<div class="spec">
+<p><tt>maybe_drop(X1::boolean(), X2::<a href="#type-config">config()</a>) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>drop the credential if allowed, else error.</p>
+
+<h3 class="function"><a name="remove_credential-2">remove_credential/2 *</a></h3>
+<div class="spec">
+<p><tt>remove_credential(UserId::binary(), CredentialId::binary()) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>delete the credential for the user</p>
+
+<h3 class="function"><a name="request-4">request/4</a></h3>
+<div class="spec">
+<p><tt>request(ServiceId::binary(), UserInfo::<a href="watts_userinfo.html#type-userinfo">watts_userinfo:userinfo()</a>, Interface::binary(), Params::#{}) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>perform a request at the service for the user.</p>
+
+<h3 class="function"><a name="result_to_atom-1">result_to_atom/1 *</a></h3>
+<div class="spec">
+<p><tt>result_to_atom(Result::atom() | binary()) -&gt; atom()</tt><br></p>
+</div><p>convert the result of the plugin "ok", "error" or "oidc_login" to atom.</p>
+
+<h3 class="function"><a name="return-2">return/2 *</a></h3>
+<div class="spec">
+<p><tt>return(X1::result | oidc_login | error, Result::#{} | atom() | tuple()) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>convert the result to the result data type.</p>
+
+<h3 class="function"><a name="revoke-2">revoke/2</a></h3>
+<div class="spec">
+<p><tt>revoke(CredentialId::binary(), UserInfo::<a href="watts_userinfo.html#type-info">watts_userinfo:info()</a>) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>try to revoke the given credential for the user</p>
+
+<h3 class="function"><a name="revoke_credential-2">revoke_credential/2 *</a></h3>
+<div class="spec">
+<p><tt>revoke_credential(MaybeCredential, UserInfo::<a href="watts_userinfo.html#type-info">watts_userinfo:info()</a>) -&gt; <a href="#type-result">result()</a></tt>
+<ul class="definitions"><li><tt>MaybeCredential = {ok, <a href="watts.html#type-credential">watts:credential()</a>} | {error, atom()}</tt></li></ul></p>
+</div><p>revoke the credential for user, if found.</p>
+
+<h3 class="function"><a name="revoke_or_drop-2">revoke_or_drop/2 *</a></h3>
+<div class="spec">
+<p><tt>revoke_or_drop(X1::boolean(), Config::<a href="#type-config">config()</a>) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>perform the revocation or maybe drop the credential.</p>
+
+<h3 class="function"><a name="run_plugin-1">run_plugin/1 *</a></h3>
+<div class="spec">
+<p><tt>run_plugin(Config::<a href="#type-config">config()</a>) -&gt; <a href="watts_plugin_runner.html#type-result">watts_plugin_runner:result()</a></tt><br></p>
+</div><p>run a plugin</p>
+
+<h3 class="function"><a name="runner_config-1">runner_config/1 *</a></h3>
+<div class="spec">
+<p><tt>runner_config(Config::#{}) -&gt; <a href="watts_plugin_runner.html#type-config">watts_plugin_runner:config()</a></tt><br></p>
+</div><p>create a minimal valid runner config</p>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; {ok, pid()}</tt><br></p>
+</div><p>start the gen_server process linked to the supervisor</p>
+
+<h3 class="function"><a name="stop-0">stop/0</a></h3>
+<div class="spec">
+<p><tt>stop() -&gt; ok</tt><br></p>
+</div><p>stop the process</p>
+
+<h3 class="function"><a name="store_credential-4">store_credential/4 *</a></h3>
+<div class="spec">
+<p><tt>store_credential(UserId::binary(), ServiceId::binary(), Interface::binary(), CredentialState::binary()) -&gt; {ok, binary()} | {error, atom()}</tt><br></p>
+</div><p>store credential information.
+  The only information stored are:
+  <ul>
+  <li> the ID of credential (returned from persistent layer) </li>
+  <li> the ID of the user </li>
+  <li> the ID of the service </li>
+  <li> the interface that has been used </li>
+  <li> the state returned by the plugin </li>
+  </ul></p>
+
+<h3 class="function"><a name="sync_store_credential-4">sync_store_credential/4 *</a></h3>
+<div class="spec">
+<p><tt>sync_store_credential(UserId::binary(), ServiceId::binary(), Interface::binary(), CredState::binary()) -&gt; {ok, binary()} | {error, Reason::atom()}</tt><br></p>
+</div><p>serialize storing of the credential state in the database.</p>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason::any(), State::<a href="#type-state">state()</a>) -&gt; ok</tt><br></p>
+</div><p>nothing done here</p>
+
+<h3 class="function"><a name="validate_credential_values-1">validate_credential_values/1 *</a></h3>
+<div class="spec">
+<p><tt>validate_credential_values(Credential::[#{}]) -&gt; [<a href="#type-cred_entry">cred_entry()</a>]</tt><br></p>
+</div><p>validate the credential entries returned from the plugin</p>
+
+<h3 class="function"><a name="validate_credential_values-2">validate_credential_values/2 *</a></h3>
+<div class="spec">
+<p><tt>validate_credential_values(T::[#{}], ValidatedCredential::[<a href="#type-cred_entry">cred_entry()</a>]) -&gt; [<a href="#type-cred_entry">cred_entry()</a>]</tt><br></p>
+</div><p>validate the credential entries returned from the plugin</p>
+
+<h3 class="function"><a name="value_to_binary-1">value_to_binary/1 *</a></h3>
+<div class="spec">
+<p><tt>value_to_binary(Val::any()) -&gt; binary()</tt><br></p>
+</div><p>convert a value to binary</p>
+
+<h3 class="function"><a name="value_to_file-1">value_to_file/1 *</a></h3>
+<div class="spec">
+<p><tt>value_to_file(Val::any()) -&gt; binary()</tt><br></p>
+</div><p>convert a value to file</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

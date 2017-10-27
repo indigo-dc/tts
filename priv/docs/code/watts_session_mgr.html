@@ -1,0 +1,192 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_session_mgr</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_session_mgr</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>This module runs as a single worker and serializes all needed session
+  creations to ensure uniqueness of tokens.
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+
+<h2><a name="description">Description</a></h2>This module runs as a single worker and serializes all needed session
+  creations to ensure uniqueness of tokens.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #state{}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_new_session_entry-1">add_new_session_entry/1*</a></td><td>store a new session and return if succeeded.</td></tr>
+<tr><td valign="top"><a href="#close_all_sessions-0">close_all_sessions/0</a></td><td>close all sessions, gracefully shutdown.</td></tr>
+<tr><td valign="top"><a href="#close_session-1">close_session/1*</a></td><td>delete and trigger a close at the session.</td></tr>
+<tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td>does nothting.</td></tr>
+<tr><td valign="top"><a href="#create_new_session-0">create_new_session/0*</a></td><td>create a new session.</td></tr>
+<tr><td valign="top"><a href="#delete_session-1">delete_session/1*</a></td><td>delete the session with the given id.</td></tr>
+<tr><td valign="top"><a href="#delete_sessions-1">delete_sessions/1*</a></td><td>delete list of sessions.</td></tr>
+<tr><td valign="top"><a href="#do_delete_all_sessions-0">do_delete_all_sessions/0*</a></td><td>delete all sessions.</td></tr>
+<tr><td valign="top"><a href="#get_all_sessions-0">get_all_sessions/0*</a></td><td>get all active sessions.</td></tr>
+<tr><td valign="top"><a href="#get_cookie_data-1">get_cookie_data/1</a></td><td>get the max age and the content of the cookie for the session.</td></tr>
+<tr><td valign="top"><a href="#get_session-1">get_session/1</a></td><td>get a session by the cookie data, just a simple ets lookup.</td></tr>
+<tr><td valign="top"><a href="#get_unique_token-0">get_unique_token/0*</a></td><td>generate a unique token that can be stored in a cookie.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td>handle the calls coming in from the plublic functions.</td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td>handle the stop cast form the stop function.</td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td>ignore all other messages.</td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td>init the session manager process.</td></tr>
+<tr><td valign="top"><a href="#lookup_session_pid-1">lookup_session_pid/1*</a></td><td>lookup a session by its id.</td></tr>
+<tr><td valign="top"><a href="#new_session-0">new_session/0</a></td><td>create a new session.</td></tr>
+<tr><td valign="top"><a href="#repeat_token_gen_if_needed-1">repeat_token_gen_if_needed/1*</a></td><td>repeat the generation of the token until it is unique.</td></tr>
+<tr><td valign="top"><a href="#session_terminating-1">session_terminating/1</a></td><td>a session died purge it.</td></tr>
+<tr><td valign="top"><a href="#session_wants_to_close-1">session_wants_to_close/1</a></td><td>a session wants to close, remove it and send a close back.</td></tr>
+<tr><td valign="top"><a href="#set_token_for_session-2">set_token_for_session/2*</a></td><td>set the token for the session.</td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>start link implementation of the gen_server.</td></tr>
+<tr><td valign="top"><a href="#start_session-1">start_session/1*</a></td><td>start a session and set the token.</td></tr>
+<tr><td valign="top"><a href="#stop-0">stop/0</a></td><td>send a cast to stop the process.</td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td>do nothing, just stop.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_new_session_entry-1">add_new_session_entry/1 *</a></h3>
+<div class="spec">
+<p><tt>add_new_session_entry(Token::binary()) -&gt; {ok, binary()} | {error, used}</tt><br></p>
+</div><p>store a new session and return if succeeded</p>
+
+<h3 class="function"><a name="close_all_sessions-0">close_all_sessions/0</a></h3>
+<div class="spec">
+<p><tt>close_all_sessions() -&gt; ok</tt><br></p>
+</div><p>close all sessions, gracefully shutdown</p>
+
+<h3 class="function"><a name="close_session-1">close_session/1 *</a></h3>
+<div class="spec">
+<p><tt>close_session(ID::any()) -&gt; ok</tt><br></p>
+</div><p>delete and trigger a close at the session</p>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn::any(), State::<a href="#type-state">state()</a>, Extra::any()) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>does nothting</p>
+
+<h3 class="function"><a name="create_new_session-0">create_new_session/0 *</a></h3>
+<div class="spec">
+<p><tt>create_new_session() -&gt; {ok, pid()}</tt><br></p>
+</div><p>create a new session</p>
+
+<h3 class="function"><a name="delete_session-1">delete_session/1 *</a></h3>
+<div class="spec">
+<p><tt>delete_session(ID::any()) -&gt; ok</tt><br></p>
+</div><p>delete the session with the given id</p>
+
+<h3 class="function"><a name="delete_sessions-1">delete_sessions/1 *</a></h3>
+<div class="spec">
+<p><tt>delete_sessions(T::[#{id =&gt; Id::any(), pid =&gt; pid()}]) -&gt; ok</tt><br></p>
+</div><p>delete list of sessions</p>
+
+<h3 class="function"><a name="do_delete_all_sessions-0">do_delete_all_sessions/0 *</a></h3>
+<div class="spec">
+<p><tt>do_delete_all_sessions() -&gt; ok</tt><br></p>
+</div><p>delete all sessions</p>
+
+<h3 class="function"><a name="get_all_sessions-0">get_all_sessions/0 *</a></h3>
+<div class="spec">
+<p><tt>get_all_sessions() -&gt; [#{id =&gt; Id::any(), pid =&gt; pid()}]</tt><br></p>
+</div><p>get all active sessions</p>
+
+<h3 class="function"><a name="get_cookie_data-1">get_cookie_data/1</a></h3>
+<div class="spec">
+<p><tt>get_cookie_data(Session::pid()) -&gt; {ok, MaxAge::pos_integer(), CookieData::binary()}</tt><br></p>
+</div><p>get the max age and the content of the cookie for the session.</p>
+
+<h3 class="function"><a name="get_session-1">get_session/1</a></h3>
+<div class="spec">
+<p><tt>get_session(Cookie::binary() | undefined) -&gt; {ok, pid() | undefined}</tt><br></p>
+</div><p>get a session by the cookie data, just a simple ets lookup</p>
+
+<h3 class="function"><a name="get_unique_token-0">get_unique_token/0 *</a></h3>
+<div class="spec">
+<p><tt>get_unique_token() -&gt; binary()</tt><br></p>
+</div><p>generate a unique token that can be stored in a cookie</p>
+<p><b><font color="red">To do</font></b><ul><li><font color="red">use signed JWTS as token</font></li></ul></p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request::any(), From::any(), State::<a href="#type-state">state()</a>) -&gt; {reply, atom() | tuple(), <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the calls coming in from the plublic functions</p>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Msg::any(), State::<a href="#type-state">state()</a>) -&gt; {stop, normal, <a href="#type-state">state()</a>} | {noreply, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the stop cast form the stop function</p>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>ignore all other messages</p>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1::noparams) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>init the session manager process</p>
+
+<h3 class="function"><a name="lookup_session_pid-1">lookup_session_pid/1 *</a></h3>
+<div class="spec">
+<p><tt>lookup_session_pid(ID::any()) -&gt; {ok, pid() | undefined}</tt><br></p>
+</div><p>lookup a session by its id</p>
+
+<h3 class="function"><a name="new_session-0">new_session/0</a></h3>
+<div class="spec">
+<p><tt>new_session() -&gt; {ok, pid()}</tt><br></p>
+</div><p>create a new session</p>
+
+<h3 class="function"><a name="repeat_token_gen_if_needed-1">repeat_token_gen_if_needed/1 *</a></h3>
+<div class="spec">
+<p><tt>repeat_token_gen_if_needed(X1::{ok, binary()} | {error, atom()}) -&gt; binary()</tt><br></p>
+</div><p>repeat the generation of the token until it is unique</p>
+
+<h3 class="function"><a name="session_terminating-1">session_terminating/1</a></h3>
+<div class="spec">
+<p><tt>session_terminating(ID::any()) -&gt; ok</tt><br></p>
+</div><p>a session died purge it</p>
+
+<h3 class="function"><a name="session_wants_to_close-1">session_wants_to_close/1</a></h3>
+<div class="spec">
+<p><tt>session_wants_to_close(Token::binary()) -&gt; ok</tt><br></p>
+</div><p>a session wants to close, remove it and send a close back</p>
+
+<h3 class="function"><a name="set_token_for_session-2">set_token_for_session/2 *</a></h3>
+<div class="spec">
+<p><tt>set_token_for_session(Token::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set the token for the session</p>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; {ok, pid()}</tt><br></p>
+</div><p>start link implementation of the gen_server</p>
+
+<h3 class="function"><a name="start_session-1">start_session/1 *</a></h3>
+<div class="spec">
+<p><tt>start_session(Token::binary()) -&gt; pid()</tt><br></p>
+</div><p>start a session and set the token</p>
+
+<h3 class="function"><a name="stop-0">stop/0</a></h3>
+<div class="spec">
+<p><tt>stop() -&gt; ok</tt><br></p>
+</div><p>send a cast to stop the process</p>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason::any(), State::<a href="#type-state">state()</a>) -&gt; ok</tt><br></p>
+</div><p>do nothing, just stop</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

@@ -1,0 +1,12 @@
+%% encoding: UTF-8
+{application,watts}.
+{modules,[watts,watts_app,watts_ets,watts_file_util,watts_http_api,
+          watts_http_redirect,watts_http_rsp,watts_http_util,watts_init,
+          watts_jwt_keys,watts_oidc_client,watts_persistent,
+          watts_persistent_leveldb,watts_persistent_mnesia,
+          watts_persistent_sqlite,watts_plugin,watts_plugin_runner,
+          watts_plugin_sup,watts_rsp,watts_rsp_keys,watts_rsp_keys_sup,
+          watts_service,watts_service_authz,watts_session,watts_session_mgr,
+          watts_session_sup,watts_sessions_sup,watts_sup,watts_temp_cred,
+          watts_temp_cred_data,watts_temp_cred_sup,watts_userinfo,
+          watts_utils]}.

@@ -1,0 +1,271 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_jwt_keys</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_jwt_keys</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>The purpose of this module is to ensure that the JWT keys are rotated and availeable.
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+
+<h2><a name="description">Description</a></h2><p>The purpose of this module is to ensure that the JWT keys are rotated and availeable.</p>
+ 
+  The module does
+  <ul>
+  <li> trigger a check every minute through the idle timeout <a href="#maybe_update-1"><code>maybe_update/1 </code></a> </li>
+  <li> Then checks if old keys can be deleted </li>
+  <li> Also checks if new keys need to be created. This is configured
+  with the variable 'jwt_key_rotation_interval' </li>
+  </ul>
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-key">key()</a></h3>
+<p><tt>key() = #{kty =&gt; binary(), n =&gt; binary(), e =&gt; binary(), d =&gt; binary()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #state{next_key_rotation = integer(), next_key_delete = undefined | pos_integer(), key_file = binary(), key_bits = binary(), info_file = binary()}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_new_key-1">add_new_key/1*</a></td><td>add a new key to the list of keys.</td></tr>
+<tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td>code change does nothing.</td></tr>
+<tr><td valign="top"><a href="#create_files-1">create_files/1*</a></td><td>create the key and the info.</td></tr>
+<tr><td valign="top"><a href="#create_or_read_files-2">create_or_read_files/2*</a></td><td>either create the files or read them.</td></tr>
+<tr><td valign="top"><a href="#current_time-0">current_time/0*</a></td><td>get the current time in seconds.</td></tr>
+<tr><td valign="top"><a href="#delete_oldest_key-0">delete_oldest_key/0*</a></td><td>drop the tail of the list of keys in use, the oldest one.</td></tr>
+<tr><td valign="top"><a href="#delete_oldest_key-1">delete_oldest_key/1*</a></td><td>ensure that at least one key is left.</td></tr>
+<tr><td valign="top"><a href="#encode_key_value-1">encode_key_value/1*</a></td><td>convert an unsigned integer in base64 encoded value.</td></tr>
+<tr><td valign="top"><a href="#generate_jwt_key-2">generate_jwt_key/2*</a></td><td>generate a new rsa private key for jwt signing.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td>handle the calls, only one is supported to perform the inital read.</td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td>handle the casts.</td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td>handle the info.</td></tr>
+<tr><td valign="top"><a href="#handle_jwt_info_file-1">handle_jwt_info_file/1*</a></td><td>handle the result of creating the info file.</td></tr>
+<tr><td valign="top"><a href="#handle_key_generation_result-2">handle_key_generation_result/2*</a></td><td>handle the result of creating the key file and generate info.</td></tr>
+<tr><td valign="top"><a href="#handle_read_result-3">handle_read_result/3*</a></td><td>handle the results of the reading of the key/info.</td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td>initialize the gen_server.</td></tr>
+<tr><td valign="top"><a href="#initial_read-0">initial_read/0</a></td><td>trigger the initial read or generation of the jwt signing key.</td></tr>
+<tr><td valign="top"><a href="#initial_read-1">initial_read/1*</a></td><td>perform the initale read and maybe generation of keys.</td></tr>
+<tr><td valign="top"><a href="#maybe_trigger_direct_rotation-1">maybe_trigger_direct_rotation/1*</a></td><td>this triggers a direct rotation after a crash.</td></tr>
+<tr><td valign="top"><a href="#maybe_update-1">maybe_update/1*</a></td><td>maybe update the current key setting.</td></tr>
+<tr><td valign="top"><a href="#next_key_del-0">next_key_del/0*</a></td><td>calculate the times in seconds of the next key dropping.</td></tr>
+<tr><td valign="top"><a href="#next_key_rot-0">next_key_rot/0*</a></td><td>calculate the times in seconds of the next key rotation.</td></tr>
+<tr><td valign="top"><a href="#perform_update-4">perform_update/4*</a></td><td>perform the needed updates.</td></tr>
+<tr><td valign="top"><a href="#read_files-1">read_files/1*</a></td><td>read the key files (key itself and info).</td></tr>
+<tr><td valign="top"><a href="#read_jwt_key-1">read_jwt_key/1*</a></td><td>read the jwt key file.</td></tr>
+<tr><td valign="top"><a href="#read_key_info-1">read_key_info/1*</a></td><td>read the info file.</td></tr>
+<tr><td valign="top"><a href="#regenerate_or_use_key-3">regenerate_or_use_key/3*</a></td><td>use the key or regeneratae one:w.</td></tr>
+<tr><td valign="top"><a href="#run_openssl-2">run_openssl/2*</a></td><td>run the openssl command to create the key file.</td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>start the gen_server linked to the current process.</td></tr>
+<tr><td valign="top"><a href="#stop-0">stop/0</a></td><td>stop the gen_server.</td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td>terminate logs an error on crash.</td></tr>
+<tr><td valign="top"><a href="#too_old-1">too_old/1*</a></td><td>check if the creation time of the key is too old.</td></tr>
+<tr><td valign="top"><a href="#trigger_direct_rotation_if_started-2">trigger_direct_rotation_if_started/2*</a></td><td>this triggers a direct rotation after a crash.</td></tr>
+<tr><td valign="top"><a href="#update_delete-1">update_delete/1*</a></td><td>update the time of next key deletion in the state.</td></tr>
+<tr><td valign="top"><a href="#update_rot_del-1">update_rot_del/1*</a></td><td>update both, key delete and rotation time.</td></tr>
+<tr><td valign="top"><a href="#update_rotation-1">update_rotation/1*</a></td><td>update the time of next key rotation in the state.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_new_key-1">add_new_key/1 *</a></h3>
+<div class="spec">
+<p><tt>add_new_key(NewKey::<a href="#type-key">key()</a>) -&gt; ok</tt><br></p>
+</div><p>add a new key to the list of keys.</p>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(X1::any(), X2::any(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>code change does nothing</p>
+
+<h3 class="function"><a name="create_files-1">create_files/1 *</a></h3>
+<div class="spec">
+<p><tt>create_files(State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>} | {error, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>create the key and the info</p>
+
+<h3 class="function"><a name="create_or_read_files-2">create_or_read_files/2 *</a></h3>
+<div class="spec">
+<p><tt>create_or_read_files(X1::boolean(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>} | {error, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>either create the files or read them.</p>
+
+<h3 class="function"><a name="current_time-0">current_time/0 *</a></h3>
+<div class="spec">
+<p><tt>current_time() -&gt; integer()</tt><br></p>
+</div><p>get the current time in seconds.</p>
+
+<h3 class="function"><a name="delete_oldest_key-0">delete_oldest_key/0 *</a></h3>
+<div class="spec">
+<p><tt>delete_oldest_key() -&gt; ok</tt><br></p>
+</div><p>drop the tail of the list of keys in use, the oldest one.</p>
+
+<h3 class="function"><a name="delete_oldest_key-1">delete_oldest_key/1 *</a></h3>
+<div class="spec">
+<p><tt>delete_oldest_key(Keys::[<a href="#type-key">key()</a>]) -&gt; [<a href="#type-key">key()</a>]</tt><br></p>
+</div><p>ensure that at least one key is left.</p>
+
+<h3 class="function"><a name="encode_key_value-1">encode_key_value/1 *</a></h3>
+<div class="spec">
+<p><tt>encode_key_value(Value::pos_integer()) -&gt; binary()</tt><br></p>
+</div><p>convert an unsigned integer in base64 encoded value</p>
+
+<h3 class="function"><a name="generate_jwt_key-2">generate_jwt_key/2 *</a></h3>
+<div class="spec">
+<p><tt>generate_jwt_key(KeyFile::binary(), Bits::binary()) -&gt; ok | error</tt><br></p>
+</div><p>generate a new rsa private key for jwt signing</p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request::read_key | any(), From::any(), State::<a href="#type-state">state()</a>) -&gt; {reply, any(), <a href="#type-state">state()</a>, pos_integer()}</tt><br></p>
+</div><p>handle the calls, only one is supported to perform the inital read.
+  This must always return a timeout to trigger the check.</p>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Request::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>, pos_integer()} | {noreply, <a href="#type-state">state()</a>} | {stop, normal, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the casts. This is only stopping.
+  This must always return a timeout to trigger the check.</p>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Request::timeout | any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>, pos_integer()}</tt><br></p>
+</div><p>handle the info. This can only be the update check.
+  This must always return a timeout to trigger the check.</p>
+
+<h3 class="function"><a name="handle_jwt_info_file-1">handle_jwt_info_file/1 *</a></h3>
+<div class="spec">
+<p><tt>handle_jwt_info_file(X1::{ok, binary()} | any()) -&gt; {ok, #{}} | {error, atom()}</tt><br></p>
+</div><p>handle the result of creating the info file.</p>
+
+<h3 class="function"><a name="handle_key_generation_result-2">handle_key_generation_result/2 *</a></h3>
+<div class="spec">
+<p><tt>handle_key_generation_result(X1::ok | error, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>} | {error, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the result of creating the key file and generate info.</p>
+
+<h3 class="function"><a name="handle_read_result-3">handle_read_result/3 *</a></h3>
+<div class="spec">
+<p><tt>handle_read_result(X1::{ok, Key::<a href="#type-key">key()</a>} | any(), X2::{ok, #{bits =&gt; binary(), generated =&gt; integer()}} | any(), State::<a href="#type-state">state()</a>) -&gt; ok | error</tt><br></p>
+</div><p>handle the results of the reading of the key/info</p>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1::noparams) -&gt; {ok, <a href="#type-state">state()</a>} | {ok, <a href="#type-state">state()</a>, pos_integer()}</tt><br></p>
+</div><p>initialize the gen_server.
+  This waits if it has not yet started before, if it has started before
+  it triggers a direct rotation as it has crashed and lost track of time.</p>
+
+<h3 class="function"><a name="initial_read-0">initial_read/0</a></h3>
+<div class="spec">
+<p><tt>initial_read() -&gt; ok | error</tt><br></p>
+</div><p>trigger the initial read or generation of the jwt signing key</p>
+
+<h3 class="function"><a name="initial_read-1">initial_read/1 *</a></h3>
+<div class="spec">
+<p><tt>initial_read(State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>} | {error, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>perform the initale read and maybe generation of keys.</p>
+
+<h3 class="function"><a name="maybe_trigger_direct_rotation-1">maybe_trigger_direct_rotation/1 *</a></h3>
+<div class="spec">
+<p><tt>maybe_trigger_direct_rotation(State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>} | {ok, <a href="#type-state">state()</a>, pos_integer()}</tt><br></p>
+</div><p>this triggers a direct rotation after a crash.
+  as through a crash the tack of time is lost, we just assume it is now.
+  so setting the key rotation time to now and setting timeout to 1 ms.</p>
+
+<h3 class="function"><a name="maybe_update-1">maybe_update/1 *</a></h3>
+<div class="spec">
+<p><tt>maybe_update(State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>maybe update the current key setting.
+  Either delete old, unused keys or rotate.</p>
+
+<h3 class="function"><a name="next_key_del-0">next_key_del/0 *</a></h3>
+<div class="spec">
+<p><tt>next_key_del() -&gt; integer()</tt><br></p>
+</div><p>calculate the times in seconds of the next key dropping.</p>
+
+<h3 class="function"><a name="next_key_rot-0">next_key_rot/0 *</a></h3>
+<div class="spec">
+<p><tt>next_key_rot() -&gt; integer()</tt><br></p>
+</div><p>calculate the times in seconds of the next key rotation.</p>
+
+<h3 class="function"><a name="perform_update-4">perform_update/4 *</a></h3>
+<div class="spec">
+<p><tt>perform_update(NextDelete::undefined | integer(), NextRotation::undefined | integer(), Now::integer(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>perform the needed updates</p>
+
+<h3 class="function"><a name="read_files-1">read_files/1 *</a></h3>
+<div class="spec">
+<p><tt>read_files(State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>} | {error, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>read the key files (key itself and info).</p>
+
+<h3 class="function"><a name="read_jwt_key-1">read_jwt_key/1 *</a></h3>
+<div class="spec">
+<p><tt>read_jwt_key(Path::binary()) -&gt; {ok, <a href="#type-key">key()</a>} | {error, atom()}</tt><br></p>
+</div><p>read the jwt key file</p>
+
+<h3 class="function"><a name="read_key_info-1">read_key_info/1 *</a></h3>
+<div class="spec">
+<p><tt>read_key_info(Path::binary()) -&gt; {ok, #{}} | {error, atom()}</tt><br></p>
+</div><p>read the info file</p>
+
+<h3 class="function"><a name="regenerate_or_use_key-3">regenerate_or_use_key/3 *</a></h3>
+<div class="spec">
+<p><tt>regenerate_or_use_key(X1::boolean(), Key::<a href="#type-key">key()</a>, State::<a href="#type-state">state()</a>) -&gt; ok | error | {ok, <a href="#type-state">state()</a>} | {error, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>use the key or regeneratae one:w</p>
+
+<h3 class="function"><a name="run_openssl-2">run_openssl/2 *</a></h3>
+<div class="spec">
+<p><tt>run_openssl(KeyFile::binary(), Bits::binary()) -&gt; {ok, any()} | {error, any()}</tt><br></p>
+</div><p>run the openssl command to create the key file</p>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; {ok, pid()}</tt><br></p>
+</div><p>start the gen_server linked to the current process</p>
+
+<h3 class="function"><a name="stop-0">stop/0</a></h3>
+<div class="spec">
+<p><tt>stop() -&gt; ok</tt><br></p>
+</div><p>stop the gen_server</p>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason::any(), State::<a href="#type-state">state()</a>) -&gt; ok</tt><br></p>
+</div><p>terminate logs an error on crash.</p>
+
+<h3 class="function"><a name="too_old-1">too_old/1 *</a></h3>
+<div class="spec">
+<p><tt>too_old(GenTime::integer()) -&gt; boolean()</tt><br></p>
+</div><p>check if the creation time of the key is too old.</p>
+
+<h3 class="function"><a name="trigger_direct_rotation_if_started-2">trigger_direct_rotation_if_started/2 *</a></h3>
+<div class="spec">
+<p><tt>trigger_direct_rotation_if_started(X1::boolean(), BaseState::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>} | {ok, <a href="#type-state">state()</a>, pos_integer()}</tt><br></p>
+</div><p>this triggers a direct rotation after a crash.
+  as through a crash the tack of time is lost, we just assume it is now.
+  so setting the key rotation time to now and setting timeout to 1 ms.</p>
+
+<h3 class="function"><a name="update_delete-1">update_delete/1 *</a></h3>
+<div class="spec">
+<p><tt>update_delete(State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>update the time of next key deletion in the state</p>
+
+<h3 class="function"><a name="update_rot_del-1">update_rot_del/1 *</a></h3>
+<div class="spec">
+<p><tt>update_rot_del(State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>update both, key delete and rotation time.</p>
+
+<h3 class="function"><a name="update_rotation-1">update_rotation/1 *</a></h3>
+<div class="spec">
+<p><tt>update_rotation(State::<a href="#type-state">state()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>update the time of next key rotation in the state</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

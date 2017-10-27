@@ -1,0 +1,176 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_data_sqlite</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_data_sqlite</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>, <a href="watts_persistent.html"><tt>watts_persistent</tt></a>.</p>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#create_random_uuid-1">create_random_uuid/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#create_tables_if_needed-1">create_tables_if_needed/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_add-5">credential_add/5</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_add-6">credential_add/6*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_get-1">credential_get/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_get-2">credential_get/2*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_get_count-2">credential_get_count/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_get_count-3">credential_get_count/3*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_get_list-1">credential_get_list/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_get_list-2">credential_get_list/2*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_remove-2">credential_remove/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_remove-3">credential_remove/3*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#credential_state_unique-4">credential_state_unique/4*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#initialize-0">initialize/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#is_ready-0">is_ready/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#reconfigure-0">reconfigure/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#reconfigure-2">reconfigure/2*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#stop-0">stop/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn, State, Extra) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="create_random_uuid-1">create_random_uuid/1 *</a></h3>
+<div class="spec">
+<p><tt>create_random_uuid(Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="create_tables_if_needed-1">create_tables_if_needed/1 *</a></h3>
+<div class="spec">
+<p><tt>create_tables_if_needed(Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="credential_add-5">credential_add/5</a></h3>
+<div class="spec">
+<p><tt>credential_add(UserId::binary(), ServiceId::binary(), Interface::binary(), CredState::any(), AllowNonUniqueStates::boolean()) -&gt; {ok, CredentialID::binary()} | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="credential_add-6">credential_add/6 *</a></h3>
+<div class="spec">
+<p><tt>credential_add(UserId, ServiceId, Interface, CredState, SameStateOk, Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="credential_get-1">credential_get/1</a></h3>
+<div class="spec">
+<p><tt>credential_get(CredId::binary()) -&gt; {ok, <a href="watts.html#type-cred">watts:cred()</a>}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="credential_get-2">credential_get/2 *</a></h3>
+<div class="spec">
+<p><tt>credential_get(CredId, Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="credential_get_count-2">credential_get_count/2</a></h3>
+<div class="spec">
+<p><tt>credential_get_count(UserId::binary(), ServiceId::binary()) -&gt; {ok, integer()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="credential_get_count-3">credential_get_count/3 *</a></h3>
+<div class="spec">
+<p><tt>credential_get_count(UserId, ServiceId, Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="credential_get_list-1">credential_get_list/1</a></h3>
+<div class="spec">
+<p><tt>credential_get_list(UserId::binary()) -&gt; {ok, [<a href="watts.html#type-cred">watts:cred()</a>]}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="credential_get_list-2">credential_get_list/2 *</a></h3>
+<div class="spec">
+<p><tt>credential_get_list(UserId, Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="credential_remove-2">credential_remove/2</a></h3>
+<div class="spec">
+<p><tt>credential_remove(UserId::binary(), CredentialId::binary()) -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="credential_remove-3">credential_remove/3 *</a></h3>
+<div class="spec">
+<p><tt>credential_remove(UserId, CredentialId, Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="credential_state_unique-4">credential_state_unique/4 *</a></h3>
+<div class="spec">
+<p><tt>credential_state_unique(UserId, ServiceId, CredState, Con) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request, From, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Msg, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="initialize-0">initialize/0</a></h3>
+<div class="spec">
+<p><tt>initialize() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="is_ready-0">is_ready/0</a></h3>
+<div class="spec">
+<p><tt>is_ready() -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="reconfigure-0">reconfigure/0</a></h3>
+<div class="spec">
+<p><tt>reconfigure() -&gt; ok</tt><br></p>
+</div>
+
+<h3 class="function"><a name="reconfigure-2">reconfigure/2 *</a></h3>
+<div class="spec">
+<p><tt>reconfigure(NewDB, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; {ok, pid()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="stop-0">stop/0</a></h3>
+<div class="spec">
+<p><tt>stop() -&gt; ok</tt><br></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

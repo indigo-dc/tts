@@ -1,0 +1,274 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_plugin_runner</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_plugin_runner</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>this module takes care of running a plugin in an environment and
+  controlling and validating its results.
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+
+<h2><a name="description">Description</a></h2>this module takes care of running a plugin in an environment and
+  controlling and validating its results.
+  It is implemented as a gen_server so that each run of a plugin has a
+  corresponding process in the VM.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-config">config()</a></h3>
+<p><tt>config() = #{action =&gt; parameter | request | revoke, service_id =&gt; binary(), queue =&gt; atom(), user_info =&gt; <a href="watts_userinfo.html#type-userinfo">watts_userinfo:userinfo()</a> | undefined, cred_state =&gt; binary() | undefined, params =&gt; #{} | undefined}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-env">env()</a></h3>
+<p><tt>env() = [{string(), string()}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-output">output()</a></h3>
+<p><tt>output() = #{channel_id =&gt; any(), process_id =&gt; any(), cmd =&gt; string() | undefined, env =&gt; <a href="#type-env">env()</a>, std_out =&gt; [binary()], std_err =&gt; [binary()], exit_status =&gt; any()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-result">result()</a></h3>
+<p><tt>result() = {ok, Result::#{}, Output::<a href="#type-output">output()</a>} | {error, Reason::atom() | tuple(), Output::<a href="#type-output">output()</a>} | {error, Reason::atom() | tuple()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #state{action = any(), client = any(), service_info = undefined | <a href="watts_service.html#type-info">watts_service:info()</a>, user_info = any(), params = any(), queue = any(), job_id = any(), cred_state = any(), connection = any(), con_type = any(), cmd_line = any(), cmd_env = undefined | <a href="#type-env">env()</a>, cmd_output = undefined | <a href="#type-output">output()</a>, error = any()}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_user_info_if_present-4">add_user_info_if_present/4*</a></td><td>add the information about the user to the parameter.</td></tr>
+<tr><td valign="top"><a href="#close_connection-2">close_connection/2*</a></td><td>close the connection.</td></tr>
+<tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td>only returns the current state.</td></tr>
+<tr><td valign="top"><a href="#connect_to_service-1">connect_to_service/1*</a></td><td>connect to the plugin, either locally or via ssh.</td></tr>
+<tr><td valign="top"><a href="#create_cmd_and_env-3">create_cmd_and_env/3*</a></td><td>create the command to execute and the environment.</td></tr>
+<tr><td valign="top"><a href="#create_command_and_update_state-5">create_command_and_update_state/5*</a></td><td>create the command line command and update the state with it.</td></tr>
+<tr><td valign="top"><a href="#create_result-1">create_result/1*</a></td><td>create the result from the command output.</td></tr>
+<tr><td valign="top"><a href="#get_connection_info-1">get_connection_info/1*</a></td><td>return the connection info from the service info.</td></tr>
+<tr><td valign="top"><a href="#get_env_var-1">get_env_var/1*</a></td><td>return the environment variable.</td></tr>
+<tr><td valign="top"><a href="#get_plugin-1">get_plugin/1*</a></td><td>get the plugin.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td>hande the only call, the action request.</td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td>each step in the process of executing the plugin is done here.</td></tr>
+<tr><td valign="top"><a href="#handle_exec_message-3">handle_exec_message/3*</a></td><td>handle the messages from the exec module, when done send the result.</td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td>handle the responses from either ssh or the executed plugin.</td></tr>
+<tr><td valign="top"><a href="#handle_ssh_message-3">handle_ssh_message/3*</a></td><td>handle the incomming ssh messages and when done trigger sending result.</td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td>init the gen_server process, this just returns an empty state.</td></tr>
+<tr><td valign="top"><a href="#kill-1">kill/1*</a></td><td>kill this process and the execution.</td></tr>
+<tr><td valign="top"><a href="#output-1">output/1*</a></td><td>create a valid basic output.</td></tr>
+<tr><td valign="top"><a href="#parameter_update-3">parameter_update/3*</a></td><td>return the config and request parameter, if not performing parameter.</td></tr>
+<tr><td valign="top"><a href="#prepare_action-1">prepare_action/1*</a></td><td>prepare the execution by creating the command line and connecting.</td></tr>
+<tr><td valign="top"><a href="#request_action-2">request_action/2</a></td><td>Request the action configured in the config passed.</td></tr>
+<tr><td valign="top"><a href="#run_plugin-1">run_plugin/1*</a></td><td>prepare and run a plugin.</td></tr>
+<tr><td valign="top"><a href="#run_plugin-5">run_plugin/5*</a></td><td>run the plugin with its parameter.</td></tr>
+<tr><td valign="top"><a href="#send_reply-2">send_reply/2*</a></td><td>send the reply if not yet done.</td></tr>
+<tr><td valign="top"><a href="#send_result-1">send_result/1*</a></td><td>send the result to the requesting process and stop this one.</td></tr>
+<tr><td valign="top"><a href="#start-0">start/0</a></td><td>start the gen_server process (not linked).</td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>start the gen_server process in a linked manner.</td></tr>
+<tr><td valign="top"><a href="#stop-1">stop/1</a></td><td>stop the gen_server.</td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td>check if crashed and send a reply then, if not do nothing.</td></tr>
+<tr><td valign="top"><a href="#timeout_result-0">timeout_result/0*</a></td><td>generate a timout result.</td></tr>
+<tr><td valign="top"><a href="#trigger_sending-0">trigger_sending/0*</a></td><td>trigger sending the result.</td></tr>
+<tr><td valign="top"><a href="#update_exit_and_send-2">update_exit_and_send/2*</a></td><td>update the exit status of the command and trigger sending the result.</td></tr>
+<tr><td valign="top"><a href="#update_exit_status-2">update_exit_status/2*</a></td><td>update the exit status in the cmd output.</td></tr>
+<tr><td valign="top"><a href="#update_std_out_err-3">update_std_out_err/3*</a></td><td>update the std out or error list of inputs.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_user_info_if_present-4">add_user_info_if_present/4 *</a></h3>
+<div class="spec">
+<p><tt>add_user_info_if_present(ScriptParam::#{}, UserInfo::<a href="watts_userinfo.html#type-info">watts_userinfo:info()</a> | undefined, ServiceId::binary(), AddAccessToken::boolean()) -&gt; #{}</tt><br></p>
+</div><p>add the information about the user to the parameter</p>
+
+<h3 class="function"><a name="close_connection-2">close_connection/2 *</a></h3>
+<div class="spec">
+<p><tt>close_connection(Connection::any(), X2::ssh | local) -&gt; ok</tt><br></p>
+</div><p>close the connection</p>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn::any(), State::<a href="#type-state">state()</a>, Extra::any()) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>only returns the current state.</p>
+
+<h3 class="function"><a name="connect_to_service-1">connect_to_service/1 *</a></h3>
+<div class="spec">
+<p><tt>connect_to_service(Info::<a href="watts_service.html#type-connection">watts_service:connection()</a>) -&gt; {ok, any()}</tt><br></p>
+</div><p>connect to the plugin, either locally or via ssh.</p>
+
+<h3 class="function"><a name="create_cmd_and_env-3">create_cmd_and_env/3 *</a></h3>
+<div class="spec">
+<p><tt>create_cmd_and_env(Cmd::binary(), EncJson::binary(), VarName::undefined | string()) -&gt; {string(), <a href="#type-env">env()</a>}</tt><br></p>
+</div><p>create the command to execute and the environment</p>
+
+<h3 class="function"><a name="create_command_and_update_state-5">create_command_and_update_state/5 *</a></h3>
+<div class="spec">
+<p><tt>create_command_and_update_state(Cmd::binary(), UserInfo::<a href="watts_userinfo.html#type-info">watts_userinfo:info()</a>, ServiceInfo::<a href="watts_service.html#type-info">watts_service:info()</a>, X4::{ok, any()}, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>create the command line command and update the state with it.</p>
+
+<h3 class="function"><a name="create_result-1">create_result/1 *</a></h3>
+<div class="spec">
+<p><tt>create_result(Output::<a href="#type-output">output()</a>) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>create the result from the command output.</p>
+
+<h3 class="function"><a name="get_connection_info-1">get_connection_info/1 *</a></h3>
+<div class="spec">
+<p><tt>get_connection_info(X1::<a href="watts_service.html#type-info">watts_service:info()</a>) -&gt; {ok, <a href="watts_service.html#type-connection">watts_service:connection()</a>}</tt><br></p>
+</div><p>return the connection info from the service info</p>
+
+<h3 class="function"><a name="get_env_var-1">get_env_var/1 *</a></h3>
+<div class="spec">
+<p><tt>get_env_var(X1::<a href="watts_service.html#type-info">watts_service:info()</a>) -&gt; string() | undefined</tt><br></p>
+</div><p>return the environment variable</p>
+
+<h3 class="function"><a name="get_plugin-1">get_plugin/1 *</a></h3>
+<div class="spec">
+<p><tt>get_plugin(X1::<a href="watts_service.html#type-info">watts_service:info()</a>) -&gt; {ok, binary()}</tt><br></p>
+</div><p>get the plugin</p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request::{request_action, <a href="#type-config">config()</a>} | any(), From::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>, pos_integer()} | {reply, ignored, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>hande the only call, the action request.
+  This will start the process to iterate throught all the needed steps.</p>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Msg::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>} | {stop, normal, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>each step in the process of executing the plugin is done here.
+  The actions performed are:
+  <ul>
+  <li> request a slot in the queue </li>
+  <li> run the plugin (perform action) </li>
+  <li> return the result </li>
+  </ul></p>
+
+<h3 class="function"><a name="handle_exec_message-3">handle_exec_message/3 *</a></h3>
+<div class="spec">
+<p><tt>handle_exec_message(X1::atom(), Data::binary(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the messages from the exec module, when done send the result.</p>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info::any(), State::<a href="#type-state">state()</a>) -&gt; {noreply, <a href="#type-state">state()</a>} | {stop, normal, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the responses from either ssh or the executed plugin.</p>
+<p><b>See also:</b> <a href="#handle_exec_message-3">handle_exec_message/3</a>, <a href="#handle_ssh_message-3">handle_ssh_message/3</a>.</p>
+
+<h3 class="function"><a name="handle_ssh_message-3">handle_ssh_message/3 *</a></h3>
+<div class="spec">
+<p><tt>handle_ssh_message(X1::tuple(), ChannelId::any(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the incomming ssh messages and when done trigger sending result.</p>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1::noparams) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>init the gen_server process, this just returns an empty state.</p>
+
+<h3 class="function"><a name="kill-1">kill/1 *</a></h3>
+<div class="spec">
+<p><tt>kill(State) -&gt; any()</tt></p>
+</div><p>kill this process and the execution.
+  this is called after a timeout.</p>
+
+<h3 class="function"><a name="output-1">output/1 *</a></h3>
+<div class="spec">
+<p><tt>output(Output::#{}) -&gt; <a href="#type-output">output()</a></tt><br></p>
+</div><p>create a valid basic output</p>
+
+<h3 class="function"><a name="parameter_update-3">parameter_update/3 *</a></h3>
+<div class="spec">
+<p><tt>parameter_update(X1::atom(), ServiceInfo::<a href="watts_service.html#type-info">watts_service:info()</a>, State::<a href="#type-state">state()</a>) -&gt; #{}</tt><br></p>
+</div><p>return the config and request parameter, if not performing parameter.</p>
+
+<h3 class="function"><a name="prepare_action-1">prepare_action/1 *</a></h3>
+<div class="spec">
+<p><tt>prepare_action(State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>prepare the execution by creating the command line and connecting.</p>
+
+<h3 class="function"><a name="request_action-2">request_action/2</a></h3>
+<div class="spec">
+<p><tt>request_action(ConfigIn::<a href="#type-config">config()</a>, Pid::pid()) -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>Request the action configured in the config passed.
+  The action can be one of the suppoerted actions:
+  <ul>
+  <li> parameter </li>
+  <li> request </li>
+  <li> revoke </li>
+  </ul></p>
+
+<h3 class="function"><a name="run_plugin-1">run_plugin/1 *</a></h3>
+<div class="spec">
+<p><tt>run_plugin(State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>prepare and run a plugin</p>
+
+<h3 class="function"><a name="run_plugin-5">run_plugin/5 *</a></h3>
+<div class="spec">
+<p><tt>run_plugin(Cmd::string(), Env::<a href="#type-env">env()</a>, X3::ssh | local, Connection::any(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>run the plugin with its parameter.
+  The results will be sent async to this process and are handled by the
+  <a href="#handle_info-2"><code>handle_info/2</code></a> function.</p>
+
+<h3 class="function"><a name="send_reply-2">send_reply/2 *</a></h3>
+<div class="spec">
+<p><tt>send_reply(Reply::<a href="#type-result">result()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>send the reply if not yet done.</p>
+
+<h3 class="function"><a name="send_result-1">send_result/1 *</a></h3>
+<div class="spec">
+<p><tt>send_result(State::<a href="#type-state">state()</a>) -&gt; {stop, normal, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>send the result to the requesting process and stop this one.</p>
+
+<h3 class="function"><a name="start-0">start/0</a></h3>
+<div class="spec">
+<p><tt>start() -&gt; {ok, pid()}</tt><br></p>
+</div><p>start the gen_server process (not linked).</p>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; {ok, pid()}</tt><br></p>
+</div><p>start the gen_server process in a linked manner.</p>
+
+<h3 class="function"><a name="stop-1">stop/1</a></h3>
+<div class="spec">
+<p><tt>stop(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>stop the gen_server.</p>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason::any(), State::<a href="#type-state">state()</a>) -&gt; ok</tt><br></p>
+</div><p>check if crashed and send a reply then, if not do nothing.</p>
+
+<h3 class="function"><a name="timeout_result-0">timeout_result/0 *</a></h3>
+<div class="spec">
+<p><tt>timeout_result() -&gt; <a href="#type-result">result()</a></tt><br></p>
+</div><p>generate a timout result</p>
+
+<h3 class="function"><a name="trigger_sending-0">trigger_sending/0 *</a></h3>
+<div class="spec">
+<p><tt>trigger_sending() -&gt; ok</tt><br></p>
+</div><p>trigger sending the result.</p>
+
+<h3 class="function"><a name="update_exit_and_send-2">update_exit_and_send/2 *</a></h3>
+<div class="spec">
+<p><tt>update_exit_and_send(ExitStatus::any(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>update the exit status of the command and trigger sending the result</p>
+
+<h3 class="function"><a name="update_exit_status-2">update_exit_status/2 *</a></h3>
+<div class="spec">
+<p><tt>update_exit_status(ExitStatus::any(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>update the exit status in the cmd output</p>
+
+<h3 class="function"><a name="update_std_out_err-3">update_std_out_err/3 *</a></h3>
+<div class="spec">
+<p><tt>update_std_out_err(Out::binary(), Err::binary(), State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>update the std out or error list of inputs.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

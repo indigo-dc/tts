@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_http_rsp</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_http_rsp</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>the http endpoint to redirect a user to for an RSP flow.
+
+<p><b>Behaviours:</b> <a href="cowboy_http_handler.html"><tt>cowboy_http_handler</tt></a>.</p>
+
+<h2><a name="description">Description</a></h2>the http endpoint to redirect a user to for an RSP flow.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #state{}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#execute_or_error-5">execute_or_error/5*</a></td><td>redirect to the provider for login or trigger the plugin.</td></tr>
+<tr><td valign="top"><a href="#get_return_url-2">get_return_url/2*</a></td><td>return the url to use on fail/success of plugin execution.</td></tr>
+<tr><td valign="top"><a href="#handle-2">handle/2</a></td><td>start a session if jwt parsing succeeded and get a queue entry,
+  else retrun back.</td></tr>
+<tr><td valign="top"><a href="#handle_queue_result-2">handle_queue_result/2*</a></td><td>handle the toke or error of requesting the queue.</td></tr>
+<tr><td valign="top"><a href="#init-3">init/3</a></td><td>init the request handling, does nothing.</td></tr>
+<tr><td valign="top"><a href="#maybe_handle-3">maybe_handle/3*</a></td><td>maybe handle the request, if there are not too many per second.</td></tr>
+<tr><td valign="top"><a href="#redirect_to_provider-4">redirect_to_provider/4*</a></td><td>redirect the a provider for login.</td></tr>
+<tr><td valign="top"><a href="#request_queue_if_configured-2">request_queue_if_configured/2*</a></td><td>request a token at the queue if needed.</td></tr>
+<tr><td valign="top"><a href="#set_cookie-2">set_cookie/2*</a></td><td>set the cookie for session.</td></tr>
+<tr><td valign="top"><a href="#setup_session_and_start-3">setup_session_and_start/3*</a></td><td>check the parsing result and maybe start the session and trigger
+  the needed action.</td></tr>
+<tr><td valign="top"><a href="#terminate-3">terminate/3</a></td><td>on termination do nothing.</td></tr>
+<tr><td valign="top"><a href="#warning-2">warning/2*</a></td><td>log a warning.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="execute_or_error-5">execute_or_error/5 *</a></h3>
+<div class="spec">
+<p><tt>execute_or_error(X1::<a href="watts_rsp.html#type-request_type">watts_rsp:request_type()</a> | {error, Reason::atom()}, Session::pid(), Rsp::<a href="watts_rsp.html#type-rsp">watts_rsp:rsp()</a>, Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cowboy_req.html#type-req">cowboy_req:req()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>redirect to the provider for login or trigger the plugin</p>
+
+<h3 class="function"><a name="get_return_url-2">get_return_url/2 *</a></h3>
+<div class="spec">
+<p><tt>get_return_url(X1::{ok, any()} | any(), Rsp::<a href="watts_rsp.html#type-rsp">watts_rsp:rsp()</a>) -&gt; binary()</tt><br></p>
+</div><p>return the url to use on fail/success of plugin execution</p>
+
+<h3 class="function"><a name="handle-2">handle/2</a></h3>
+<div class="spec">
+<p><tt>handle(Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cowboy_req.html#type-req">cowboy_req:req()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>start a session if jwt parsing succeeded and get a queue entry,
+  else retrun back</p>
+
+<h3 class="function"><a name="handle_queue_result-2">handle_queue_result/2 *</a></h3>
+<div class="spec">
+<p><tt>handle_queue_result(X1::{ok, any()} | any(), State::<a href="#type-state">state()</a>) -&gt; {boolean(), <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>handle the toke or error of requesting the queue</p>
+
+<h3 class="function"><a name="init-3">init/3</a></h3>
+<div class="spec">
+<p><tt>init(Type::any(), Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>, Opts::any()) -&gt; {ok, <a href="cowboy_req.html#type-req">cowboy_req:req()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>init the request handling, does nothing</p>
+
+<h3 class="function"><a name="maybe_handle-3">maybe_handle/3 *</a></h3>
+<div class="spec">
+<p><tt>maybe_handle(X1::boolean(), Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cowboy_req.html#type-req">cowboy_req:req()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>maybe handle the request, if there are not too many per second.</p>
+
+<h3 class="function"><a name="redirect_to_provider-4">redirect_to_provider/4 *</a></h3>
+<div class="spec">
+<p><tt>redirect_to_provider(Session::pid(), Rsp::<a href="watts_rsp.html#type-rsp">watts_rsp:rsp()</a>, Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cowboy_req.html#type-req">cowboy_req:req()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>redirect the a provider for login</p>
+
+<h3 class="function"><a name="request_queue_if_configured-2">request_queue_if_configured/2 *</a></h3>
+<div class="spec">
+<p><tt>request_queue_if_configured(X1::boolean(), State::<a href="#type-state">state()</a>) -&gt; {boolean(), <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>request a token at the queue if needed.</p>
+
+<h3 class="function"><a name="set_cookie-2">set_cookie/2 *</a></h3>
+<div class="spec">
+<p><tt>set_cookie(Session::pid(), Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>) -&gt; {ok, <a href="cowboy_req.html#type-req">cowboy_req:req()</a>}</tt><br></p>
+</div><p>set the cookie for session.</p>
+
+<h3 class="function"><a name="setup_session_and_start-3">setup_session_and_start/3 *</a></h3>
+<div class="spec">
+<p><tt>setup_session_and_start(X1::{ok, <a href="watts_rsp.html#type-rsp">watts_rsp:rsp()</a>} | {error, any(), binary()}, Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cowboy_req.html#type-req">cowboy_req:req()</a>, <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>check the parsing result and maybe start the session and trigger
+  the needed action.</p>
+
+<h3 class="function"><a name="terminate-3">terminate/3</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason::any(), Req::<a href="cowboy_req.html#type-req">cowboy_req:req()</a>, State::<a href="#type-state">state()</a>) -&gt; ok</tt><br></p>
+</div><p>on termination do nothing</p>
+
+<h3 class="function"><a name="warning-2">warning/2 *</a></h3>
+<div class="spec">
+<p><tt>warning(Msg::string() | binary(), Params::[any()]) -&gt; ok</tt><br></p>
+</div><p>log a warning</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

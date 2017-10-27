@@ -1,0 +1,126 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_persistent_mnesia</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_persistent_mnesia</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>this module implement the persistent storage for the internal
+  Erlang database called mnesia.
+
+<p><b>Behaviours:</b> <a href="watts_persistent.html"><tt>watts_persistent</tt></a>.</p>
+<p><b>See also:</b> <a href="watts_persistent_leveldb.html">watts_persistent_leveldb</a>.</p>
+
+<h2><a name="description">Description</a></h2>this module implement the persistent storage for the internal
+  Erlang database called mnesia.
+  As there is an extension for mnesia that uses leveldb, this also enables
+  support for the leveldb.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#convert_result-1">convert_result/1*</a></td><td>convert the result to a common return value.</td></tr>
+<tr><td valign="top"><a href="#create_random_uuid-0">create_random_uuid/0*</a></td><td>create a random uuid for the credential.</td></tr>
+<tr><td valign="top"><a href="#create_tables-0">create_tables/0*</a></td><td>create the needed tables.</td></tr>
+<tr><td valign="top"><a href="#credential_add-5">credential_add/5</a></td><td>store a credential for a user
+  A callback from the watts_persistent behaviour.</td></tr>
+<tr><td valign="top"><a href="#credential_get-1">credential_get/1</a></td><td>get a specific credential.</td></tr>
+<tr><td valign="top"><a href="#credential_get_count-2">credential_get_count/2</a></td><td>get the number of credentials for a user at a service.</td></tr>
+<tr><td valign="top"><a href="#credential_get_list-1">credential_get_list/1</a></td><td>get the list of credentials for a user
+  A callback from the watts_persistent behaviour.</td></tr>
+<tr><td valign="top"><a href="#credential_remove-2">credential_remove/2</a></td><td>remove a credential of a user
+  A callback from the watts_persistent behaviour.</td></tr>
+<tr><td valign="top"><a href="#initialize-0">initialize/0</a></td><td>initialize the sqlite database.</td></tr>
+<tr><td valign="top"><a href="#is_ready-0">is_ready/0</a></td><td>return if the database is ready.</td></tr>
+<tr><td valign="top"><a href="#match_spec-2">match_spec/2*</a></td><td>match specifications to search within the mnesia database.</td></tr>
+<tr><td valign="top"><a href="#setup_mnesia_if_needed-1">setup_mnesia_if_needed/1*</a></td><td>create the schema for the mnesia database if needed.</td></tr>
+<tr><td valign="top"><a href="#start_mnesia-0">start_mnesia/0*</a></td><td>start the mnesia application.</td></tr>
+<tr><td valign="top"><a href="#stop_mnesia-0">stop_mnesia/0*</a></td><td>stop the mnesia application.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="convert_result-1">convert_result/1 *</a></h3>
+<div class="spec">
+<p><tt>convert_result(X1::tuple()) -&gt; {ok, any()} | {error, Reason::atom()}</tt><br></p>
+</div><p>convert the result to a common return value</p>
+
+<h3 class="function"><a name="create_random_uuid-0">create_random_uuid/0 *</a></h3>
+<div class="spec">
+<p><tt>create_random_uuid() -&gt; binary()</tt><br></p>
+</div><p>create a random uuid for the credential</p>
+
+<h3 class="function"><a name="create_tables-0">create_tables/0 *</a></h3>
+<div class="spec">
+<p><tt>create_tables() -&gt; ok</tt><br></p>
+</div><p>create the needed tables</p>
+
+<h3 class="function"><a name="credential_add-5">credential_add/5</a></h3>
+<div class="spec">
+<p><tt>credential_add(UserId::binary(), ServiceId::binary(), Interface::binary(), CredState::any(), AllowNonUniqueStates::boolean()) -&gt; {ok, CredentialID::binary()} | {error, Reason::atom()}</tt><br></p>
+</div><p>store a credential for a user
+  A callback from the watts_persistent behaviour.</p>
+
+<h3 class="function"><a name="credential_get-1">credential_get/1</a></h3>
+<div class="spec">
+<p><tt>credential_get(CredId::binary()) -&gt; {ok, <a href="watts.html#type-credential">watts:credential()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>get a specific credential.
+  A callback from the watts_persistent behaviour.</p>
+
+<h3 class="function"><a name="credential_get_count-2">credential_get_count/2</a></h3>
+<div class="spec">
+<p><tt>credential_get_count(UserId::binary(), ServiceId::binary()) -&gt; {ok, pos_integer()}</tt><br></p>
+</div><p>get the number of credentials for a user at a service.
+  A callback from the watts_persistent behaviour.</p>
+
+<h3 class="function"><a name="credential_get_list-1">credential_get_list/1</a></h3>
+<div class="spec">
+<p><tt>credential_get_list(UserId::binary()) -&gt; {ok, [<a href="watts.html#type-credential">watts:credential()</a>]}</tt><br></p>
+</div><p>get the list of credentials for a user
+  A callback from the watts_persistent behaviour.</p>
+
+<h3 class="function"><a name="credential_remove-2">credential_remove/2</a></h3>
+<div class="spec">
+<p><tt>credential_remove(UserId::binary(), CredentialId::binary()) -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div><p>remove a credential of a user
+  A callback from the watts_persistent behaviour.</p>
+
+<h3 class="function"><a name="initialize-0">initialize/0</a></h3>
+<div class="spec">
+<p><tt>initialize() -&gt; ok</tt><br></p>
+</div><p>initialize the sqlite database.
+  A callback from the watts_persistent behaviour.</p>
+
+<h3 class="function"><a name="is_ready-0">is_ready/0</a></h3>
+<div class="spec">
+<p><tt>is_ready() -&gt; true | {false, Reason::atom()}</tt><br></p>
+</div><p>return if the database is ready.
+  A callback from the watts_persistent behaviour.</p>
+
+<h3 class="function"><a name="match_spec-2">match_spec/2 *</a></h3>
+<div class="spec">
+<p><tt>match_spec(CredentialUuid::binary(), UserId::binary() | undefined) -&gt; [tuple()]</tt><br></p>
+</div><p>match specifications to search within the mnesia database</p>
+
+<h3 class="function"><a name="setup_mnesia_if_needed-1">setup_mnesia_if_needed/1 *</a></h3>
+<div class="spec">
+<p><tt>setup_mnesia_if_needed(X1::boolean()) -&gt; ok</tt><br></p>
+</div><p>create the schema for the mnesia database if needed</p>
+
+<h3 class="function"><a name="start_mnesia-0">start_mnesia/0 *</a></h3>
+<div class="spec">
+<p><tt>start_mnesia() -&gt; ok</tt><br></p>
+</div><p>start the mnesia application</p>
+
+<h3 class="function"><a name="stop_mnesia-0">stop_mnesia/0 *</a></h3>
+<div class="spec">
+<p><tt>stop_mnesia() -&gt; ok</tt><br></p>
+</div><p>stop the mnesia application</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

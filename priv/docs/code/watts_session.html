@@ -1,0 +1,243 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_session</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_session</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>this module handles one session.
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+
+<h2><a name="description">Description</a></h2>this module handles one session. One process exists per session and the
+  running process keeps track of the timeout.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-session">session()</a></h3>
+<p><tt>session() = #state{id = unknown | pid(), creation = integer(), type = undefined | <a href="#type-type">type()</a>, issuer_id = undefined | binary(), sess_token = undefined | binary(), user_agent = undefined | binary(), rsp = any(), ip = any(), error = any(), user_info = undefined | <a href="watts_userinfo.html#type-userinfo">watts_userinfo:userinfo()</a>, max_age = pos_integer(), killed = boolean(), redirection = any()}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type">type()</a></h3>
+<p><tt>type() = oidc | rest | {rsp, Ui::ui | no_ui, Login::login | no_login}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_additional_login-3">add_additional_login/3</a></td><td>add an additional login to the session.</td></tr>
+<tr><td valign="top"><a href="#clear_additional_logins-2">clear_additional_logins/2</a></td><td>clear additional logins for the given service.</td></tr>
+<tr><td valign="top"><a href="#clear_redirection-1">clear_redirection/1</a></td><td>clear the redirection in the session.</td></tr>
+<tr><td valign="top"><a href="#close-1">close/1</a></td><td>send a cast to stop the session.</td></tr>
+<tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td>code change does nothing.</td></tr>
+<tr><td valign="top"><a href="#get_display_name-1">get_display_name/1</a></td><td>get the display name of the user.</td></tr>
+<tr><td valign="top"><a href="#get_error-1">get_error/1</a></td><td>get the error used for displaying login error messages at the UI.</td></tr>
+<tr><td valign="top"><a href="#get_id-1">get_id/1</a></td><td>call the process to return the id.</td></tr>
+<tr><td valign="top"><a href="#get_iss_id-1">get_iss_id/1</a></td><td>get the Issuer id.</td></tr>
+<tr><td valign="top"><a href="#get_max_age-1">get_max_age/1</a></td><td>get the max age of this session.</td></tr>
+<tr><td valign="top"><a href="#get_redirection-1">get_redirection/1</a></td><td>get the redirection config.</td></tr>
+<tr><td valign="top"><a href="#get_rsp-1">get_rsp/1</a></td><td>get the rsp data from the ssession.</td></tr>
+<tr><td valign="top"><a href="#get_sess_token-1">get_sess_token/1</a></td><td>get the session token by calling the process.</td></tr>
+<tr><td valign="top"><a href="#get_type-1">get_type/1</a></td><td>get the session type.</td></tr>
+<tr><td valign="top"><a href="#get_user_info-1">get_user_info/1</a></td><td>get the userinfo data from the session.</td></tr>
+<tr><td valign="top"><a href="#get_userid-1">get_userid/1</a></td><td>get the WaTTS userid.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td>implement the handle call to handle all the public function.</td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td>handle cast reacts only to the stop cast.</td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td>handle the timeout.</td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td>intialize the session with the given token.</td></tr>
+<tr><td valign="top"><a href="#is_logged_in-1">is_logged_in/1</a></td><td>check if the user in this session is logged in; web ui only.</td></tr>
+<tr><td valign="top"><a href="#is_same_ip-2">is_same_ip/2</a></td><td>check if the peer ip is the same as used before.</td></tr>
+<tr><td valign="top"><a href="#is_user_agent-2">is_user_agent/2</a></td><td>check if the user agent is the same as used before.</td></tr>
+<tr><td valign="top"><a href="#kill-1">kill/1</a></td><td>send a cast to kill the session.</td></tr>
+<tr><td valign="top"><a href="#set_error-2">set_error/2</a></td><td>set an error to be displayed to the user.</td></tr>
+<tr><td valign="top"><a href="#set_iss_id-2">set_iss_id/2</a></td><td>set the issuer id.</td></tr>
+<tr><td valign="top"><a href="#set_iss_sub-3">set_iss_sub/3</a></td><td>set issuer and subject.</td></tr>
+<tr><td valign="top"><a href="#set_max_age-2">set_max_age/2</a></td><td>set the max age for this session.</td></tr>
+<tr><td valign="top"><a href="#set_redirection-4">set_redirection/4</a></td><td>set the redirection for login, used for additional logins (also RSP).</td></tr>
+<tr><td valign="top"><a href="#set_rsp-2">set_rsp/2</a></td><td>set the rsp data for the session.</td></tr>
+<tr><td valign="top"><a href="#set_token-2">set_token/2</a></td><td>set an id token and update information.</td></tr>
+<tr><td valign="top"><a href="#set_type-2">set_type/2</a></td><td>set the session type.</td></tr>
+<tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>start the session process with the token, linked.</td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td>termination, just log a message and tell the manager.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_additional_login-3">add_additional_login/3</a></h3>
+<div class="spec">
+<p><tt>add_additional_login(IssuerId::binary(), Token::#{}, Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>add an additional login to the session</p>
+
+<h3 class="function"><a name="clear_additional_logins-2">clear_additional_logins/2</a></h3>
+<div class="spec">
+<p><tt>clear_additional_logins(ServiceId::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>clear additional logins for the given service</p>
+
+<h3 class="function"><a name="clear_redirection-1">clear_redirection/1</a></h3>
+<div class="spec">
+<p><tt>clear_redirection(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>clear the redirection in the session</p>
+
+<h3 class="function"><a name="close-1">close/1</a></h3>
+<div class="spec">
+<p><tt>close(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>send a cast to stop the session</p>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn::any(), State::<a href="#type-session">session()</a>, Extra::any()) -&gt; {ok, <a href="#type-session">session()</a>}</tt><br></p>
+</div><p>code change does nothing</p>
+
+<h3 class="function"><a name="get_display_name-1">get_display_name/1</a></h3>
+<div class="spec">
+<p><tt>get_display_name(Pid::pid()) -&gt; {ok, Name::binary()}</tt><br></p>
+</div><p>get the display name of the user</p>
+
+<h3 class="function"><a name="get_error-1">get_error/1</a></h3>
+<div class="spec">
+<p><tt>get_error(Pid::pid()) -&gt; {ok, Error::binary()}</tt><br></p>
+</div><p>get the error used for displaying login error messages at the UI</p>
+
+<h3 class="function"><a name="get_id-1">get_id/1</a></h3>
+<div class="spec">
+<p><tt>get_id(Pid::pid() | undefined) -&gt; {ok, ID::binary() | undefined}</tt><br></p>
+</div><p>call the process to return the id</p>
+
+<h3 class="function"><a name="get_iss_id-1">get_iss_id/1</a></h3>
+<div class="spec">
+<p><tt>get_iss_id(Pid::pid()) -&gt; {ok, IssId::binary()}</tt><br></p>
+</div><p>get the Issuer id</p>
+
+<h3 class="function"><a name="get_max_age-1">get_max_age/1</a></h3>
+<div class="spec">
+<p><tt>get_max_age(Pid::pid()) -&gt; {ok, MaxAge::non_neg_integer()}</tt><br></p>
+</div><p>get the max age of this session</p>
+
+<h3 class="function"><a name="get_redirection-1">get_redirection/1</a></h3>
+<div class="spec">
+<p><tt>get_redirection(Pid::pid()) -&gt; {ok, Redirection::#{}}</tt><br></p>
+</div><p>get the redirection config</p>
+
+<h3 class="function"><a name="get_rsp-1">get_rsp/1</a></h3>
+<div class="spec">
+<p><tt>get_rsp(Pid::pid()) -&gt; {ok, <a href="watts_rsp.html#type-rsp">watts_rsp:rsp()</a> | undefined}</tt><br></p>
+</div><p>get the rsp data from the ssession</p>
+
+<h3 class="function"><a name="get_sess_token-1">get_sess_token/1</a></h3>
+<div class="spec">
+<p><tt>get_sess_token(Pid::pid()) -&gt; {ok, Token::binary()}</tt><br></p>
+</div><p>get the session token by calling the process</p>
+
+<h3 class="function"><a name="get_type-1">get_type/1</a></h3>
+<div class="spec">
+<p><tt>get_type(Pid::pid()) -&gt; {ok, <a href="#type-type">type()</a> | undefined}</tt><br></p>
+</div><p>get the session type</p>
+
+<h3 class="function"><a name="get_user_info-1">get_user_info/1</a></h3>
+<div class="spec">
+<p><tt>get_user_info(Pid::pid()) -&gt; {ok, UserInfo::<a href="watts_userinfo.html#type-userinfo">watts_userinfo:userinfo()</a>}</tt><br></p>
+</div><p>get the userinfo data from the session</p>
+
+<h3 class="function"><a name="get_userid-1">get_userid/1</a></h3>
+<div class="spec">
+<p><tt>get_userid(Pid::pid()) -&gt; {ok, ID::binary()}</tt><br></p>
+</div><p>get the WaTTS userid</p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request::any(), From::any(), State::<a href="#type-session">session()</a>) -&gt; {reply, any(), <a href="#type-session">session()</a>, pos_integer()}</tt><br></p>
+</div><p>implement the handle call to handle all the public function</p>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Msg::close | any(), State::<a href="#type-session">session()</a>) -&gt; {stop, normal, <a href="#type-session">session()</a>} | {noreply, <a href="#type-session">session()</a>, pos_integer()}</tt><br></p>
+</div><p>handle cast reacts only to the stop cast</p>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info::timeout | any(), State::<a href="#type-session">session()</a>) -&gt; {noreply, <a href="#type-session">session()</a>, pos_integer()}</tt><br></p>
+</div><p>handle the timeout</p>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(Token::binary()) -&gt; {ok, <a href="#type-session">session()</a>}</tt><br></p>
+</div><p>intialize the session with the given token.
+  Also setting the max age</p>
+
+<h3 class="function"><a name="is_logged_in-1">is_logged_in/1</a></h3>
+<div class="spec">
+<p><tt>is_logged_in(Pid::pid()) -&gt; true | false</tt><br></p>
+</div><p>check if the user in this session is logged in; web ui only</p>
+
+<h3 class="function"><a name="is_same_ip-2">is_same_ip/2</a></h3>
+<div class="spec">
+<p><tt>is_same_ip(IP, Pid) -&gt; any()</tt></p>
+</div><p>check if the peer ip is the same as used before</p>
+
+<h3 class="function"><a name="is_user_agent-2">is_user_agent/2</a></h3>
+<div class="spec">
+<p><tt>is_user_agent(UserAgent, Pid) -&gt; any()</tt></p>
+</div><p>check if the user agent is the same as used before</p>
+
+<h3 class="function"><a name="kill-1">kill/1</a></h3>
+<div class="spec">
+<p><tt>kill(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>send a cast to kill the session</p>
+
+<h3 class="function"><a name="set_error-2">set_error/2</a></h3>
+<div class="spec">
+<p><tt>set_error(Error::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set an error to be displayed to the user</p>
+
+<h3 class="function"><a name="set_iss_id-2">set_iss_id/2</a></h3>
+<div class="spec">
+<p><tt>set_iss_id(IssuerId::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set the issuer id</p>
+
+<h3 class="function"><a name="set_iss_sub-3">set_iss_sub/3</a></h3>
+<div class="spec">
+<p><tt>set_iss_sub(Issuer::binary(), Subject::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set issuer and subject</p>
+
+<h3 class="function"><a name="set_max_age-2">set_max_age/2</a></h3>
+<div class="spec">
+<p><tt>set_max_age(MaxAge::pos_integer(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set the max age for this session</p>
+
+<h3 class="function"><a name="set_redirection-4">set_redirection/4</a></h3>
+<div class="spec">
+<p><tt>set_redirection(ServiceId::binary(), Params::#{}, ProviderId::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set the redirection for login, used for additional logins (also RSP)</p>
+
+<h3 class="function"><a name="set_rsp-2">set_rsp/2</a></h3>
+<div class="spec">
+<p><tt>set_rsp(Client::<a href="watts_rsp.html#type-rsp">watts_rsp:rsp()</a>, Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set the rsp data for the session</p>
+
+<h3 class="function"><a name="set_token-2">set_token/2</a></h3>
+<div class="spec">
+<p><tt>set_token(Token::#{}, Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set an id token and update information</p>
+
+<h3 class="function"><a name="set_type-2">set_type/2</a></h3>
+<div class="spec">
+<p><tt>set_type(Type::<a href="#type-type">type()</a>, Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>set the session type</p>
+
+<h3 class="function"><a name="start_link-1">start_link/1</a></h3>
+<div class="spec">
+<p><tt>start_link(Token::binary()) -&gt; {ok, pid()}</tt><br></p>
+</div><p>start the session process with the token, linked</p>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason::any(), State::<a href="#type-session">session()</a>) -&gt; ok</tt><br></p>
+</div><p>termination, just log a message and tell the manager</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

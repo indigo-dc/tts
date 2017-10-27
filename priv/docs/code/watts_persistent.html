@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_persistent</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_persistent</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>This module defines the needed callbacks for WaTTS persistent storage.
+
+<p><b>This module defines the <tt>watts_persistent</tt> behaviour.</b><br> Required callback functions: <tt>initialize/0</tt>, <tt>credential_add/5</tt>, <tt>credential_get_list/1</tt>, <tt>credential_get_count/2</tt>, <tt>credential_get/1</tt>, <tt>credential_remove/2</tt>, <tt>is_ready/0</tt>.</p>
+
+<h2><a name="description">Description</a></h2>This module defines the needed callbacks for WaTTS persistent storage.
+  Any module implementing these can be used to store credentials. So extending
+  the supported databases woule mean to implement a new watts_persistent_xxx
+  module.
+  Also the config/schema/watts.schema needs to be adjusted to supporte the new
+  database and its config.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#credential_delete-2">credential_delete/2</a></td><td>delete the credential with the Id.</td></tr>
+<tr><td valign="top"><a href="#credential_fetch-2">credential_fetch/2</a></td><td>get the credential with the Id for the given User.</td></tr>
+<tr><td valign="top"><a href="#credential_fetch_list-1">credential_fetch_list/1</a></td><td>fetch the list of all credentials for a user.</td></tr>
+<tr><td valign="top"><a href="#credential_service_count-2">credential_service_count/2</a></td><td>get the number of credentials of the user at the service.</td></tr>
+<tr><td valign="top"><a href="#credential_store-5">credential_store/5</a></td><td>storing a credential, this is done by calling the configured
+  database and credential_add there.</td></tr>
+<tr><td valign="top"><a href="#ensure_credential_of_user-2">ensure_credential_of_user/2*</a></td><td>this function ensures that credentials are only returned to their owner.</td></tr>
+<tr><td valign="top"><a href="#init-0">init/0</a></td><td>this gets called during initialization.</td></tr>
+<tr><td valign="top"><a href="#is_ready-0">is_ready/0</a></td><td>check if the configured database is ready.</td></tr>
+<tr><td valign="top"><a href="#mod-0">mod/0*</a></td><td>get the configured database module.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="credential_delete-2">credential_delete/2</a></h3>
+<div class="spec">
+<p><tt>credential_delete(UserId::binary(), CredentialId::binary()) -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div><p>delete the credential with the Id.
+  using the configured database.</p>
+
+<h3 class="function"><a name="credential_fetch-2">credential_fetch/2</a></h3>
+<div class="spec">
+<p><tt>credential_fetch(CredId::binary(), UserId::binary()) -&gt; {ok, <a href="watts.html#type-credential">watts:credential()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>get the credential with the Id for the given User.
+  using the configured database.</p>
+
+<h3 class="function"><a name="credential_fetch_list-1">credential_fetch_list/1</a></h3>
+<div class="spec">
+<p><tt>credential_fetch_list(UserId::binary()) -&gt; {ok, [<a href="watts.html#type-credential">watts:credential()</a>]}</tt><br></p>
+</div><p>fetch the list of all credentials for a user.
+  using the configured database.</p>
+
+<h3 class="function"><a name="credential_service_count-2">credential_service_count/2</a></h3>
+<div class="spec">
+<p><tt>credential_service_count(UserId::binary(), ServiceId::binary()) -&gt; {ok, pos_integer()}</tt><br></p>
+</div><p>get the number of credentials of the user at the service.
+  using the configured database.</p>
+
+<h3 class="function"><a name="credential_store-5">credential_store/5</a></h3>
+<div class="spec">
+<p><tt>credential_store(UserId::binary(), ServiceId::binary(), Interface::binary(), CredState::any(), AllowNonUniqueStates::boolean()) -&gt; {ok, CredentialId::binary()} | {error, Reason::atom()}</tt><br></p>
+</div><p>storing a credential, this is done by calling the configured
+  database and credential_add there.</p>
+
+<h3 class="function"><a name="ensure_credential_of_user-2">ensure_credential_of_user/2 *</a></h3>
+<div class="spec">
+<p><tt>ensure_credential_of_user(Result::{ok, <a href="watts.html#type-credential">watts:credential()</a>} | {error, Reason::atom()}, UserId::binary()) -&gt; {ok, <a href="watts.html#type-credential">watts:credential()</a>} | {error, Reason::atom()}</tt><br></p>
+</div><p>this function ensures that credentials are only returned to their owner.</p>
+
+<h3 class="function"><a name="init-0">init/0</a></h3>
+<div class="spec">
+<p><tt>init() -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div><p>this gets called during initialization.
+  The function calls the initalize function of the configured
+  database.</p>
+
+<h3 class="function"><a name="is_ready-0">is_ready/0</a></h3>
+<div class="spec">
+<p><tt>is_ready() -&gt; true | {false, Reason::any()}</tt><br></p>
+</div><p>check if the configured database is ready.</p>
+
+<h3 class="function"><a name="mod-0">mod/0 *</a></h3>
+<div class="spec">
+<p><tt>mod() -&gt; atom()</tt><br></p>
+</div><p>get the configured database module.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

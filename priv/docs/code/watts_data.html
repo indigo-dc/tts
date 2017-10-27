@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module watts_data</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module watts_data</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#create_lookup_result-1">create_lookup_result/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#create_table-1">create_table/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#create_tables-0">create_tables/0*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#delete-2">delete/2*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#delete_table-1">delete_table/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#delete_tables-0">delete_tables/0*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#destroy-0">destroy/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_all_entries-1">get_all_entries/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-0">init/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#insert-2">insert/2*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#insert_new-2">insert_new/2*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#lookup-2">lookup/2*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#return_ok_or_error-1">return_ok_or_error/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#return_value-1">return_value/1*</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_add-2">service_add/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_get-1">service_get/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_get_list-0">service_get_list/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#service_update-2">service_update/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#sessions_create_new-1">sessions_create_new/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#sessions_delete-1">sessions_delete/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#sessions_get_list-0">sessions_get_list/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#sessions_get_pid-1">sessions_get_pid/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#sessions_update_pid-2">sessions_update_pid/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#wait_for_tables-1">wait_for_tables/1*</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="create_lookup_result-1">create_lookup_result/1 *</a></h3>
+<div class="spec">
+<p><tt>create_lookup_result(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="create_table-1">create_table/1 *</a></h3>
+<div class="spec">
+<p><tt>create_table(TableName) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="create_tables-0">create_tables/0 *</a></h3>
+<div class="spec">
+<p><tt>create_tables() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="delete-2">delete/2 *</a></h3>
+<div class="spec">
+<p><tt>delete(Table, Key) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="delete_table-1">delete_table/1 *</a></h3>
+<div class="spec">
+<p><tt>delete_table(Name) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="delete_tables-0">delete_tables/0 *</a></h3>
+<div class="spec">
+<p><tt>delete_tables() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="destroy-0">destroy/0</a></h3>
+<div class="spec">
+<p><tt>destroy() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get_all_entries-1">get_all_entries/1 *</a></h3>
+<div class="spec">
+<p><tt>get_all_entries(Table) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-0">init/0</a></h3>
+<div class="spec">
+<p><tt>init() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="insert-2">insert/2 *</a></h3>
+<div class="spec">
+<p><tt>insert(Table, Entry) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="insert_new-2">insert_new/2 *</a></h3>
+<div class="spec">
+<p><tt>insert_new(Table, Entry) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="lookup-2">lookup/2 *</a></h3>
+<div class="spec">
+<p><tt>lookup(Table, Key) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="return_ok_or_error-1">return_ok_or_error/1 *</a></h3>
+<div class="spec">
+<p><tt>return_ok_or_error(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="return_value-1">return_value/1 *</a></h3>
+<div class="spec">
+<p><tt>return_value(Error) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="service_add-2">service_add/2</a></h3>
+<div class="spec">
+<p><tt>service_add(Identifier::binary(), Info::#{}) -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="service_get-1">service_get/1</a></h3>
+<div class="spec">
+<p><tt>service_get(Identifier::binary()) -&gt; {ok, tuple()} | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="service_get_list-0">service_get_list/0</a></h3>
+<div class="spec">
+<p><tt>service_get_list() -&gt; {ok, [#{}]}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="service_update-2">service_update/2</a></h3>
+<div class="spec">
+<p><tt>service_update(Identifier::binary(), Info::#{}) -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="sessions_create_new-1">sessions_create_new/1</a></h3>
+<div class="spec">
+<p><tt>sessions_create_new(Token::binary()) -&gt; ok | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="sessions_delete-1">sessions_delete/1</a></h3>
+<div class="spec">
+<p><tt>sessions_delete(Token::binary()) -&gt; ok</tt><br></p>
+</div>
+
+<h3 class="function"><a name="sessions_get_list-0">sessions_get_list/0</a></h3>
+<div class="spec">
+<p><tt>sessions_get_list() -&gt; [#{}]</tt><br></p>
+</div>
+
+<h3 class="function"><a name="sessions_get_pid-1">sessions_get_pid/1</a></h3>
+<div class="spec">
+<p><tt>sessions_get_pid(Token::binary()) -&gt; {ok, Pid::pid()} | {error, Reason::atom()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="sessions_update_pid-2">sessions_update_pid/2</a></h3>
+<div class="spec">
+<p><tt>sessions_update_pid(Token::binary(), Pid::pid()) -&gt; ok</tt><br></p>
+</div>
+
+<h3 class="function"><a name="wait_for_tables-1">wait_for_tables/1 *</a></h3>
+<div class="spec">
+<p><tt>wait_for_tables(List) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>
