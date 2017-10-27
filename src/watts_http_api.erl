@@ -471,11 +471,7 @@ is_malformed(#state{in = #{
                       header_used := HeaderUsed
                      }} = State) ->
     case is_bad_version(Version, HeaderUsed) of
-        true -> {true, State#state{method=Method, version=Version, type=Type,
-                                   id=Id, token=Token, issuer=Issuer,
-                                   session_pid=CookieSession, json=Body,
-                                   in = #{}
-                                  }};
+        true -> {true, State};
         false -> Result = is_malformed(Method, ContentType, Type, Id, Issuer,
                                        Body),
                  {Result, State#state{method=Method, version=Version, type=Type,

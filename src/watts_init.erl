@@ -525,18 +525,17 @@ start_web_interface() ->
 -spec maybe_start_web_queues() -> ok.
 maybe_start_web_queues() ->
     ok = maybe_start_web_queue(?CONFIG(web_connection_rate, undefined)),
-    ok = maybe_start_rsp_queue(false, ?CONFIG(rsp_connection_rate, undefined)),
+    ok = maybe_start_rsp_queue(?CONFIG(enable_rsp, false),
+                               ?CONFIG(rsp_connection_rate, undefined)),
     ok.
 
 %% @doc decide if the rate limit for api endpoint needs to be started
 -spec maybe_start_web_queue(any()) -> ok.
--dialyzer({nowarn_function, maybe_start_web_queue/1}).
 maybe_start_web_queue(Number) when is_integer(Number), Number > 0 ->
     MaxTime = ?CONFIG(web_queue_max_wait, 500),
     lager:info("Init: setting web rate limit to ~p/sec [MW: ~p ms]", [Number,
                                                                   MaxTime]),
-    Options = [{counter, [{limit, Number}]}, {type, fifo}, {max_time, MaxTime}],
-    ok = jobs:add_queue(watts_web_queue, Options),
+    ok = start_queue(watts_web_queue, Number, MaxTime),
     ?SETCONFIG(watts_web_queue, true),
     ok;
 maybe_start_web_queue(_) ->
@@ -546,20 +545,26 @@ maybe_start_web_queue(_) ->
 
 %% @doc decide if the rate limit for rsp endpoint needs to be started
 -spec maybe_start_rsp_queue(boolean(), any()) -> ok.
--dialyzer({nowarn_function, maybe_start_rsp_queue/2}).
 maybe_start_rsp_queue(false, _) ->
     ok;
 maybe_start_rsp_queue(true, Number) when is_integer(Number), Number > 0 ->
     MaxTime = ?CONFIG(rsp_queue_max_wait, 1000),
     lager:info("Init: setting rsp rate limit to ~p/sec [MW: ~p ms]", [Number,
                                                                   MaxTime]),
-    Options = [{counter, [{limit, Number}]}, {type, fifo}, {max_time, MaxTime}],
-    ok = jobs:add_queue(watts_rsp_queue, Options),
+    ok = start_queue(watts_rsp_queue, Number, MaxTime),
     ?SETCONFIG(watts_rsp_queue, true),
     ok;
 maybe_start_rsp_queue(true, _) ->
     lager:warning("Init: rsp connection rate set to unlimited!"),
     ?UNSETCONFIG(watts_rsp_queue),
+    ok.
+
+%% @doc start a queue with the given name, rate limit and wait time.
+-spec start_queue(atom(), integer(), integer()) -> ok.
+-dialyzer({nowarn_function, start_queue/3}).
+start_queue(Name, Limit, MaxTime) ->
+    Options = [{counter, [{limit, Limit}]}, {type, fifo}, {max_time, MaxTime}],
+    ok = jobs:add_queue(Name, Options),
     ok.
 
 
