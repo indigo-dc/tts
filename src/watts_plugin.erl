@@ -62,7 +62,7 @@
                          request_params => [any()],
                          conf_params => [any()] }}|
                   {oidc_login, map()}|
-                  {error, atom() | tuple()}.
+                  {error, atom() | tuple() | map()}.
 
 -type config() :: #{action =>  parameter | request | revoke ,
                     service_id => binary(),
