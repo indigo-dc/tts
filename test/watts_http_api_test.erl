@@ -12,10 +12,12 @@ init_test() ->
 
 %% state from tts_rest
 -record(state, {
+          in = #{},
           method = undefined,
           version = undefined,
           type = undefined,
           id = undefined,
+          queue_token = undefined,
 
           token = undefined,
           issuer = undefined,
@@ -26,8 +28,21 @@ init_test() ->
 rest_init_test() ->
     {ok, Meck} = start_meck(),
     try
-        Req = req,
-        {ok, Req, #state{}} = watts_http_api:rest_init(Req, doesnt_matter)
+        Req = #{path_info => [<<"v2">>,<<"info">>],
+                        header => [],
+                        method => <<"GET">>,
+                        body => []},
+        {ok, Req, State} = watts_http_api:rest_init(Req, doesnt_matter),
+        #{version := _Version,
+          type := _Type,
+          id := _Id,
+          token := _Token,
+          issuer := _Issuer,
+          session := _CookieSession,
+          method := _Method,
+          content := _ContentType,
+          body := _Body,
+          header_used := _HeaderUsed} = State#state.in
     after
         ok = stop_meck(Meck)
     end,
@@ -62,9 +77,8 @@ content_types_accepted_test() ->
 malformed_request_test() ->
     {ok, Meck} = start_meck(),
     try
-        State = #state{},
         Requests = [
-                                                % GOOD request
+                    % GOOD request
                     {#{ path_info => [<<"v1">>,<<"oidcp">>],
                         header => [],
                         method => <<"GET">>,
@@ -111,7 +125,7 @@ malformed_request_test() ->
                          body => []
                        }, false },
 
-                                                % BAD requests
+                    % BAD requests
                     { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>],
                          header => [],
                          method => <<"POST">>,
@@ -158,9 +172,13 @@ malformed_request_test() ->
 
         Test  = fun({Request, ExpResult}, _) ->
                         io:format("testing with request ~p~n",[Request]),
-                        {Result, Request, _} = watts_http_api:malformed_request(Request,
-                                                                            State),
-                        io:format("got result ~p, expecting ~p~n",[Result, ExpResult]),
+                        {ok, _Req, State} = watts_http_api:rest_init(Request,
+                                                                    ignored),
+                        io:format("got state ~p~n",[State]),
+                        {Result, Request, _} =
+                            watts_http_api:malformed_request(Request, State),
+                        io:format("got result ~p, expecting ~p~n",[Result,
+                                                                   ExpResult]),
                         ?assertEqual(ExpResult, Result),
                         ok
                 end,
@@ -586,13 +604,13 @@ start_meck() ->
     IsUserAgent = fun(_, _) -> true end,
 
     ok = test_util:meck_new(MeckModules),
+    ok = meck:expect(cowboy_req, body, Body),
     ok = meck:expect(cowboy_req, cookie, GetCookie),
     ok = meck:expect(cowboy_req, header, Header),
-    ok = meck:expect(cowboy_req, peer, Peer),
-    ok = meck:expect(cowboy_req, parse_header, ParseHeader),
     ok = meck:expect(cowboy_req, method, Method),
-    ok = meck:expect(cowboy_req, body, Body),
+    ok = meck:expect(cowboy_req, parse_header, ParseHeader),
     ok = meck:expect(cowboy_req, path_info, PathInfo),
+    ok = meck:expect(cowboy_req, peer, Peer),
     ok = meck:expect(cowboy_req, set_resp_body, fun(_, Req) -> Req end),
     ok = meck:expect(cowboy_req, set_resp_cookie, fun(_, _, _, Req) -> Req end),
     ok = meck:expect(cowboy_req, set_resp_header, SetHeader),
