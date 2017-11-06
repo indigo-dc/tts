@@ -94,7 +94,20 @@
 %% @doc get a list of all services currently configured.
 -spec get_list() -> {ok, [info()]}.
 get_list() ->
-     watts_ets:service_get_list().
+    {ok, List} = watts_ets:service_get_list(),
+    Sort =
+        fun(#{display_prio := A}, #{display_prio := undefined})
+              when is_number(A)->
+                true;
+           (#{display_prio := A}, #{display_prio := B})
+              when is_number(A), is_number(B), A < B->
+                true;
+           (#{display_prio := A, id := IdA}, #{display_prio := A, id := IdB}) ->
+                string:lowercase(IdA) =< string:lowercase(IdB);
+           (_, _) ->
+                false
+        end,
+    {ok, lists:sort(Sort, List)}.
 
 
 %% @doc get the list of all services for a user
