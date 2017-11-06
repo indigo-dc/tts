@@ -94,7 +94,15 @@
 %% @doc get a list of all services currently configured.
 -spec get_list() -> {ok, [info()]}.
 get_list() ->
-    {ok, List} = watts_ets:service_get_list(),
+    watts_ets:service_get_list().
+
+
+%% @doc get the list of all services for a user
+-spec get_list(UserInfo :: watts_userinfo:userinfo()) ->
+                      {ok, [limited_info()]}.
+get_list(UserInfo) ->
+    {ok, ServiceList} = get_list(),
+    {ok, ServicesOfUser} = filter_list_for_user(UserInfo, ServiceList),
     Sort =
         fun(#{display_prio := A}, #{display_prio := undefined})
               when is_number(A)->
@@ -107,16 +115,7 @@ get_list() ->
            (_, _) ->
                 false
         end,
-    {ok, lists:sort(Sort, List)}.
-
-
-%% @doc get the list of all services for a user
--spec get_list(UserInfo :: watts_userinfo:userinfo()) ->
-                      {ok, [limited_info()]}.
-get_list(UserInfo) ->
-    {ok, ServiceList} = get_list(),
-    {ok, ServicesOfUser} = filter_list_for_user(UserInfo, ServiceList),
-    update_limits_for_user(UserInfo, ServicesOfUser).
+    update_limits_for_user(UserInfo, lists:sort(Sort, ServicesOfUser)).
 
 
 %% @doc filter the list of services for a user, to hide them.
