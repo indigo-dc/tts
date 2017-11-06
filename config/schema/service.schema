@@ -467,14 +467,14 @@
                      [ Setting | Result]
              end,
          Sort =
-             fun(#{display_prio := undefined}, #{display_prio := B})
-                when is_number(B)->
+             fun(#{display_prio := A}, #{display_prio := undefined})
+                when is_number(A)->
                      true;
                 (#{display_prio := A}, #{display_prio := B})
                 when is_number(A), is_number(B), A < B->
                      true;
                 (#{display_prio := A, id := IdA}, #{display_prio := A, id := IdB}) ->
-                     IdA =< IdB;
+                     string:lowercase(IdA) =< string:lowercase(IdB);
                 (_, _) ->
                      false
              end,
