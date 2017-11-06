@@ -99,6 +99,52 @@
         end
     end}.
 
+%% @doc the rate in connections per second allowed to connect to WaTTS
+{mapping, "web_connection_rate", "watts.web_connection_rate", [
+          {default, 10},
+          {datatype,  [integer]}
+          ]}.
+
+{translation, "watts.web_connection_rate",
+    fun(Conf) ->
+        Num = cuttlefish:conf_get("web_connection_rate", Conf),
+        case Num of
+            Good when is_integer(Good), Good >= 1 ->
+                Good;
+             _ -> unlimited
+        end
+    end}.
+
+%% @doc the max duration to wait before cancelling the request du to high load
+{mapping, "web_queue_max_wait", "watts.web_queue_max_wait", [
+          {default, "500ms"},
+          {datatype,  [{duration, ms}]}
+          ]}.
+
+
+%% @doc the rate in connections per second allowed for RSPs to connect to WaTTS
+{mapping, "rsp_connection_rate", "watts.rsp_connection_rate", [
+          {default, 10},
+          {datatype,  [integer]}
+          ]}.
+
+{translation, "watts.rsp_connection_rate",
+    fun(Conf) ->
+        Num = cuttlefish:conf_get("rsp_connection_rate", Conf),
+        case Num of
+            Good when is_integer(Good), Good >= 1 ->
+                Good;
+             _ -> unlimited
+        end
+    end}.
+
+%% @doc the max duration to wait before cancelling the request du to high load
+{mapping, "rsp_queue_max_wait", "watts.web_queue_max_wait", [
+          {default, "1s"},
+          {datatype,  [{duration, ms}]}
+          ]}.
+
+
 %% wether IPv6 should be used.
 {mapping, "enable_ipv6", "watts.enable_ipv6", [
           {default, false},

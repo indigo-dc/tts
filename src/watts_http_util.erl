@@ -74,12 +74,11 @@ whole_url(AbsPath) when is_list(AbsPath) ->
     whole_url(list_to_binary(AbsPath)).
 
 %% @doc create a redirection for cowboy to the given url.
--spec redirect_to(Url :: binary(), cowboy_req:req()) ->
-                         {ok, cowboy_req:req(), []}.
+-spec redirect_to(Url :: binary(), cowboy_req:req()) -> cowboy_req:req().
 redirect_to(Url, Req) ->
     Header = [{<<"location">>, Url}],
     {ok, Req2} = cowboy_req:reply(302, Header, Req),
-    {ok, Req2, []}.
+    Req2.
 
 %% @doc return the name of the cookie.
 -spec cookie_name() -> binary().

@@ -2,11 +2,16 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("watts.hrl").
 
+%% copied from watts_http_rsp
+-record(state, {
+          token = undefined
+         }).
+
 init_test() ->
-    {ok, b, state} = watts_http_rsp:init(a, b, c).
+    {ok, b, #state{}} = watts_http_rsp:init(a, b, c).
 
 terminate_test() ->
-   ok = watts_http_rsp:terminate(a, b, c).
+   ok = watts_http_rsp:terminate(a, b, #state{}).
 
 no_ui_no_login_handle_test() ->
     {ok, Meck} = start_meck(),

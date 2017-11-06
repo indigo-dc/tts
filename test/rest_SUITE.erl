@@ -141,6 +141,7 @@ setup_group(DbType) ->
     ?SETCONFIG(redirection_enable, false),
     ?SETCONFIG(redirection_port, 8080),
     ?SETCONFIG(ssl, false),
+    ?SETCONFIG(web_connection_rate, 1),
     ?SETCONFIG(port, 8080),
     ?SETCONFIG(enable_ipv6, false),
     ?SETCONFIG(num_acceptors, 100),

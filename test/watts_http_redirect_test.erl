@@ -31,7 +31,7 @@ redirect_test() ->
     ok = meck:expect(cowboy_req, reply, Reply),
     ok = meck:expect(cowboy_req, path, Path),
     set_needed_env(),
-    {ok, req2, []} = watts_http_redirect:handle(req, ignored),
+    {ok, req2, ignored} = watts_http_redirect:handle(req, ignored),
     unset_env(),
     ok = test_util:meck_done(MeckModules),
     ok.

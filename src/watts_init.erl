@@ -450,6 +450,7 @@ update_jwt_keys() ->
 -spec start_web_interface() -> ok.
 start_web_interface() ->
     lager:info("Init: starting web interface"),
+    ok = maybe_start_web_queues(),
     oidcc_client:register(watts_oidc_client),
     Dispatch = cowboy_router:compile([{'_', create_dispatch_list()}]),
     SSL = ?CONFIG(ssl),
@@ -519,6 +520,54 @@ start_web_interface() ->
     end,
 
     ok.
+
+%% @doc maybe start the queues for rate limits at the api and rsp endpoint
+-spec maybe_start_web_queues() -> ok.
+maybe_start_web_queues() ->
+    ok = maybe_start_web_queue(?CONFIG(web_connection_rate, undefined)),
+    ok = maybe_start_rsp_queue(?CONFIG(enable_rsp, false),
+                               ?CONFIG(rsp_connection_rate, undefined)),
+    ok.
+
+%% @doc decide if the rate limit for api endpoint needs to be started
+-spec maybe_start_web_queue(any()) -> ok.
+maybe_start_web_queue(Number) when is_integer(Number), Number > 0 ->
+    MaxTime = ?CONFIG(web_queue_max_wait, 500),
+    lager:info("Init: setting web rate limit to ~p/sec [max wait: ~p ms]",
+               [Number, MaxTime]),
+    ok = start_queue(watts_web_queue, Number, MaxTime),
+    ?SETCONFIG(watts_web_queue, true),
+    ok;
+maybe_start_web_queue(_) ->
+    lager:warning("Init: connection rate set to unlimited!"),
+    ?UNSETCONFIG(watts_web_queue),
+    ok.
+
+%% @doc decide if the rate limit for rsp endpoint needs to be started
+-spec maybe_start_rsp_queue(boolean(), any()) -> ok.
+maybe_start_rsp_queue(false, _) ->
+    ok;
+maybe_start_rsp_queue(true, Number) when is_integer(Number), Number > 0 ->
+    MaxTime = ?CONFIG(rsp_queue_max_wait, 1000),
+    lager:info("Init: setting rsp rate limit to ~p/sec [MW: ~p ms]", [Number,
+                                                                  MaxTime]),
+    ok = start_queue(watts_rsp_queue, Number, MaxTime),
+    ?SETCONFIG(watts_rsp_queue, true),
+    ok;
+maybe_start_rsp_queue(true, _) ->
+    lager:warning("Init: rsp connection rate set to unlimited!"),
+    ?UNSETCONFIG(watts_rsp_queue),
+    ok.
+
+%% @doc start a queue with the given name, rate limit and wait time.
+-spec start_queue(atom(), integer(), integer()) -> ok.
+-dialyzer({nowarn_function, start_queue/3}).
+start_queue(Name, Limit, MaxTime) ->
+    Options = [{counter, [{limit, Limit}]}, {type, fifo}, {max_time, MaxTime}],
+    ok = jobs:add_queue(Name, Options),
+    ok.
+
+
 
 
 %% @doc try to read the SSL files and return if successful.
@@ -614,7 +663,7 @@ read_dhparam(_) ->
     ?UNSETCONFIG(dhparam),
     true.
 
-%% This is the list of endpoints and the corresponding action to happen,
+%% @doc This is the list of endpoints and the corresponding action to happen,
 %% this could be either calling a function or serving static files.
 %%
 %% The function creates a basic dispatch list for the javascript to be served,
