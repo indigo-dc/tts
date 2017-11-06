@@ -533,8 +533,8 @@ maybe_start_web_queues() ->
 -spec maybe_start_web_queue(any()) -> ok.
 maybe_start_web_queue(Number) when is_integer(Number), Number > 0 ->
     MaxTime = ?CONFIG(web_queue_max_wait, 500),
-    lager:info("Init: setting web rate limit to ~p/sec [MW: ~p ms]", [Number,
-                                                                  MaxTime]),
+    lager:info("Init: setting web rate limit to ~p/sec [max wait: ~p ms]",
+               [Number, MaxTime]),
     ok = start_queue(watts_web_queue, Number, MaxTime),
     ?SETCONFIG(watts_web_queue, true),
     ok;
