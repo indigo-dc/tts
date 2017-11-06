@@ -5,6 +5,11 @@
           {datatype, string}
           ]}.
 
+%% @doc the listing priority of the service, the lower the higher it gets listed
+{mapping, "service.$id.display_prio", "watts.service_list", [
+          {datatype, [{atom, undefined}, integer]}
+          ]}.
+
 %% @doc the command to execute, the so called 'plugin'
 {mapping, "service.$id.cmd", "watts.service_list.a", [
           {datatype, string}
@@ -154,6 +159,7 @@
              end,
 
          Descs = TypeIdValue("service.$id.description", three),
+         Prios = TypeIdValue("service.$id.display_prio", three),
          Cmds = TypeIdValue("service.$id.cmd", three),
          EnvUses = TypeIdValue("service.$id.cmd_env_use", three),
          EnvVars = TypeIdValue("service.$id.cmd_env_var", three),
@@ -212,6 +218,10 @@
              fun(Id, Result) ->
                      Desc = case lists:keyfind(Id, 1, Descs) of
                                {Id, D} -> D;
+                               _ -> undefined
+                           end,
+                     Prio = case lists:keyfind(Id, 1, Prios) of
+                               {Id, P} -> P;
                                _ -> undefined
                            end,
                      Cmd = case lists:keyfind(Id, 1, Cmds) of
@@ -431,6 +441,7 @@
                      Setting = #{ id => list_to_binary(Id),
                                   authz => AuthzConf,
                                   description => list_to_binary(Desc),
+                                  display_prio => Prio,
                                   cmd => list_to_binary(Cmd),
                                   cmd_env_use => EnvUse,
                                   cmd_env_var => EnvVar,
