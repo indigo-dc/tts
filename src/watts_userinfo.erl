@@ -266,7 +266,7 @@ has_additional_login(ServiceId, IssuerId,
                     {additional_logins, ServiceId :: binary(),
                      WithAccessToken :: boolean()}
             , UserInfo :: userinfo()) ->
-                    {ok, Data :: any()} | {ok, Iss :: binary(), Sub :: binary}
+                    {ok, Data :: any()} | {ok, Iss :: binary(), Sub :: binary()}
                         | boolean() | {error, Reason :: atom()}.
 return({key, Key0}, #user_info{plugin_info=PluginInfo}) ->
     Key = maybe_to_atom(Key0),

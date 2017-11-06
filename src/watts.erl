@@ -50,7 +50,7 @@
          stop_debug/0
         ]).
 
--export_type([credential/0]).
+-export_type([credential/0, oidc_info/0]).
 
 -type session_info() :: #{session_pid => Session :: pid(),
                           session_type => watts_session:type()}.
@@ -60,6 +60,13 @@
                         interface => Interface :: binary(),
                         service_id => ServiceId :: binary(),
                         cred_state => CredState :: binary()}.
+
+-type oidc_info() :: #{ id => Id :: binary(),
+                        desc => Desc :: binary() ,
+                        priority => Priority :: integer(),
+                        ready => Ready :: boolean(),
+                        issuer => Issuer :: binary() }.
+
 %% @doc perform a login with the openid flow through the ui (not access token).
 %% there are some possible valid cases, if the Token contains the minimal
 %% needed information:
@@ -126,10 +133,19 @@ session_for_rsp(Rsp) ->
     SessType = watts_rsp:session_type(Rsp),
     {ServiceId, Params} = watts_rsp:get_service_data(Rsp),
     ProviderEnabled = not is_provider_disabled(Provider),
-    NoProvider = (Provider == undefined),
+    NoProvider = no_provider_used(Provider),
     ValidProvider = NoProvider or ProviderEnabled,
     rsp_session_or_error(ValidProvider,
                             ServiceId, Params, Provider, Rsp, SessType).
+
+
+%% @doc a helper function to get rid of the dialyzer error
+-dialyzer({nowarn_function, no_provider_used/1}).
+-spec no_provider_used(undefined | binary()) -> boolean().
+no_provider_used(undefined) ->
+    true;
+no_provider_used(_) ->
+    false.
 
 
 %% @doc either setup the rsp session or return an error.
@@ -267,13 +283,21 @@ do_login(Issuer, Subject0, Token0, SessPid) ->
             {error, internal}
     end.
 
+%% @doc set the session type depending on the fact if the subject has been shown
+%% in the token, so if it has been an Id Token or an Access Token
+-spec update_session_type(undefined | binary(), pid()) -> ok.
 update_session_type(undefined, SessPid) ->
     watts_session:set_type(rest, SessPid);
 update_session_type(_, SessPid) ->
     watts_session:set_type(oidc, SessPid).
 
 
-
+%% @doc perform an additional login for a user.
+%% This is e.g. needed for rsps to verify the identity of a user
+%% or for plugins that need additional logins/access token
+-spec do_additional_login(binary(), binary(), map(), pid())
+                         -> {ok, session_info()} |
+                            {error, Reason :: atom()}.
 do_additional_login(Issuer, Subject0, Token0, SessPid) ->
     {ok, SessionId} = watts_session:get_id(SessPid),
     lager:info("SESS~p additional login as ~p at ~p",
@@ -301,20 +325,26 @@ do_additional_login(Issuer, Subject0, Token0, SessPid) ->
     end.
 
 
-
+%% @doc close the given session
+-spec logout(pid()) -> ok.
 logout(Session) ->
     watts_session:close(Session).
 
+%% @doc check if the credential with the given Id exists for the user
+-spec does_credential_exist(binary(), pid()) -> boolean().
 does_credential_exist(Id, Session) ->
     {ok, UserInfo} =  watts_session:get_user_info(Session),
     watts_plugin:exists(UserInfo, Id).
 
+%% @doc check if the temp credential with the given Id exists for the user
+-spec does_temp_cred_exist(binary(), pid()) -> boolean().
 does_temp_cred_exist(Id, Session) ->
     {ok, UserId} =  watts_session:get_userid(Session),
     watts_temp_cred:exists(Id, UserId).
 
 
-
+%% @doc get the list of all configured openid connect provider.
+-spec get_openid_provider_list() -> {ok, [ oidc_info() ]}.
 get_openid_provider_list() ->
     {ok, OidcProvList} = oidcc:get_openid_provider_list(),
     ExtFields = fun({Id, Pid}, List) ->
@@ -335,6 +365,8 @@ get_openid_provider_list() ->
     OpList = lists:reverse(lists:foldl(ExtFields, [], OidcProvList)),
     {ok, OpList}.
 
+%% @doc get the complete openid connect provider information
+-spec get_openid_provider_info(binary()) -> {ok, map()}.
 get_openid_provider_info(ProviderId) ->
     case is_provider_disabled(ProviderId) of
         false ->
@@ -378,14 +410,14 @@ return_service_list(_, _) ->
 
 
 %% @doc get the list of credentials for the given session
--spec get_credential_list_for(Session :: pid()) -> {ok, [Credential :: map()]}.
+-spec get_credential_list_for(Session :: pid()) -> {ok, [credential()]}.
 get_credential_list_for(Session) ->
     {ok, SessType} = watts_session:get_type(Session),
     return_credential_list(Session, SessType).
 
 %% @doc get the list of credentials for the given session unless it is RSP
 -spec return_credential_list(Session :: pid(),  Type :: atom() | tuple()) ->
-                                    {ok, [Credential :: map()]}.
+                                    {ok, [credential()]}.
 return_credential_list(Session,  Type)
   when Type == oidc; Type == rest->
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -403,7 +435,7 @@ return_credential_list(_,  _) ->
 %% @see watts_plugin
 %% @see watts_plugin_runner
 -spec request_credential_for(ServiceId :: binary(), Session :: pid(),
-                             Params :: [map()]) -> {ok, map()} | {error, map()}.
+                             Params :: map()) -> {ok, map()} | {error, map()}.
 request_credential_for(ServiceId, Session, Params) ->
     IFace =  get_interface_description(watts_session:get_type(Session)),
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -425,13 +457,10 @@ get_interface_description({ok, {rsp, _, _}}) ->
 
 %% @doc handle the result of a translation.
 %% this is the result part of the {@link request_credential_for/3} call.
-%% -spec handle_credential_result({ok, Credential::map()} |
-%%                                {error, Reason :: atom()},
-%%                                 ServiceId :: binary(),
-%%                                Session :: pid(), Params :: [map()]) ->
-%%                                       {ok, map()} | {error, map()}.
-%% -spec handle_credential_result(watts_plugin:result(), binary(), pid(), map())
-%% -> ok.
+-spec handle_credential_result(watts_plugin:result(), binary(), pid(), map())
+                              -> {ok, #{result => ok , credential => credential()}} |
+                                 {ok, #{result => oidc_login , oidc_login => map()}} |
+                                 {error, #{result => error, user_msg => binary()}}.
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
@@ -488,10 +517,18 @@ handle_credential_result({error, Reason}, ServiceId, Session, _Params) ->
     lager:warning(WMsg, [SessionId, ServiceId, Reason]),
     {error, #{result => error, user_msg => UMsg}}.
 
-
+%% @doc convert the error to readable messages for log and user
+-spec credential_error_message(Reason :: atom() | tuple() | any())
+                              -> {binary(), string()}.
 credential_error_message(Reason) ->
     BaseWMsg = "SESS~p credential request for ~p failed: ~p",
     credential_error_message(Reason, BaseWMsg).
+
+
+%% @doc convert the error to readable messages for log and user, with default
+-spec credential_error_message(Reason :: atom() | tuple(),
+                              DefaultMessage :: string())
+                              -> {binary(), string()}.
 credential_error_message(limit_reached, BaseWMsg) ->
     {<<"the credential limit has been reached">>, BaseWMsg};
 credential_error_message(user_not_allowed, BaseWMsg) ->
@@ -502,13 +539,14 @@ credential_error_message(invalid_params, BaseWMsg) ->
     {<<"invalid parameter have been passed">>, BaseWMsg};
 credential_error_message({storing, {error, not_unique_state}}, _) ->
     {<<"the service did not return a unique state, contact the administrator">>,
-     <<"SESS~p identical state in request ~p: ~p">>};
+     "SESS~p identical state in request ~p: ~p"};
 credential_error_message(_, BaseWMsg) ->
     {<<"unknown error occured, please contact the admin">>, BaseWMsg}.
 
 
 
-
+%% @doc revoke the credential witht the given id for the user from the session.
+-spec revoke_credential_for(binary(), pid()) -> ok | {error, Reason :: atom()}.
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, SessionId} = watts_session:get_id(Session),
@@ -530,56 +568,80 @@ revoke_credential_for(CredId, Session) ->
     end.
 
 
-
-
+%% @doc return the access token from a session
+-spec get_access_token_for(pid()) -> {ok, binary()}.
 get_access_token_for(Session) ->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, AccessToken} = watts_userinfo:return(access_token, UserInfo),
     {ok, AccessToken}.
 
+%% @doc return the display name of a session
+-spec get_display_name_for(pid()) -> {ok, binary()}.
+-dialyzer({nowarn_function, get_display_name_for/1}).
 get_display_name_for(Session) ->
     case watts_session:get_display_name(Session) of
         {ok, Name} -> {ok, Name};
         _ -> {ok, <<"">>}
     end.
 
+%% @doc return the issuer and subject of a session
+-spec get_iss_sub_for(pid()) -> {ok, binary(), binary()}.
 get_iss_sub_for(Session) ->
     {ok, Iss, _, Sub} = get_iss_id_sub_for(Session),
     {ok, Iss, Sub}.
 
+%% @doc return the issuer, its id, and subject of a session
+-spec get_iss_id_sub_for(pid()) -> {ok, binary(), binary(), binary()}.
 get_iss_id_sub_for(Session) ->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, IssId} = watts_session:get_iss_id(Session),
     {ok, Iss, Sub} = watts_userinfo:return(issuer_subject, UserInfo),
     {ok, Iss, IssId, Sub}.
 
+%% @doc store a credential temporary in a gen_server in RAM
+-spec store_temp_cred(credential(), pid()) -> {ok, binary()}.
 store_temp_cred(Credential, Session) ->
     {ok, UserId} = watts_session:get_userid(Session),
     {ok, Id} = watts_temp_cred:add_cred(Credential, UserId),
     {ok, Id}.
 
+%% @doc get a temp credential by its id and for the user
+%% this also deletes the stored credential
+-spec get_temp_cred(binary(), pid()) -> {ok, credential()} | {error, atom()}.
 get_temp_cred(Id, Session) ->
     {ok, UserId} = watts_session:get_userid(Session),
     watts_temp_cred:get_cred(Id, UserId).
 
+%% @doc start debugging with defaults (one hour, 10000 messages)
+-spec start_debug([string()]) -> {ok, any()}.
 start_debug(ListOfModules) ->
     %debug for an hour or 10000 messages
     Options = [{time, 3600000}, {msgs, 10000}],
     start_debug(ListOfModules, Options).
 
+%% @doc start debugging, with options
+-spec start_debug([string()], [any()]) -> {ok, any()}.
 start_debug(ListOfModules, Options) ->
     redbug:start(ListOfModules, Options).
 
 
+%% @doc stop debugging
+-spec stop_debug() -> stopped | not_started.
 stop_debug() ->
     redbug:stop().
 
+%% @doc update the session with issuer, subject and maybe more
+-spec update_session(binary(), binary(), binary() | map(), pid())
+                    -> {ok, session_info()}.
 update_session(Issuer, Subject, Token, SessionPid) ->
     {ok, Provider} = oidcc:find_openid_provider(Issuer),
     {ok, #{id := IssId}} = oidcc:get_openid_provider_info(Provider),
     update_session(Issuer, IssId, Subject, Token, SessionPid).
 
 
+%% @doc update the session with issuer, its id, subject and maybe more
+-spec update_session(binary(), binary(), binary(), binary() | map(), pid())
+                    -> {ok, session_info()}.
 update_session(Issuer, IssId, Subject, Token, SessionPid) ->
     ok = watts_session:set_iss_sub(Issuer, Subject, SessionPid),
     true = watts_session:is_logged_in(SessionPid),
@@ -598,7 +660,9 @@ return_session_info(SessionPid) ->
     {ok, SessType} = watts_session:get_type(SessionPid),
     {ok, #{session_pid => SessionPid, session_type => SessType}}.
 
-
+%% @doc retrieve user information at the oidc provider
+-spec retrieve_information(binary(), binary(), map(), pid())
+                          -> {ok, binary(), binary(), map()} | {error, atom()}.
 retrieve_information(Issuer, Subject, Token, Session) ->
     {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
     {ok, #{id := IssuerId, issuer := Issuer} = Config} =
@@ -613,7 +677,9 @@ retrieve_information(Issuer, Subject, Token, Session) ->
     TokenInfo = introspect_token_if_needed(HasScope, Token, Config, Session),
     create_information_result(UserInfo, TokenInfo, Token, IssuerId).
 
-
+%% @doc extract user information out of the response from the oidc provider
+-spec extract_userinfo({ok, map()} | {error, any()})
+                      -> {ok, binary(), map()} | {error, any()} .
 extract_userinfo({ok, #{sub := Subject} = OidcInfo}) ->
     {ok, Subject, OidcInfo};
 extract_userinfo({error, {bad_status, #{body := Body}}}) ->
@@ -635,6 +701,10 @@ extract_userinfo({error, Reason}) ->
 extract_userinfo(Unknown) ->
     {error, io_lib:format("unknown result: ~p", [Unknown])}.
 
+%% @doc perfom token introspection if needed
+-spec introspect_token_if_needed(boolean(), map(), map(), pid())
+                                -> {ok, map()} | {error, atom()}.
+-dialyzer({nowarn_function, introspect_token_if_needed/4}).
 introspect_token_if_needed(true, _, _, _) ->
     {ok, #{}};
 introspect_token_if_needed(false, Token, #{introspection_endpoint := _,
@@ -661,7 +731,12 @@ introspect_token_if_needed(false, _, #{id := Id}, Session) ->
     {ok, #{}}.
 
 
-
+%% @doc create the resul for the user info call
+-spec create_information_result({ok, binary(), map()} | {error, atom()} ,
+                                {ok, map()} | {error, atom()} ,
+                                map() | binary(), binary())
+                          -> {ok, binary(), binary(), map()} | {error, atom()}.
+-dialyzer({nowarn_function, create_information_result/4}).
 create_information_result({ok, Subject, OidcInfo}, TokenResult,
                           TokenMap, IssuerId)
   when is_map(TokenMap) ->
@@ -693,6 +768,8 @@ create_information_result(_, {error, Reason}, _, _) ->
     {error, Reason}.
 
 
+%% @doc extract the user message from the map
+-spec get_user_msg(map()) -> binary().
 get_user_msg(#{user_msg := Msg}) when is_list(Msg) ->
     list_to_binary(Msg);
 get_user_msg(#{user_msg := Msg}) when is_binary(Msg) ->
