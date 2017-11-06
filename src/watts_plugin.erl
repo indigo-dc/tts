@@ -199,15 +199,16 @@ get_params(ServiceId) ->
 
 %% @doc handle the results or a plugin run, including validation
 -spec handle_result(watts_plugin_runner:result(), config()) -> result().
-handle_result({ok, #{result := Result}=Map, Log}, Info) ->
+handle_result({ok, #{result := Result}=Map, Output}, Info) ->
     AResult = result_to_atom(Result),
-    handle_result(AResult, Map, Log, Info);
+    handle_result(AResult, Map, Output, Info);
 handle_result({ok, _Map, _Log}, #{service_id := ServiceId} ) ->
     LogMsg = io_lib:format("plugin missing 'result': service ~p", [ServiceId]),
     UMsg = "the plugin had an error, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
-handle_result({error, Map, Log}, Info) ->
-    LogMsg = io_lib:format("plugin error: ~p ~p ~p", [Map, Info, Log]),
+handle_result({error, Reason, Output}, _Info) ->
+    SmallOutput = maps:with([cmd, env, std_out, std_err, exit_status], Output),
+    LogMsg = io_lib:format("plugin error: ~p ~p", [Reason, SmallOutput]),
     UMsg = "the plugin had an error, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg=>LogMsg}).
 
@@ -500,7 +501,7 @@ config(#{action := _, service_id := _} = Config) ->
       user_info => undefined,
       cred_state => undefined,
       cred_id => undefined,
-      params => undefined
+      params => #{}
      },
     maps:merge(BasicConfig, Config).
 
