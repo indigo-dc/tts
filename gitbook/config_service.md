@@ -28,6 +28,7 @@ you want to give to the service.
 | Key | Description | Datatype | Mandatory |
 | :---: | --- | :---: | :---: |
 | description | A description of the service for the user | string | yes |
+| display_prio | the priority of the service in the listing. the lower the number the higher in the list the service will be listed. If the priority is 'undefined', the service is listed below the ones that have a numeric priority. | integer or 'undefined' | no ('undefined') |
 | cmd | The command to execute after connecting, needs to be executable/readable by the user WaTTS is running as | string | yes |
 | cmd_env_use | The parameter will not be passed at the command line but put into an environment variable. The default is 'false'. | boolean | no |
 | cmd_env_var | The name of the environment variable containing the parameter, only used if `cmd_env_use` is true | string | no |
