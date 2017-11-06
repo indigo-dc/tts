@@ -63,7 +63,7 @@
                     queue => atom(),
                     user_info => watts_userinfo:userinfo() | undefined,
                     cred_state => binary() | undefined,
-                    params => map() | undefined
+                    params => map()
                    }.
 
 -type result() ::

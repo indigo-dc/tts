@@ -546,7 +546,7 @@ credential_error_message(_, BaseWMsg) ->
 
 
 %% @doc revoke the credential witht the given id for the user from the session.
--spec revoke_credential_for(binary(), pid()) -> ok | {error, Reason :: atom()}.
+-spec revoke_credential_for(binary(), pid()) -> ok | {error, Reason::binary()}.
 revoke_credential_for(CredId, Session) ->
     {ok, UserInfo} = watts_session:get_user_info(Session),
     {ok, SessionId} = watts_session:get_id(Session),
