@@ -229,46 +229,47 @@ start_meck() ->
     RequestFun = fun(Service, UserInfo, _Par, _Queue, Pid) ->
                          {ok, User}  = watts_userinfo:return(id, UserInfo),
                          Pid = MyPid,
+                         Output = #{},
                          case {User, Service} of
                              {UserId1, Service1} ->
                                  {ok, #{result => <<"ok">>,
                                         credential => [Cred1],
-                                        state => CredState}, []};
+                                        state => CredState}, Output};
                              {UserId1, Service2} ->
                                  {ok, #{result => <<"ok">>,
                                         credential => [Cred2],
-                                        state => CredState}, []};
+                                        state => CredState}, Output};
                              {UserId1, Service3} ->
                                  {ok, #{result => <<"ok">>,
                                         credential => [Cred3],
-                                        state => CredState}, []};
+                                        state => CredState}, Output};
                              {UserId1, Service4} ->
                                  {ok, #{result => <<"ok">>,
                                         credential => [Cred4],
-                                        state => CredState}, []};
+                                        state => CredState}, Output};
                              {UserId1, Service5} ->
                                  {ok, #{result => <<"ok">>,
                                         credential => [Cred5],
-                                        state => CredState}, []};
+                                        state => CredState}, Output};
                              {UserId2, Service1} -> {ok, #{
                                                result => <<"error">>,
                                                user_msg => <<"some message">>,
                                                log_msg => <<"logged">>
-                                               }, []};
+                                               }, Output};
                              {UserId2, Service3} -> {ok, #{
                                                user_msg => <<"some message">>,
                                                log_msg => <<"logged">>
-                                               }, []};
+                                               }, Output};
                              {UserId2, Service4} -> {error, #{
                                                result => <<"error">>,
                                                log_msg => <<"logged">>
-                                               }, []};
+                                               }, Output};
                              {UserId2, Service5} -> {ok, #{
                                                result => <<"ok">>,
                                                log_msg => <<"logged">>
-                                               }, []};
+                                               }, Output};
                              %% {UserId3, _} -> {ok, #{credential => [Cred1]}, []};
-                             _ -> {error, just_because, []}
+                             _ -> {error, just_because, Output}
                          end
                  end,
     RevokeFun = fun(Service, UserInfo, _Par, _Queue, Pid) ->
