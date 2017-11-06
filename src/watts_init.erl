@@ -549,8 +549,8 @@ maybe_start_rsp_queue(false, _) ->
     ok;
 maybe_start_rsp_queue(true, Number) when is_integer(Number), Number > 0 ->
     MaxTime = ?CONFIG(rsp_queue_max_wait, 1000),
-    lager:info("Init: setting rsp rate limit to ~p/sec [MW: ~p ms]", [Number,
-                                                                  MaxTime]),
+    lager:info("Init: setting rsp rate limit to ~p/sec [max wait: ~p ms]",
+               [Number, MaxTime]),
     ok = start_queue(watts_rsp_queue, Number, MaxTime),
     ?SETCONFIG(watts_rsp_queue, true),
     ok;

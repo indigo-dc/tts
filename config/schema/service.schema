@@ -7,11 +7,8 @@
 
 %% @doc the listing priority of the service, the lower the higher it gets listed
 {mapping, "service.$id.display_prio", "watts.service_list", [
-          {datatype, [{atom, undefined}, integer]},
-
+          {datatype, [{atom, undefined}, integer]}
           ]}.
-
-
 
 %% @doc the command to execute, the so called 'plugin'
 {mapping, "service.$id.cmd", "watts.service_list.a", [
@@ -469,5 +466,10 @@
                                   },
                      [ Setting | Result]
              end,
-         lists:foldl(CreateSetting, [], Ids)
+         Sort =
+             fun(#{display_prio := A}, #{display_prio := B}) ->
+                     (A == undefined)
+                         or (is_number(A) and is_number(B) and A =< B)
+             end,
+         lists:sort(Sort, lists:foldl(CreateSetting, [], Ids))
     end}.
