@@ -474,7 +474,9 @@
                 when is_number(A), is_number(B), A < B->
                      true;
                 (#{display_prio := A, id := IdA}, #{display_prio := A, id := IdB}) ->
-                     IdA =< IdB
+                     IdA =< IdB;
+                (_, _) ->
+                     false
              end,
          lists:sort(Sort, lists:foldl(CreateSetting, [], Ids))
     end}.
