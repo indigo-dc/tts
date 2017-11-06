@@ -467,9 +467,14 @@
                      [ Setting | Result]
              end,
          Sort =
-             fun(#{display_prio := A}, #{display_prio := B}) ->
-                     (A == undefined)
-                         or (is_number(A) and is_number(B) and A =< B)
+             fun(#{display_prio := undefined}, #{display_prio := B})
+                when is_number(B)->
+                     true;
+                (#{display_prio := A}, #{display_prio := B})
+                when is_number(A), is_number(B), A < B->
+                     true;
+                (#{display_prio := A, id := IdA}, #{display_prio := A, id := IdB}) ->
+                     IdA =< IdB
              end,
          lists:sort(Sort, lists:foldl(CreateSetting, [], Ids))
     end}.
