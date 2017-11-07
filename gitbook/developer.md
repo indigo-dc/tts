@@ -76,11 +76,20 @@ The expected result is:
         ],
         []
     ],
+    "developer_email":"me@domain.com",
     "version":"the plugin version"
 }
 ```
 The result MUST be OK and the version should describe the version of your *plugin* so e.g. errors
 can be tracked. All entries are mandatory.
+
+#### Version (version)
+WaTTS expects a version to be present in the response so it can list the version for
+later debugging and helping the development of plugins.
+
+#### Email of the developer/team (developer_email)
+If this is present WaTTS expects it to be a vaild email address and, if configured,
+sends emails on invalid behaviour of the plugin to the developer.
 
 #### Config Parameter (conf_params)
 Each config parameter consists of an `json` object with three key-value pairs:

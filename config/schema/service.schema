@@ -98,6 +98,11 @@
           {datatype, string}
           ]}.
 
+%% @doc the plugin configuration parameter
+{mapping, "service.$id.mail_on_error_to", "watts.service_list.q", [
+          {datatype, [{atom, noone}, {atom, developer}, {atom, admin},
+                      {atom, admin_devel}]}
+          ]}.
 
 %% @doc wether to hide the service from unauthorized users, default is false
 {mapping, "service.$id.authz.hide", "watts.service_list.w", [
@@ -176,6 +181,7 @@
          ConnDirs = TypeIdValue("service.$id.connection.ssh_dir", four),
          ConnKeyPasses = TypeIdValue("service.$id.connection.ssh_key_pass", four),
          PluginConfs = TypeIdValue("service.$id.plugin.$key", plugin),
+         Mails = TypeIdValue("service.$id.mail_on_error_to", three),
 
          AuthzHides = TypeIdValue("service.$id.authz.hide", four),
          AuthzTooltips = TypeIdValue("service.$id.authz.tooltip", four),
@@ -222,6 +228,10 @@
                            end,
                      Prio = case lists:keyfind(Id, 1, Prios) of
                                {Id, P} -> P;
+                               _ -> undefined
+                           end,
+                     Mail = case lists:keyfind(Id, 1, Mails) of
+                               {Id, M} -> M;
                                _ -> undefined
                            end,
                      Cmd = case lists:keyfind(Id, 1, Cmds) of
@@ -454,6 +464,7 @@
                                   parallel_runner => ParaRunner,
                                   pass_access_token => PassAccToken,
                                   plugin_timeout => PluginTimeout,
+                                  mail_on_error_to => Mail,
                                   connection => #{
                                     type => ConnType,
                                     user => ConnUser,

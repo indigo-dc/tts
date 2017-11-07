@@ -81,6 +81,12 @@ endif
 	$(REBAR) release
 
 
+debug_config: rel
+	if [ -f ~/.config/watts/watts.conf ] ; then \
+		cp ~/.config/watts/watts.conf _build/default/rel/watts/etc/watts.conf ; \
+	fi ;
+	./_build/default/rel/watts/bin/watts config generate -l debug
+
 run: rel
 	if [ -f ~/.config/watts/watts.conf ] ; then \
 		cp ~/.config/watts/watts.conf _build/default/rel/watts/etc/watts.conf ; \
