@@ -1,12 +1,18 @@
+%% @doc a simple mail sending implementation using gen_smtp
 -module (watts_mail).
 
 -include("watts.hrl").
 
 -export([send/3]).
 
+%% @doc send a mail (if enabled), given subject, body and receipients
+-spec send(string(), string(), [string()]) -> atom().
 send(Subject, Body, Receipients) ->
-    maybe_send(?CONFIG(email_enable), Subject, Body, Receipients).
+    maybe_send(?CONFIG(mail_enabled), Subject, Body, Receipients).
 
+
+%% @doc send a mail if configured, given subject, body and receipients
+-spec maybe_send(boolean(), string(), string(), [string()]) -> atom().
 maybe_send(true, Subject, Body, Receipients)
   when is_list(Receipients), length(Receipients) >= 1 ->
     Sender = ?CONFIG(email_address),
@@ -34,6 +40,8 @@ maybe_send(_, Subject, _Body, _Receipients) ->
     disabled.
 
 
+%% @doc create the whole mail with headers
+-spec compose_mail(string(), string(), [string()], string()) -> string().
 compose_mail(Subject, Body, Receipients, Sender) ->
     ReceipientsString = lists:flatten(lists:join(", ", Receipients)),
     Name = ?CONFIG(email_name, "WaTTS"),
@@ -48,6 +56,8 @@ compose_mail(Subject, Body, Receipients, Sender) ->
     lists:flatten(lists:join("\r\n", Header)) ++ Body.
 
 
+%% @doc handle mail results and return either ok or error, also log errors
+-spec handle_mail_result(binary() | {error, any(), any()}) -> ok | error.
 handle_mail_result(Result) when is_binary(Result) ->
     lager:debug("Mail: sent with ~p", [Result]),
     ok;

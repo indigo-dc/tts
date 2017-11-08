@@ -260,7 +260,8 @@ handle_result(ok,
               _Log, #{ action := parameter } )
   when is_list(ConfParams), is_list(ReqParams), is_binary(Version)  ->
     %% valid parameter response
-    return(result, maps:with([conf_params, request_params, version], Result));
+    ReturnedKeys = [conf_params, request_params, version, developer_email],
+    return(result, maps:with(ReturnedKeys, Result));
 handle_result(error, Result, Log, #{ action := parameter } ) ->
     %% invalid parameter response
     LogMsg = io_lib:format("bad parameter response: ~p [~p]", [Result, Log]),

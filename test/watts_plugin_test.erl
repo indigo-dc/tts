@@ -229,7 +229,11 @@ start_meck() ->
     RequestFun = fun(Service, UserInfo, _Par, _Queue, Pid) ->
                          {ok, User}  = watts_userinfo:return(id, UserInfo),
                          Pid = MyPid,
-                         Output = #{},
+                         Output = #{cmd => <<"info.py AFFE">>,
+                                    env => [],
+                                    std_out => [],
+                                    std_err => []
+                                   },
                          case {User, Service} of
                              {UserId1, Service1} ->
                                  {ok, #{result => <<"ok">>,
@@ -276,16 +280,21 @@ start_meck() ->
                          %% Service = ServiceId,
                         {ok, UserId} = watts_userinfo:return(id, UserInfo),
                         Pid = MyPid,
+                         Output = #{cmd => <<"info.py AFFE">>,
+                                    env => [],
+                                    std_out => [],
+                                    std_err => []
+                                   },
                         case {UserId, Service} of
-                            {UserId1, Service1} -> {ok, #{result => <<"ok">>}, []};
+                            {UserId1, Service1} -> {ok, #{result => <<"ok">>}, Output};
                             {UserId1, Service2} -> {ok, #{result => <<"error">>,
                                                           user_msg => <<"user">>,
                                                           log_msg => <<"log">>
-                                                         }, []};
+                                                         }, Output};
                             {UserId1, Service3} -> {ok, #{result => <<"error">>,
                                                           log_msg => <<"log">>
-                                                         }, []};
-                            _ -> {error, just_because, []}
+                                                         }, Output};
+                            _ -> {error, just_because, Output}
                         end
                 end,
     ActionFun = fun(#{action := Action, service_id := ServiceId,
@@ -323,6 +332,12 @@ start_meck() ->
     Exists = fun(ServiceId) ->
                     not( (ServiceId == Service6))
              end,
+    GetInfo = fun(_) ->
+                      #{cmd => <<"info.py">>,
+                        plugin_version => <<"0.0.1">>,
+                        devel_email => <<"watts@kit.edu">>
+                       }
+              end,
     ok = meck:expect(watts_persistent_sqlite, credential_get_list, GetFun),
     ok = meck:expect(watts_persistent_sqlite, credential_get, GetCredFun),
     ok = meck:expect(watts_persistent_sqlite, credential_get_count, GetCountFun),
@@ -337,6 +352,7 @@ start_meck() ->
     ok = meck:expect(watts_service, allows_same_state, AllowSame),
     ok = meck:expect(watts_service, exists, Exists),
     ok = meck:expect(watts_service, are_params_valid, fun(_, _) -> true end),
+    ok = meck:expect(watts_service, get_info, GetInfo),
     {ok, {MeckModules}}.
 
 

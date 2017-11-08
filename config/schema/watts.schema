@@ -462,7 +462,11 @@
           {datatype ,  string}
           ]}.
 
-{mapping, "email.enable", "watts.email_enable", [
+{mapping, "email.enable", "watts.mail_enabled", [
+          {datatype ,  [{atom, true}, {atom, false}]}
+          ]}.
+
+{mapping, "email.on_plugin_error", "watts.mail_on_plugin_error", [
           {datatype ,  [{atom, true}, {atom, false}]}
           ]}.
 
