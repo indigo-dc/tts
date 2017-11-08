@@ -156,13 +156,14 @@ error_type_to_subject(unknown) ->
       MapOrReason :: map() | any(),
       Output :: watts_plugin_runner:output(),
       Info :: map().
-create_body(ErrorType, Map, Output, Info) ->
+create_body(ErrorType, MapOrReason, Output, Info) ->
     Action = maps:get(action, Info),
     ServiceId = maps:get(service_id, Info),
     {ok, #{cmd := Cmd,
            plugin_version := Version
           }} = watts_service:get_info(ServiceId),
     Desc = error_type_to_description(ErrorType),
+    ResponseOrError = response_or_error(ErrorType, MapOrReason),
     io_lib:format(
       "Hello Developer/Admin,~n"
       "I detected an issue with a plugin and wanted to inform you about it.~n~n"
@@ -171,10 +172,17 @@ create_body(ErrorType, Map, Output, Info) ->
       "The affected service id was: ~p~n"
       "The used plugin was: ~p version ~p~n"
       "The action was: ~p~n~n"
-      "The parsed response was: ~n ~p~n~n"
+      "~s~n"
       "The raw output was: ~s~n~n"
       "I wish you a great day,~n WaTTS",
-      [Desc, ServiceId, Cmd, Version, Action, Map, log_output(Output) ]).
+      [Desc, ServiceId, Cmd, Version, Action, ResponseOrError,
+       log_output(Output)]).
+
+response_or_error(plugin_error, Reason) ->
+    io_lib:format("The error reason was: ~p~n", [Reason]);
+response_or_error(_, Map) ->
+    io_lib:format("The parsed response was: ~n~p~n", [Map]).
+
 
 
 %% @doc convert the type to reasonable helpful description of the error
@@ -233,13 +241,24 @@ maybe_send_mail(_, _, _) ->
     not_sent.
 
 
-%% @doc create the list of receipients depending on the configuration
--spec receipients(atom(), string(), string()) -> [string()].
-receipients(admin, _, Mail) ->
+%% @doc create the list of receipients ensure they are strings
+-spec receipients(atom(), string() | undefined, string() | undefined) ->
+                         [string()].
+receipients(To, DMail, AMail) ->
+    Filter = fun(Mail) ->
+                     is_list(Mail)
+             end,
+    lists:filter(Filter, receipient_list(To, DMail, AMail)).
+
+
+%% @doc just create the list of receipients, may include undefined
+-spec receipient_list(atom(), string() | undefined, string() | undefined) ->
+                         [string() | undefined].
+receipient_list(admin, _, Mail) ->
     [Mail];
-receipients(developer, Mail, _) ->
+receipient_list(developer, Mail, _) ->
     [Mail];
-receipients(admin_devel, DMail, AMail) ->
+receipient_list(admin_devel, DMail, AMail) ->
     [DMail, AMail];
-receipients(noone, _, _) ->
+receipient_list(noone, _, _) ->
     [].

@@ -333,10 +333,10 @@ start_meck() ->
                     not( (ServiceId == Service6))
              end,
     GetInfo = fun(_) ->
-                      #{cmd => <<"info.py">>,
-                        plugin_version => <<"0.0.1">>,
-                        devel_email => <<"watts@kit.edu">>
-                       }
+                      {ok, #{cmd => <<"info.py">>,
+                             plugin_version => <<"0.0.1">>,
+                             devel_email => <<"watts@kit.edu">>
+                            }}
               end,
     ok = meck:expect(watts_persistent_sqlite, credential_get_list, GetFun),
     ok = meck:expect(watts_persistent_sqlite, credential_get, GetCredFun),

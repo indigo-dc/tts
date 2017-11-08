@@ -467,7 +467,8 @@
           ]}.
 
 {mapping, "email.on_plugin_error", "watts.mail_on_plugin_error", [
-          {datatype ,  [{atom, true}, {atom, false}]}
+          {datatype ,  [{atom, true}, {atom, false}]},
+          {default, true}
           ]}.
 
 {mapping, "email.name", "watts.email_name", [
@@ -490,10 +491,16 @@
           ]}.
 
 {mapping, "email.port", "watts.email_port", [
-          {datatype , string}
+          {datatype , integer}
           ]}.
 
+{mapping, "email.ssl", "watts.email_ssl", [
+          {datatype , {enum, [true, false]}}
+          ]}.
 
+{mapping, "email.tls", "watts.email_tls", [
+          {datatype , {enum, [always, never, if_available]}}
+          ]}.
 
 %% @doc Cookie for distributed node communication.  All nodes in the
 %% same cluster should use the same cookie or they will not be able to

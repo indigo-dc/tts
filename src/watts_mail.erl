@@ -21,7 +21,7 @@ maybe_send(true, Subject, Body, Receipients)
     Server = ?CONFIG(email_server),
     Port = ?CONFIG(email_port),
     SSL = ?CONFIG(email_ssl),
-    TLS = ?CONFIG(email_tls),
+    TLS = ?CONFIG(email_tls, always),
     Email = compose_mail(Subject, Body, Receipients, Sender),
     Filter = fun({_, Value}) ->
                      Value /= undefined
@@ -32,7 +32,7 @@ maybe_send(true, Subject, Body, Receipients)
     Result = gen_smtp_client:send_blocking({Sender, Receipients, Email},
                                            Options),
     handle_mail_result(Result);
-maybe_send(_, Subject, _Body, []) ->
+maybe_send(true, Subject, _Body, []) ->
     lager:debug("Mail: no receipients for email ~p", [Subject]),
     no_receipients;
 maybe_send(_, Subject, _Body, _Receipients) ->

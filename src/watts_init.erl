@@ -789,8 +789,8 @@ local_endpoint() ->
 -spec stop() -> ok.
 stop() ->
     lager:info("Init: done"),
-    lager:info("Init: startup took ~p seconds",
-               [erlang:system_time(seconds) - ?CONFIG(start_time)]),
+    lager:info("Init: startup took ~p seconds", [startup_duration()]),
+    check_mail(),
     lager:info("WaTTS ready"),
     stop(self()).
 
@@ -803,3 +803,25 @@ remove_newline(List) ->
                      true
              end,
     lists:filter(Filter, List).
+
+check_mail() ->
+    Subject = "WaTTS booted",
+    Body = io_lib:format("The startup of WaTTS took ~p seconds",
+                         [startup_duration()]),
+    MaybeAdminMail = ?CONFIG(admin_mail),
+    Receipient = case is_list(MaybeAdminMail) of
+                     true ->
+                         [MaybeAdminMail];
+                     false ->
+                         []
+                 end,
+    case watts_mail:send(Subject, Body, Receipient) of
+        ok -> ok;
+        disabled -> ok;
+        no_receipients ->
+            lager:warning("Init: no admin mail configured but emails enabled"),
+            ok
+    end.
+
+startup_duration() ->
+    erlang:system_time(seconds) - ?CONFIG(start_time).
