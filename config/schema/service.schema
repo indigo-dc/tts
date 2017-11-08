@@ -232,7 +232,7 @@
                            end,
                      Mail = case lists:keyfind(Id, 1, Mails) of
                                {Id, M} -> M;
-                               _ -> undefined
+                               _ -> noone
                            end,
                      Cmd = case lists:keyfind(Id, 1, Cmds) of
                                {Id, C} -> C;
