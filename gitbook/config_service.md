@@ -49,6 +49,8 @@ you want to give to the service.
 | authz.forbid.`p`.`k`.`o` | See the Authorization section | other | no ([]) |
 | authz.hide | Hide the service if the user is not allowed | boolean | no (false) |
 | authz.tooltip | Message that is shown when hovering the row of the service that is not allowed, used to give users a hint on how they might get access to the service | boolean | no (false) |
+| email_on_error_to | Whom to send emails in case of plugin issues. Only if emails are enabled and mail on plugin errors are enabled (see server settings) | 'noone', 'admin', 'developer' or 'admin_devel' | no (noone) |
+
 
 
 
