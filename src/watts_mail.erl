@@ -18,7 +18,8 @@ maybe_send(true, Subject, Body, Receipients)
     Sender = ?CONFIG(email_address),
     User = ?CONFIG(email_user),
     Password = ?CONFIG(email_password),
-    Server = ?CONFIG(email_server),
+    Relay = ?CONFIG(email_relay),
+    NoMxLookups = ?CONFIG(email_no_mx_lookups),
     Port = ?CONFIG(email_port),
     SSL = ?CONFIG(email_ssl),
     TLS = ?CONFIG(email_tls, always),
@@ -27,8 +28,8 @@ maybe_send(true, Subject, Body, Receipients)
                      Value /= undefined
              end,
     Options = lists:filter(Filter, [{user, User}, {password, Password},
-                                    {relay, Server}, {port, Port}, {ssl, SSL},
-                                    {tls, TLS}, {no_mx_lookups, true}]),
+                                    {relay, Relay}, {port, Port}, {ssl, SSL},
+                                    {tls, TLS}, {no_mx_lookups, NoMxLookups}]),
     Result = gen_smtp_client:send_blocking({Sender, Receipients, Email},
                                            Options),
     handle_mail_result(Result);

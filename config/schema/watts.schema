@@ -493,9 +493,14 @@
           {datatype ,  string}
           ]}.
 
-%% @doc the hostname of the mailserver
-{mapping, "email.server", "watts.email_server", [
+%% @doc the domain of the relay / the mailserver
+{mapping, "email.relay", "watts.email_relay", [
           {datatype ,  string}
+          ]}.
+
+%% @doc whether mx lookups should be disabled
+{mapping, "email.no_mx_lookups", "watts.email_relay", [
+          {datatype ,  {enum, [true, false]}}
           ]}.
 
 %% @doc the port to connect to, defaults to 24 (465 when using SSL)

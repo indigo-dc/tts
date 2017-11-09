@@ -162,7 +162,7 @@ create_body(ErrorType, MapOrReason, Output, Info) ->
     {ok, #{cmd := Cmd,
            plugin_version := Version
           }} = watts_service:get_info(ServiceId),
-    Desc = error_type_to_description(ErrorType),
+    Desc = io_lib:format(error_type_to_description(ErrorType), []),
     ResponseOrError = response_or_error(ErrorType, MapOrReason),
     io_lib:format(
       "Hello Developer/Admin,~n"
@@ -178,6 +178,9 @@ create_body(ErrorType, MapOrReason, Output, Info) ->
       [Desc, ServiceId, Cmd, Version, Action, ResponseOrError,
        log_output(Output)]).
 
+
+%% @doc create a nice line regarding either the parsing result or error reason
+-spec response_or_error(error_type(), atom() | map()) -> string().
 response_or_error(plugin_error, Reason) ->
     io_lib:format("The error reason was: ~p~n", [Reason]);
 response_or_error(_, Map) ->
