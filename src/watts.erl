@@ -50,16 +50,22 @@
          stop_debug/0
         ]).
 
--export_type([credential/0, oidc_info/0]).
+-export_type([credential/0, cred_entry/0, oidc_info/0]).
 
 -type session_info() :: #{session_pid => Session :: pid(),
                           session_type => watts_session:type()}.
+
+-type cred_entry() :: #{name => binary(),
+                        type => binary(),
+                        value => any()}.
 
 -type credential() :: #{cred_id => CredId :: binary(),
                         ctime => CTime :: binary() ,
                         interface => Interface :: binary(),
                         service_id => ServiceId :: binary(),
-                        cred_state => CredState :: binary()}.
+                        cred_state => CredState :: binary(),
+                        entries => Entries :: [cred_entry()]
+                       }.
 
 -type oidc_info() :: #{ id => Id :: binary(),
                         desc => Desc :: binary() ,
