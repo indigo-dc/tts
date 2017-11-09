@@ -856,7 +856,7 @@ system_uptime() ->
 -spec issues_to_body(state()) -> string().
 issues_to_body(#state{issues = I}) ->
     Issues = lists:reverse(I),
-    io_lib:format(lists:flatten(lists:join("~n", Issues)), []).
+    io_lib:format(lists:flatten(watts_utils:lists_join("~n", Issues)), []).
 
 %% @doc calculate the startup duration
 -spec startup_duration() -> integer().

@@ -44,7 +44,7 @@ maybe_send(_, Subject, _Body, _Receipients) ->
 %% @doc create the whole mail with headers
 -spec compose_mail(string(), string(), [string()], string()) -> string().
 compose_mail(Subject, Body, Receipients, Sender) ->
-    ReceipientsString = lists:flatten(lists:join(", ", Receipients)),
+    ReceipientsString = lists:flatten(watts_utils:lists_join(", ", Receipients)),
     Name = ?CONFIG(email_name, "WaTTS"),
     Header = [ "To: " ++ ReceipientsString,
                "Subject: " ++ Subject,
@@ -54,7 +54,7 @@ compose_mail(Subject, Body, Receipients, Sender) ->
                "Content-Transfer-Encoding: 8bit",
                "\r\n"
              ],
-    lists:flatten(lists:join("\r\n", Header)) ++ Body.
+    lists:flatten(watts_utils:lists_join("\r\n", Header)) ++ Body.
 
 
 %% @doc handle mail results and return either ok or error, also log errors
