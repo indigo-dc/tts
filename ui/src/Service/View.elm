@@ -170,8 +170,8 @@ advancedHeader service =
             ]
 
 
-advancedView : Maybe Service.Model -> Html Msg
-advancedView srvc =
+advancedView : Maybe Service.Model -> List String -> Html Msg
+advancedView srvc nonEmptyFields=
     let
         config =
             case srvc of
@@ -179,6 +179,10 @@ advancedView srvc =
                     Nothing
 
                 Just service ->
+                    let
+                        (valid, dialogBody) =
+                                viewParamSet service nonEmptyFields
+                    in
                     Just
                         { closeMessage = Just Messages.AdvancedCancel
                         , containerClass = Nothing
@@ -186,13 +190,13 @@ advancedView srvc =
                         , header =
                             Just (advancedHeader service)
                         , body =
-                            Just
-                                (viewParamSet service)
+                            Just dialogBody
                         , footer =
                             Just
                                 (div [ class "btn-group" ]
                                     [ button
                                         [ class "btn btn-primary"
+                                        , disabled (not valid)
                                         , onClick (Messages.Request service.id)
                                         ]
                                         [ text "Submit" ]
@@ -208,8 +212,8 @@ advancedView srvc =
         Dialog.view config
 
 
-viewParamSet : Service.Model -> Html Msg
-viewParamSet model =
+viewParamSet : Service.Model -> List String -> (Bool, Html Msg)
+viewParamSet model nonEmptyFields =
     let
         sets =
             model.non_empty_sets
@@ -217,49 +221,58 @@ viewParamSet model =
         pos =
             model.current_set
 
-        setFilter a ( num, entry ) =
-            case num == pos of
-                True ->
-                    ( num + 1, Just a )
-
-                False ->
-                    ( num + 1, entry )
-
         set =
-            case List.foldl setFilter ( 0, Nothing ) sets of
-                ( _, Nothing ) ->
+            case List.head (List.drop pos sets) of
+                Nothing ->
                     []
-
-                ( _, Just s ) ->
+                Just s ->
                     s
+        doViewParam set (valid, htmlList) =
+            let
+                (v, html) = viewParam set nonEmptyFields
+            in
+                (valid && v, List.append htmlList [html])
+
+        (isValid, tableBody) =
+                    List.foldl doViewParam (True, []) set
     in
-        div []
-            [ p [] [ text "please fill in at least all mandatory parameter" ]
-            , table [ class "table table-striped" ]
-                [ tbody []
-                    (List.map viewParam set)
-                ]
-            ]
+        (isValid, div []
+             [ p [] [ text "please fill in at least all mandatory parameter" ]
+             , table [ class "table table-striped" ]
+                 [ tbody []
+                       tableBody
+                 ]
+             ])
 
 
-viewParam : Service.Param -> Html Msg
-viewParam param =
+viewParam : Service.Param -> List String -> (Bool, Html Msg)
+viewParam param nonEmptyFields=
     let
-        name =
+        (name, isValid)  =
             if param.mandatory then
-                param.name ++ " (mandatory)"
+                (param.name ++ " (mandatory)"
+                ,List.member param.key nonEmptyFields)
+
             else
-                param.name ++ " (optional)"
+                (param.name ++ " (optional)", True)
+
+        classText = "form-control"
 
         column =
             td []
                 [ if param.type_ == "text" then
-                    input [ type_ "text", class "form-control" ] []
+                    input [ type_ "text", class classText ] []
                   else if param.type_ == "textarea" then
-                    textarea [ class "form-control", placeholder param.description, onInput (Messages.AdvancedChange param.key) ] []
+                    textarea [ class "form-control"
+                             , placeholder param.description
+                             , onInput (Messages.AdvancedChange param.key) ] []
                   else
-                    input [ type_ "text", placeholder param.description, class "form-control" ] []
+                    input [ type_ "text"
+                          , placeholder param.description
+                          , class "form-control"
+                          , onInput (Messages.AdvancedChange param.key) ] []
                 ]
     in
-        tr []
-            [ td [] [ text name ], column ]
+        (isValid,
+             tr []
+             [ td [] [ text name ], column ])
