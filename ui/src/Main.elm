@@ -6,7 +6,6 @@ import AccessToken.Decoder exposing (decodeAccessToken)
 import AccessToken.Model as AccessToken exposing (Model)
 import CredentialList.Decoder as CredentialList exposing (decodeCredentialList)
 import CredentialList.Model as CredentialList exposing (Model, initModel)
-import Debug exposing (log)
 import Dict exposing (Dict, empty, insert)
 import Html exposing (Html, a, div, h1, text, small, strong)
 import Html.Attributes exposing (class, hidden, style, href)
@@ -67,6 +66,7 @@ type alias Model =
     , displayName : String
     , current_service : Maybe Service.Model
     , current_param : Maybe (Dict String Json.Value)
+    , non_empty_params : List String
     , current_serviceid : Maybe String
     , request_progressing : Bool
     , user_docs_enabled : Bool
@@ -120,10 +120,6 @@ update msg model =
                 )
 
         Messages.Info (Err info) ->
-            let
-                bla =
-                    Debug.log "info error:" info
-            in
                 ( model, Cmd.none )
 
         Messages.ProviderList (Ok providerlist) ->
@@ -169,6 +165,7 @@ update msg model =
                     , progressing_title = progTitle
                     , current_serviceid = Nothing
                     , current_param = Nothing
+                    , non_empty_params = []
                   }
                 , nextCmd
                 )
@@ -186,6 +183,7 @@ update msg model =
             ( { model
                 | current_service = Nothing
                 , current_param = Nothing
+                , non_empty_params = []
                 , request_progressing = True
                 , progressing_title = Just "Requesting Credential ..."
               }
@@ -327,16 +325,40 @@ update msg model =
                 jsonValue =
                     Json.string value
 
-                newParams =
+                filter a =
+                    a /= key
+
+                oldNonEmpty =
+                    List.filter filter model.non_empty_params
+
+                nonEmptyParams =
+                    case (String.length value) > 0  of
+                        True ->
+                           List.append [key] oldNonEmpty
+
+                        False ->
+                            oldNonEmpty
+
+                oldParams =
                     case model.current_param of
                         Just params ->
-                            Dict.insert key jsonValue params
+                            Dict.remove key params
 
                         Nothing ->
-                            Dict.insert key jsonValue Dict.empty
+                            Dict.empty
+
+                newParams =
+                    case (String.length value) > 0 of
+                        True ->
+                            Dict.insert key jsonValue oldParams
+
+                        False ->
+                            oldParams
+
             in
                 ( { model
                     | current_param = Just newParams
+                    , non_empty_params = nonEmptyParams
                   }
                 , Cmd.none
                 )
@@ -490,6 +512,7 @@ mainContent model =
                     , secret_progressing = model.request_progressing
                     , progressing_title = model.progressing_title
                     , service = model.current_service
+                    , non_empty_fields = model.non_empty_params
                     }
             in
                 User.view context
@@ -559,6 +582,7 @@ initModel baseUrl restVersion =
       , current_service = Nothing
       , current_serviceid = Nothing
       , current_param = Nothing
+      , non_empty_params = []
       , request_progressing = False
       , user_docs_enabled = False
       , code_docs_enabled = False

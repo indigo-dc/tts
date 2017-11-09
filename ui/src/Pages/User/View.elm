@@ -25,6 +25,7 @@ type alias ViewContext =
     , secret_progressing : Bool
     , progressing_title : Maybe String
     , service : Maybe Service.Model
+    , non_empty_fields : List String
     }
 
 
@@ -42,7 +43,7 @@ view context =
             [ text "show issuer/subject and access token" ]
         , AccessToken.view context.accessToken
         , Secret.view context.progressing_title context.secret
-        , Service.advancedView context.service
+        , Service.advancedView context.service context.non_empty_fields
         , br [] []
         , br [] []
         , ServiceList.view context.serviceList
