@@ -302,7 +302,7 @@ validate_jwt_content({error, Error}, Rsp, JwtMap) ->
 provider_exists(undefined) ->
     true;
 provider_exists(Id) when is_binary(Id) ->
-    {OkError, _} = oidcc:find_openid_provider(Id),
+    {OkError, _} = oidcc:get_openid_provider_info(Id),
     OkError == ok;
 provider_exists(_) ->
     false.

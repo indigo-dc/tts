@@ -241,9 +241,9 @@ does_provider_exist(ProviderId, ProviderList) ->
 %% @doc return the primary provider whith which the user logged in
 -spec get_provider_id(ProviderName :: binary()) -> {ok, binary()} |
                                                    {error, Reason :: atom()}.
-get_provider_id(<< Prefix:4/binary, _/binary>> = Rsp)
+get_provider_id(<< Prefix:4/binary, Name/binary>> = Rsp)
   when Prefix == <<"rsp-">> ->
-    Exists = watts_rsp:exists(Rsp),
+    Exists = watts_rsp:exists(Name),
     Enabled = ?CONFIG(enable_rsp),
     return_rsp_if_enabled_and_exists(Rsp, Exists, Enabled);
 get_provider_id(Issuer) ->

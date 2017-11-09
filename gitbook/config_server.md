@@ -58,6 +58,18 @@ And for production use:
 | rsp_connection_rate | same as the web_connection_rate but for the rsp endpoint | integer | 10 |
 | web_queue_max_wait | The maximum amount of time to wait until the request get cancelled while waiting in the queue | duration | 100ms |
 | rsp_queue_max_wait | Same as web_queue_max_wait but for the rsp | duration | 1s |
+| admin_mail | The email address of the administrator | string | none |
+| email.enable | Whether email sending should be enabled in general | boolean | false |
+| email.on_plugin_error | If a mail should be sent on issues with a plugin (only if email is enabled, see email.enable) | boolean | true |
+| email.name | The sender name to use in the email | string | WaTTS |
+| email.address | The sender address to use in the email | string | none |
+| email.relay | The mail server or the domain to use to send the mails | string | none |
+| email.no_mx_lookups | disable lookups of mx records of the relay | boolean | false |
+| email.port | The port of the mail server to connect to  | port | 25 (465 SSL) |
+| email.ssl | Whether a ssl connection should be established (see also tls) | boolean | false |
+| email.tls | Use tls for starting a secure connection  | 'never', 'if_available', 'always' | 'always' |
+| email.user | username to use to authenticate at the server | string | none |
+| email.password | password to authenticate with at the server | string | none |
 
 
 ## Listen_Port, Redirection Explained

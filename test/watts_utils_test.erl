@@ -17,3 +17,10 @@ random_string_test() ->
     %% just unload as this is known and wanted to fail
     ok = meck:unload(crypto),
     ok.
+
+
+lists_join_test() ->
+    ?assertEqual([], watts_utils:lists_join(x, [])),
+    ?assertEqual([a], watts_utils:lists_join(x, [a])),
+    ?assertEqual([a,x,b,x,c,x,d], watts_utils:lists_join(x, [a,b,c,d])),
+    ok.

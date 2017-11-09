@@ -315,7 +315,8 @@ get_and_validate_parameter(_) ->
                                    -> ok | {error, not_found}.
 validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
                                                request_params := RequestParams,
-                                               version := Version}}) ->
+                                               version := Version} = PluginConf
+                                        }) ->
     lager:info("service ~p: plugin version ~p", [Id, Version]),
     Ensure = #{plugin_conf => #{},
                params => [],
@@ -326,9 +327,12 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
     {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
     Info3 = list_skipped_parameter_and_delete_config(Info2),
     IsValid = ValidConfParam and ValidCallParam,
-    Update = #{enabled => IsValid},
+    Update = #{enabled => IsValid,
+               devel_email => maps:get(developer_email, PluginConf, undefined)
+              },
     NewInfo = maps:merge(Info3, Update),
     {ok, QueueName} = start_runner_queue_if_needed(NewInfo),
+
     update_service(Id, maps:put(queue, QueueName, NewInfo));
 validate_params_and_update_db(Id, _, {ok, ParamMap}) ->
     NeededKeys = [conf_params, request_params, version],

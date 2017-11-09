@@ -260,6 +260,8 @@ create_lookup_result([]) ->
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, noparams, []).
 
+%% @doc trigger a stop of the gen_server
+-spec stop() -> ok.
 stop() ->
     gen_server:cast(?MODULE, stop).
 

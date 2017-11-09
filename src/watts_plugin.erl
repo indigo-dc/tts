@@ -198,24 +198,24 @@ get_params(ServiceId) ->
     handle_result(Result, Config).
 
 %% @doc handle the results or a plugin run, including validation
+%% @todo: send email in case of plugin errors #401
 -spec handle_result(watts_plugin_runner:result(), config()) -> result().
 handle_result({ok, #{result := Result}=Map, Output}, Info) ->
     AResult = result_to_atom(Result),
     handle_result(AResult, Map, Output, Info);
-handle_result({ok, _Map, _Log}, #{service_id := ServiceId} ) ->
-    LogMsg = io_lib:format("plugin missing 'result': service ~p", [ServiceId]),
-    UMsg = "the plugin had an error, please contact the administrator",
-    return(error, #{user_msg => UMsg, log_msg => LogMsg});
-handle_result({error, Reason, Output}, _Info) ->
-    SmallOutput = maps:with([cmd, env, std_out, std_err, exit_status], Output),
-    LogMsg = io_lib:format("plugin error: ~p ~p", [Reason, SmallOutput]),
-    UMsg = "the plugin had an error, please contact the administrator",
-    return(error, #{user_msg => UMsg, log_msg=>LogMsg}).
+handle_result({ok, Map, Output}, Info) ->
+    handle_result(undefined, Map, Output, Info);
+handle_result({error, Reason, Output}, Info) ->
+    handle_result(plugin_error, Reason, Output, Info).
 
 
 %% @doc handle the results or a plugin run, including validation
--spec handle_result(ok | error | oidc_login, map(),
-                    watts_plugin_runner:output(), config()) -> result().
+%% @todo: send email in case of plugin errors #401
+-spec handle_result( Result, MapOrReason, Output, Info) -> result()
+    when Result :: ok | error | oidc_login | undefined | plugin_error | any(),
+         MapOrReason :: map() | atom() | tuple(),
+         Output :: watts_plugin_runner:output(),
+         Info :: config().
 %% REQUEST handling
 handle_result(ok, #{credential := Cred0, state := CredState}, _Log,
               #{action := request} = Info) ->
@@ -231,34 +231,19 @@ handle_result(ok, #{credential := Cred0, state := CredState}, _Log,
         Error ->
             return(error, {storing, Error})
     end;
-handle_result(ok, Map, Log, #{action := request}) ->
-    %% a bad credential response
-    LogMsg = io_lib:format("bad response to a request: ~p [~p]", [Map, Log]),
-    UMsg = "the plugin returned a bad result, please contact the administrator",
-    return(error, #{user_msg => UMsg, log_msg => LogMsg});
 handle_result(oidc_login, #{provider := ProviderId, msg := Msg}, _Log,
               #{action := request} = _Info) ->
     %% an OpenId Connect login request
     return(oidc_login, #{provider => ProviderId, msg => Msg});
-handle_result(oidc_login, Map, Log, #{action := request}) ->
-    %% a bad OpenID Connect login request
-    LogMsg = io_lib:format("bad response to a request: ~p [~p]", [Map, Log]),
-    UMsg = "the plugin returned a bad result, please contact the administrator",
-    return(error, #{user_msg => UMsg, log_msg => LogMsg});
 handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := request} ) ->
     %% a valid error response
     LogMsg = log_msg(Map, UMsg),
-    return(error, #{user_msg => UMsg, log_msg => LogMsg});
-handle_result(error, Map, _Log, #{ action := request})->
-    %% a bad error response
-    LogMsg = io_lib:format("bad error response: ~p", [Map]),
-    UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
 
 
 %% REVOKE handling
 handle_result(ok, _, _Log, #{action := revoke} = Info) ->
-    %% a valid credential response
+    %% a valid revoke response
     UserInfo = maps:get(user_info, Info),
     CredId = maps:get(cred_id, Info),
     {ok, UserId} = watts_userinfo:return(id, UserInfo),
@@ -266,11 +251,6 @@ handle_result(ok, _, _Log, #{action := revoke} = Info) ->
 handle_result(error, #{user_msg := UMsg}=Map, _Log, #{ action := revoke} ) ->
     %% a valid error response
     LogMsg = log_msg(Map, UMsg),
-    return(error, #{user_msg => UMsg, log_msg => LogMsg});
-handle_result(error, Map, Log, #{ action := revoke})->
-    %% a bad error response
-    LogMsg = io_lib:format("bad error response: ~p [~p]", [Map, Log]),
-    UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{user_msg => UMsg, log_msg => LogMsg});
 
 %% PARAMETER handling
@@ -280,31 +260,18 @@ handle_result(ok,
               _Log, #{ action := parameter } )
   when is_list(ConfParams), is_list(ReqParams), is_binary(Version)  ->
     %% valid parameter response
-    return(result, maps:with([conf_params, request_params, version], Result));
-handle_result(ok, Result, _Log, #{ action := parameter } ) ->
-    %% invalid parameter response
-    NeededKeys = [conf_params, request_params, version, result],
-    Keys = maps:keys(Result),
-    MissingKeys = lists:subtract(NeededKeys, Keys),
-    LogMsg = io_lib:format("bad parameter response: ~p missing keys ~p (type?)",
-                           [Result, MissingKeys]),
-    UMsg = "the plugin returned a bad result, please contact the administrator",
-    return(error, #{log_msg => LogMsg, user_msg => UMsg});
+    ReturnedKeys = [conf_params, request_params, version, developer_email],
+    return(result, maps:with(ReturnedKeys, Result));
 handle_result(error, Result, Log, #{ action := parameter } ) ->
     %% invalid parameter response
     LogMsg = io_lib:format("bad parameter response: ~p [~p]", [Result, Log]),
     UMsg = "the plugin returned a bad result, please contact the administrator",
     return(error, #{log_msg => LogMsg, user_msg => UMsg});
 
-
 %% EVERYTHING ELSE => ERROR
-handle_result(Result, Map, _Log, Info) ->
-    Action = maps:get(action, Info),
-    ServiceId = maps:get(service_id, Info),
-    LogMsg = io_lib:format("plugin for service ~p bad response: ~p - ~p [~p]",
-                           [ServiceId, Action, Result, Map]),
-    UMsg = "the plugin returned a bad result, please contact the administrator",
-    return(error, #{user_msg => UMsg, log_msg => LogMsg}).
+handle_result(Result, Map, Log, Info) ->
+    watts_plugin_error:maybe_send_mail_return_error(Result, Map, Log, Info).
+
 
 %% @doc generate a log message, if needed from the user message
 -spec log_msg(#{log_msg => binary(), _ => _}, binary()) -> binary().
@@ -386,6 +353,10 @@ terminate(_Reason, _State) ->
 -spec code_change(any(), state(), any()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% functions with data access

@@ -8,6 +8,8 @@ basic_init_test() ->
         %% ensure the VM does not get killed
         ?UNSETCONFIG(watts_init_started),
         ?SETCONFIG( hostname, "localhost"),
+        ?SETCONFIG( ep_main, <<"/">>),
+        ?SETCONFIG(start_time, erlang:system_time(seconds)),
         ?SETCONFIG( ssl, false),
         ?SETCONFIG( listen_port, 8080),
         ?SETCONFIG( port, 8080),
@@ -37,6 +39,8 @@ advanced_init_test() ->
                          }],
         %% ensure the VM does not get killed
         ?UNSETCONFIG(watts_init_started),
+        ?SETCONFIG( ep_main, <<"/">>),
+        ?SETCONFIG(start_time, erlang:system_time(seconds)),
         ?SETCONFIG( hostname, "localhost"),
         ?SETCONFIG( ssl, true),
         ?SETCONFIG( cert_file, "some_cert"),

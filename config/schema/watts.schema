@@ -457,6 +457,66 @@
   {default, "{{node}}"}
 ]}.
 
+%% @doc the email of the administrator
+{mapping, "admin_mail", "watts.admin_mail", [
+          {datatype ,  string}
+          ]}.
+
+%% @doc enable sending of emails by WaTTS
+{mapping, "email.enable", "watts.mail_enabled", [
+          {datatype ,  [{atom, true}, {atom, false}]}
+          ]}.
+
+%% @doc enable sending of mails when plugins have issues
+{mapping, "email.on_plugin_error", "watts.mail_on_plugin_error", [
+          {datatype ,  [{atom, true}, {atom, false}]},
+          {default, true}
+          ]}.
+
+%% @doc the sender name in emails from WaTTS
+{mapping, "email.name", "watts.email_name", [
+          {datatype ,  string}
+          ]}.
+
+%% @doc the sender address in emails from WaTTS
+{mapping, "email.address", "watts.email_address", [
+          {datatype ,  string}
+          ]}.
+
+%% @doc the username at the mailserver
+{mapping, "email.user", "watts.email_user", [
+          {datatype ,  string}
+          ]}.
+
+%% @doc the password at the mailserver
+{mapping, "email.password", "watts.email_password", [
+          {datatype ,  string}
+          ]}.
+
+%% @doc the domain of the relay / the mailserver
+{mapping, "email.relay", "watts.email_relay", [
+          {datatype ,  string}
+          ]}.
+
+%% @doc whether mx lookups should be disabled
+{mapping, "email.no_mx_lookups", "watts.email_relay", [
+          {datatype ,  {enum, [true, false]}}
+          ]}.
+
+%% @doc the port to connect to, defaults to 24 (465 when using SSL)
+{mapping, "email.port", "watts.email_port", [
+          {datatype , integer}
+          ]}.
+
+%% @doch wether ssl should be used, default is false, better use tls
+{mapping, "email.ssl", "watts.email_ssl", [
+          {datatype , {enum, [true, false]}}
+          ]}.
+
+%% @doc wether tls should be used
+{mapping, "email.tls", "watts.email_tls", [
+          {datatype , {enum, [always, never, if_available]}}
+          ]}.
 
 %% @doc Cookie for distributed node communication.  All nodes in the
 %% same cluster should use the same cookie or they will not be able to

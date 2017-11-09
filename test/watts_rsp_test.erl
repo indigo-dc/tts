@@ -134,7 +134,7 @@ start_meck() ->
     ok = meck:expect(erljwt, to_map, ToMap),
     ok = meck:expect(erljwt, validate, Validate),
     ok = meck:expect(watts_service, exists, fun(_) -> true end),
-    ok = meck:expect(oidcc, find_openid_provider, fun(_) -> {ok, whatever} end),
+    ok = meck:expect(oidcc, get_openid_provider_info, fun(_) -> {ok, whatever} end),
     ok = meck:expect(watts_rsp_keys, new, New),
     ok = meck:expect(watts_rsp_keys, get_keys, GetKeys),
     {ok, MeckModules}.

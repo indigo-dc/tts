@@ -31,6 +31,13 @@ oidc.cert_depth = 3
 enable_user_docs = true
 enable_code_docs = true
 
+# email settings
+# this will result in a mail being sent to the admin at boot
+admin_email = admin@company.com
+email.enable = true
+email.relay = company.com
+email.user = watts_user
+email.password = 123456
 
 # the simple database settings to keep track of
 # the credentials.
@@ -51,4 +58,6 @@ service.info.connection.type = local
 service.info.cmd = /home/watts/info.py
 service.info.parallel_runner = infinite
 service.info.authz.allow.any.sub.any = true
+# send a mail on issues to the admin and the plugin developer
+service.email_on_error_to = admin_devel
 ```

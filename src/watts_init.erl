@@ -56,7 +56,9 @@
 -export([code_change/3]).
 
 -record(state, {
+          issues = []
          }).
+-type state() :: #state{}.
 
 %% API.
 
@@ -108,39 +110,39 @@ handle_call(_Request, _From, State) ->
 %% @see maybe_add_rsps/1
 %% @see add_services/0
 %% @see start_web_interface/0
--spec handle_cast(any(), tuple()) -> {noreply, tuple()} |
+-spec handle_cast(any(), state()) -> {noreply, tuple()} |
                                       {stop, normal, tuple()}.
 handle_cast(check_watts_not_started, State) ->
-    start_if_not_started_before(),
-    {noreply, State};
+    NewState = start_if_not_started_before(State),
+    {noreply, NewState};
 handle_cast(start_watts, State) ->
-    init_watts(),
+    NewState = init_watts(State),
     gen_server:cast(self(), start_database),
-    {noreply, State};
+    {noreply, NewState};
 handle_cast(start_database, State) ->
-    start_database(),
+    NewState = start_database(State),
     gen_server:cast(self(), add_oidc),
-    {noreply, State};
+    {noreply, NewState};
 handle_cast(add_oidc, State) ->
-    add_openid_provider(),
+    NewState = add_openid_provider(State),
     gen_server:cast(self(), add_rsps),
-    {noreply, State};
+    {noreply, NewState};
 handle_cast(add_rsps, State) ->
-    maybe_add_rsps(?CONFIG(enable_rsp)),
+    NewState = maybe_add_rsps(?CONFIG(enable_rsp), State),
     gen_server:cast(self(), add_services),
-    {noreply, State};
+    {noreply, NewState};
 handle_cast(add_services, State) ->
-    add_services(),
+    NewState = add_services(State),
     gen_server:cast(self(), update_jwt_keys),
-    {noreply, State};
+    {noreply, NewState};
 handle_cast(update_jwt_keys, State) ->
-    update_jwt_keys(),
+    NewState = update_jwt_keys(State),
     gen_server:cast(self(), start_http),
-    {noreply, State};
+    {noreply, NewState};
 handle_cast(start_http, State) ->
-    start_web_interface(),
-    stop(),
-    {noreply, State};
+    State1 = start_web_interface(State),
+    NewState = do_stop(State1),
+    {noreply, NewState};
 handle_cast(stop, #state{} = State) ->
     {stop, normal, State};
 handle_cast(_Msg, State) ->
@@ -156,10 +158,7 @@ handle_info(_Info, State) ->
 terminate(normal, _State) ->
     ok;
 terminate(Reason, _State) ->
-    lager:error("Init: terminated with reason ~p", [Reason]),
-    timer:sleep(1000),
-    erlang:halt(254),
-    ok.
+    system_halt("Init: terminated with reason ~p", [Reason], 254).
 
 
 %% @doc just a dummy to be compliant with the behaviour, no functionality.
@@ -171,9 +170,10 @@ code_change(_OldVsn, State, _Extra) ->
 %% If it has been started before, the configuration crashed, which means
 %% that something unexpected happened. As this is a critical issue WaTTS
 %% will be stoppped then.
--spec start_if_not_started_before() -> ok.
-start_if_not_started_before() ->
-    start_if_undefined(?CONFIG(watts_init_started)).
+-spec start_if_not_started_before(state()) -> state().
+start_if_not_started_before(State) ->
+    start_if_undefined(?CONFIG(watts_init_started)),
+    State.
 
 %% @doc only start if the special configuration `watts_init_started' is not set.
 -spec start_if_undefined(Started :: undefined | any()) -> ok.
@@ -181,15 +181,13 @@ start_if_undefined(undefined) ->
     ok = ?SETCONFIG(watts_init_started, true),
     gen_server:cast(self(), start_watts);
 start_if_undefined(_) ->
-    lager:critical("Init: restarting ... this should never happen!"),
-    timer:sleep(1000),
-    erlang:halt(255).
+    system_halt("Init: restarting ... this should never happen!", [], 255).
 
 %% @doc start initalization of WaTTS.
 %% This copies the version from keys to environment and enforces security
 %% @see enforce_security/0
--spec init_watts() -> ok.
-init_watts() ->
+-spec init_watts(state()) -> state().
+init_watts(State) ->
     lager:info("Init: starting  "),
     %% copy the version into the config
     %% only using env values, so everything can be tested
@@ -199,37 +197,38 @@ init_watts() ->
            end,
     ok = ?SETCONFIG(vsn, Vsn),
     lager:info("Init: WaTTS version ~p", [Vsn]),
-    ok = enforce_security(),
+    NewState = enforce_security(State),
     lager:debug("Init: config = ~p", [?ALLCONFIG]),
-    ok.
+    NewState.
 
 %% @doc enforces WaTTS to run in a secure setting.
 %% This includes running as non root user and having SSL configured.
 %% If SSL is not configured it will be forced to localhost.
 %% @see maybe_change_hostname/3
 %% @see error_if_running_as_root/0
--spec enforce_security() -> ok.
-enforce_security() ->
+-spec enforce_security(state()) -> state().
+enforce_security(State) ->
     SSL = ?CONFIG(ssl),
     Hostname0 = ?CONFIG(hostname),
     Onion = lists:suffix(".onion", Hostname0),
-    Hostname = maybe_change_hostname(SSL, Onion, Hostname0),
+    {Hostname, NewState} = maybe_change_hostname(SSL, Onion, Hostname0, State),
     ?SETCONFIG(hostname, Hostname),
     ok = error_if_running_as_root(),
-    ok.
+    NewState.
 
 %% @doc change the hostname to localhost if not configured well.
 %% It will change to localhost if neither configured to run as a
 %% tor hidden service, nor having SSL configured.
 -spec maybe_change_hostname(HasSSL :: boolean(), IsOnion :: boolean(),
-                            Hostname :: list()) -> NewHostname :: list().
-maybe_change_hostname(false, false, _) ->
+                            Hostname :: list(), state())
+                           -> {NewHostname :: list(), state()}.
+maybe_change_hostname(false, false, _, State) ->
     H = "localhost",
-    lager:warning("Init: Neither SSL nor Tor is configured; "
-                  "hostname set to ~p", [H]),
-    H;
-maybe_change_hostname(_, _, Hostname) ->
-    Hostname.
+    NewState = log_warning("Neither SSL nor Tor is configured; "
+                  "hostname set to ~p", [H], State),
+    {H, NewState};
+maybe_change_hostname(_, _, Hostname, State) ->
+    {Hostname, State}.
 
 %% @doc ensure WaTTS is not running as root.
 %% if it is running as root the VM gets stopped.
@@ -243,8 +242,7 @@ error_if_running_as_root() ->
 %% @doc halt the VM if uid is 0 or user is 'root'.
 -spec maybe_root_halt(User :: list(), Uid :: number()) -> ok.
 maybe_root_halt(User, Uid) when User == "root"; Uid == 0 ->
-    lager:critical("Init: do not run WaTTS as root, stopping"),
-    erlang:halt(1);
+    system_halt("Init: do not run WaTTS as root, stopping", [], 1);
 maybe_root_halt(User, Uid) ->
     lager:info("Init: running as user ~p [~p]", [User, Uid]),
     ok.
@@ -254,8 +252,8 @@ maybe_root_halt(User, Uid) ->
 %% configured persistent database is started with watts_persistent.
 %% @see watts_ets:init/0
 %% @see watts_persistent:init/0
--spec start_database() -> ok.
-start_database() ->
+-spec start_database(state()) -> state().
+start_database(State) ->
     lager:info("Init: starting ram database"),
     ok = watts_ets:init(),
     lager:info("Init: starting persistence database"),
@@ -267,7 +265,7 @@ start_database() ->
             lager:critical(Msg),
             erlang:error(no_database)
     end,
-    ok.
+    State.
 
 %% @doc add the configured openid provider.
 %% this function iterates throught the configured providers and
@@ -275,8 +273,8 @@ start_database() ->
 %% read the needed configs from the Internet in parallel.
 %% @see add_openid_provider/2
 %% @see wait_and_log_provider_results/0
--spec add_openid_provider() -> ok.
-add_openid_provider() ->
+-spec add_openid_provider(state()) -> state().
+add_openid_provider(State) ->
     lager:info("Init: adding openid provider"),
     %% force only one try
     application:set_env(oidcc, provider_max_tries, 1),
@@ -285,8 +283,8 @@ add_openid_provider() ->
     lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
     ok = add_openid_provider(ProviderList, LocalEndpoint),
-    ok = wait_and_log_provider_results(),
-    ok.
+    NewState = wait_and_log_provider_results(State),
+    NewState.
 
 %% @doc take one provider from the list and add it.
 %% This uses the oidcc library to handle the OpenID Connect provider.
@@ -321,12 +319,12 @@ add_openid_provider([], _) ->
 %% The configuration max_provider_wait sets the max time to wait, the
 %% default is 5 seconds. Reducing this time will speedup the startup.
 %% @see wait_and_log_provider_results/3
--spec wait_and_log_provider_results() -> ok.
-wait_and_log_provider_results() ->
+-spec wait_and_log_provider_results(state()) -> state().
+wait_and_log_provider_results(State) ->
     {ok, List} = oidcc:get_openid_provider_list(),
     Max = erlang:system_time(seconds) + ?CONFIG(max_provider_wait, 5),
-    ok = wait_and_log_provider_results(List, [], Max),
-    ok.
+    NewState = wait_and_log_provider_results(List, [], Max, State),
+    NewState.
 
 %% @doc iterate through the list of oidc provider and check their status.
 %% A new list is set up with pending provider and maybe checked again if
@@ -334,65 +332,65 @@ wait_and_log_provider_results() ->
 %% @see maybe_recheck_provider/3
 -spec wait_and_log_provider_results(Provider :: [{Id::binary(), Pid::pid()}],
                                     Pending :: [{Id::binary(), Pid::pid()}],
-                                    Timeout :: integer()) -> ok.
-wait_and_log_provider_results([], [], _Max) ->
-    ok;
-wait_and_log_provider_results([], List, Max) ->
+                                    Timeout :: integer(), state()) -> state().
+wait_and_log_provider_results([], [], _Max, State) ->
+    State;
+wait_and_log_provider_results([], List, Max, State) ->
     InTime = (erlang:system_time(seconds) < Max),
-    maybe_recheck_provider(InTime, List, Max);
-wait_and_log_provider_results([{Id, Pid} = H | T], List, Max) ->
+    maybe_recheck_provider(InTime, List, Max, State);
+wait_and_log_provider_results([{Id, Pid} = H | T], List, Max, State) ->
     {ok, #{ready := Ready}} = oidcc_openid_provider:get_config(Pid),
     {ok, Error} = oidcc_openid_provider:get_error(Pid),
     IsError = (Error /= undefined),
-    NewList =
+    {NewList, NewState} =
         case {Ready, IsError} of
             {true, _} ->
                 lager:info("Init: OpenId Connect provider ~p ready", [Id]),
-                List;
+                {List, State};
             {_, true} ->
-                lager:warning("Init: OpenId Connect provider ~p has error ~p",
-                              [Id, Error]),
-                List;
+                NewSt = log_warning("OpenId Connect provider ~p has error ~p",
+                              [Id, Error], State),
+                {List, NewSt};
             _ ->
-                [ H | List ]
+                {[ H | List ], State}
         end,
-    wait_and_log_provider_results(T, NewList, Max).
+    wait_and_log_provider_results(T, NewList, Max, NewState).
 
 %% @doc recheck the provider for their status if still in time.
 -spec maybe_recheck_provider(InTime :: boolean(),
                              ProviderPending :: [{Id::binary(), Pid::pid()}],
-                             MaxTime :: integer()) -> ok.
-maybe_recheck_provider(true, List, Max) ->
+                             MaxTime :: integer(), state()) -> state().
+maybe_recheck_provider(true, List, Max, State) ->
     timer:sleep(200),
-    wait_and_log_provider_results(List, [], Max);
-maybe_recheck_provider(false, List, _) ->
+    wait_and_log_provider_results(List, [], Max, State);
+maybe_recheck_provider(false, List, _, State) ->
     Output =
-        fun({Id, _Pid}, _) ->
-                lager:info("Init: OpenId Connect provider ~p takes too long, "
-                           "won't wait for its result", [Id])
+        fun({Id, _Pid}, S) ->
+                log_warning("OpenId Connect provider ~p takes too long, "
+                           "won't wait for its result", [Id], S)
         end,
-    lists:foldl(Output, ok, List),
-    ok.
+    NewState = lists:foldl(Output, State, List),
+    NewState.
 
 
 %% @doc Add RSPs if enabled in the configuration.
 %% Relaying Service Provider are only added if configured, else the
 %% configured RSPs are not added to the running WaTTS instance.
 %% @see add_rsps/0
--spec maybe_add_rsps(Enabled :: boolean() ) -> ok.
-maybe_add_rsps(true) ->
-    add_rsps();
-maybe_add_rsps(_) ->
+-spec maybe_add_rsps(Enabled :: boolean(), state() ) -> state().
+maybe_add_rsps(true, State) ->
+    add_rsps(State);
+maybe_add_rsps(_, State) ->
     ?SETCONFIG(rsp_list, []),
-    ok.
+    State.
 
 %% @doc Add the configured RSPs as they are enabled in the config.
 %% The function iterates through the configuration and updates them.
 %% No keys are fetched yet, only the configuration is updated.
 %% @see watts_rsp:new/1
 %% @see watts_rsp
--spec add_rsps() -> ok.
-add_rsps() ->
+-spec add_rsps(state()) -> state().
+add_rsps(State) ->
     lager:info("Init: adding relying service provider (RSP)"),
     UpdateRsp =
         fun(#{id := Id} = Config, List) ->
@@ -402,40 +400,41 @@ add_rsps() ->
         end,
     NewRspList = lists:foldl(UpdateRsp, [], ?CONFIG(rsp_list, [])),
     ?SETCONFIG(rsp_list, NewRspList),
-    ok.
+    State.
 
 
 %% @doc add the services to the server and log the results.
 %% @see watts_service:add/1
 %% @see watts_service:update_params/1
--spec add_services() -> ok.
-add_services() ->
+-spec add_services(state()) -> state().
+add_services(State) ->
     AddService =
-        fun(#{id := Id} = ConfigMap, _) ->
+        fun(#{id := Id} = ConfigMap, S) ->
                 lager:debug("Init: adding service ~p", [Id]),
                 try
                     {ok, Id} = watts_service:add(ConfigMap),
-                    ok = watts_service:update_params(Id)
+                    ok = watts_service:update_params(Id),
+                    S
                 catch Error:Reason ->
                      Msg = "error occured during adding service ~p: '~p' ~p",
-                     lager:critical(Msg, [Id, Error, Reason])
+                     log_error(Msg, [Id, Error, Reason], S)
                 end
         end,
 
     lager:info("Init: adding services"),
     ServiceList = ?CONFIG(service_list, []),
-    lists:foldl(AddService, ok, ServiceList),
-    ok.
+    NewState = lists:foldl(AddService, State, ServiceList),
+    NewState.
 
 %% @doc generate new signing keys for jwt
--spec update_jwt_keys() -> ok.
-update_jwt_keys() ->
+-spec update_jwt_keys(state()) -> state().
+update_jwt_keys(State) ->
     lager:info("Init: reading JWT keys"),
     ok = watts_jwt_keys:initial_read(),
     Duration = round(?CONFIG(jwt_key_rotation_interval)/60),
     lager:info("Init: JWT key will rotate about every ~p minutes",
                [Duration]),
-    ok.
+    State.
 
 
 
@@ -447,16 +446,18 @@ update_jwt_keys() ->
 %% To configure SSL first the files are read and if that fails SSL is disabled.
 %% @see create_dispatch_list/0
 %% @see add_options/5
--spec start_web_interface() -> ok.
-start_web_interface() ->
+-spec start_web_interface(state()) -> state().
+start_web_interface(State) ->
     lager:info("Init: starting web interface"),
-    ok = maybe_start_web_queues(),
+    State1 = maybe_start_web_queues(State),
     oidcc_client:register(watts_oidc_client),
-    Dispatch = cowboy_router:compile([{'_', create_dispatch_list()}]),
+    {DispatchList, State2} = create_dispatch_list(State1),
+    Dispatch = cowboy_router:compile([{'_', DispatchList}]),
     SSL = ?CONFIG(ssl),
-    UseSSL = read_ssl_files(SSL),
+    {UseSSL, State3} = read_ssl_files(SSL, State2),
     ListenPort = ?CONFIG(listen_port),
     MaxConns = ?CONFIG(num_parallel_conns),
+    NewState =
     case UseSSL of
         true ->
             Cert = ?CONFIG(cert),
@@ -475,16 +476,19 @@ start_web_interface() ->
                                           , ?CONFIG(num_acceptors)
                                           , Options
                                           , [{env, [{dispatch, Dispatch}]}]
-                                        );
+                                        ),
+            State3;
         false ->
-            LocalIp =
+            {LocalIp, State4} =
                 case ?CONFIG(enable_ipv6) of
                     false ->
-                        lager:warning("Init: listening only at 127.0.0.1"),
-                        {127, 0, 0, 1};
+                        NewS = log_warning("listening only at 127.0.0.1",
+                                          State3),
+                        {{127, 0, 0, 1}, NewS};
                     true ->
-                        lager:warning("Init: listening only at ::1"),
-                        {0, 0, 0, 0, 0, 0, 0, 1}
+                        NewS = log_warning("listening only at ::1",
+                                          State3),
+                        {{0, 0, 0, 0, 0, 0, 0, 1}, NewS}
                 end,
             {ok, _} = cowboy:start_http( http_handler
                                          , ?CONFIG(num_acceptors)
@@ -493,7 +497,8 @@ start_web_interface() ->
                                              {max_connections, MaxConns}
                                              ]
                                          , [{env, [{dispatch, Dispatch}]}]
-                                       )
+                                       ),
+            State4
     end,
     Redirect = ?CONFIG(redirection_enable),
     RedirectPort = ?CONFIG(redirection_port),
@@ -518,46 +523,46 @@ start_web_interface() ->
                                        );
         _ -> ok
     end,
-
-    ok.
+    NewState.
 
 %% @doc maybe start the queues for rate limits at the api and rsp endpoint
--spec maybe_start_web_queues() -> ok.
-maybe_start_web_queues() ->
-    ok = maybe_start_web_queue(?CONFIG(web_connection_rate, undefined)),
-    ok = maybe_start_rsp_queue(?CONFIG(enable_rsp, false),
-                               ?CONFIG(rsp_connection_rate, undefined)),
-    ok.
+-spec maybe_start_web_queues(state()) -> state().
+maybe_start_web_queues(State) ->
+    S1 = maybe_start_web_queue(?CONFIG(web_connection_rate, undefined), State),
+    S2 = maybe_start_rsp_queue(?CONFIG(enable_rsp, false),
+                               ?CONFIG(rsp_connection_rate, undefined), S1),
+    S2.
 
 %% @doc decide if the rate limit for api endpoint needs to be started
--spec maybe_start_web_queue(any()) -> ok.
-maybe_start_web_queue(Number) when is_integer(Number), Number > 0 ->
+-spec maybe_start_web_queue(any(), state()) -> state().
+maybe_start_web_queue(Number, State) when is_integer(Number), Number > 0 ->
     MaxTime = ?CONFIG(web_queue_max_wait, 500),
     lager:info("Init: setting web rate limit to ~p/sec [max wait: ~p ms]",
                [Number, MaxTime]),
     ok = start_queue(watts_web_queue, Number, MaxTime),
     ?SETCONFIG(watts_web_queue, true),
-    ok;
-maybe_start_web_queue(_) ->
-    lager:warning("Init: connection rate set to unlimited!"),
+    State;
+maybe_start_web_queue(_, State) ->
     ?UNSETCONFIG(watts_web_queue),
-    ok.
+    NewState = log_warning("connection rate set to unlimited!", State),
+    NewState.
 
 %% @doc decide if the rate limit for rsp endpoint needs to be started
--spec maybe_start_rsp_queue(boolean(), any()) -> ok.
-maybe_start_rsp_queue(false, _) ->
-    ok;
-maybe_start_rsp_queue(true, Number) when is_integer(Number), Number > 0 ->
+-spec maybe_start_rsp_queue(boolean(), any(), state()) -> state().
+maybe_start_rsp_queue(false, _, State) ->
+    State;
+maybe_start_rsp_queue(true, Number, State)
+  when is_integer(Number), Number > 0 ->
     MaxTime = ?CONFIG(rsp_queue_max_wait, 1000),
     lager:info("Init: setting rsp rate limit to ~p/sec [max wait: ~p ms]",
                [Number, MaxTime]),
     ok = start_queue(watts_rsp_queue, Number, MaxTime),
     ?SETCONFIG(watts_rsp_queue, true),
-    ok;
-maybe_start_rsp_queue(true, _) ->
-    lager:warning("Init: rsp connection rate set to unlimited!"),
+    State;
+maybe_start_rsp_queue(true, _, State) ->
+    NewState = log_warning("rsp connection rate set to unlimited!", State),
     ?UNSETCONFIG(watts_rsp_queue),
-    ok.
+    NewState.
 
 %% @doc start a queue with the given name, rate limit and wait time.
 -spec start_queue(atom(), integer(), integer()) -> ok.
@@ -579,54 +584,55 @@ start_queue(Name, Limit, MaxTime) ->
 %% <li> the dh params </li>
 %% </ul>
 %% SSL gets disable if one of them fails.
--spec read_ssl_files(ShouldBeRead :: boolean()) -> UseSSL :: boolean().
-read_ssl_files(true) ->
-    CertOK = read_certificate(?CONFIG_(cert_file)),
-    KeyOK = read_key(?CONFIG_(key_file)),
-    ChainOK = read_cachain(?CONFIG_(cachain_file)),
-    DhOK = read_dhparam(?CONFIG_(dh_file)),
-    CertOK and KeyOK and ChainOK and DhOK;
-read_ssl_files(_) ->
-    false.
+-spec read_ssl_files(ShouldBeRead :: boolean(), state())
+                    -> {UseSSL :: boolean(), state()}.
+read_ssl_files(true, State0) ->
+    {CertOK, State1} = read_certificate(?CONFIG_(cert_file), State0),
+    {KeyOK, State2} = read_key(?CONFIG_(key_file), State1),
+    {ChainOK, State3} = read_cachain(?CONFIG_(cachain_file), State2),
+    {DhOK, State4} = read_dhparam(?CONFIG_(dh_file), State3),
+    {CertOK and KeyOK and ChainOK and DhOK, State4};
+read_ssl_files(_, State) ->
+    {false, State}.
 
 %% @doc read the certificate for SSL
--spec read_certificate(any()) -> Success :: boolean().
-read_certificate({ok, Path}) ->
+-spec read_certificate(any(), state()) -> {Success :: boolean(), state()}.
+read_certificate({ok, Path}, State) ->
     case watts_file_util:read_pem_entries(Path) of
         [{'Certificate', Certificate, not_encrypted}] ->
             ?SETCONFIG(cert, Certificate),
-            true;
+            {true, State};
         _ ->
-            lager:error("Init: certificate ~p invalid", [Path]),
-            false
+            NewState = log_error("certificate ~p invalid", [Path], State),
+            {false, NewState}
     end;
-read_certificate(_) ->
-    false.
+read_certificate(_, State) ->
+    {false, State}.
 
 %% @doc read the private key for SSL
--spec read_key(any()) -> Success :: boolean().
-read_key({ok, Path}) ->
+-spec read_key(any(), state()) -> {Success :: boolean(), state()}.
+read_key({ok, Path}, State) ->
     case watts_file_util:read_pem_entries(Path) of
         [{Type, PrivateKey, not_encrypted}]
         when Type == 'RSAPrivateKey'; Type == 'DSAPrivateKey';
              Type =='ECPrivateKey'; Type == 'PrivateKeyInfo'->
             ?SETCONFIG(key, {Type, PrivateKey}),
-            true;
+            {true, State};
         _ ->
-            lager:error("Init: private key ~p invalid", [Path]),
-            false
+            NewState = log_error("private key ~p invalid", [Path], State),
+            {false, NewState}
     end;
-read_key(_) ->
-    false.
+read_key(_, State) ->
+    {false, State}.
 
 %% @doc read the ca chain for SSL
--spec read_cachain(any()) -> Success :: boolean().
-read_cachain({ok, Path}) ->
+-spec read_cachain(any(), state()) -> {Success :: boolean(), state()}.
+read_cachain({ok, Path}, State) ->
     case watts_file_util:read_pem_entries(Path) of
         [] ->
-            lager:error("Init: ca chain ~p is empty", [Path]),
+            NewState = log_error("ca chain ~p is empty", [Path], State),
             ?UNSETCONFIG(cachain),
-            false;
+            {false, NewState};
         PemCerts ->
             Decode = fun({'Certificate', Cert, not_encrypted}, List) ->
                              [ Cert | List ];
@@ -635,33 +641,34 @@ read_cachain({ok, Path}) ->
                      end,
             Certs = lists:foldl(Decode, [], PemCerts),
             ?SETCONFIG(cachain, Certs),
-            true
+            {true, State}
     end;
-read_cachain(_) ->
-    lager:warning("Init: no ca-chain-file configured [cachain_file]!"),
+read_cachain(_, State) ->
+    NewState = log_warning("no ca-chain-file configured [cachain_file]!",
+                           State),
     ?UNSETCONFIG(cachain),
-    true.
+    {true, NewState}.
 
 %% @doc read the dh params for SSL
--spec read_dhparam(any()) -> Success :: boolean().
-read_dhparam({ok, none}) ->
-    lager:warning("Init: no dh-file configured [dh_file]!"),
+-spec read_dhparam(any(), state()) -> {Success :: boolean(), state()}.
+read_dhparam({ok, none}, State) ->
+    NewState = log_warning("no dh-file configured [dh_file]!", State),
     ?UNSETCONFIG(dhparam),
-    true;
-read_dhparam({ok, Path}) ->
+    {true, NewState};
+read_dhparam({ok, Path}, State) ->
     case watts_file_util:read_pem_entries(Path) of
         [{'DHParameter', DhParam, not_encrypted}] ->
             ?SETCONFIG(dhparam, DhParam),
-            true;
+            {true, State};
         _ ->
-            lager:error("Init: dh-file ~p is invalid", [Path]),
+            NewState =log_error("dh-file ~p is invalid", [Path], State),
             ?UNSETCONFIG(dhparam),
-            false
+            {false, NewState}
     end;
-read_dhparam(_) ->
-    lager:warning("Init: no dh-file configured [dh_file]!"),
+read_dhparam(_, State) ->
+    NewState = log_warning("no dh-file configured [dh_file]!", State),
     ?UNSETCONFIG(dhparam),
-    true.
+    {true, NewState}.
 
 %% @doc This is the list of endpoints and the corresponding action to happen,
 %% this could be either calling a function or serving static files.
@@ -670,8 +677,8 @@ read_dhparam(_) ->
 %% the OpenID connect handling (login) and the api.
 %% Then calls the create_dispatch_list/2 function to configure the dynamic part.
 %% @see create_dispatch_list/2
--spec create_dispatch_list() -> [tuple()].
-create_dispatch_list() ->
+-spec create_dispatch_list(state()) -> {[tuple()], state()}.
+create_dispatch_list(State) ->
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
     EpStatic = watts_http_util:relative_path("static/[...]"),
@@ -688,7 +695,7 @@ create_dispatch_list() ->
                           {doc_code, ?CONFIG(enable_code_doc)},
                           {rsp, ?CONFIG(enable_rsp), ?CONFIG(rsp_list)},
                           {privacy, ?CONFIG(privacy_doc)} ],
-                         BaseDispatchList).
+                         BaseDispatchList, State).
 
 %% @doc handle each configuration and transform it into a dispatch entry.
 %% The handled settings include
@@ -698,51 +705,51 @@ create_dispatch_list() ->
 %% <li> rps endpoint </li>
 %% <li> privacy statement </li>
 %% </ul>
--spec create_dispatch_list(Config:: [tuple()], DispatchList :: [tuple()])
-                          -> [tuple()].
-create_dispatch_list([], List) ->
-     List;
-create_dispatch_list([{doc_user, true} | T], List) ->
+-spec create_dispatch_list(Config:: [tuple()], DispatchList :: [tuple()]
+                          , state()) -> {[tuple()], state()}.
+create_dispatch_list([], List, State) ->
+     {List, State};
+create_dispatch_list([{doc_user, true} | T], List, State) ->
     DocInfo = "Init: publishing user documentation at /docs/user/",
     lager:info(DocInfo),
     EpDocs = watts_http_util:relative_path("docs/user/[...]"),
     NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs/user"}}
                 | List ],
-    create_dispatch_list(T, NewList);
-create_dispatch_list([{doc_code, true} | T], List) ->
+    create_dispatch_list(T, NewList, State);
+create_dispatch_list([{doc_code, true} | T], List, State) ->
     DocInfo = "Init: publishing code documentation at /docs/code/",
     lager:info(DocInfo),
     EpDocs = watts_http_util:relative_path("docs/code/[...]"),
     NewList = [ {EpDocs, cowboy_static, {priv_dir, ?APPLICATION, "docs/code"}}
                 | List ],
-    create_dispatch_list(T, NewList);
-create_dispatch_list([{rsp, true, []} | T], List) ->
+    create_dispatch_list(T, NewList, State);
+create_dispatch_list([{rsp, true, []} | T], List, State) ->
     lager:info("Init: relying service provider won't be enabled as none is "
                "configured"),
-    create_dispatch_list(T, List);
-create_dispatch_list([{rsp, true, _} | T], List) ->
+    create_dispatch_list(T, List, State);
+create_dispatch_list([{rsp, true, _} | T], List, State) ->
     RspInfo = "Init: enable relying service provider at /rsp/",
     lager:info(RspInfo),
     EpRsp = watts_http_util:relative_path("rsp/[...]"),
     NewList = [ {EpRsp, watts_http_rsp, []} | List ],
-    create_dispatch_list(T, NewList);
-create_dispatch_list([{privacy, undefined} | T], List) ->
+    create_dispatch_list(T, NewList, State);
+create_dispatch_list([{privacy, undefined} | T], List, State) ->
     EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
-    PrivWarn = "Init: The privacy statement is not configured [~p]",
-    lager:warning(PrivWarn, [privacy_doc]),
+    PrivWarn = "The privacy statement is not configured [~p]",
+    NewState = log_warning(PrivWarn, [privacy_doc], State),
     NewList = [ { EpPrivacy , cowboy_static,
                   {priv_file, ?APPLICATION, "no_privacy.html"}
                 }
                 | List],
-    create_dispatch_list(T, NewList);
-create_dispatch_list([{privacy, File} | T], List) ->
+    create_dispatch_list(T, NewList, NewState);
+create_dispatch_list([{privacy, File} | T], List, State) ->
     EpPrivacy = watts_http_util:relative_path("privacystatement.html"),
     PrivInfo = "Init: Using privacy statement ~p",
     lager:info(PrivInfo, [File]),
     NewList = [ {EpPrivacy, cowboy_static, {file, File}} | List],
-    create_dispatch_list(T, NewList);
-create_dispatch_list([_ | T], List) ->
-    create_dispatch_list(T, List).
+    create_dispatch_list(T, NewList, State);
+create_dispatch_list([_ | T], List, State) ->
+    create_dispatch_list(T, List, State).
 
 
 
@@ -786,13 +793,14 @@ local_endpoint() ->
     watts_http_util:whole_url(watts_http_util:relative_path("oidc")).
 
 %% @doc gracefully stop the configuration process when done.
--spec stop() -> ok.
-stop() ->
+-spec do_stop(state()) -> state().
+do_stop(State) ->
     lager:info("Init: done"),
-    lager:info("Init: startup took ~p seconds",
-               [erlang:system_time(seconds) - ?CONFIG(start_time)]),
+    lager:info("Init: startup took ~p seconds", [startup_duration()]),
+    NewState = check_mail(State),
     lager:info("WaTTS ready"),
-    stop(self()).
+    stop(self()),
+    NewState.
 
 %% @doc helperfunction to remove newlines from data
 -spec remove_newline(string()) -> string().
@@ -803,3 +811,107 @@ remove_newline(List) ->
                      true
              end,
     lists:filter(Filter, List).
+
+%% @doc check the email setting by sending one
+-spec check_mail(state()) -> state().
+check_mail(State) ->
+    Subject = "I am up again (WaTTS)",
+    Body = io_lib:format(
+             "Hello Administrator, ~n"
+             "this time my startup took ~p seconds~n~n"
+             "The system I am running on is ~s~n"
+             "I found the following issues of level 'warning' or higher: ~n~s~n"
+             "~nI hope you have a great time, I will,~n"
+             "WaTTS",
+             [startup_duration(), system_uptime(),
+              issues_to_body(State)]),
+    MaybeAdminMail = ?CONFIG(admin_mail),
+    Receipient = case is_list(MaybeAdminMail) of
+                     true ->
+                         [MaybeAdminMail];
+                     false ->
+                         []
+                 end,
+    case watts_mail:send(Subject, Body, Receipient) of
+        ok ->
+            lager:info("Init: email about initilization sent"),
+            ok;
+        disabled ->
+            lager:info("Init: email sending disabled"),
+            ok;
+        no_receipients ->
+            system_halt("Init: no admin mail configured but emails enabled", []
+                       , 253);
+        error ->
+            system_halt("Init: mail failed, will shutdown", [], 252)
+    end,
+    State.
+
+%% @doc get the output of uptime
+-spec system_uptime() -> string().
+system_uptime() ->
+    os:cmd("uptime --pretty").
+
+%% @doc convert the issues form the state to a email body
+-spec issues_to_body(state()) -> string().
+issues_to_body(#state{issues = I}) ->
+    Issues = lists:reverse(I),
+    io_lib:format(lists:flatten(watts_utils:lists_join("~n", Issues)), []).
+
+%% @doc calculate the startup duration
+-spec startup_duration() -> integer().
+startup_duration() ->
+    erlang:system_time(seconds) - ?CONFIG(start_time).
+
+
+%% @doc log a warning  message and store it in the state for email
+-spec log_warning(string(), [any()], state()) -> state().
+log_warning(Msg, Params, State) ->
+    Message = io_lib:format(Msg, Params),
+    log_warning(Message, State).
+
+%% @doc log a warning  message and store it in the state for email
+-spec log_warning(string(), state()) -> state().
+log_warning(Message, State) ->
+    lager:warning("Init: " ++ Message),
+    message_to_state(Message, State).
+
+%% @doc log an error message and store it in the state for email
+-spec log_error(string(), [any()], state()) -> state().
+log_error(Msg, Params, State) ->
+    Message = io_lib:format(Msg, Params),
+    log_error(Message, State).
+
+%% @doc log an error message and store it in the state for email
+-spec log_error(string(), state()) -> state().
+log_error(Message, State) ->
+    lager:error("Init: " ++ Message),
+    message_to_state(Message, State).
+
+%% @doc insert the message into the  issues list of the state
+-spec message_to_state(string(), state()) -> state().
+message_to_state(Message, #state{issues = Issues} = State) ->
+    State#state{issues = [Message | Issues]}.
+
+
+-ifndef(TEST).
+%% @doc halt the system with a message and a number.
+%% The halt is delayed for a second to ensure the logs get written.
+-spec system_halt(string(), [any()], integer()) -> ok.
+-dialyzer({nowarn_function, system_halt/3}).
+system_halt(Message, Params, Number) ->
+    lager:critical(Message, Params),
+    timer:sleep(1000),
+    erlang:halt(Number),
+    ok.
+
+-else.
+%% @doc the system halt for testing purposes.
+%% So the tests (the vm) are not halted by this function
+-spec system_halt(string(), [any()], integer()) -> ok.
+system_halt(Message, Params, Number) ->
+    Msg = io_lib:format(Message, Params),
+    io:format("would halt system with ~p due to ~s", [Number, Msg]),
+    ok.
+
+-endif.

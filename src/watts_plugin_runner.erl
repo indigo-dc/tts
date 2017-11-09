@@ -428,23 +428,16 @@ kill(#state{con_type = ssh, connection = Connection} = State) ->
 
 %% @doc create the result from the command output.
 -spec create_result(output()) -> result().
-create_result(#{exit_status := 0, std_out := []} = Output) ->
-    {error, no_json, Output};
-create_result(#{exit_status := 0, std_out := StdOut} = Output) ->
+create_result(#{std_out := StdOut} = Output) ->
     Prepend = fun(Bin, Result) ->
                      << Bin/binary, Result/binary>>
              end,
     Json = lists:foldl(Prepend, <<>>, StdOut),
     case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
         {ok, Map, _} -> {ok, Map, Output};
-        {error, _} -> {error, bad_json_result, Output}
-    end;
-create_result(#{exit_status := _} = Output) ->
-    {error, script_failed, Output};
-create_result(#{std_err := []} = Output) ->
-    create_result(maps:put(exit_status, 0, Output));
-create_result(Output) ->
-    create_result(maps:put(exit_status, -1, Output)).
+        {error, _} ->
+            {error, bad_json, Output}
+    end.
 
 
 %% @doc handle the messages from the exec module, when done send the result.

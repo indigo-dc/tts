@@ -16,7 +16,9 @@
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
 
--export([random_string/1]).
+-export([random_string/1,
+         lists_join/2
+        ]).
 
 
 %% @doc generate a random base64url encoded string of given Length
@@ -30,3 +32,17 @@ random_string(Length) ->
                      random_string(Length)
              end,
     base64url:encode(Random).
+
+%% @doc a implementation of the new lists:join function
+-spec lists_join(any(), [any()]) -> [any()].
+lists_join(_Sep, []) ->
+    [];
+lists_join(Sep, [H | T]) ->
+    do_join(Sep, [H], T).
+
+%% @doc helper function for lists_join function
+-spec do_join(any(), [any()], [any()]) -> [any()].
+do_join(_Sep, NewList, []) ->
+    lists:reverse(NewList);
+do_join(Sep, NewList, [H | T]) ->
+    do_join(Sep, [H, Sep | NewList], T).

@@ -22,6 +22,7 @@
                                     lager_syslog,
                                     uuid,
                                     jobs,
+                                    gen_smtp,
                                     eper
                                    ]},
                     {mod, {watts_app, []}}

@@ -64,7 +64,7 @@ request_local_test() ->
                       queue => undefined},
 
 
-        {error, bad_json_result
+        {error, bad_json
         , _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
         ok = test_util:wait_for_process_to_die(ReqPid,100)
     after
@@ -91,7 +91,7 @@ revoke_local_test() ->
 
         ConfigRev = maps:merge(ConfigReq, #{action => revoke,
                                             cred_state => <<"credstate">>}),
-        {error, bad_json_result
+        {error, bad_json
         , _} = watts_plugin_runner:request_action(ConfigRev, RevPid),
         ok = test_util:wait_for_process_to_die(RevPid,100)
     after
