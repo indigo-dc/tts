@@ -315,20 +315,40 @@ delete_resource(Req, #state{type=credential,
     {ok, Req3} = update_cookie_or_end_session(Req2, State),
     {Result, Req3, State#state{session_pid=undefined}}.
 
-
+%% @doc handle the get requests
+-spec get_json(cowboy_req:req(), state())
+              -> {binary(), cowboy_req:req(), state()}.
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
                      session_pid=Session} = State) ->
-    Result = perform_get(Type, Id, Session, Version),
+    Content = perform_get(Type, Id, Session, Version),
     {ok, Req2} = update_cookie_or_end_session(Req, State),
-    {Result, Req2, State#state{session_pid=undefined}}.
+    {Content, Req2, State#state{session_pid=undefined}}.
 
-
+%% @doc handle the post requests
+-spec post_json(cowboy_req:req(), state())
+              -> {{true, binary()} | false, cowboy_req:req(), state()}.
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
                       session_pid=Session, json=Json} = State) ->
     {Req1, Result} = perform_post(Req, Type, Id, Json, Session, Version),
     {ok, Req2} = update_cookie_or_end_session(Req1, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
+%% @doc handle the get requests.
+%% This includes:
+%% <ul>
+%% <li> the list of services </li>
+%% <li> the list of OpenID Connect provider </li>
+%% <li> the info endpoint </li>
+%% <li> the access token, issuer, its id, and subject  </li>
+%% <li> the credential list  </li>
+%% <li> the temporarly stored credential  </li>
+%% </ul>
+-spec perform_get(RequestType, Id, Session, Version) -> binary()
+   when
+      RequestType :: request_type(),
+      Id :: undefined | binary(),
+      Session :: undefined | pid(),
+      Version :: integer().
 perform_get(service, undefined, Session, Version) ->
     {ok, ServiceList} = watts:get_service_list_for(Session),
     Keys = case Version of
@@ -345,6 +365,51 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
+    return_json_info(Session);
+perform_get(logout, undefined, _, _) ->
+    jsone:encode(#{result => ok});
+perform_get(access_token, undefined, Session, _) ->
+    {ok, AccessToken} = watts:get_access_token_for(Session),
+    {ok, Iss, Id, Sub} = watts:get_iss_id_sub_for(Session),
+    jsone:encode(#{access_token => AccessToken,
+                   issuer => Iss,
+                   subject => Sub,
+                   issuer_id => Id
+                  });
+perform_get(credential, undefined, Session, Version) ->
+    {ok, CredList} = watts:get_credential_list_for(Session),
+    return_json_credential_list(CredList, Version);
+perform_get(cred_data, Id, Session, Version) ->
+    case watts:get_temp_cred(Id, Session) of
+        {ok, Cred} ->
+            return_json_credential(Cred, Version);
+        _ ->
+            Msg = <<"Sorry, the requested data was not found">>,
+            jsone:encode(#{result => error, user_msg => Msg})
+    end.
+
+%% @doc perform a post, meaning a translation
+-spec perform_post(cowboy_req:req(), credential, undefined,
+                   watts_service:info(), pid(), integer())
+                  -> {cowboy_req:req(), {true, binary()} | false}.
+perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
+             Session, Ver) ->
+    Params = maps:get(params, Data, #{}),
+    case  watts:request_credential_for(ServiceId, Session, Params) of
+        {ok, CredData} ->
+            {ok, Id} = watts:store_temp_cred(CredData, Session),
+            {ok, _Iss, IssuerId, _Sub} = watts:get_iss_id_sub_for(Session),
+            Url = temp_cred_id_to_url(Id, IssuerId, Ver),
+            {Req, {true, Url}};
+        {error, ErrorInfo} ->
+            Body = jsone:encode(ErrorInfo),
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {Req1, false}
+    end.
+
+%% @doc create and return the info data
+-spec return_json_info(pid()) -> binary().
+return_json_info(Session) ->
     {LoggedIn, DName, IssId, Error, AutoService, SuccessRedir, ErrorRedir}  =
         case is_pid(Session) of
             false ->
@@ -392,47 +457,7 @@ perform_get(info, undefined, Session, _) ->
                                rsp_error => ErrRedir},
                    maps:merge(Info1, Update)
            end,
-    jsone:encode(Info2);
-perform_get(logout, undefined, _, _) ->
-    jsone:encode(#{result => ok});
-perform_get(access_token, undefined, Session, _) ->
-    {ok, AccessToken} = watts:get_access_token_for(Session),
-    {ok, Iss, Id, Sub} = watts:get_iss_id_sub_for(Session),
-    jsone:encode(#{access_token => AccessToken,
-                   issuer => Iss,
-                   subject => Sub,
-                   issuer_id => Id
-                  });
-perform_get(credential, undefined, Session, Version) ->
-    {ok, CredList} = watts:get_credential_list_for(Session),
-    return_json_credential_list(CredList, Version);
-perform_get(cred_data, Id, Session, Version) ->
-    case watts:get_temp_cred(Id, Session) of
-        {ok, Cred} ->
-            return_json_credential(Cred, Version);
-        _ ->
-            Msg = <<"Sorry, the requested data was not found">>,
-            jsone:encode(#{result => error, user_msg => Msg})
-    end.
-
-%% @doc perform a post, meaning a translation
--spec perform_post(cowboy_req:req(), credential, undefined,
-                   watts_service:info(), pid(), integer())
-                  -> {cowboy_req:req(), {true, binary()} | false}.
-perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
-             Session, Ver) ->
-    Params = maps:get(params, Data, #{}),
-    case  watts:request_credential_for(ServiceId, Session, Params) of
-        {ok, CredData} ->
-            {ok, Id} = watts:store_temp_cred(CredData, Session),
-            {ok, _Iss, IssuerId, _Sub} = watts:get_iss_id_sub_for(Session),
-            Url = temp_cred_id_to_url(Id, IssuerId, Ver),
-            {Req, {true, Url}};
-        {error, ErrorInfo} ->
-            Body = jsone:encode(ErrorInfo),
-            Req1 = cowboy_req:set_resp_body(Body, Req),
-            {Req1, false}
-    end.
+    jsone:encode(Info2).
 
 
 %% @doc return the list of the services limited to the given keys
@@ -467,14 +492,13 @@ return_json_oidc_list(Oidc) ->
     List = lists:reverse(lists:foldl(Id, [], Oidc)),
     jsone:encode(#{openid_provider_list => List}).
 
-%% @doc return a single credential as json
+%% @doc return a single temp_credential (includes oidc_login) as json
 %% @todo check spec
--spec return_json_credential(watts:credential(), integer()) -> binary().
-return_json_credential(Cred, 1) ->
-    #{credential :=
-          #{id := Id,
-            entries := Entries
-           }
+-spec return_json_credential(watts:temp_cred(), integer()) -> binary().
+-dialyzer({nowarn_function, return_json_credential/2}).
+return_json_credential(#{result := ok, credential := Cred } , 1) ->
+    #{id := Id,
+      entries := Entries
      } = Cred,
     IdEntry = #{name => id, type => text, value => Id},
     jsone:encode([ IdEntry | Entries ]);

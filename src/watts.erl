@@ -50,7 +50,7 @@
          stop_debug/0
         ]).
 
--export_type([credential/0, cred_entry/0, oidc_info/0]).
+-export_type([credential/0, cred_entry/0, oidc_info/0, temp_cred/0]).
 
 -type session_info() :: #{session_pid => Session :: pid(),
                           session_type => watts_session:type()}.
@@ -58,6 +58,13 @@
 -type cred_entry() :: #{name => binary(),
                         type => binary(),
                         value => any()}.
+
+-type temp_cred() :: #{result => ok, credential => credential()} |
+                     #{result => oidc_login , oidc_login => map()}.
+
+-type cred_result() :: {ok, temp_cred()} |
+                       {error, #{result => error, user_msg => binary()}}.
+
 
 -type credential() :: #{cred_id => CredId :: binary(),
                         ctime => CTime :: binary() ,
@@ -441,7 +448,7 @@ return_credential_list(_,  _) ->
 %% @see watts_plugin
 %% @see watts_plugin_runner
 -spec request_credential_for(ServiceId :: binary(), Session :: pid(),
-                             Params :: map()) -> {ok, map()} | {error, map()}.
+                             Params :: map()) -> cred_result().
 request_credential_for(ServiceId, Session, Params) ->
     IFace =  get_interface_description(watts_session:get_type(Session)),
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -464,9 +471,7 @@ get_interface_description({ok, {rsp, _, _}}) ->
 %% @doc handle the result of a translation.
 %% this is the result part of the {@link request_credential_for/3} call.
 -spec handle_credential_result(watts_plugin:result(), binary(), pid(), map())
-                              -> {ok, #{result => ok , credential => credential()}} |
-                                 {ok, #{result => oidc_login , oidc_login => map()}} |
-                                 {error, #{result => error, user_msg => binary()}}.
+                              -> cred_result().
 handle_credential_result({ok, Credential}, ServiceId, Session, _Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     ok = watts_session:clear_additional_logins(ServiceId, Session),
@@ -605,7 +610,7 @@ get_iss_id_sub_for(Session) ->
     {ok, Iss, IssId, Sub}.
 
 %% @doc store a credential temporary in a gen_server in RAM
--spec store_temp_cred(credential(), pid()) -> {ok, binary()}.
+-spec store_temp_cred(temp_cred(), pid()) -> {ok, binary()}.
 store_temp_cred(Credential, Session) ->
     {ok, UserId} = watts_session:get_userid(Session),
     {ok, Id} = watts_temp_cred:add_cred(Credential, UserId),
