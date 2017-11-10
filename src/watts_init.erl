@@ -56,7 +56,7 @@
 -export([code_change/3]).
 
 -record(state, {
-          issues = []
+          issues = [] :: [string()] | []
          }).
 -type state() :: #state{}.
 
@@ -816,15 +816,17 @@ remove_newline(List) ->
 -spec check_mail(state()) -> state().
 check_mail(State) ->
     Subject = "I am up again (WaTTS)",
+    Version = ?CONFIG(vsn),
     Body = io_lib:format(
-             "Hello Administrator, ~n"
-             "this time my startup took ~p seconds~n~n"
-             "The system I am running on is ~s~n"
-             "I found the following issues of level 'warning' or higher: ~n~s~n"
+             "Hello Administrator, ~n~n"
+             "This is WaTTS version ~p, "
+             "my startup took ~p seconds.~n~n"
+             "The system I am running on is ~s and is ~p~n"
+             "~s~n"
              "~nI hope you have a great time, I will,~n"
              "WaTTS",
-             [startup_duration(), system_uptime(),
-              issues_to_body(State)]),
+             [Version, startup_duration(), system_uptime(),
+              get_system_name(), issues_to_body(State)]),
     MaybeAdminMail = ?CONFIG(admin_mail),
     Receipient = case is_list(MaybeAdminMail) of
                      true ->
@@ -854,9 +856,15 @@ system_uptime() ->
 
 %% @doc convert the issues form the state to a email body
 -spec issues_to_body(state()) -> string().
+-dialyzer({nowarn_function, issues_to_body/1}).
+issues_to_body(#state{issues = []}) ->
+    "No issues of level 'warning' or higher, feels very good!";
 issues_to_body(#state{issues = I}) ->
     Issues = lists:reverse(I),
-    io_lib:format(lists:flatten(watts_utils:lists_join("~n", Issues)), []).
+    Text = io_lib:format(lists:flatten(watts_utils:lists_join("~n", Issues)),
+                         []),
+    io_lib:format("I found the following issues of level "
+                  "'warning' or higher: ~n~s", [Text]).
 
 %% @doc calculate the startup duration
 -spec startup_duration() -> integer().
@@ -892,6 +900,28 @@ log_error(Message, State) ->
 -spec message_to_state(string(), state()) -> state().
 message_to_state(Message, #state{issues = Issues} = State) ->
     State#state{issues = [Message | Issues]}.
+
+%% @doc get the name of the system, like debian
+-spec get_system_name() -> list().
+get_system_name() ->
+    MaybeFileData = file:read_file("/etc/os-release"),
+    binary_to_list(handle_system_file(MaybeFileData)).
+
+%% @doc handle the content of the /etc/os-release file or reading errors
+-spec handle_system_file({ok, binary()} | any()) -> binary().
+handle_system_file({ok, Binary}) ->
+    Lines = binary:split(Binary, <<"\n">>, [global, trim_all]),
+    Info = fun(Line, Current) ->
+                   case binary:split(Line, <<"=">>, [global, trim_all]) of
+                       [<<"PRETTY_NAME">>, SystemName] ->
+                           SystemName;
+                       _ ->
+                           Current
+                   end
+           end,
+    lists:foldl(Info, <<"unknown (not found pretty line)">>, Lines);
+handle_system_file(_) ->
+    <<"unknown (could not read /etc/os-release)">>.
 
 
 -ifndef(TEST).

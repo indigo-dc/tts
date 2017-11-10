@@ -8,7 +8,7 @@
 %% @doc send a mail (if enabled), given subject, body and receipients
 -spec send(string(), string(), [string()]) -> atom().
 send(Subject, Body, Receipients) ->
-    maybe_send(?CONFIG(mail_enabled), Subject, Body, Receipients).
+    maybe_send(?CONFIG(email_enabled), Subject, Body, Receipients).
 
 
 %% @doc send a mail if configured, given subject, body and receipients
@@ -33,7 +33,7 @@ maybe_send(true, Subject, Body, Receipients)
     Result = gen_smtp_client:send_blocking({Sender, Receipients, Email},
                                            Options),
     handle_mail_result(Result);
-maybe_send(true, Subject, _Body, []) ->
+maybe_send(true, Subject, _Body, _) ->
     lager:debug("Mail: no receipients for email ~p", [Subject]),
     no_receipients;
 maybe_send(_, Subject, _Body, _Receipients) ->
