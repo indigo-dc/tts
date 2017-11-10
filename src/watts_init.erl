@@ -816,17 +816,16 @@ remove_newline(List) ->
 -spec check_mail(state()) -> state().
 check_mail(State) ->
     Subject = "I am up again (WaTTS)",
-    Version = ?CONFIG(vsn),
     Body = io_lib:format(
              "Hello Administrator, ~n~n"
-             "This is WaTTS version ~p, "
-             "my startup took ~p seconds.~n~n"
-             "The system I am running on is ~s and is ~p~n"
+             "This is WaTTS on ~p, I am build as version ~s.~n"
+             "My startup took ~p seconds and "
+             "the system I am running on is ~s and is ~s~n~n"
              "~s~n"
-             "~nI hope you have a great time, I will,~n"
+             "~n~nI hope you have a great time, I will,~n"
              "WaTTS",
-             [Version, startup_duration(), system_uptime(),
-              get_system_name(), issues_to_body(State)]),
+             [?CONFIG(hostname), ?CONFIG(vsn), startup_duration(),
+              system_name(), system_uptime(), issues_to_body(State)]),
     MaybeAdminMail = ?CONFIG(admin_mail),
     Receipient = case is_list(MaybeAdminMail) of
                      true ->
@@ -902,8 +901,8 @@ message_to_state(Message, #state{issues = Issues} = State) ->
     State#state{issues = [Message | Issues]}.
 
 %% @doc get the name of the system, like debian
--spec get_system_name() -> list().
-get_system_name() ->
+-spec system_name() -> list().
+system_name() ->
     MaybeFileData = file:read_file("/etc/os-release"),
     binary_to_list(handle_system_file(MaybeFileData)).
 

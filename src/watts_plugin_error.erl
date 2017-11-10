@@ -164,20 +164,35 @@ create_body(ErrorType, MapOrReason, Output, Info) ->
           }} = watts_service:get_info(ServiceId),
     Desc = io_lib:format(error_type_to_description(ErrorType), []),
     ResponseOrError = response_or_error(ErrorType, MapOrReason),
+
     io_lib:format(
       "Hello Developer/Admin,~n"
       "I detected an issue with a plugin and wanted to inform you about it.~n~n"
       "~s~n~n"
       "Some more details about the issue:~n"
       "The affected service id was: ~p~n"
-      "The used plugin was: ~p version ~p~n"
       "The action was: ~p~n~n"
+      "The used plugin was: ~p version ~p ~n    ~s~n"
       "~s~n"
       "The raw output was: ~s~n~n"
       "I wish you a great day,~n WaTTS",
-      [Desc, ServiceId, Cmd, Version, Action, ResponseOrError,
+      [Desc, ServiceId, Action, Cmd, Version, sha256sum(Cmd), ResponseOrError,
        log_output(Output)]).
 
+%% @doc create the sha256sum of the file, if possible
+-spec sha256sum(binary()) -> list().
+sha256sum(Cmd) ->
+    maybe_sha256sum(file:read_file(binary_to_list(Cmd))).
+
+%% @doc create the sha256sum from given data
+-spec maybe_sha256sum({ok, binary()} | any()) -> list().
+maybe_sha256sum({ok, Data}) ->
+    Hash = crypto:hash(sha256, Data),
+    "sha256sum: " ++
+        lists:append( [erlang:integer_to_list(X, 16) ||
+                          <<X:8/integer>> <= Hash] );
+maybe_sha256sum(_) ->
+    "could not create sha256 sum (file not readable)".
 
 %% @doc create a nice line regarding either the parsing result or error reason
 -spec response_or_error(error_type(), atom() | map()) -> string().
