@@ -62,7 +62,7 @@ And for production use:
 | email.enable | Whether email sending should be enabled in general | boolean | false |
 | email.on_plugin_error | If a mail should be sent on issues with a plugin (only if email is enabled, see email.enable) | boolean | true |
 | email.name | The sender name to use in the email | string | WaTTS |
-| email.address | The sender address to use in the email | string | none |
+| email.address | The sender address to use in the email | string | watts@<hostname> |
 | email.relay | The mail server or the domain to use to send the mails | string | none |
 | email.no_mx_lookups | disable lookups of mx records of the relay | boolean | false |
 | email.port | The port of the mail server to connect to  | port | 25 (465 SSL) |

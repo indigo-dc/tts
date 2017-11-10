@@ -15,7 +15,6 @@ send(Subject, Body, Receipients) ->
 -spec maybe_send(boolean(), string(), string(), [string()]) -> atom().
 maybe_send(true, Subject, Body, Receipients)
   when is_list(Receipients), length(Receipients) >= 1 ->
-    Sender = ?CONFIG(email_address),
     User = ?CONFIG(email_user),
     Password = ?CONFIG(email_password),
     Relay = ?CONFIG(email_relay),
@@ -23,6 +22,7 @@ maybe_send(true, Subject, Body, Receipients)
     Port = ?CONFIG(email_port),
     SSL = ?CONFIG(email_ssl),
     TLS = ?CONFIG(email_tls, always),
+    Sender = sender(),
     Email = compose_mail(Subject, Body, Receipients, Sender),
     Filter = fun({_, Value}) ->
                      Value /= undefined
@@ -65,3 +65,17 @@ handle_mail_result(Result) when is_binary(Result) ->
 handle_mail_result({error, Type, Message}) ->
     lager:error("MAIL: sending failed with ~p : ~p", [Type, Message]),
     error.
+
+%% @doc get the sender
+-spec sender() -> list().
+sender() ->
+    default_or_given_sender(?CONFIG(email_address)).
+
+%% @doc decide between given sender and default
+-spec default_or_given_sender(Sender) -> list()
+   when
+      Sender :: list() | any().
+default_or_given_sender(Sender) when is_list(Sender) ->
+    Sender;
+default_or_given_sender(_) ->
+    "watts@" ++ ?CONFIG(hostname).
