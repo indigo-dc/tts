@@ -44,14 +44,9 @@
 
 -define(LATEST_VERSION, 2).
 
-%
-% list of API methods:
-% GET /oidcp/
-% GET /service/
-% GET /credential
-% POST /credential
-% DELETE /credential/$ID
 
+%% @doc upgrade to cowboy rest
+-spec init(any(), any(), any()) -> {upgrade, protocol, cowboy_rest}.
 init(_, _Req, _Opts) ->
     {upgrade, protocol, cowboy_rest}.
 
@@ -69,47 +64,69 @@ init(_, _Req, _Opts) ->
           session_pid = undefined
          }).
 
+-type state() :: #state{}.
+
+-type request_type() :: oidcp | info | logout | service | credential |
+                        access_token | cred_data | undefined.
+
+%% @doc intialize the rest request by creating a state with all preparsed infos
+-spec rest_init(cowboy_req:req(), any()) -> {ok, cowboy_req:req(), state()}.
 rest_init(Req0, _Opts) ->
     {State, Req1} = extract_info(Req0),
     Req2 = cowboy_req:set_resp_header(<<"Cache-control">>, <<"no-cache">>, Req1),
     {ok, Req2, State}.
 
+%% @doc terminate the rest request, this ensures the token is given back
+-spec rest_terminate(cowboy_req:req(), state()) -> ok.
 rest_terminate(_Req, #state{queue_token = undefined}) ->
     ok;
 rest_terminate(_Req, #state{queue_token = Token}) ->
     jobs:done(Token),
     ok.
 
+%% @doc check if the service is available (still within the rate limit)
+%% cred_data is not checked, they always pass
+-spec service_available(cowboy_req:req(), state())
+                       -> {boolean(), cowboy_req:req(), state()}.
 service_available(Req, #state{in = #{type := cred_data}} = State) ->
     %% they for sure need to get their data
-    {true, Req, State};
-service_available(Req, #state{in = #{type := undefined}} = State) ->
-    %% get them out
     {true, Req, State};
 service_available(Req, State) ->
     QueueUsed = ?CONFIG(watts_web_queue, undefined),
     {Result, NewState} = request_queue_if_configured(QueueUsed, State),
     {Result, Req, NewState}.
 
+%% @doc stand in the queue and request a token, if configured
+-spec request_queue_if_configured(boolean(), state()) -> {boolean(), state()}.
 request_queue_if_configured(true, State) ->
     Result = jobs:ask(watts_web_queue),
     handle_queue_result(Result, State);
 request_queue_if_configured(_, State) ->
     {true, State}.
 
+%% @doc handle the result of a queue request
+-spec handle_queue_result({ok, any()} | any(), state()) -> {boolean(), state()}.
 handle_queue_result({ok, Token}, State) ->
     {true, State#state{queue_token = Token}};
 handle_queue_result(_, State) ->
     {false, State}.
 
 
+%% @doc return the allowed methods
+-spec allowed_methods(cowboy_req:req(), state())
+                     -> {[binary()], cowboy_req:req(), state()}.
 allowed_methods(Req, State) ->
     {[<<"GET">>, <<"POST">>, <<"DELETE">>]
      , Req, State}.
 
+%% @doc it is not allowed to post to urls that do not exist
+-spec allow_missing_post(cowboy_req:req(), state())
+                        -> {false, cowboy_req:req(), state()}.
 allow_missing_post(Req, State) ->
     {false, Req, State}.
 
+%% @doc extrac information from the request and put them into the state
+-spec extract_info(cowboy_req:req()) -> {state(), cowboy_req:req()}.
 extract_info(Req) ->
     CookieName = watts_http_util:cookie_name(),
     {CookieSessionToken, Req2} = cowboy_req:cookie(CookieName, Req),
@@ -162,7 +179,9 @@ extract_info(Req) ->
                header_used => HeaderUsed}
        }, Req8}.
 
-
+%% @doc return if a request is malformed
+-spec malformed_request(cowboy_req:req(), state())
+                       -> { boolean(), cowboy_req:req(), state() }.
 malformed_request(Req, State) ->
     {Result, NewState} = is_malformed(State),
     NewReq =
@@ -176,7 +195,9 @@ malformed_request(Req, State) ->
         end,
     {Result, NewReq, NewState}.
 
-
+%% @doc check if the user is authorized to perform the request
+-spec is_authorized(cowboy_req:req(), state())
+                       -> { boolean(), cowboy_req:req(), state() }.
 is_authorized(Req, #state{type=oidcp} = State) ->
     {true, Req, State};
 is_authorized(Req, #state{type=info} = State) ->
@@ -237,16 +258,25 @@ is_authorized(Req, State) ->
     {{false, <<"authorization">>}, Req1, State}.
 
 
+%% @doc return the provided content types (only json)
+-spec content_types_provided(cowboy_req:req(), state())
+                       -> { [tuple()], cowboy_req:req(), state() }.
 content_types_provided(Req, State) ->
     {[
       {{<<"application">>, <<"json">>, '*'}, get_json}
      ], Req, State}.
 
+%% @doc return the accepted content types (only json)
+-spec content_types_accepted(cowboy_req:req(), state())
+                       -> { [tuple()], cowboy_req:req(), state() }.
 content_types_accepted(Req, State) ->
     {[
       {{<<"application">>, <<"json">>, '*'}, post_json }
      ], Req, State}.
 
+%% @doc return if a resource exists
+-spec resource_exists(cowboy_req:req(), state())
+                       -> { boolean(), cowboy_req:req(), state() }.
 resource_exists(Req, #state{type=Type, id=undefined} = State)
     when Type == oidcp; Type == info; Type == logout; Type == service;
          Type == credential; Type == access_token ->
@@ -265,6 +295,10 @@ resource_exists(Req, State) ->
     Req1 = cowboy_req:set_resp_body(Body, Req),
     {false, Req1, State}.
 
+%% @doc perform a deletion of a resource.
+%% this is revoking a credential
+-spec delete_resource(cowboy_req:req(), state())
+                       -> { boolean(), cowboy_req:req(), state() }.
 delete_resource(Req, #state{type=credential,
                             id=CredentialId, session_pid=Session}=State) ->
     {Result, Req2}  =
@@ -281,20 +315,40 @@ delete_resource(Req, #state{type=credential,
     {ok, Req3} = update_cookie_or_end_session(Req2, State),
     {Result, Req3, State#state{session_pid=undefined}}.
 
-
+%% @doc handle the get requests
+-spec get_json(cowboy_req:req(), state())
+              -> {binary(), cowboy_req:req(), state()}.
 get_json(Req, #state{version=Version, type=Type, id=Id, method=get,
                      session_pid=Session} = State) ->
-    Result = perform_get(Type, Id, Session, Version),
+    Content = perform_get(Type, Id, Session, Version),
     {ok, Req2} = update_cookie_or_end_session(Req, State),
-    {Result, Req2, State#state{session_pid=undefined}}.
+    {Content, Req2, State#state{session_pid=undefined}}.
 
-
+%% @doc handle the post requests
+-spec post_json(cowboy_req:req(), state())
+              -> {{true, binary()} | false, cowboy_req:req(), state()}.
 post_json(Req, #state{version=Version, type=Type, id=Id, method=post,
                       session_pid=Session, json=Json} = State) ->
     {Req1, Result} = perform_post(Req, Type, Id, Json, Session, Version),
     {ok, Req2} = update_cookie_or_end_session(Req1, State),
     {Result, Req2, State#state{session_pid=undefined}}.
 
+%% @doc handle the get requests.
+%% This includes:
+%% <ul>
+%% <li> the list of services </li>
+%% <li> the list of OpenID Connect provider </li>
+%% <li> the info endpoint </li>
+%% <li> the access token, issuer, its id, and subject  </li>
+%% <li> the credential list  </li>
+%% <li> the temporarly stored credential  </li>
+%% </ul>
+-spec perform_get(RequestType, Id, Session, Version) -> binary()
+   when
+      RequestType :: request_type(),
+      Id :: undefined | binary(),
+      Session :: undefined | pid(),
+      Version :: integer().
 perform_get(service, undefined, Session, Version) ->
     {ok, ServiceList} = watts:get_service_list_for(Session),
     Keys = case Version of
@@ -311,6 +365,51 @@ perform_get(oidcp, _, _, _) ->
     {ok, OIDCList} = watts:get_openid_provider_list(),
     jsone:encode(#{openid_provider_list => OIDCList});
 perform_get(info, undefined, Session, _) ->
+    return_json_info(Session);
+perform_get(logout, undefined, _, _) ->
+    jsone:encode(#{result => ok});
+perform_get(access_token, undefined, Session, _) ->
+    {ok, AccessToken} = watts:get_access_token_for(Session),
+    {ok, Iss, Id, Sub} = watts:get_iss_id_sub_for(Session),
+    jsone:encode(#{access_token => AccessToken,
+                   issuer => Iss,
+                   subject => Sub,
+                   issuer_id => Id
+                  });
+perform_get(credential, undefined, Session, Version) ->
+    {ok, CredList} = watts:get_credential_list_for(Session),
+    return_json_credential_list(CredList, Version);
+perform_get(cred_data, Id, Session, Version) ->
+    case watts:get_temp_cred(Id, Session) of
+        {ok, Cred} ->
+            return_json_credential(Cred, Version);
+        _ ->
+            Msg = <<"Sorry, the requested data was not found">>,
+            jsone:encode(#{result => error, user_msg => Msg})
+    end.
+
+%% @doc perform a post, meaning a translation
+-spec perform_post(cowboy_req:req(), credential, undefined,
+                   watts_service:info(), pid(), integer())
+                  -> {cowboy_req:req(), {true, binary()} | false}.
+perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
+             Session, Ver) ->
+    Params = maps:get(params, Data, #{}),
+    case  watts:request_credential_for(ServiceId, Session, Params) of
+        {ok, CredData} ->
+            {ok, Id} = watts:store_temp_cred(CredData, Session),
+            {ok, _Iss, IssuerId, _Sub} = watts:get_iss_id_sub_for(Session),
+            Url = temp_cred_id_to_url(Id, IssuerId, Ver),
+            {Req, {true, Url}};
+        {error, ErrorInfo} ->
+            Body = jsone:encode(ErrorInfo),
+            Req1 = cowboy_req:set_resp_body(Body, Req),
+            {Req1, false}
+    end.
+
+%% @doc create and return the info data
+-spec return_json_info(pid()) -> binary().
+return_json_info(Session) ->
     {LoggedIn, DName, IssId, Error, AutoService, SuccessRedir, ErrorRedir}  =
         case is_pid(Session) of
             false ->
@@ -358,49 +457,11 @@ perform_get(info, undefined, Session, _) ->
                                rsp_error => ErrRedir},
                    maps:merge(Info1, Update)
            end,
-    jsone:encode(Info2);
-perform_get(logout, undefined, _, _) ->
-    jsone:encode(#{result => ok});
-perform_get(access_token, undefined, Session, _) ->
-    {ok, AccessToken} = watts:get_access_token_for(Session),
-    {ok, Iss, Id, Sub} = watts:get_iss_id_sub_for(Session),
-    jsone:encode(#{access_token => AccessToken,
-                   issuer => Iss,
-                   subject => Sub,
-                   issuer_id => Id
-                  });
-perform_get(credential, undefined, Session, Version) ->
-    {ok, CredList} = watts:get_credential_list_for(Session),
-    return_json_credential_list(CredList, Version);
-perform_get(cred_data, Id, Session, Version) ->
-    case watts:get_temp_cred(Id, Session) of
-        {ok, Cred} ->
-            return_json_credential(Cred, Version);
-        _ ->
-            Msg = <<"Sorry, the requested data was not found">>,
-            jsone:encode(#{result => error, user_msg => Msg})
-    end.
+    jsone:encode(Info2).
 
-perform_post(Req, credential, undefined, #{service_id:=ServiceId} = Data,
-             Session, Ver) ->
-    Params = maps:get(params, Data, #{}),
-    case  watts:request_credential_for(ServiceId, Session, Params) of
-        {ok, CredData} ->
-            {ok, Id} = watts:store_temp_cred(CredData, Session),
-            {ok, _Iss, IssuerId, _Sub} = watts:get_iss_id_sub_for(Session),
-            Url = id_to_url(Id, IssuerId, Ver),
-            {Req, {true, Url}};
-        {error, ErrorInfo} ->
-            Body = jsone:encode(ErrorInfo),
-            Req1 = cowboy_req:set_resp_body(Body, Req),
-            {Req1, false};
-        _Other ->
-            UserMsg = "An internal error occured, please contact the admin.",
-            Body = jsone:encode(#{result => error, user_msg => UserMsg}),
-            Req1 = cowboy_req:set_resp_body(Body, Req),
-            {Req1, false}
-    end.
 
+%% @doc return the list of the services limited to the given keys
+-spec return_json_service_list([map()], [atom()]) -> binary().
 return_json_service_list(Services, Keys) ->
     Extract = fun(Map0, List) ->
                       CredLimit = case maps:get(cred_limit, Map0) of
@@ -418,6 +479,8 @@ return_json_service_list(Services, Keys) ->
     List = lists:reverse(lists:foldl(Extract, [], Services)),
     jsone:encode(#{service_list => List}).
 
+%% @doc return the list of supported OpenID Connect provider
+-spec return_json_oidc_list([map()]) -> binary().
 return_json_oidc_list(Oidc) ->
     Id = fun(OidcInfo, List) ->
                  case OidcInfo of
@@ -429,11 +492,13 @@ return_json_oidc_list(Oidc) ->
     List = lists:reverse(lists:foldl(Id, [], Oidc)),
     jsone:encode(#{openid_provider_list => List}).
 
-return_json_credential(Cred, 1) ->
-    #{credential :=
-          #{id := Id,
-            entries := Entries
-           }
+%% @doc return a single temp_credential (includes oidc_login) as json
+%% @todo check spec
+-spec return_json_credential(watts:temp_cred(), integer()) -> binary().
+-dialyzer({nowarn_function, return_json_credential/2}).
+return_json_credential(#{result := ok, credential := Cred } , 1) ->
+    #{id := Id,
+      entries := Entries
      } = Cred,
     IdEntry = #{name => id, type => text, value => Id},
     jsone:encode([ IdEntry | Entries ]);
@@ -441,8 +506,8 @@ return_json_credential(Cred, _) ->
     jsone:encode(Cred).
 
 
-
-
+%% @doc return the credential list in json format
+-spec return_json_credential_list([map()], integer()) -> binary().
 return_json_credential_list(Credentials, Version)->
     Keys = [cred_id, ctime, interface, service_id],
     Adjust =
@@ -458,6 +523,8 @@ return_json_credential_list(Credentials, Version)->
     List = lists:reverse(lists:foldl(Adjust, [], Credentials)),
     jsone:encode(#{credential_list => List}).
 
+%% @doc check if the state is a malformed request
+-spec is_malformed(state()) -> {boolean(), state()}.
 is_malformed(#state{in = #{
                       version := Version,
                       type := Type,
@@ -481,21 +548,25 @@ is_malformed(#state{in = #{
                                      }}
     end.
 
-verify_version(<<"latest">>) ->
-    ?LATEST_VERSION;
+%% @doc verify the passed version
+-spec verify_version(binary() | undefined) -> integer().
 verify_version(<< V:1/binary, Version/binary >>) when V==<<"v">>; V==<<"V">> ->
      safe_binary_to_integer(Version);
 verify_version(_) ->
     0.
 
+%% @doc verify the token passed
+-spec verify_token(binary() | undefined) -> binary() | undefined | bad_token.
 verify_token(<< Prefix:7/binary, Token/binary >>) when
       Prefix == <<"Bearer ">> ->
     Token;
 verify_token(Token) when is_binary(Token) ->
     bad_token;
-verify_token(Token) when is_atom(Token) ->
-    Token.
+verify_token(undefined) ->
+    undefined.
 
+%% @doc verify the content is json or undefined
+-spec verify_content_type(tuple()) -> json | undefined | unsupported.
 verify_content_type({ok, {<<"application">>, <<"json">>, _}}) ->
     json;
 verify_content_type({ok, undefined}) ->
@@ -505,7 +576,10 @@ verify_content_type({undefined, _}) ->
 verify_content_type(_) ->
     unsupported.
 
-
+%% @doc verify the issuer
+-spec verify_issuer(binary() | undefined)
+                   -> binary() | undefined | rsps_disabled | unkonwn_rsp
+                          | bad_issuer .
 verify_issuer(undefined) ->
     undefined;
 verify_issuer(<< Prefix:4/binary, RspId/binary>> = Rsp)
@@ -523,10 +597,11 @@ verify_issuer(Issuer) when is_binary(Issuer) ->
                 true -> Issuer;
                 false -> bad_issuer
             end
-    end;
-verify_issuer(_Issuer)  ->
-    bad_issuer.
+    end.
 
+%% @doc return the given rsp, if it is enabled
+-spec return_rsp_if_enabled(binary(), boolean(), boolean())
+                           -> binary() | unknown_rsp | rsps_disabled.
 return_rsp_if_enabled(Rsp, true, true) ->
     Rsp;
 return_rsp_if_enabled(_, false, true) ->
@@ -535,13 +610,15 @@ return_rsp_if_enabled(_, _, false) ->
     rsps_disabled.
 
 
-
+%% @doc verify the session, just check if it is a pid
+-spec verify_session({ok, pid()} | any()) -> pid() | undefined.
 verify_session({ok, Pid}) when is_pid(Pid) ->
     Pid;
 verify_session(_) ->
     undefined.
 
-
+%% @doc verify the method
+-spec verify_method(binary()) -> get | post | delete.
 verify_method(<<"GET">>) ->
     get;
 verify_method(<<"POST">>) ->
@@ -549,8 +626,8 @@ verify_method(<<"POST">>) ->
 verify_method(<<"DELETE">>) ->
     delete.
 
-verify_body([]) ->
-    undefined;
+%% @doc verify the passed body, try to parse the json
+-spec verify_body(binary()) -> undefined | map().
 verify_body(Data) ->
     case jsone:try_decode(Data, [{object_format, map}, {keys, attempt_atom}]) of
         {ok, Json, _} ->
@@ -559,7 +636,8 @@ verify_body(Data) ->
             undefined
     end.
 
-
+%% @doc safe conversion of binary to integer
+-spec safe_binary_to_integer(binary()) -> integer().
 safe_binary_to_integer(Version) ->
     try binary_to_integer(Version) of
         Number -> Number
@@ -568,6 +646,27 @@ safe_binary_to_integer(Version) ->
             0
     end.
 
+%% @doc convert a temp cred Id to its url
+-spec temp_cred_id_to_url(binary(), binary(), pos_integer()) -> binary().
+temp_cred_id_to_url(Id, IssuerId, Version) ->
+    ApiBase = watts_http_util:whole_url("/api"),
+    temp_cred_id_to_url(ApiBase, Id, IssuerId, Version).
+
+%% @doc create the url depending on the version of the api used
+-spec temp_cred_id_to_url(binary(), binary(), binary(), pos_integer())
+                         -> binary().
+temp_cred_id_to_url(ApiBase, Id, _IssuerId, 1) ->
+    Path = << <<"/v1/credential_data/">>/binary, Id/binary >>,
+    << ApiBase/binary, Path/binary>>;
+temp_cred_id_to_url(ApiBase, Id, IssuerId, ApiVersion) ->
+    Version = list_to_binary(io_lib:format("v~p", [ApiVersion])),
+    PathElements =[Version, IssuerId, <<"credential_data">>, Id],
+    Concat = fun(Element, Path) ->
+                     Sep = <<"/">>,
+                     << Path/binary, Sep/binary, Element/binary >>
+             end,
+    Path = lists:foldl(Concat, <<>>, PathElements),
+    << ApiBase/binary, Path/binary>>.
 
 
 -define(TYPE_MAPPING, [
@@ -579,33 +678,29 @@ safe_binary_to_integer(Version) ->
                        {<<"access_token">>, access_token},
                        {<<"credential_data">>, cred_data }
                       ]).
-id_to_url(Id, IssuerId, Version) ->
-    ApiBase = watts_http_util:whole_url("/api"),
-    id_to_url(ApiBase, Id, IssuerId, Version).
 
-id_to_url(ApiBase, Id, _IssuerId, 1) ->
-    Path = << <<"/v1/credential_data/">>/binary, Id/binary >>,
-    << ApiBase/binary, Path/binary>>;
-id_to_url(ApiBase, Id, IssuerId, ApiVersion) ->
-    Version = list_to_binary(io_lib:format("v~p", [ApiVersion])),
-    PathElements =[Version, IssuerId, <<"credential_data">>, Id],
-    Concat = fun(Element, Path) ->
-                     Sep = <<"/">>,
-                     << Path/binary, Sep/binary, Element/binary >>
-             end,
-    Path = lists:foldl(Concat, <<>>, PathElements),
-    << ApiBase/binary, Path/binary>>.
-
-
+%% @doc verify the request type
+-spec verify_type(binary() | undefined) -> request_type().
 verify_type(Type) ->
     case lists:keyfind(Type, 1, ?TYPE_MAPPING) of
         false -> undefined;
         {Type, AtomType} -> AtomType
     end.
 
+%% @doc verify the id
+-spec verify_id(binary() | undefined) -> binary() | undefined.
 verify_id(Id) ->
     Id.
 
+%% @doc check if the request is malformed
+-spec is_malformed(Method, ContentType, Type, Id, Issuer, Body) -> boolean()
+    when
+      Method :: get | post | delete,
+      ContentType :: json | undefined,
+      Type :: request_type(),
+      Id :: binary() | undefined,
+      Issuer :: binary() | undefined,
+      Body :: binary() | undefined.
 is_malformed(get, _, oidcp, undefined, _, undefined) ->
     false;
 is_malformed(get, _, info, undefined, _, undefined) ->
@@ -632,6 +727,8 @@ is_malformed(delete, _, credential, Id, Iss, undefined)
 is_malformed(_, _, _, _, _, _) ->
     true.
 
+%% @doc return if the given version is bad
+-spec is_bad_version(integer() | any(), HeaderUsed ::boolean()) -> boolean().
 is_bad_version(1, true) ->
     false;
 is_bad_version(_, true) ->
@@ -641,12 +738,17 @@ is_bad_version(Version, false) when is_integer(Version) ->
 is_bad_version(_, _) ->
     true.
 
+%% @doc decide to update the cookie for the session or logout
+-spec update_cookie_or_end_session(cowboy_req:req(), state())
+                    -> {ok, cowboy_req:req()}.
 update_cookie_or_end_session(Req, #state{session_pid = Session,
                                           type=RequestType}) ->
     {ok, SessionType} =  watts_session:get_type(Session),
     KeepAlive = keep_session_alive(SessionType, RequestType),
     update_cookie_or_end_session(KeepAlive, Session, SessionType, Req).
 
+%% @doc decide if the session should be closed or not
+-spec keep_session_alive(watts_session:type(), atom()) -> boolean().
 keep_session_alive(_, logout) ->
     false;
 keep_session_alive(oidc, _) ->
@@ -658,6 +760,10 @@ keep_session_alive({rsp, _, _}, _) ->
 keep_session_alive(_, _) ->
     false.
 
+%% @doc either update the cookie for the session or logout
+-spec update_cookie_or_end_session(boolean(), pid(), watts_session:type(),
+                                   cowboy_req:req())
+                    -> {ok, cowboy_req:req()}.
 update_cookie_or_end_session(true, Session, SessType, Req) ->
     case watts_session:is_logged_in(Session) of
         true ->
@@ -667,10 +773,11 @@ update_cookie_or_end_session(true, Session, SessType, Req) ->
             perform_logout(Session, SessType, Req)
     end;
 update_cookie_or_end_session(false, Session, SessType, Req) ->
-    perform_logout(Session, SessType, Req);
-update_cookie_or_end_session(_, _, _, Req) ->
-    {ok, Req}.
+    perform_logout(Session, SessType, Req).
 
+%% @doc perform a logout, either by cookie or by just closing the session
+-spec perform_logout(pid(), watts_session:type(), cowboy_req:req())
+                    -> {ok, cowboy_req:req()}.
 perform_logout(Session, oidc, Req) ->
     perform_cookie_logout(Session, Req);
 perform_logout(Session, {rsp, _, _}, Req) ->
@@ -679,13 +786,16 @@ perform_logout(Session, _, Req) ->
     watts:logout(Session),
     {ok, Req}.
 
+%% @doc logout by deleteing the cookie
+-spec perform_cookie_logout(pid(), cowboy_req:req()) -> {ok, cowboy_req:req()}.
 perform_cookie_logout(Session, Req) ->
     Result = watts_http_util:perform_cookie_action(clear, 0, deleted, Req),
     watts:logout(Session),
     Result.
 
-
-
+%% @doc get the return urls of an rsp, if valid
+-spec get_return_urls(undefined | binary()) -> {undefined, undefined} |
+                                               {binary(), binary()}.
 get_return_urls(undefined) ->
     {undefined, undefined};
 get_return_urls(Rsp) ->

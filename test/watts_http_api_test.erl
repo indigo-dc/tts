@@ -31,7 +31,7 @@ rest_init_test() ->
         Req = #{path_info => [<<"v2">>,<<"info">>],
                         header => [],
                         method => <<"GET">>,
-                        body => []},
+                        body => <<>>},
         {ok, Req, State} = watts_http_api:rest_init(Req, doesnt_matter),
         #{version := _Version,
           type := _Type,
@@ -82,47 +82,47 @@ malformed_request_test() ->
                     {#{ path_info => [<<"v1">>,<<"oidcp">>],
                         header => [],
                         method => <<"GET">>,
-                        body => []
+                        body => <<>>
                       }, false },
 
                     { #{ path_info => [<<"V1">>, <<"ID1">>, <<"service">>],
                          header => [],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, false},
 
-                    { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>],
+                    { #{ path_info => [<<"v2">>, <<"ID1">>, <<"credential">>],
                          header => [],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, false},
 
-                    { #{ path_info => [<<"latest">>, <<"ID1">>,
+                    { #{ path_info => [<<"v2">>, <<"ID1">>,
                                        <<"credential_data">>, <<"234">>],
                          header => [],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, false },
 
-                    { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>],
+                    { #{ path_info => [<<"v2">>, <<"ID1">>, <<"credential">>],
                          header => [{<<"content-type">>,{ok, {<<"application">>,
                                                               <<"json">>,[]}}}],
                          method => <<"POST">>,
                          body => <<"{\"service_id\":\"234\"}">>
                        }, false },
-                    { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>, <<"234">>],
+                    { #{ path_info => [<<"v2">>, <<"ID1">>, <<"credential">>, <<"234">>],
                          header => [
                                     {<<"authorization">>,<<"Bearer SomeToken">>}
                                    ],
                          method => <<"DELETE">>,
-                         body => []
+                         body => <<>>
                        }, false },
-                    { #{ path_info => [<<"latest">>, <<"ID1">>, <<"credential">>, <<"234">>],
+                    { #{ path_info => [<<"v2">>, <<"ID1">>, <<"credential">>, <<"234">>],
                          header => [
                                     {<<"authorization">>,<<"Bearer SomeToken">>}
                                    ],
                          method => <<"DELETE">>,
-                         body => []
+                         body => <<>>
                        }, false },
 
                     % BAD requests
@@ -140,13 +140,13 @@ malformed_request_test() ->
                     { #{ path_info => [<<"latest">>, <<"ID1">>, <<"unknown_type">>],
                          header => [],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, true },
 
                     { #{ path_info => [<<"v0">>, <<"ID1">>, <<"oidcp">>],
                          header => [{<<"authorization">>, <<"missingBearer">>}],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, true },
 
                     { #{ path_info => [<<"v0">>, <<"ID2">>, <<"credentials">>],
@@ -154,19 +154,19 @@ malformed_request_test() ->
                                     {<<"authorization">>,<<"Bearer SomeToken">>}
                                    ],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, true },
 
                     { #{ path_info => [<<"vn">>, <<"oidcp">>],
                          header => [],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, true },
 
                     { #{ path_info => [<<"234">>, <<"oidcp">>],
                          header => [],
                          method => <<"GET">>,
-                         body => []
+                         body => <<>>
                        }, true }
                    ],
 

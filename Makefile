@@ -42,7 +42,7 @@ dialyzer:
 tests: elvis
 	$(REBAR) do cover -r, eunit -v
 	./utils/setup_ct.sh
-	$(REBAR) do ct -v, cover -v
+	$(REBAR) do ct -v, cover -v, dialyzer
 
 elvis: check
 	$(REBAR) lint

@@ -1,9 +1,10 @@
 
-%% @doc this is the management module for the temporary credential data storage.
-%% The credentials are only stored in RAM and each in a separate process.
+%% @doc this is the management module for the temporary plugin result data storage.
+%% The results (credentials or oidc_login request) are only stored in RAM and
+%% each in a separate process.
 %%
 %% This module is running as a registered process so it can be reached without
-%% knowing its process id. It sets up the API to store and retrieve credentials.
+%% knowing its process id. It sets up the API to store and retrieve results.
 %%
 %% @see watts_temp_cred_data
 -module(watts_temp_cred).
@@ -61,14 +62,14 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, noparams, []).
 
 %% @doc add a credential, this creates a new temp_cred_data process.
--spec add_cred(Credential :: watts:credential(), UserId::binary())
+-spec add_cred(Credential :: watts:temp_cred(), UserId::binary())
               -> {ok, Id::binary()}.
 add_cred(Credential, UserId) ->
     gen_server:call(?MODULE, {add, Credential, UserId}).
 
 %% @doc retrieve the data if the userid is the same
 -spec get_cred(CredId :: binary(), UserId :: binary()) ->
-                      {ok, Credential :: watts:credential()} |
+                      {ok, Credential :: watts:temp_cred()} |
                       {error, Reason :: atom()}.
 get_cred(Id, UserId) ->
     gen_server:call(?MODULE, {get, Id, UserId}).
@@ -113,7 +114,7 @@ handle_call(_Request, _From, State) ->
 
 
 %% @doc store a new credential, ensure to have a unique id.
--spec add_credential(Credential :: watts:credential(),
+-spec add_credential(Credential :: watts:temp_cred(),
                      UserId :: binary(),
                      State :: state())
                     -> {ok, CredentialId :: binary(), NewState :: state()}.
@@ -150,7 +151,7 @@ credential_exists(Id, UserId, State) ->
 -spec get_credential(CredentiaId :: binary(),
                      UserId :: binary(),
                      State :: state())
-                    -> {ok, Credential :: watts:credential()} |
+                    -> {ok, Credential :: watts:temp_cred()} |
                        {error, not_found}.
 get_credential(Id, UserId, State) ->
     case get_cred_pid(Id, UserId, State) of
