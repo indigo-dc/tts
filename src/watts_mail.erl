@@ -62,6 +62,9 @@ compose_mail(Subject, Body, Receipients, Sender) ->
 handle_mail_result(Result) when is_binary(Result) ->
     lager:debug("Mail: sent with ~p", [Result]),
     ok;
+handle_mail_result({error, Reason}) ->
+    lager:error("MAIL: sending failed with error ~p", [Reason]),
+    error;
 handle_mail_result({error, Type, Message}) ->
     lager:error("MAIL: sending failed with ~p : ~p", [Type, Message]),
     error.
