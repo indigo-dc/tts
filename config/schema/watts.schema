@@ -463,12 +463,12 @@
           ]}.
 
 %% @doc enable sending of emails by WaTTS
-{mapping, "email.enable", "watts.mail_enabled", [
+{mapping, "email.enable", "watts.email_enabled", [
           {datatype ,  [{atom, true}, {atom, false}]}
           ]}.
 
 %% @doc enable sending of mails when plugins have issues
-{mapping, "email.on_plugin_error", "watts.mail_on_plugin_error", [
+{mapping, "email.on_plugin_error", "watts.email_on_plugin_error", [
           {datatype ,  [{atom, true}, {atom, false}]},
           {default, true}
           ]}.

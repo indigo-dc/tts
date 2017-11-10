@@ -35,7 +35,7 @@
 maybe_send_mail_return_error(Result, Map, Output, Info) ->
     ErrorType = to_error_type(Result, Info),
     LogMsg = log_message(ErrorType, Map, Output),
-    SendMailOnError = ?CONFIG(mail_on_plugin_error, false),
+    SendMailOnError = ?CONFIG(email_on_plugin_error, false),
     Mail = create_mail(ErrorType, Map, Output, Info),
     DoSend = SendMailOnError and (maps:size(Mail) == 2),
     MailSent = case maybe_send_mail(DoSend, Mail, Info) of
