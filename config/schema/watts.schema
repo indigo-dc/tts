@@ -121,6 +121,10 @@
           {datatype,  [{duration, ms}]}
           ]}.
 
+%% @doc the background image to use
+{mapping, "web_background_image", "watts.web_background_image", [
+          {datatype,  string}
+          ]}.
 
 %% @doc the rate in connections per second allowed for RSPs to connect to WaTTS
 {mapping, "rsp_connection_rate", "watts.rsp_connection_rate", [

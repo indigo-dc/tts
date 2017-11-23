@@ -28,6 +28,7 @@ And for production use:
 | listen_port | Port at which WaTTS actually listens, used to support listening at non-privileged ports; the traffic must then be redirected from the privileged ports to the listen_port usually by the firewall. The value 'port' means using the same value as `port`| port or 'port' | 'port' |
 | web_acceptors | The number of parallel waiting processes for incomming connection | integer | 5 |
 | web_parallel_conns | The number of maximal parallel connections at the rest interface | integer | 50 |
+| web_background_image | The path to a png image to use as background | file | default |
 | ssl | Whether SSL should be used | boolean | true |
 | cachain_file | Location of the ca chain for the server  | file | none |
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
