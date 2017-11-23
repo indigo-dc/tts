@@ -152,9 +152,9 @@ perform_operation(regexp, UserValue, ConfigValue) ->
 -spec validate_config(ServiceId :: binary(), Config::config())
                      -> {ok, ValidatedConfig :: config()}.
 validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0} = Authz0) ->
-    lager:info("Service ~p: validating authz: allow", [ServiceId]),
+    watts_init:info("Service ~p: validating authz: allow", [ServiceId]),
     {AllowOk, Allow} = validate(Allow0),
-    lager:info("Service ~p: validating authz: forbid", [ServiceId]),
+    watts_init:info("Service ~p: validating authz: forbid", [ServiceId]),
     {ForbidOk, Forbid} = validate(Forbid0),
     ValidatedAuthz =
         case AllowOk and ForbidOk of

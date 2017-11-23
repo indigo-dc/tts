@@ -318,7 +318,7 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
                                                request_params := RequestParams,
                                                version := Version} = PluginConf
                                         }) ->
-    lager:info("service ~p: plugin version ~p", [Id, Version]),
+    watts_init:info("service ~p: plugin version ~p", [Id, Version]),
     Ensure = #{plugin_conf => #{},
                params => [],
                plugin_version => Version
@@ -552,7 +552,7 @@ start_runner_queue_if_needed(#{enabled := true,
     QueueId = gen_queue_name(Id),
     ok = add_queue(QueueId, NumRunner),
     Msg = "service ~p: queue ~p started with max ~p parallel runners",
-    lager:info(Msg, [Id, QueueId, NumRunner]),
+    watts_init:info(Msg, [Id, QueueId, NumRunner]),
     {ok, QueueId} ;
 start_runner_queue_if_needed(_) ->
     {ok, undefined}.

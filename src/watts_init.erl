@@ -47,11 +47,13 @@
 -export([start_link/0]).
 -export([stop/1]).
 
-%% for mails
--export([error/1]).
--export([error/2]).
+%% for mails/logs
+-export([info/1]).
+-export([info/2]).
 -export([warning/1]).
 -export([warning/2]).
+-export([error/1]).
+-export([error/2]).
 
 
 %% gen_server.
@@ -79,18 +81,27 @@ start_link() ->
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
+info(Message) ->
+    gen_server:cast(?MODULE, {log_info, Message}).
 
-error(Message) ->
-    gen_server:cast(?MODULE, {log_error, Message}).
-
-error(Message, Params) ->
-    gen_server:cast(?MODULE, {log_error, Message, Params}).
+info(Msg, Params) ->
+    Message = io_lib:format(Msg, Params),
+    gen_server:cast(?MODULE, {log_info, Message}).
 
 warning(Message) ->
     gen_server:cast(?MODULE, {log_warning, Message}).
 
-warning(Message, Params) ->
-    gen_server:cast(?MODULE, {log_warning, Message, Params}).
+warning(Msg, Params) ->
+    Message = io_lib:format(Msg, Params),
+    gen_server:cast(?MODULE, {log_warning, Message}).
+
+error(Message) ->
+    gen_server:cast(?MODULE, {log_error, Message}).
+
+error(Msg, Params) ->
+    Message = io_lib:format(Msg, Params),
+    gen_server:cast(?MODULE, {log_error, Message}).
+
 
 %% gen_server.
 %% @doc staring the initializing process.
@@ -164,17 +175,14 @@ handle_cast(start_http, State) ->
     {noreply, NewState};
 handle_cast(stop, #state{} = State) ->
     {stop, normal, State};
-handle_cast({log_error, Message}, State) ->
-    NewState = log_error(Message, State),
-    {noreply, NewState};
-handle_cast({log_error, Message, Params}, State) ->
-    NewState = log_error(Message, Params, State),
-    {noreply, NewState};
+handle_cast({log_info, Message}, State) ->
+    lager:info("Init: " ++ Message),
+    {noreply, State};
 handle_cast({log_warning, Message}, State) ->
     NewState = log_warning(Message, State),
     {noreply, NewState};
-handle_cast({log_warning, Message, Params}, State) ->
-    NewState = log_warning(Message, Params, State),
+handle_cast({log_error, Message}, State) ->
+    NewState = log_error(Message, State),
     {noreply, NewState};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -890,11 +898,21 @@ system_uptime() ->
 issues_to_body(#state{issues = []}) ->
     "No issues of level 'warning' or higher, feels very good!";
 issues_to_body(#state{issues = I}) ->
-    Issues = lists:reverse(I),
+    EscapeTilde = fun($~, Acc) ->
+                          [$~, $~ | Acc];
+                     (H, Acc) ->
+                          [ H | Acc]
+                  end,
+    ReverseEscape = fun(H, IssueList) ->
+                            Escaped = lists:foldr(EscapeTilde, [], H),
+                            [Escaped | IssueList]
+                    end,
+    Issues = lists:foldl(ReverseEscape, [], I),
     Text = io_lib:format(lists:flatten(watts_utils:lists_join("~n", Issues)),
                          []),
     io_lib:format("I found the following issues of level "
                   "'warning' or higher: ~n~s", [Text]).
+
 
 %% @doc calculate the startup duration
 -spec startup_duration() -> integer().
