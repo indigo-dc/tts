@@ -898,21 +898,11 @@ system_uptime() ->
 issues_to_body(#state{issues = []}) ->
     "No issues of level 'warning' or higher, feels very good!";
 issues_to_body(#state{issues = I}) ->
-    EscapeTilde = fun($~, Acc) ->
-                          [$~, $~ | Acc];
-                     (H, Acc) ->
-                          [ H | Acc]
-                  end,
-    ReverseEscape = fun(H, IssueList) ->
-                            Escaped = lists:foldr(EscapeTilde, [], H),
-                            [Escaped | IssueList]
-                    end,
-    Issues = lists:foldl(ReverseEscape, [], I),
+    Issues = lists:reverse(I),
     Text = io_lib:format(lists:flatten(watts_utils:lists_join("~n", Issues)),
                          []),
     io_lib:format("I found the following issues of level "
                   "'warning' or higher: ~n~s", [Text]).
-
 
 %% @doc calculate the startup duration
 -spec startup_duration() -> integer().
@@ -945,8 +935,14 @@ log_error(Message, State) ->
     message_to_state(Message, State).
 
 %% @doc insert the message into the  issues list of the state
--spec message_to_state(string(), state()) -> state().
-message_to_state(Message, #state{issues = Issues} = State) ->
+-spec message_to_state(list(), state()) -> state().
+message_to_state(Msg, #state{issues = Issues} = State) ->
+    EscapeTilde = fun($~, M) ->
+                          [ $~, $~ | M ];
+                     (C, M) ->
+                          [ C | M ]
+                     end,
+    Message = lists:foldr(EscapeTilde, [], Msg),
     State#state{issues = [Message | Issues]}.
 
 %% @doc get the name of the system, like debian
