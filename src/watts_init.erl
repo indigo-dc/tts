@@ -47,6 +47,13 @@
 -export([start_link/0]).
 -export([stop/1]).
 
+%% for mails
+-export([error/1]).
+-export([error/2]).
+-export([warning/1]).
+-export([warning/2]).
+
+
 %% gen_server.
 -export([init/1]).
 -export([handle_call/3]).
@@ -65,13 +72,25 @@
 -spec start_link() -> {ok, pid()}.
 %% @doc starting the gen_server process.
 start_link() ->
-    gen_server:start_link(?MODULE, no_parameter, []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, no_parameter, []).
 
 -spec stop(pid()) -> ok.
 %% @doc function to stop the process.
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
+
+error(Message) ->
+    gen_server:cast(?MODULE, {log_error, Message}).
+
+error(Message, Params) ->
+    gen_server:cast(?MODULE, {log_error, Message, Params}).
+
+warning(Message) ->
+    gen_server:cast(?MODULE, {log_warning, Message}).
+
+warning(Message, Params) ->
+    gen_server:cast(?MODULE, {log_warning, Message, Params}).
 
 %% gen_server.
 %% @doc staring the initializing process.
@@ -145,6 +164,18 @@ handle_cast(start_http, State) ->
     {noreply, NewState};
 handle_cast(stop, #state{} = State) ->
     {stop, normal, State};
+handle_cast({log_error, Message}, State) ->
+    NewState = log_error(Message, State),
+    {noreply, NewState};
+handle_cast({log_error, Message, Params}, State) ->
+    NewState = log_error(Message, Params, State),
+    {noreply, NewState};
+handle_cast({log_warning, Message}, State) ->
+    NewState = log_warning(Message, State),
+    {noreply, NewState};
+handle_cast({log_warning, Message, Params}, State) ->
+    NewState = log_warning(Message, Params, State),
+    {noreply, NewState};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
