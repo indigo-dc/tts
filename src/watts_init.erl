@@ -65,7 +65,8 @@
 -export([code_change/3]).
 
 -record(state, {
-          issues = [] :: [string()] | []
+          issues = [] :: [string()] | [],
+          services = [] :: [map()] | []
          }).
 -type state() :: #state{}.
 
@@ -81,23 +82,35 @@ start_link() ->
 stop(Pid) ->
     gen_server:cast(Pid, stop).
 
+%% @doc support logging of level info for other modules
+-spec info(list()) -> ok.
 info(Message) ->
     gen_server:cast(?MODULE, {log_info, Message}).
 
+%% @doc support logging of level info for other modules
+-spec info(list(), list()) -> ok.
 info(Msg, Params) ->
     Message = io_lib:format(Msg, Params),
     gen_server:cast(?MODULE, {log_info, Message}).
 
+%% @doc support logging of level warning for other modules
+-spec warning(list()) -> ok.
 warning(Message) ->
     gen_server:cast(?MODULE, {log_warning, Message}).
 
+%% @doc support logging of level warning for other modules
+-spec warning(list(), list()) -> ok.
 warning(Msg, Params) ->
     Message = io_lib:format(Msg, Params),
     gen_server:cast(?MODULE, {log_warning, Message}).
 
+%% @doc support logging of level error for other modules
+-spec error(list()) -> ok.
 error(Message) ->
     gen_server:cast(?MODULE, {log_error, Message}).
 
+%% @doc support logging of level error for other modules
+-spec error(list(), list()) -> ok.
 error(Msg, Params) ->
     Message = io_lib:format(Msg, Params),
     gen_server:cast(?MODULE, {log_error, Message}).
@@ -163,7 +176,9 @@ handle_cast(add_rsps, State) ->
     {noreply, NewState};
 handle_cast(add_services, State) ->
     NewState = add_services(State),
-    gen_server:cast(self(), update_jwt_keys),
+    {noreply, NewState};
+handle_cast(add_service, State) ->
+    NewState = add_service(State),
     {noreply, NewState};
 handle_cast(update_jwt_keys, State) ->
     NewState = update_jwt_keys(State),
@@ -447,23 +462,31 @@ add_rsps(State) ->
 %% @see watts_service:update_params/1
 -spec add_services(state()) -> state().
 add_services(State) ->
-    AddService =
-        fun(#{id := Id} = ConfigMap, S) ->
-                lager:debug("Init: adding service ~p", [Id]),
-                try
-                    {ok, Id} = watts_service:add(ConfigMap),
-                    ok = watts_service:update_params(Id),
-                    S
-                catch Error:Reason ->
-                     Msg = "error occured during adding service ~p: '~p' ~p",
-                     log_error(Msg, [Id, Error, Reason], S)
-                end
-        end,
-
     lager:info("Init: adding services"),
     ServiceList = ?CONFIG(service_list, []),
-    NewState = lists:foldl(AddService, State, ServiceList),
-    NewState.
+    gen_server:cast(self(), add_service),
+    State#state{services=ServiceList}.
+
+
+%% @doc add a single service and if no services are left trigger jwt key updates
+-spec add_service(state()) -> state().
+add_service(#state{services = []} = State) ->
+    gen_server:cast(self(), update_jwt_keys),
+    State;
+add_service(#state{ services = [ #{id := Id} = ConfigMap | T ] } = S) ->
+    gen_server:cast(self(), add_service),
+    lager:debug("Init: adding service ~p", [Id]),
+    State = S#state{services = T},
+    try
+        {ok, Id} = watts_service:add(ConfigMap),
+        ok = watts_service:update_params(Id),
+        State
+    catch Error:Reason ->
+            Msg = "error occured during adding service ~p: '~p' ~p",
+            log_error(Msg, [Id, Error, Reason], State)
+    end.
+
+
 
 %% @doc generate new signing keys for jwt
 -spec update_jwt_keys(state()) -> state().
@@ -942,7 +965,8 @@ message_to_state(Msg, #state{issues = Issues} = State) ->
                      (C, M) ->
                           [ C | M ]
                      end,
-    Message = lists:foldr(EscapeTilde, [], Msg),
+    Message = lists:foldr(EscapeTilde, [], lists:flatten(Msg)),
+    lager:info("changed message to: ~p", [Message]),
     State#state{issues = [Message | Issues]}.
 
 %% @doc get the name of the system, like debian
