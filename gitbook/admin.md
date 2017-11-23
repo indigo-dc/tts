@@ -63,6 +63,9 @@ After upgrading WaTTs start it again
 ```
 watts start
 ```
+### v1.3.0 to v1.4.0
+Nothing special needs to be done.
+
 ### v1.2.1 to v1.3.0
 The configuration enable_docs is renamed to enable_user_doc, so if you have it
 in your watts.conf please rename it.
@@ -85,7 +88,6 @@ Add these settings to your watts.conf and then restart WaTTs.
 Upgrading from TTS to WaTTS is **not** straightforward as both the configuration
 file and the plugin API have changed.
 You can not reuse any old configuration or plugins.
-<!-- Please see this Documentation on further information regarding a fresh setup. -->
 
 For a clean and fresh setup, do the following:
 
