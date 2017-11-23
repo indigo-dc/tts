@@ -21,6 +21,10 @@
 * Open ports:
   * 8080 - in default config
   * 4369 - epmd, can be blocked by firewall
+  * In a production setup this usually changes to
+    * 8080 - http redirection to the SSL secured connection
+    * 8443 - https web interface and api
+    * the above ports get redirected by iptables to the specified ports (see Server Settings)
 * Possible unit test of the service:
   * configure at least one OpenID Connect Provider
   * configure the info service
