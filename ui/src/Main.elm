@@ -123,11 +123,18 @@ update msg model =
                 ( model, Cmd.none )
 
         Messages.ProviderList (Ok providerlist) ->
-            ( { model
-                | providerList = ProviderList.sort providerlist
-              }
-            , Cmd.none
-            )
+            let
+                maybeProvider = List.head providerlist.provider
+
+                cmd = case (List.length providerlist.provider, maybeProvider) of
+                    (1, Just provider)  ->
+                        Navigation.load (model.redirectPath ++ "?provider=" ++ provider.id)
+                    (_, _) ->
+                        Cmd.none
+            in
+                ( { model
+                      | providerList = ProviderList.sort providerlist
+                  }, cmd )
 
         Messages.ProviderList (Err info) ->
             ( model, Cmd.none )

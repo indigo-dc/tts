@@ -15,14 +15,17 @@ type alias ViewContext =
 view : ViewContext -> Html msg
 view context =
     let
-        hideLogin =
-            List.isEmpty context.providerList.provider
+        showLogin =
+            (List.length context.providerList.provider) > 1
 
-        hideLoginImpossible =
-            not hideLogin
+        autoLogin =
+            (List.length context.providerList.provider) == 1
+
+        loginImpossible =
+            (not showLogin) && (not autoLogin)
     in
         div []
-            [ div [ hidden hideLogin ]
+            [ div [ hidden (not showLogin) ]
                 [ text "Please select your OpenId Connect Provider"
                 , div [ class "form-group" ]
                     [ form [ method "post", action context.path ]
@@ -42,6 +45,8 @@ view context =
                         ]
                     ]
                 ]
-            , div [ hidden hideLoginImpossible ]
+            , div [ hidden (not autoLogin) ]
+                [ text "You are getting redirected for login, this might take some time" ]
+            , div [ hidden (not loginImpossible) ]
                 [ text "Login is disabled as no OpenId Connect provider is configured" ]
             ]
