@@ -740,12 +740,15 @@ read_dhparam(_, State) ->
 %% Then calls the create_dispatch_list/2 function to configure the dynamic part.
 %% @see create_dispatch_list/2
 -spec create_dispatch_list(state()) -> {[tuple()], state()}.
-create_dispatch_list(State) ->
+create_dispatch_list(State0) ->
     EpMain = ?CONFIG(ep_main),
     EpOidc = watts_http_util:relative_path("oidc"),
+    EpBackground = watts_http_util:relative_path("static/img/background.png"),
     EpStatic = watts_http_util:relative_path("static/[...]"),
     EpApi = watts_http_util:relative_path("api/[...]"),
-    BaseDispatchList = [{EpStatic, cowboy_static,
+    {Background, State} = background_file(State0),
+    BaseDispatchList = [{EpBackground, cowboy_static, Background},
+                        {EpStatic, cowboy_static,
                          {priv_dir, ?APPLICATION, "http_static"}
                         },
                         {EpApi, watts_http_api, []},
@@ -758,6 +761,30 @@ create_dispatch_list(State) ->
                           {rsp, ?CONFIG(enable_rsp), ?CONFIG(rsp_list)},
                           {privacy, ?CONFIG(privacy_doc)} ],
                          BaseDispatchList, State).
+
+%% @doc create the needed tuple to reference to the background image
+-spec background_file(state()) -> {tuple(), state()}.
+background_file(State) ->
+    MaybePath = case ?CONFIG(web_background_image) of
+                    Path when is_list(Path) -> watts_file_util:to_abs(Path);
+                    Other -> Other
+                end,
+    IsRegular = filelib:is_regular(MaybePath),
+    background_file(IsRegular, MaybePath, State).
+
+%% @doc decide which background image to use, the default of the given one
+-spec background_file(boolean(), undefined | string(), state())
+                     -> {tuple(), state()}.
+background_file(false, undefined, State) ->
+    {{priv_file, ?APPLICATION, "http_static/img/background.png"}, State};
+background_file(false, Path, State) ->
+    Msg = "The given background image ~p does not exist, using default",
+    NewState = log_warning(Msg, [Path], State),
+    {{priv_file, ?APPLICATION, "http_static/img/background.png"}, NewState};
+background_file(true, Path, State) ->
+    {{file, Path}, State}.
+
+
 
 %% @doc handle each configuration and transform it into a dispatch entry.
 %% The handled settings include
