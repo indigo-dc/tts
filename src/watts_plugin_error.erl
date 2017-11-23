@@ -50,7 +50,7 @@ maybe_send_mail_return_error(Result, Map, Output, Info) ->
 %% @doc convert the error condition to a single atom
 -spec to_error_type(Result, Info) -> error_type()
    when
-      Result :: ok | error | oidc_login | plugin_error | undefined | any(),
+      Result :: ok | error | oidc_login | plugin_error | missing_result | any(),
       Info :: map().
 to_error_type(Result, #{action := request})
   when Result == ok; Result == oidc_login ->
@@ -64,7 +64,7 @@ to_error_type(error, #{ action := parameter } ) ->
     error_parameter;
 to_error_type(plugin_error, _Info) ->
     plugin_error;
-to_error_type(undefined, _Info) ->
+to_error_type(missing_result, _Info) ->
     missing_result;
 to_error_type(_Result, _Info) ->
     unknown.
@@ -92,6 +92,10 @@ log_message(bad_parameter, Result, Output ) ->
 log_message(error_parameter, Result, Output) ->
     %% invalid parameter response
     io_lib:format("bad parameter response: ~p~s", [Result, log_output(Output)]);
+log_message(plugin_error, {no_map, Other}, Output) ->
+    %% the plugin did not return a json object
+    io_lib:format("plugin error: plugin did not return an object: ~p~s",
+                  [Other, log_output(Output)]);
 log_message(plugin_error, Reason, Output) ->
     %% the plugin did not return valid json
     io_lib:format("plugin error: ~p~s", [Reason, log_output(Output)]);

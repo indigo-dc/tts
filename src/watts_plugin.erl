@@ -204,7 +204,7 @@ handle_result({ok, #{result := Result}=Map, Output}, Info) ->
     AResult = result_to_atom(Result),
     handle_result(AResult, Map, Output, Info);
 handle_result({ok, Map, Output}, Info) ->
-    handle_result(undefined, Map, Output, Info);
+    handle_result(missing_result, Map, Output, Info);
 handle_result({error, Reason, Output}, Info) ->
     handle_result(plugin_error, Reason, Output, Info).
 

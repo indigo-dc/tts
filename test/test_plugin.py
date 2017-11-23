@@ -14,16 +14,33 @@ import os
 VERSION="0.0.1"
 
 def list_params():
-    RequestParams = [[{"key":"test", "name":"test", "type":"textarea", "description":"a simple test"}],
-                     [{"key":"result", "name":"missing result", "type":"textarea", "description":"send this and it will cause an error", "mandatory":True}],
+    RequestParams = [
+                     [{"key":"missing_result", "name":"missing result", "type":"textarea", "description":"send this and it will cause an error", "mandatory":True}],
+                     [{"key":"bad_json", "name":"create bad json", "type":"textarea", "description":"send this and it will cause an error", "mandatory":True}],
+                     [{"key":"no_json_map", "name":"create json, but not an object", "type":"textarea", "description":"send this and it will cause an error", "mandatory":True}],
+                     [{"key":"bad_result", "name":"create bad result", "type":"textarea", "description":"send this and it will cause an error", "mandatory":True}],
+                     [{"key":"bad_error", "name":"create bad error", "type":"textarea", "description":"send this and it will cause an error", "mandatory":True}],
                      []]
     ConfParams = []
     Email = "Bas.Wegh@kit.edu"
-    return json.dumps({'result':'ok', 'conf_params': ConfParams, 'request_params': RequestParams, 'version':VERSION, 'developer_email':Email})
+    Config = {'result':'ok', 'conf_params': ConfParams, 'request_params': RequestParams, 'version':VERSION, 'developer_email':Email}
+    return json.dumps(Config)
+
 
 def request(JObject):
-    return json.dumps({'result':'ok', 'credential': [], 'state': 'test'})
+    Params = JObject['params']
+    if Params.has_key('missing_result') :
+        return json.dumps({'credential': [], 'state': 'test'})
+    elif Params.has_key('bad_json') :
+        return "no json"
+    elif Params.has_key('no_json_map') :
+        return "[3,4,1,\"no json map\"]"
+    elif Params.has_key('bad_result') :
+        return json.dumps({'result':'ok', 'credential': []})
+    elif Params.has_key('bad_error') :
+        return json.dumps({'result':'error', 'log_msg': "this is missing the user message"})
 
+    return json.dumps({'result':'ok', 'credential': [], 'state': 'test'})
 
 
 def revoke(JObject):
