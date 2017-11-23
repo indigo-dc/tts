@@ -53,7 +53,8 @@ is_authorized(ServiceId, UserInfo, #{allow := Allow0, forbid := Forbid0} = A) ->
         Error:Reason ->
             StackTrace = erlang:get_stacktrace(),
             EMsg = "Service ~p: Authzcheck for ~p failed due to ~p:~p at ~p",
-            lager:error(EMsg, [ServiceId, UserInfo, Error, Reason, StackTrace]),
+            watts_init:error(EMsg, [ServiceId, UserInfo, Error, Reason,
+                                    StackTrace]),
             false
      end.
 
@@ -151,9 +152,9 @@ perform_operation(regexp, UserValue, ConfigValue) ->
 -spec validate_config(ServiceId :: binary(), Config::config())
                      -> {ok, ValidatedConfig :: config()}.
 validate_config(ServiceId, #{allow := Allow0, forbid := Forbid0} = Authz0) ->
-    lager:info("Service ~p: validating authz: allow", [ServiceId]),
+    watts_init:info("Service ~p: validating authz: allow", [ServiceId]),
     {AllowOk, Allow} = validate(Allow0),
-    lager:info("Service ~p: validating authz: forbid", [ServiceId]),
+    watts_init:info("Service ~p: validating authz: forbid", [ServiceId]),
     {ForbidOk, Forbid} = validate(Forbid0),
     ValidatedAuthz =
         case AllowOk and ForbidOk of
@@ -217,7 +218,7 @@ maybe_add_to_result({false, Id}, Op, Key, Val, Result) ->
                  -> {false, rules()}.
 add_failed(Reason, Key, Op, Val, Id, {Result, List}) ->
     Msg = "bad rule ~p ~p ~p for provider ~p (~s) -> ~p",
-    lager:warning(Msg, [Key, Op, Val, Id, Reason, Result]),
+    watts_init:warning(Msg, [Key, Op, Val, Id, Reason, Result]),
     {false, List}.
 
 

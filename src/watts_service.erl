@@ -318,7 +318,7 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
                                                request_params := RequestParams,
                                                version := Version} = PluginConf
                                         }) ->
-    lager:info("service ~p: plugin version ~p", [Id, Version]),
+    watts_init:info("service ~p: plugin version ~p", [Id, Version]),
     Ensure = #{plugin_conf => #{},
                params => [],
                plugin_version => Version
@@ -338,15 +338,15 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
 validate_params_and_update_db(Id, Info, {ok, ParamMap}) ->
     NeededKeys = [conf_params, request_params, version],
     MissingKeys = NeededKeys -- maps:keys(ParamMap),
-    lager:error("service ~p: missing keys in parameter response: ~p",
+    watts_init:error("service ~p: missing keys in parameter response: ~p",
                 [Id, MissingKeys]),
     update_service(Id, maps:put(enabled, false, Info));
 validate_params_and_update_db(Id, Info, {error, #{log_msg := LogMsg}}) ->
-    lager:error("service ~p: parameter issue (at plugin): ~s ",
+    watts_init:error("service ~p: parameter issue (at plugin): ~s ",
                 [Id, LogMsg]),
     update_service(Id, maps:put(enabled, false, Info));
 validate_params_and_update_db(Id, Info, {error, Result}) ->
-    lager:error("service ~p: bad parameter response: ~p (from plugin)",
+    watts_init:error("service ~p: bad parameter response: ~p (from plugin)",
                 [Id, Result]),
     update_service(Id, maps:put(enabled, false, Info)).
 
@@ -373,11 +373,11 @@ validate_conf_parameter([#{name := Name, default := Def , type := Type } | T ],
 validate_conf_parameter([ Entry | T ], #{ id:= Id, cmd:= Cmd}=Info, _Current) ->
     RequiredKeys = [name, default, type],
     MissingKeys =  RequiredKeys -- maps:keys(Entry),
-    lager:error("service ~p: conf parameter missing keys ~p [~p]",
+    watts_init:error("service ~p: conf parameter missing keys ~p [~p]",
                 [Id, MissingKeys, Cmd]),
     validate_conf_parameter(T, Info, false);
 validate_conf_parameter(_, #{id := Id, cmd := Cmd} = Info, _) ->
-    lager:error("service ~p: bad conf parameter for plugin ~p", [Id, Cmd]),
+    watts_init:error("service ~p: bad conf parameter for plugin ~p", [Id, Cmd]),
     {false, Info}.
 
 %% @doc check the conversion results and update the config if all okay.
@@ -394,14 +394,14 @@ update_conf_parameter(Name, true, {ok, Default}, Type,
     {true, maps:put(plugin_conf, NewConf, Info)};
 update_conf_parameter(Name, _Valid, _Default, unknown, #{id := Id} = Info) ->
     Msg = "service ~p: unsupported datatype at conf parameter ~p (from plugin)",
-    lager:error(Msg, [Id, Name]),
+    watts_init:error(Msg, [Id, Name]),
     {false, Info};
 update_conf_parameter(Name, true, _, _Type, #{id := Id} = Info) ->
-    lager:error("service ~p: bad default at conf parameter ~p (from plugin)",
+    watts_init:error("service ~p: bad default at conf parameter ~p (from plugin)",
                 [Id, Name]),
     {false, Info};
 update_conf_parameter(Name, false, _, _Type, #{id := Id} = Info) ->
-    lager:error("service ~p: bad config parameter name '~p' (from plugin)",
+    watts_init:error("service ~p: bad config parameter name '~p' (from plugin)",
                 [Id, Name]),
     {false, Info}.
 
@@ -409,7 +409,7 @@ update_conf_parameter(Name, false, _, _Type, #{id := Id} = Info) ->
 -spec maybe_warn_default(boolean(), binary(), binary(), any()) -> ok.
 maybe_warn_default(true, Id, Name, Default) ->
     WMsg = "service ~p: plugin config ~p not set, using default: ~p",
-    lager:warning(WMsg, [Id, Name, Default]),
+    watts_init:warning(WMsg, [Id, Name, Default]),
     ok;
 maybe_warn_default(false, _Id, _Name, _Default) ->
     ok.
@@ -434,7 +434,7 @@ validate_call_parameter_sets([ H | T ], Info, Current)
     {Result, NewInfo} = validate_call_parameter_set(H, Info),
    validate_call_parameter_sets(T, NewInfo, Result and Current);
 validate_call_parameter_sets([ H | T ], #{id := Id} = Info, _) ->
-    lager:error("service ~p: bad request parameter set ~p (from plugin)",
+    watts_init:error("service ~p: bad request parameter set ~p (from plugin)",
                 [Id, H]),
     validate_call_parameter_sets(T, Info, false).
 
@@ -470,11 +470,11 @@ validate_call_parameter_set([Param | T], #{id := Id} = Info, ParamSet, Keys, _)
     RequiredKeys = [description, name, key, type],
     MissingKeys = RequiredKeys -- maps:keys(Param),
     EMsg = "service ~p: request parameter ~p is missing keys ~p",
-    lager:error(EMsg, [Id, Param, MissingKeys]),
+    watts_init:error(EMsg, [Id, Param, MissingKeys]),
     validate_call_parameter_set(T, Info, ParamSet, Keys, false);
 validate_call_parameter_set([H | T], #{id := Id} = Info, ParamSet, Keys, _) ->
     EMsg = "service ~p: bad request parameter ~p (from plugin)",
-    lager:error(EMsg, [Id, H]),
+    watts_init:error(EMsg, [Id, H]),
     validate_call_parameter_set(T, Info, ParamSet, Keys, false).
 
 
@@ -492,7 +492,7 @@ validate_call_parameter(Key, true, false, Name, Desc, Type, Param, Id,
     {Result, NewParamSet } =
         case to_request_type(Type) of
             unknown ->
-                lager:error(EMsg, [Id, Name, Type]),
+                watts_init:error(EMsg, [Id, Name, Type]),
                 {false, ParamSet};
             AtomType ->
                 {true, [#{ key => Key,
@@ -505,15 +505,15 @@ validate_call_parameter(Key, true, false, Name, Desc, Type, Param, Id,
     {Result, NewParamSet };
 validate_call_parameter(Key, _, true, _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: key ~p exists multiple times: ~p",
-    lager:error(EMsg, [Id, Key, Param]),
+    watts_init:error(EMsg, [Id, Key, Param]),
     {false, ParamSet};
 validate_call_parameter(Key, false, false, _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: key ~p of parameter contains spaces: ~p",
-    lager:error(EMsg, [Id, Key, Param]),
+    watts_init:error(EMsg, [Id, Key, Param]),
     {false, ParamSet};
 validate_call_parameter(_,  true, false, _N, _D, _T, Param, Id, ParamSet) ->
     EMsg = "service ~p: bad request parameter values ~p (not strings)",
-    lager:error(EMsg, [Id, Param]),
+    watts_init:error(EMsg, [Id, Param]),
     {false, ParamSet}.
 
 
@@ -532,7 +532,8 @@ list_skipped_parameter_and_delete_config(#{plugin_conf := Conf,
         fun(Key, _) ->
                 case maps:is_key(Key, Conf) of
                     false ->
-                        lager:warning(WMsg, [Id, Key, maps:get(Key, RawConf)]);
+                        Value = maps:get(Key, RawConf),
+                        watts_init:warning(WMsg, [Id, Key, Value]);
                     _ ->
                         ok
                 end
@@ -551,7 +552,7 @@ start_runner_queue_if_needed(#{enabled := true,
     QueueId = gen_queue_name(Id),
     ok = add_queue(QueueId, NumRunner),
     Msg = "service ~p: queue ~p started with max ~p parallel runners",
-    lager:info(Msg, [Id, QueueId, NumRunner]),
+    watts_init:info(Msg, [Id, QueueId, NumRunner]),
     {ok, QueueId} ;
 start_runner_queue_if_needed(_) ->
     {ok, undefined}.
