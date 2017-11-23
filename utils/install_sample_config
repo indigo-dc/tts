@@ -1,6 +1,8 @@
 #!/bin/bash
 DATA_DIR=~/.config/watts
 BACKUPDIR=~/.config/watts_`date +%Y%m%d_%H%M%S`
+cd `dirname $0`
+UTILS_DIR=`pwd`
 
 if [ -d "$DATA_DIR" ]; then
     echo
@@ -9,6 +11,7 @@ if [ -d "$DATA_DIR" ]; then
     echo
     mv "$DATA_DIR" "$BACKUPDIR"
 fi
+
 mkdir -p $DATA_DIR
 cd $DATA_DIR
 echo
@@ -19,8 +22,11 @@ git clone https://github.com/indigo-dc/tts_plugin_info.git
 cp tts_plugin_info/plugin/info.py .
 rm -rf tts_plugin_info
 
+
+echo "*** copy test plugin ***"
 echo
-echo
+cp $UTILS_DIR/../test/test_plugin.py .
+
 echo "*** configuring WaTTS ***"
 echo
 echo "nodename = watts-dev@127.0.0.1" > watts.conf
@@ -33,17 +39,19 @@ echo "enable_code_doc = true" >> watts.conf
 echo "sqlite_file = $HOME/.config/watts/watts.db" >> watts.conf
 # TODO: check for distribution CentOS vs Ubuntu
 echo " setting 'oidc.cacertfile' ... you might need to adjust the value"
+echo "" >> watts.conf
 echo "oidc.cacertfile = /etc/ssl/certs/ca-certificates.crt" >> watts.conf
 echo "oidc.cert_depth = 5" >> watts.conf
+echo "" >> watts.conf
 echo "openid.iam.description = INDIGO Datacloud Identity and Access Management (IAM)" >> watts.conf
 echo "openid.iam.client_id = e70e7190-f19a-44be-8f6c-d64cad3771b9" >> watts.conf
 echo "openid.iam.client_secret = AN5pY379_Z_1jgiiAzmQFB4lYMsBYJOAQrCoTtf2stPA6dMghW5KAoKob4zCDCg_yKBEHe8zKP2KuiWxV34zWzw" >> watts.conf
 echo "openid.iam.config_endpoint = https://iam-test.indigo-datacloud.eu/.well-known/openid-configuration" >> watts.conf
 echo "openid.iam.request_scopes = openid, profile" >> watts.conf
+echo "" >> watts.conf
+echo "" >> watts.conf
 
-echo
-echo
-echo "*** configuring service ***"
+echo "*** configuring services ***"
 echo
 echo "service.info.description = Simple Info Service" >> watts.conf
 echo "service.info.credential_limit = 1 " >> watts.conf
@@ -51,6 +59,14 @@ echo "service.info.connection.type = local" >> watts.conf
 echo "service.info.cmd = $HOME/.config/watts/info.py" >> watts.conf
 echo "service.info.parallel_runner = infinite " >> watts.conf
 echo "service.info.authz.allow.any.sub.any = true" >> watts.conf
+echo "" >> watts.conf
+echo "" >> watts.conf
+echo "service.test.description = Simple Error-Test Plugin" >> watts.conf
+echo "service.test.credential_limit = 1 " >> watts.conf
+echo "service.test.connection.type = local" >> watts.conf
+echo "service.test.cmd = $HOME/.config/watts/test_plugin.py" >> watts.conf
+echo "service.test.parallel_runner = infinite " >> watts.conf
+echo "service.test.authz.allow.any.sub.any = true" >> watts.conf
 
 echo "done, ready to start WaTTS, just type:"
 echo "make run"

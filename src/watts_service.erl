@@ -288,7 +288,8 @@ add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     AuthzConf0 = maps:get(authz, ServiceInfo, #{allow => [], forbid => []}),
     {ok, AuthzConf} = watts_service_authz:validate_config(ServiceId,
                                                           AuthzConf0),
-    Update = #{enabled => false, authz => AuthzConf},
+    Update = #{enabled => false, authz => AuthzConf,
+               devel_email => undefined},
     ok = watts_ets:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
     {ok, ServiceId};
 add(_ServiceMap)  ->
@@ -334,16 +335,20 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
     {ok, QueueName} = start_runner_queue_if_needed(NewInfo),
 
     update_service(Id, maps:put(queue, QueueName, NewInfo));
-validate_params_and_update_db(Id, _, {ok, ParamMap}) ->
+validate_params_and_update_db(Id, Info, {ok, ParamMap}) ->
     NeededKeys = [conf_params, request_params, version],
     MissingKeys = NeededKeys -- maps:keys(ParamMap),
     lager:error("service ~p: missing keys in parameter response: ~p",
                 [Id, MissingKeys]),
-    {error, bad_config};
-validate_params_and_update_db(Id, _, {error, Result}) ->
+    update_service(Id, maps:put(enabled, false, Info));
+validate_params_and_update_db(Id, Info, {error, #{log_msg := LogMsg}}) ->
+    lager:error("service ~p: parameter issue (at plugin): ~s ",
+                [Id, LogMsg]),
+    update_service(Id, maps:put(enabled, false, Info));
+validate_params_and_update_db(Id, Info, {error, Result}) ->
     lager:error("service ~p: bad parameter response: ~p (from plugin)",
                 [Id, Result]),
-    {error, bad_config}.
+    update_service(Id, maps:put(enabled, false, Info)).
 
 
 

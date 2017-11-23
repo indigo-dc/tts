@@ -819,8 +819,8 @@ check_mail(State) ->
     Body = io_lib:format(
              "Hello Administrator, ~n~n"
              "This is WaTTS on ~p, I am build as version ~s.~n"
-             "My startup took ~p seconds and "
-             "the system I am running on is ~s and is ~s~n~n"
+             "My startup took ~p seconds.~n"
+             "This system is ~s and is ~s.~n~n"
              "~s~n"
              "~n~nI hope you have a great time, I will,~n"
              "WaTTS",

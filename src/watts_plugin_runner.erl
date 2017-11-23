@@ -434,7 +434,8 @@ create_result(#{std_out := StdOut} = Output) ->
              end,
     Json = lists:foldl(Prepend, <<>>, StdOut),
     case jsone:try_decode(Json, [{keys, attempt_atom}, {object_format, map}]) of
-        {ok, Map, _} -> {ok, Map, Output};
+        {ok, Map, _} when is_map(Map) -> {ok, Map, Output};
+        {ok, Other, _} -> {error, {no_map, Other}, Output};
         {error, _} ->
             {error, bad_json, Output}
     end.
