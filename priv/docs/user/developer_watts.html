@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
-        <title>SSH for WaTTS · GitBook</title>
+        <title>WaTTS Developer · GitBook</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="description" content="">
         <meta name="generator" content="GitBook 3.2.2">
@@ -57,10 +57,10 @@
     <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
 
     
-    <link rel="next" href="developer.html" />
+    <link rel="next" href="developer_plugin.html" />
     
     
-    <link rel="prev" href="config_rsp.html" />
+    <link rel="prev" href="developer.html" />
     
 
     </head>
@@ -207,7 +207,7 @@
             
         </li>
     
-        <li class="chapter active" data-level="1.4.6" data-path="config_ssh.html">
+        <li class="chapter " data-level="1.4.6" data-path="config_ssh.html">
             
                 <a href="config_ssh.html">
             
@@ -239,7 +239,7 @@
             <ul class="articles">
                 
     
-        <li class="chapter " data-level="1.5.1" data-path="developer_watts.html">
+        <li class="chapter active" data-level="1.5.1" data-path="developer_watts.html">
             
                 <a href="developer_watts.html">
             
@@ -339,7 +339,7 @@
     <!-- Title -->
     <h1>
         <i class="fa fa-circle-o-notch fa-spin"></i>
-        <a href="." >SSH for WaTTS</a>
+        <a href="." >WaTTS Developer</a>
     </h1>
 </div>
 
@@ -354,32 +354,127 @@
     
                                 <section class="normal markdown-section">
                                 
-                                <h1 id="configuring-ssh-for-watts">Configuring SSH for WaTTS</h1>
-<p>WaTTS does not yet support hashed hosts in the <code>known_hosts</code> file. As the
-connection to the remote host is done without user interaction, the host MUST be
-listed in the <code>known_hosts</code> file.</p>
-<p>To add a host to the list of known hosts in a way readable for WaTTS, the
-<code>ssh_config</code> (usually located in <code>/etc/ssh/ssh_config</code>) must have the setting
-<code>HashKnownHosts no</code>. After checking and eventually updating the configuration,
-one can login as a WaTTS user.</p>
-<p>As a WaTTS user, one connects to remote hosts using the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
-username/password for ssh">credential</a> specified in the
-service configuration, with potentially using the verbose flag (-v). During the
-connection there are two possibilities:</p>
-<ol>
-<li>The client asks whether the host should be added. In the case it is a host that
-should be accessible by WaTTS, the user should answer with yes, and then
-can go on with the next host.</li>
-<li>The client silently connects without asking. If this is the case, the host is
-already in the <code>~/.ssh/known_hosts</code> file. In the verbose connection, the
-output will tell which line in the file belongs to the remote host. In this
-case you can edit the <code>known_hosts</code> file and delete the line at the number
-printed before. Save the file and start the connection again, and the
-situation described above will happen.</li>
-</ol>
-<p>After adding all the hosts, the <code>ssh_config</code> should be modified. Open the
-<code>ssh_config</code> and change the hash hosts setting to <code>HashKnownHosts yes</code>.</p>
-
+                                <h1 id="watts-development">WaTTS Development</h1>
+<h2 id="setting-up-the-development-environment">Setting up the development environment</h2>
+<h3 id="basic-setup">Basic Setup</h3>
+<p>Setting up a basic development environment takes about 10-15 minutes, out of which 80%
+is waiting for compilation.</p>
+<p>The steps to perform are:</p>
+<ul>
+<li>clone the git repository</li>
+<li>run the prepare_system.sh script</li>
+<li>start coding</li>
+</ul>
+<pre><code> git clone git@github.com:indigo-dc/tts.git
+ cd tts
+ ./utils/prepare_system.sh
+</code></pre><h3 id="complete-setup">Complete Setup</h3>
+<p>The basic setup is missing a few essential things:</p>
+<ul>
+<li>nodejs and npm to be able to install the later two</li>
+<li>the elm language, used for UI development</li>
+<li>a gitbook installation to generated the user documentation</li>
+</ul>
+<h4 id="installing-npm">Installing Npm</h4>
+<p>Elm and gitbook both use npm, so first we need to install nodejs (for debian/ubuntu):</p>
+<pre><code>apt-get install nodejs-legacy
+</code></pre><p>Then we will build npm from source as it is not in the debian packages anymore:</p>
+<pre><code>git clone https://github.com/npm/npm.git
+cd npm
+git checkout v5.6.0
+make
+sudo make install
+</code></pre><h4 id="installing-elm">Installing Elm</h4>
+<p>Elm is a functional language that compiles to javascript. The benefit is
+that once the compliler is satisfied you won&apos;t have runtime issues.</p>
+<p>Elm needs npm, so please follow the instructions &apos;installing npm&apos; first.
+The only thing to do is installing elm with npm. WaTTS is currently built with version 0.18.0.</p>
+<pre><code>sudo npm install elm@0.18.0 -g
+</code></pre><p>now building the ui is easy (in the WaTTS source directory):</p>
+<pre><code>make ui_install
+</code></pre><h4 id="installing-gitbook">Installing gitbook</h4>
+<p>The user documentation is generated using gitbook, which also is not in the debian packages.
+Gitbook also uses npm, so please follow the &apos;installing npm&apos; instructions above first.
+Instlaling gitbook is then as easy as:</p>
+<pre><code>sudo npm install gitbook-cli@2.3.0 -g
+</code></pre><p>Building the user documentation is now</p>
+<pre><code>make gitbook
+</code></pre><h2 id="directory-overview">Directory overview</h2>
+<p>The WaTTS folder has different subfolder each for a different purpose:</p>
+<ul>
+<li>config - as the name tells you, it contains the configuration files</li>
+<li>config/ERLANG_VERSION - contains the erlang VM version to use during prepare</li>
+<li>config/vars.config - the default variables to be set when building a release</li>
+<li>config/watts.conf - the example config</li>
+<li>config/schema - contains the schema files to parse and validate the configuration file</li>
+<li>doc/ - contains the overview.edoc which is the main page for the code doc</li>
+<li>docker - contains the Dockerfile to build a docker container (WIP)</li>
+<li>gitbook - contains the gitbook markdown documentation, used to generate the user documentation</li>
+<li>include - contains headerfiles for WaTTS</li>
+<li>priv - the static data area, will be included in a release. The generated user and code documentation will be copied to here as well as the generated javascript ui.</li>
+<li>priv/http_static/ includes the files neede for the web interface</li>
+<li>src - contains all the WaTTS code</li>
+<li>test - contains the unit and integration tests of WaTTS</li>
+<li>ui - contains the ui configuration</li>
+<li>ui/src - contains the ui source</li>
+<li>utils - contains helper scripts to e.g. install needed depencencies</li>
+</ul>
+<h2 id="build-targets">Build targets</h2>
+<p>The makefile has multiple targets:</p>
+<ul>
+<li>all (default): compile WaTTS</li>
+<li>complile: compile WaTTS</li>
+<li>ui: build the user interface</li>
+<li>ui_install: build the user interface and include it in the priv directory</li>
+<li>check: check if erlang is installed</li>
+<li>clean: clean up the build structure</li>
+<li>elvis: perform codestyle checks</li>
+<li>eunit: run the unit tests</li>
+<li>ct: run the integration tests</li>
+<li>dialyzer: run the static code analysis tool</li>
+<li>tests: run elvis, eunit, ct and dialyzer</li>
+<li>edoc: generate code documentation and copy into priv directory</li>
+<li>gitbook: generate user documentation and copy into priv directory</li>
+<li>plt: generate the static code analysis of the Erlang system</li>
+<li>rel: create a release, that is a contained locally system</li>
+<li>run: run the release</li>
+<li>debug_config: start the config parser in debug mode to find issues with schema files</li>
+<li>install_deps: install needed 3rd party libraries</li>
+<li>sample_config: generate a sample config and copy it to ~/.config/watts/watts.conf</li>
+<li>clean_package: clean up the package building directories</li>
+<li>package: generate a package for the current system</li>
+</ul>
+<h2 id="upgrading-3rd-party-libraries">Upgrading 3rd party libraries</h2>
+<p>Rebar, the buildtool used through the Makefile, keeps track of the used libraries and
+pins them to ensure that the release will always built the exact same way.</p>
+<p>The pinning file is rebar.lock, so please ensure you also commit that!</p>
+<p>Upgrading a library is done in two steps:</p>
+<ul>
+<li>upgrade the dependency in rebar.conf</li>
+<li>run <code>./rebar3 upgrade</code></li>
+</ul>
+<h2 id="upgrading-the-used-erlang-vm">Upgrading the used Erlang VM</h2>
+<p>The Erlang vm is fetched and compiled with the build_install_erlang.sh script (in utils).</p>
+<p>The version is extracted from config/ERLANG_VERSION:</p>
+<ul>
+<li>VERSION is the release to use, currently 20.1</li>
+<li>ERTS is the erlang runtime version, that is usually the version number minus eleven
+So if the version 20.1 is used the erts is 20.1 - 11 = 9.1<pre><code>VERSION=20.1
+ERTS=9.1
+</code></pre></li>
+</ul>
+<p>After changing the version the new erlang VM needs to be install on the system:</p>
+<pre><code>./utils/build_install_erlang.sh
+</code></pre><h2 id="building-a-package">Building a package</h2>
+<p>The code to build a package will get the current checked out version WITHOUT local modification.
+This is to ensure that packages are only built from source that is under version control.</p>
+<p>Important is to check in the user documentation and the changed ui as those are not built
+during package generation.</p>
+<p>A typical package process looks like this:</p>
+<pre><code>git checkout v1.4.0
+make clean_package
+make package
+</code></pre>
                                 
                                 </section>
                             
@@ -406,12 +501,12 @@ situation described above will happen.</li>
 
             
                 
-                <a href="config_rsp.html" class="navigation navigation-prev " aria-label="Previous page: RSP Settings">
+                <a href="developer.html" class="navigation navigation-prev " aria-label="Previous page: Developer Guide">
                     <i class="fa fa-angle-left"></i>
                 </a>
                 
                 
-                <a href="developer.html" class="navigation navigation-next " aria-label="Next page: Developer Guide">
+                <a href="developer_plugin.html" class="navigation navigation-next " aria-label="Next page: Plugin Developer">
                     <i class="fa fa-angle-right"></i>
                 </a>
                 
@@ -422,7 +517,7 @@ situation described above will happen.</li>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"SSH for WaTTS","level":"1.4.6","depth":2,"next":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[{"title":"WaTTS Developer","level":"1.5.1","depth":2,"path":"developer_watts.md","ref":"developer_watts.md","articles":[]},{"title":"Plugin Developer","level":"1.5.2","depth":2,"path":"developer_plugin.md","ref":"developer_plugin.md","articles":[]}]},"previous":{"title":"RSP Settings","level":"1.4.5","depth":2,"path":"config_rsp.md","ref":"config_rsp.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_ssh.md","mtime":"2017-10-20T11:42:20.453Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-11-30T08:16:18.704Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"WaTTS Developer","level":"1.5.1","depth":2,"next":{"title":"Plugin Developer","level":"1.5.2","depth":2,"path":"developer_plugin.md","ref":"developer_plugin.md","articles":[]},"previous":{"title":"Developer Guide","level":"1.5","depth":1,"path":"developer.md","ref":"developer.md","articles":[{"title":"WaTTS Developer","level":"1.5.1","depth":2,"path":"developer_watts.md","ref":"developer_watts.md","articles":[]},{"title":"Plugin Developer","level":"1.5.2","depth":2,"path":"developer_plugin.md","ref":"developer_plugin.md","articles":[]}]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer_watts.md","mtime":"2017-11-30T08:14:35.408Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-11-30T08:16:18.704Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>

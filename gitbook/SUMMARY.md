@@ -10,6 +10,8 @@
    * [RSP Settings](config_rsp.md)
    * [SSH for WaTTS](config_ssh.md)
 * [Developer Guide](developer.md)
+   * [WaTTS Developer](developer_watts.md)
+   * [Plugin Developer](developer_plugin.md)
 * [Relying Service Provider (RSP) Guide](rsp.md)
 * [REST Api](api.md)
 * [WaTTS - Service Reference Card](service_ref_card.md)

@@ -1,9 +1,8 @@
 #!/bin/bash
-VERSION=20.1
-ERTS=9.1
-
 cd `dirname $0`
 UTILS_DIR=`pwd`
+source $UTILS_DIR/../config/ERLANG_VERSION
+
 cd /tmp
 
 # http://erlang.org/download/otp_src_$VERSION.tar.gz

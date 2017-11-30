@@ -22,6 +22,7 @@ clean: check
 	$(REBAR) do cover -r, clean -a
 	rm -rf _build/default/plugins
 	rm -rf _build/default/bin
+	rm -rf _build/default/rel
 	rm -rf _build/test
 	rm -rf _book
 

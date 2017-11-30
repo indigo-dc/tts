@@ -1,0 +1,722 @@
+
+<!DOCTYPE HTML>
+<html lang="" >
+    <head>
+        <meta charset="UTF-8">
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <title>Plugin Developer · GitBook</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="description" content="">
+        <meta name="generator" content="GitBook 3.2.2">
+        
+        
+        
+    
+    <link rel="stylesheet" href="gitbook/style.css">
+
+    
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-highlight/website.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-search/search.css">
+                
+            
+                
+                <link rel="stylesheet" href="gitbook/gitbook-plugin-fontsettings/website.css">
+                
+            
+        
+
+    
+
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+        
+    
+
+        
+    
+    
+    <meta name="HandheldFriendly" content="true"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="gitbook/images/apple-touch-icon-precomposed-152.png">
+    <link rel="shortcut icon" href="gitbook/images/favicon.ico" type="image/x-icon">
+
+    
+    <link rel="next" href="rsp.html" />
+    
+    
+    <link rel="prev" href="developer_watts.html" />
+    
+
+    </head>
+    <body>
+        
+<div class="book">
+    <div class="book-summary">
+        
+            
+<div id="book-search-input" role="search">
+    <input type="text" placeholder="Type to search" />
+</div>
+
+            
+                <nav role="navigation">
+                
+
+
+<ul class="summary">
+    
+    
+
+    
+
+    
+        
+        
+    
+        <li class="chapter " data-level="1.1" data-path="./">
+            
+                <a href="./">
+            
+                    
+                    Introduction
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.2" data-path="user.html">
+            
+                <a href="user.html">
+            
+                    
+                    User Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.3" data-path="admin.html">
+            
+                <a href="admin.html">
+            
+                    
+                    Deployment And Administration Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4" data-path="config.html">
+            
+                <a href="config.html">
+            
+                    
+                    Configuration Guide
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.4.1" data-path="config_example.html">
+            
+                <a href="config_example.html">
+            
+                    
+                    Config Example
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.2" data-path="config_server.html">
+            
+                <a href="config_server.html">
+            
+                    
+                    Server Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.3" data-path="config_provider.html">
+            
+                <a href="config_provider.html">
+            
+                    
+                    OpenId Connect Provider Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.4" data-path="config_service.html">
+            
+                <a href="config_service.html">
+            
+                    
+                    Service Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.5" data-path="config_rsp.html">
+            
+                <a href="config_rsp.html">
+            
+                    
+                    RSP Settings
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.4.6" data-path="config_ssh.html">
+            
+                <a href="config_ssh.html">
+            
+                    
+                    SSH for WaTTS
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.5" data-path="developer.html">
+            
+                <a href="developer.html">
+            
+                    
+                    Developer Guide
+            
+                </a>
+            
+
+            
+            <ul class="articles">
+                
+    
+        <li class="chapter " data-level="1.5.1" data-path="developer_watts.html">
+            
+                <a href="developer_watts.html">
+            
+                    
+                    WaTTS Developer
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter active" data-level="1.5.2" data-path="developer_plugin.html">
+            
+                <a href="developer_plugin.html">
+            
+                    
+                    Plugin Developer
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+            </ul>
+            
+        </li>
+    
+        <li class="chapter " data-level="1.6" data-path="rsp.html">
+            
+                <a href="rsp.html">
+            
+                    
+                    Relying Service Provider (RSP) Guide
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.7" data-path="api.html">
+            
+                <a href="api.html">
+            
+                    
+                    REST Api
+            
+                </a>
+            
+
+            
+        </li>
+    
+        <li class="chapter " data-level="1.8" data-path="service_ref_card.html">
+            
+                <a href="service_ref_card.html">
+            
+                    
+                    WaTTS - Service Reference Card
+            
+                </a>
+            
+
+            
+        </li>
+    
+
+    
+
+    <li class="divider"></li>
+
+    <li>
+        <a href="https://www.gitbook.com" target="blank" class="gitbook-link">
+            Published with GitBook
+        </a>
+    </li>
+</ul>
+
+
+                </nav>
+            
+        
+    </div>
+
+    <div class="book-body">
+        
+            <div class="body-inner">
+                
+                    
+
+<div class="book-header" role="navigation">
+    
+
+    <!-- Title -->
+    <h1>
+        <i class="fa fa-circle-o-notch fa-spin"></i>
+        <a href="." >Plugin Developer</a>
+    </h1>
+</div>
+
+
+
+
+                    <div class="page-wrapper" tabindex="-1" role="main">
+                        <div class="page-inner">
+                            
+<div id="book-search-results">
+    <div class="search-noresults">
+    
+                                <section class="normal markdown-section">
+                                
+                                <h1 id="plugin-development">Plugin Development</h1>
+<p>To enable a certain type of service for WaTTS, a corresponding <em>plugin</em> is
+needed.  Sometimes there are even multiple plugins for the same type of service,
+e.g. due to different local policies.</p>
+<p>The communication between WaTTS and the <em>plugin</em> is done by passing one argument
+to the script or sending it to stdin of the plugin and parsing the <code>stdout</code> of the script.</p>
+<h2 id="plugin-input">Plugin Input</h2>
+<p>The parameter coming from the WaTTS is a <code>base64url</code> encoded <code>json</code> object.</p>
+<p>The decoded <code>json</code> object has the following format:</p>
+<pre><code>{
+    &quot;watts_version&quot;: &quot;1.0.0&quot;,
+    &quot;action&quot;: &quot;request&quot;,
+    &quot;conf_params&quot;: {},
+    &quot;params&quot;: {},
+    &quot;cred_state&quot;: &quot;undefined&quot;,
+    &quot;access_token&quot;:&quot;opaque access token (needs to be enabled)&quot;,
+    &quot;user_info&quot;: {
+        &quot;family_name&quot;: &quot;Mustermann&quot;,
+        &quot;gender&quot;: &quot;male&quot;,
+        &quot;given_name&quot;: &quot;Max&quot;,
+        &quot;iss&quot;: &quot;https://issuer.example.com&quot;,
+        &quot;name&quot;: &quot;Max Mustermann&quot;,
+        &quot;sub&quot;: &quot;12345678&quot;
+    },
+    &quot;additional_logins&quot;:
+        [
+            {
+                &quot;user_info&quot;: {
+                    &quot;iss&quot;:&quot;https://otherprovider.com&quot;,
+                    &quot;sub&quot;:&quot;123sub456there&quot;,
+                    &quot;name&quot;:&quot;Rumpelstiltskin&quot;
+                },
+                &quot;access_token&quot;:&quot;access token of otherprovider (needs to be enabled)&quot;
+            }
+
+        ],
+    &quot;watts_userid&quot;: &quot;base64url encoded json object, containing subject and issuer&quot;
+}
+</code></pre><p>The items of the object are:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>watts_version</td>
+<td>The version of WaTTS, e.g. can be used for a <em>plugin</em> to handle newer parameters</td>
+</tr>
+<tr>
+<td>action</td>
+<td>Which action to perform, this can be either <em>request</em>, <em>revoke</em> or <em>parameter</em></td>
+</tr>
+<tr>
+<td>conf_params</td>
+<td>These are parameters that are set in the configuration file</td>
+</tr>
+<tr>
+<td>params</td>
+<td>These are parameters entered upon request</td>
+</tr>
+<tr>
+<td>cred_state</td>
+<td>This is only valid when revoking, it is the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> state returned when creating the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a></td>
+</tr>
+<tr>
+<td>access_token</td>
+<td>The access token from the user, this will only be passed if enabled at WaTTS.</td>
+</tr>
+<tr>
+<td>user_info</td>
+<td>The user info contains information about the user gathered using OpenId Connect</td>
+</tr>
+<tr>
+<td>additional_logins</td>
+<td>A list of objects, each at least containing &apos;user_info&apos; with information about the user gathered at another provider, after requesting a redirection.</td>
+</tr>
+<tr>
+<td>watts_userid</td>
+<td>This is the dynamically generated unique <em>id</em> used within WaTTS for the current user. It is also a <code>base64url</code> encoded <code>json</code> object containing <em>issuer</em> and <em>subject</em></td>
+</tr>
+</tbody>
+</table>
+<h2 id="listing-the-supported-parameter-action--parameter">Listing The Supported Parameter (action = parameter)</h2>
+<p>WaTTS requests the supported parameter of the <em>plugin</em> by setting the <code>action</code> to <code>parameter</code>.</p>
+<p>The expected result is:</p>
+<pre><code>{
+    &quot;result&quot;:&quot;ok&quot;,
+    &quot;conf_params&quot;: [ {&apos;name&apos;:&apos;full_access&apos;, &apos;type&apos;:&apos;boolean&apos;, &apos;default&apos;: False},
+                     {&apos;name&apos;:&apos;state_prefix&apos;, &apos;type&apos;:&apos;string&apos;, &apos;default&apos;:&apos;WATTS_&apos;},
+                     {&apos;name&apos;:&apos;override_user_name&apos;, &apos;type&apos;:&apos;boolean&apos;, &apos;default&apos;:False }
+                   ],
+    &quot;request_params&quot;:
+    [
+        [
+            {&apos;key&apos;:&apos;pub_key&apos;, &apos;name&apos;:&apos;public key&apos;,
+            &apos;description&apos;:&apos;the public key to upload to the service&apos;,
+            &apos;type&apos;:&apos;textarea&apos;, &apos;mandatory&apos;:True}
+        ],
+        []
+    ],
+    &quot;developer_email&quot;:&quot;me@domain.com&quot;,
+    &quot;version&quot;:&quot;the plugin version&quot;
+}
+</code></pre><p>The result MUST be OK and the version should describe the version of your <em>plugin</em> so e.g. errors
+can be tracked. All entries are mandatory.</p>
+<h3 id="version-version">Version (version)</h3>
+<p>WaTTS expects a version to be present in the response so it can list the version for
+later debugging and helping the development of plugins.</p>
+<h3 id="email-of-the-developerteam-developeremail">Email of the developer/team (developer_email)</h3>
+<p>If this is present WaTTS expects it to be a vaild email address and, if configured,
+sends emails on invalid behaviour of the plugin to the developer.</p>
+<h3 id="config-parameter-confparams">Config Parameter (conf_params)</h3>
+<p>Each config parameter consists of an <code>json</code> object with three key-value pairs:</p>
+<ul>
+<li><em>name</em>: the name of the parameter, MUST consists of only [a-z0-9_]</li>
+<li><em>type</em>: the datatype of the parameter, currently supported are <code>boolean</code> and <code>string</code></li>
+<li><em>default</em>: the default value to use if not configured, please ensure safe defaults</li>
+</ul>
+<h3 id="request-parameter-sets-requestparams">Request Parameter Sets (request_params)</h3>
+<p>The supported request parameters are grouped into sets. A set is a group of parameters that
+belong together logically.
+At the web interface, a parameter set is shown in one dialog page, to switch between them
+press &apos;left&apos; or &apos;right&apos; in the carousel of sets.</p>
+<p>The <code>Advanced</code> button at the web-interface is enabled if at least one non empty parameter
+set exists. The <code>Request</code> button is enabled if either the empty set exists (see example above),
+or a set exists with no mandatory parameters.</p>
+<p>Each entry in a set is described with five key-value pairs:</p>
+<ul>
+<li><em>key</em>: a key used to pass the value, this is also the key to lookup the information when performing a request, MUST consist only of [a-z0-9_].</li>
+<li><em>name</em>: a short nice name, displayed to the user</li>
+<li><em>description</em>: a longer description, also shown to the user</li>
+<li><em>type</em>: the input type to use, currently only supported <code>textarea</code></li>
+<li><em>mandatory</em>: either <code>True</code> or <code>False</code>, indicates whether this field MUST be filled</li>
+</ul>
+<h2 id="performing-a-request-action--request">Performing a Request (action = request)</h2>
+<p>When the <code>action</code> is set to <code>request</code>, it means that a user or a service on a
+user&apos;s behalf wants to create a <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a>.
+The <em>plugin</em> should perform any necessary action to create the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> for the user and print
+a <code>json</code> object on <code>stdout</code>.</p>
+<p>The expected format of the <code>json</code> object for a <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> is:</p>
+<pre><code>{
+    &quot;result&quot;:&quot;ok&quot;,
+    &quot;credential&quot;: [{&quot;name&quot;:&quot;some name&quot;, &quot;type&quot;:&quot;text&quot;, &quot;value&quot;:&quot;secret&quot;}],
+    &quot;state&quot;:&quot;state description&quot;
+}
+</code></pre><p>The expected format of a request to perform an additional login is:</p>
+<pre><code>{
+    &quot;result&quot;:&quot;oidc_login&quot;,
+    &quot;provider&quot;:&quot;&lt;id of provider&gt;&quot;,
+    &quot;msg&quot;:&quot;message to tell the user why an additional login is required&quot;
+}
+</code></pre><p>please keep in mind that the user may deny the request.</p>
+<p>In case of an error, the expected json is:</p>
+<pre><code>{
+    &quot;result&quot;:&quot;error&quot;,
+    &quot;user_msg&quot;:&quot;Sorry, you are not allowed to use this service&quot;,
+    &quot;log_msg&quot;:&quot;user joe tried to access service and has been denied&quot;
+}
+</code></pre><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>result</td>
+<td>The result of the request, currently <em>ok</em>, <em>oidc_login</em> and <em>error</em> are supported</td>
+</tr>
+<tr>
+<td><a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a></td>
+<td>A list of objects, each representing one part of the credentials. This will be shown to the user</td>
+</tr>
+<tr>
+<td>state</td>
+<td>A state to keep track of the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a>; it MUST NOT contain sensitive information. This state is passed again to the plugin for revocation.</td>
+</tr>
+<tr>
+<td>provider</td>
+<td>The id of the provider to redirect to for an additional login</td>
+</tr>
+<tr>
+<td>msg</td>
+<td>a message to display to the user on a request to trigger an aditional login</td>
+</tr>
+<tr>
+<td>user_msg</td>
+<td>If the result is an error, this message will be shown to the user</td>
+</tr>
+<tr>
+<td>log_msg</td>
+<td>If the result is an error, this message will be logged</td>
+</tr>
+</tbody>
+</table>
+<p>The entries in the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> object (part of the list in &apos;<a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a>&apos; above) are:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>name</td>
+<td>The name the user will see, e.g. username or password</td>
+</tr>
+<tr>
+<td>type</td>
+<td>The type of data, this will determine how it will be displayed. At the moment <code>text</code> and <code>textfile</code> are supported</td>
+</tr>
+<tr>
+<td>rows</td>
+<td>The number of rows for the <code>textarea</code> in case the type is <code>textfile</code>, else ignored</td>
+</tr>
+<tr>
+<td>cols</td>
+<td>The number of columns for the <code>textarea</code> when using <code>textfile</code>, else ignored</td>
+</tr>
+<tr>
+<td>value</td>
+<td>The value of the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> part, e.g. the password or the username itself</td>
+</tr>
+<tr>
+<td>save_as</td>
+<td>the name of the file, the value can be stored as. If this is set a download button appears.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="performing-a-revoke-action--revoke">Performing a Revoke (action = revoke)</h2>
+<p>When the <code>action</code> is set to <code>revoke</code>, the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> identified by the <code>state</code> should be invalidated
+or removed, depending on the type of service. In the SSH plugin, e.g., the created ssh-key is
+removed from the authorized keys.
+When performing a request, WaTTS expects the <code>stdout</code> to be a <code>json</code> object. In case of <em>revoke</em>, it may contain
+one of the two elements:</p>
+<pre><code>{
+    &quot;result&quot;:&quot;ok&quot;
+}
+</code></pre><p>or in case of an error:</p>
+<pre><code>{
+    &quot;result&quot;:&quot;error&quot;,
+    &quot;user_msg&quot;:&quot;Sorry, could not revoke the certificate&quot;,
+    &quot;log_msg&quot;:&quot;internal error when executing command ....&quot;
+}
+</code></pre><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>result</td>
+<td>either <em>ok</em> or <em>error</em>, representing the result of the <em>plugin</em></td>
+</tr>
+<tr>
+<td>user_msg</td>
+<td>If the result is an error, this message will be shown to the user</td>
+</tr>
+<tr>
+<td>log_msg</td>
+<td>If the result is an error, this message will be logged</td>
+</tr>
+</tbody>
+</table>
+<p>Therefore, if only the result key is present in the object, WaTTS assumes that
+everything went fine, however, if the error key is present it assumes that
+something went bad and does not remove the <a href="GLOSSARY.html#credential" class="glossary-term" title="Any kind of information used to gain access to a service, such as e.g.
+username/password for ssh">credential</a> state from its database.</p>
+
+                                
+                                </section>
+                            
+    </div>
+    <div class="search-results">
+        <div class="has-results">
+            
+            <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+            <ul class="search-results-list"></ul>
+            
+        </div>
+        <div class="no-results">
+            
+            <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+            
+        </div>
+    </div>
+</div>
+
+                        </div>
+                    </div>
+                
+            </div>
+
+            
+                
+                <a href="developer_watts.html" class="navigation navigation-prev " aria-label="Previous page: WaTTS Developer">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+                
+                
+                <a href="rsp.html" class="navigation navigation-next " aria-label="Next page: Relying Service Provider (RSP) Guide">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+                
+            
+        
+    </div>
+
+    <script>
+        var gitbook = gitbook || [];
+        gitbook.push(function() {
+            gitbook.page.hasChanged({"page":{"title":"Plugin Developer","level":"1.5.2","depth":2,"next":{"title":"Relying Service Provider (RSP) Guide","level":"1.6","depth":1,"path":"rsp.md","ref":"rsp.md","articles":[]},"previous":{"title":"WaTTS Developer","level":"1.5.1","depth":2,"path":"developer_watts.md","ref":"developer_watts.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer_plugin.md","mtime":"2017-11-30T06:49:29.993Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-11-30T08:16:18.704Z"},"basePath":".","book":{"language":""}});
+        });
+    </script>
+</div>
+
+        
+    <script src="gitbook/gitbook.js"></script>
+    <script src="gitbook/theme.js"></script>
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search-engine.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-search/search.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/lunr.min.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-lunr/search-lunr.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-sharing/buttons.js"></script>
+        
+    
+        
+        <script src="gitbook/gitbook-plugin-fontsettings/fontsettings.js"></script>
+        
+    
+
+    </body>
+</html>
+
