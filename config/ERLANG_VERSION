@@ -1,0 +1,4 @@
+VERSION=20.1
+# ERTS is usually $VERSION -11 
+# so version 18.3 => erts 7.3
+ERTS=9.1
