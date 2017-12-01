@@ -381,7 +381,7 @@ you want to give to the service.</p>
 <th style="text-align:center">Key</th>
 <th>Description</th>
 <th style="text-align:center">Datatype</th>
-<th style="text-align:center">Mandatory</th>
+<th style="text-align:center">Mandatory (Default)</th>
 </tr>
 </thead>
 <tbody>
@@ -405,15 +405,15 @@ you want to give to the service.</p>
 </tr>
 <tr>
 <td style="text-align:center">cmd_env_use</td>
-<td>The parameter will not be passed at the command line but put into an environment variable. The default is &apos;false&apos;.</td>
+<td>DEPRECATED! The parameter will not be passed at the command line but put into an environment variable. The default is &apos;false&apos;.</td>
 <td style="text-align:center">boolean</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (false)</td>
 </tr>
 <tr>
 <td style="text-align:center">cmd_env_var</td>
-<td>The name of the environment variable containing the parameter, only used if <code>cmd_env_use</code> is true</td>
+<td>DEPRECATED! The name of the environment variable containing the parameter, only used if <code>cmd_env_use</code> is true</td>
 <td style="text-align:center">string</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (WATTS_PARAMETER)</td>
 </tr>
 <tr>
 <td style="text-align:center">credential_limit</td>
@@ -455,43 +455,43 @@ you want to give to the service.</p>
 <td style="text-align:center">connection.user</td>
 <td>The user name to use when connecting e.g. with ssh</td>
 <td style="text-align:center">string</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (&apos;&apos;)</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.password</td>
 <td>The password to use when connecting e.g. with ssh</td>
 <td style="text-align:center">string</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (&apos;&apos;)</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.host</td>
 <td>The hostname to connect to e.g. with ssh</td>
 <td style="text-align:center">host</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (&apos;&apos;)</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.port</td>
 <td>The port number to connect to e.g. with ssh</td>
 <td style="text-align:center">port</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (&apos;&apos;)</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.ssh_dir</td>
 <td>The ssh_dir to use with ssh</td>
 <td style="text-align:center">port</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (&apos;&apos;)</td>
 </tr>
 <tr>
 <td style="text-align:center">connection.ssh_key_pass</td>
 <td>The password of the private key to use with ssh</td>
 <td style="text-align:center">string</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no (&apos;&apos;)</td>
 </tr>
 <tr>
 <td style="text-align:center">plugin.<code>key</code></td>
 <td>A setting to send to the plugin, the name of the parameter will be <code>key</code>. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs</td>
 <td style="text-align:center">any</td>
-<td style="text-align:center">no</td>
+<td style="text-align:center">no  (default from plugin)</td>
 </tr>
 <tr>
 <td style="text-align:center">authz.allow.<code>p</code>.<code>k</code>.<code>o</code></td>
@@ -660,7 +660,7 @@ service.plugin.path = /tmp/data
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Service Settings","level":"1.4.4","depth":2,"next":{"title":"RSP Settings","level":"1.4.5","depth":2,"path":"config_rsp.md","ref":"config_rsp.md","articles":[]},"previous":{"title":"OpenId Connect Provider Settings","level":"1.4.3","depth":2,"path":"config_provider.md","ref":"config_provider.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_service.md","mtime":"2017-11-10T13:56:31.213Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-11-30T08:16:18.704Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Service Settings","level":"1.4.4","depth":2,"next":{"title":"RSP Settings","level":"1.4.5","depth":2,"path":"config_rsp.md","ref":"config_rsp.md","articles":[]},"previous":{"title":"OpenId Connect Provider Settings","level":"1.4.3","depth":2,"path":"config_provider.md","ref":"config_provider.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"config_service.md","mtime":"2017-12-01T09:46:24.292Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-12-01T09:47:10.437Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>

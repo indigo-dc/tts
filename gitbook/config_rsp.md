@@ -14,6 +14,7 @@ you want to give to the relying service provider.
 | perform_login | If set to 'false' the user won't be redirected to a login. | boolean | no (true) |
 | base_url | The url each url passed to WaTTS in the JWT must start with. | string | yes |
 
+All settings are mandatory.
 
 
 ## Example

@@ -25,26 +25,26 @@ Feel free to add an issue to get your plugin listed above.
 Each setting is prefixed with 'service.`id`.' where `id` must be replaced by the id
 you want to give to the service.
 
-| Key | Description | Datatype | Mandatory |
+| Key | Description | Datatype | Mandatory (Default) |
 | :---: | --- | :---: | :---: |
 | description | A description of the service for the user | string | yes |
 | display_prio | the priority of the service in the listing. the lower the number the higher in the list the service will be listed. If the priority is 'undefined', the service is listed below the ones that have a numeric priority. | integer or 'undefined' | no ('undefined') |
 | cmd | The command to execute after connecting, needs to be executable/readable by the user WaTTS is running as | string | yes |
-| cmd_env_use | The parameter will not be passed at the command line but put into an environment variable. The default is 'false'. | boolean | no |
-| cmd_env_var | The name of the environment variable containing the parameter, only used if `cmd_env_use` is true | string | no |
+| cmd_env_use | DEPRECATED! The parameter will not be passed at the command line but put into an environment variable. The default is 'false'. | boolean | no (false) |
+| cmd_env_var | DEPRECATED! The name of the environment variable containing the parameter, only used if `cmd_env_use` is true | string | no (WATTS_PARAMETER) |
 | credential_limit | The maximum number of retrievable credentials | integer or 'infinite' | no (infinite) |
 | parallel_runner | The number of parallel runs of the plugin for the service | integer or 'infinite' | no, (1) |
 | allow_same_state | Whether the plugin is allowed to return the same state more than once | boolean | no, (false) |
 | plugin_timeout | The time after which WaTTS won't wait for the result of the plugin execution anymore | duration or 'infinity' | no (infinity) |
 | pass_access_token | Whether the  access token should be passed to the plugin. Enabling this is adding a security risk! | boolean | no (false) |
 | connection.type | Either local or ssh | 'local' or 'ssh' | yes |
-| connection.user | The user name to use when connecting e.g. with ssh | string | no |
-| connection.password | The password to use when connecting e.g. with ssh | string | no |
-| connection.host | The hostname to connect to e.g. with ssh | host | no |
-| connection.port | The port number to connect to e.g. with ssh | port | no |
-| connection.ssh_dir | The ssh_dir to use with ssh | port | no |
-| connection.ssh_key_pass | The password of the private key to use with ssh | string | no |
-| plugin.`key` | A setting to send to the plugin, the name of the parameter will be `key`. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs | any | no |
+| connection.user | The user name to use when connecting e.g. with ssh | string | no ('') |
+| connection.password | The password to use when connecting e.g. with ssh | string | no ('') |
+| connection.host | The hostname to connect to e.g. with ssh | host | no ('') |
+| connection.port | The port number to connect to e.g. with ssh | port | no ('') |
+| connection.ssh_dir | The ssh_dir to use with ssh | port | no ('') |
+| connection.ssh_key_pass | The password of the private key to use with ssh | string | no ('') |
+| plugin.`key` | A setting to send to the plugin, the name of the parameter will be `key`. Which values and which keys are supported depend on the plugin. If no parameter are set warning about using default values are issued in the logs | any | no  (default from plugin) |
 | authz.allow.`p`.`k`.`o` | See the Authorization section | other | no ([])|
 | authz.forbid.`p`.`k`.`o` | See the Authorization section | other | no ([]) |
 | authz.hide | Hide the service if the user is not allowed | boolean | no (false) |

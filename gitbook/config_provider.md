@@ -73,6 +73,7 @@ oidc.cert_depth = 5
 
 Each setting is prefixed with 'openid.`id`.' where `id` must be replaced by the id
 you want to give to the provider. The `id` MUST not be 'any' or start with 'rsp'.
+All settings are mandatory.
 
 ## Example
 An example for the IAM OpenId Connect Provider, setting its id to `iam`:
