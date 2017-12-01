@@ -6,6 +6,7 @@ deps/
 _rel/
 _build/
 _book/
+priv/docs/code
 doc/*.html
 doc/*.css
 doc/edoc-info
