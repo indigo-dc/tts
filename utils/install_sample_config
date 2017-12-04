@@ -18,9 +18,10 @@ echo
 echo
 echo "*** installing info plugin ***"
 echo
-git clone https://github.com/indigo-dc/tts_plugin_info.git
-cp tts_plugin_info/plugin/info.py .
-rm -rf tts_plugin_info
+git clone https://github.com/watts-kit/watts_plugin_info.git
+./watts_plugin_info/utils/compile.sh
+cp watts_plugin_info/watts_plugin_info info_plugin
+rm -rf watts_plugin_info
 
 
 echo "*** copy test plugin ***"
@@ -56,7 +57,7 @@ echo
 echo "service.info.description = Simple Info Service" >> watts.conf
 echo "service.info.credential_limit = 1 " >> watts.conf
 echo "service.info.connection.type = local" >> watts.conf
-echo "service.info.cmd = $HOME/.config/watts/info.py" >> watts.conf
+echo "service.info.cmd = $HOME/.config/watts/info_plugin" >> watts.conf
 echo "service.info.parallel_runner = infinite " >> watts.conf
 echo "service.info.authz.allow.any.sub.any = true" >> watts.conf
 echo "" >> watts.conf
