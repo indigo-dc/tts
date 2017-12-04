@@ -109,7 +109,7 @@ setup_group(DbType) ->
                     forbid => [],
                     hide => false,
                     tooltip => <<"Tooltip">>},
-                  cmd => <<"/tmp/watts_common_test/tts_plugin_info/plugin/info.py">>,
+                  cmd => <<"/tmp/watts_common_test/watts_plugin_info/watts_plugin_info">>,
                   connection => #{host => undefined,
                     passwd => undefined,
                     port => 22,
