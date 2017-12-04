@@ -1,2 +1,2 @@
 #!/bin/bash
-sudo pacman -S base-devel wget openssl ncurses
+sudo pacman -S base-devel wget openssl ncurses gloang
