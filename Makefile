@@ -1,4 +1,4 @@
-REPO = tts
+REPO = $(shell basename $(shell pwd))
 REBAR = $(shell pwd)/rebar3
 MODULES = watts_init watts watts_app watts_sup watts_http_api watts_oidc_client \
 		watts_persistent watts_plugin watts_plugin_runner watts_service \
