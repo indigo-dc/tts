@@ -75,6 +75,7 @@ callgraph:
 
 
 rel: compile edoc
+	./utils/build_install_info_plugin.sh
 	cat ./config/vars.config > ./config/vars_gen.config
 ifneq ($(OVERLAY_VARS),)
 	cat $(OVERLAY_VARS) >> ./config/vars_gen.config
