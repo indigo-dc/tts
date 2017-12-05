@@ -267,6 +267,7 @@ enforce_security(State) ->
     Onion = lists:suffix(".onion", Hostname0),
     {Hostname, NewState} = maybe_change_hostname(SSL, Onion, Hostname0, State),
     ?SETCONFIG(hostname, Hostname),
+    ok = force_config_permissions(),
     ok = error_if_running_as_root(),
     NewState.
 
@@ -299,6 +300,12 @@ maybe_root_halt(User, Uid) when User == "root"; Uid == 0 ->
     system_halt("Init: do not run WaTTS as root, stopping", [], 1);
 maybe_root_halt(User, Uid) ->
     lager:info("Init: running as user ~p [~p]", [User, Uid]),
+    ok.
+
+force_config_permissions() ->
+    ConfigDir = watts_file_util:to_abs(?CONFIG(config_dir)),
+    Cmd = io_lib:format("chmod -R o= ~s", [ConfigDir]),
+    os:cmd(Cmd),
     ok.
 
 %% @doc start the databases needed to run WaTTS.

@@ -24,6 +24,8 @@ clean: check
 	rm -rf _build/default/bin
 	rm -rf _build/default/rel
 	rm -rf _build/test
+	rm -rf _build/plugins
+	rm -rf _build/tmp
 	rm -rf _book
 
 eunit: check
@@ -101,6 +103,9 @@ install_deps:
 sample_config:
 	./utils/install_sample_config
 
+rebuild_info_plugin:
+	rm -f _build/plugins/info_plugin
+	./utils/build_install_info_plugin.sh
 
 clean_package:
 	rm -rf package
