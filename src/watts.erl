@@ -483,9 +483,11 @@ handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
                          ServiceId, Session, Params) ->
     {ok, SessionId} = watts_session:get_id(Session),
     Msg = <<"OpenID Connect Login error, please contact the admin">>,
+    NotRdyMsg = <<"the plugin required a login but the provider is not ready">>,
     DoneMsg = <<"the plugin required a login that has already been performed">>,
     OffMsg = <<"login is required, yet the needed provider is not ready">>,
     RestMsg = <<"login is required, please use the web interface">>,
+    NotExistMsg = <<"the plugin required a login at a non existing provider">>,
     ProviderResult = oidcc:get_openid_provider_info(Provider),
     {ok, SessionType} = watts_session:get_type(Session),
     {ok, UserInfo} = watts_session:get_user_info(Session),
@@ -500,15 +502,19 @@ handle_credential_result({oidc_login, #{provider := Provider, msg := UsrMsg}},
                                     url => Url,
                                    msg => UsrMsg} }
             };
+        {{ok, #{ready := false}}, oidc, false} ->
+            {error, #{result => error, user_msg => NotRdyMsg}};
         {{ok, _}, oidc, true} ->
             {error, #{result => error, user_msg => DoneMsg}};
         {{ok, _}, oidc, _} ->
             {error, #{result => error, user_msg => OffMsg}};
         {{ok, _}, rest, _} ->
             {error, #{result => error, user_msg => RestMsg}};
-        _ ->
-            WMsg = "SESS~p additional login request for ~p failed: ~s",
-            lager:warning(WMsg, [SessionId, ServiceId, Provider]),
+        {{error, not_found}, oidc, _} ->
+            {error, #{result => error, user_msg => NotExistMsg}};
+        Other ->
+            WMsg = "SESS~p additional login request for ~p failed: ~s = ~p",
+            lager:warning(WMsg, [SessionId, ServiceId, Provider, Other]),
             {error, #{result => error, user_msg => Msg}}
     end;
 handle_credential_result({error, Map}, ServiceId, Session, _Params)
