@@ -43,8 +43,11 @@ Elm is a functional language that compiles to javascript. The benefit is
 that once the compliler is satisfied you won't have runtime issues.
 
 Elm needs npm, so please follow the instructions 'installing npm' first.
-The only thing to do is installing elm with npm. WaTTS is currently built with version 0.18.0.
+The only things to do are installing the closure-compiler and elm with npm.
+WaTTS is currently built with version 0.18.0.
+
 ```
+sudo apt install closure-compiler
 sudo npm install elm@0.18.0 -g
 ```
 

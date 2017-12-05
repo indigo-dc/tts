@@ -15,11 +15,20 @@ type alias ViewContext =
 view : ViewContext -> Html msg
 view context =
     let
+
+        firstProviderReady =
+            case List.head context.providerList.provider of
+                Nothing ->
+                    False
+                Just prov ->
+                    prov.ready
+
         showLogin =
             (List.length context.providerList.provider) > 1
 
         autoLogin =
-            (List.length context.providerList.provider) == 1
+            ((List.length context.providerList.provider) == 1) && firstProviderReady
+
 
         loginImpossible =
             (not showLogin) && (not autoLogin)
