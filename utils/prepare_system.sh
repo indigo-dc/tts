@@ -12,6 +12,9 @@ case "$DISTRIBUTION_NAME" in
     *Ubuntu*)
         DISTRIBUTION="ubuntu"
         ;;
+    *Red\ Hat*)
+        DISTRIBUTION="redhat"
+        ;;
     *CentOS*)
         DISTRIBUTION="centos"
         ;;
@@ -38,6 +41,9 @@ case "$DISTRIBUTION" in
         ;;
     ubuntu)
         ./ubuntu_install_packages.sh
+        ;;
+    redhat)
+        ./redhat_install_packages.sh
         ;;
     centos)
         ./centos_install_packages.sh
