@@ -50,6 +50,7 @@
           con_type = undefined,
           cmd_line = undefined,
           cmd_env = undefined :: undefined | env(),
+          cmd_stdin = undefined :: undefined | binary(),
           cmd_output = undefined :: undefined | output(),
           error = undefined
          }).
@@ -232,10 +233,11 @@ run_plugin(State) ->
     {ok, NewState} = prepare_action(State),
     #state{ cmd_line = Cmd,
             cmd_env = Env,
+            cmd_stdin = Stdin,
             connection = Connection,
             con_type = ConType
           } = NewState,
-    run_plugin(Cmd, Env, ConType, Connection, NewState).
+    run_plugin(Cmd, Stdin, Env, ConType, Connection, NewState).
 
 
 %% @doc prepare the execution by creating the command line and connecting.
@@ -321,13 +323,18 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo,
                                            ServiceId, AddAccessToken),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
+    Features = maps:get(plugin_features, ServiceInfo),
     lager:debug("runner ~p: will execute ~p with parameter ~p",
                 [self(), Cmd, ScriptParam]),
-    EnvVar = get_env_var(ServiceInfo),
-    {CmdLine, Env} = create_cmd_and_env(Cmd, EncodedJson, EnvVar),
-    lager:debug("runner ~p: the command line is (parameter in base64url): ~p",
-                [self(), CmdLine]),
-    {ok, State#state{cmd_line=CmdLine, cmd_env = Env,
+    UseStdin = case maps:get(stdin, Features, false) of
+                   true -> true;
+                   _    -> false
+               end,
+    {CmdLine, CmdStdin} = create_cmd_and_env(Cmd, EncodedJson, UseStdin),
+    % marcus: this is useful for logging!!
+    lager:debug("runner ~p: the command line is (parameter in base64url): ~p. CmdStdin: ~p",
+                [self(), CmdLine, CmdStdin]),
+    {ok, State#state{cmd_line=CmdLine, cmd_env = [], cmd_stdin = CmdStdin,
                      connection = Connection, con_type = ConnType}}.
 
 
@@ -341,24 +348,14 @@ parameter_update(_, ServiceInfo, #state{ params = Params }) ->
       params => Params}.
 
 
-%% @doc return the environment variable
--spec get_env_var( watts_service:info() ) -> string() | undefined.
-get_env_var(#{cmd_env_use := true, cmd_env_var := Var}) when is_list(Var) ->
-    Var;
-get_env_var(_) ->
-    undefined.
-
-
-
 %% @doc create the command to execute and the environment
--spec create_cmd_and_env(binary(), binary(), undefined | string())
-                        -> {string(), env()}.
-create_cmd_and_env(Cmd, EncJson, undefined) ->
+-spec create_cmd_and_env(binary(), binary(), boolean())
+                        -> {string(), undefined | binary()}.
+create_cmd_and_env(Cmd, EncJson, false) ->
     {binary_to_list(<< Cmd/binary, <<" ">>/binary, EncJson/binary >>),
-     []};
-create_cmd_and_env(Cmd, Json, VarName) ->
-    {binary_to_list(Cmd), [{VarName, binary_to_list(Json)}]}.
-
+     undefined};
+create_cmd_and_env(Cmd, EncJson, true) ->
+    {binary_to_list(Cmd), << EncJson/binary, <<"\n">>/binary >>}.
 
 
 %% @doc add the information about the user to the parameter
@@ -385,18 +382,33 @@ add_user_info_if_present(ScriptParam, UserInfo, ServiceId, AddAccessToken) ->
 %% @doc run the plugin with its parameter.
 %% The results will be sent async to this process and are handled by the
 %% {@link handle_info/2} function.
--spec run_plugin(string(), env(), ssh | local, any(), state()) ->
+-spec run_plugin(string(), string(), env(), ssh | local, any(), state()) ->
                              {ok, state()}.
-run_plugin(Cmd, _Env, ssh, Connection, State) ->
+run_plugin(Cmd, undefined, _Env, ssh, Connection, State) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection, infinity),
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     success = ssh_connection:exec(Connection, ChannelId, Cmd, infinity),
     CmdOutput =  #{channel_id => ChannelId, cmd => Cmd},
     {ok, State#state{ cmd_output = output(CmdOutput) }};
-run_plugin(Cmd, Env, local, _Connection, State) ->
+run_plugin(Cmd, Stdin, _Env, ssh, Connection, State) ->
+    {ok, ChannelId} = ssh_connection:session_channel(Connection, infinity),
+    lager:debug("runner ~p: executing ~p", [self(), Cmd]),
+    success = ssh_connection:exec(Connection, ChannelId, Cmd, infinity),
+    ok = ssh_connection:send(Connection, ChannelId, Stdin),
+    CmdOutput =  #{channel_id => ChannelId, cmd => Cmd},
+    {ok, State#state{ cmd_output = output(CmdOutput) }};
+run_plugin(Cmd, undefined, Env, local, _Connection, State) ->
     lager:debug("runner ~p: executing ~p ~p", [self(), Cmd, Env]),
     {ok, _Pid, Id} = exec:run(Cmd, [{env, Env}, stdout, stderr, monitor,
                                     {kill_timeout, 1}]),
+    CmdOutput =  #{process_id => Id, cmd => Cmd, env => Env},
+    NewState = State#state{ cmd_output = output(CmdOutput)},
+    {ok, NewState};
+run_plugin(Cmd, Stdin, Env, local, _Connection, State) ->
+    lager:debug("runner ~p: executing ~p ~p", [self(), Cmd, Env]),
+    {ok, _Pid, Id} = exec:run(Cmd, [{env, Env}, stdout, stderr, monitor,
+                                    {kill_timeout, 1}]),
+    ok = exec:send(Id, Stdin),
     CmdOutput =  #{process_id => Id, cmd => Cmd, env => Env},
     NewState = State#state{ cmd_output = output(CmdOutput)},
     {ok, NewState}.

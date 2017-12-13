@@ -37,22 +37,23 @@
 -export_type([info/0, limited_info/0, connection/0]).
 
 -type info() :: #{ id => binary(),
-                   description => binary(),
+                   allow_same_state => boolean(),
+                   authz => watts_service_authz:config(),
                    cmd => binary(),
                    cmd_env_use => boolean(),
                    cmd_env_var => string(),
-                   cred_limit => infinite | integer(),
-                   allow_same_state => boolean(),
-                   plugin_conf => map(),
-                   plugin_version => undefined | binary(),
-                   params => [parameter_set()],
-                   parallel_runner => infinite | integer(),
-                   pass_access_token => boolean(),
-                   plugin_timeout => infinity | integer(),
                    connection => connection(),
-                   authz => watts_service_authz:config(),
-                   queue => atom(),
+                   cred_limit => infinite | integer(),
+                   description => binary(),
                    enabled => boolean(),
+                   parallel_runner => infinite | integer(),
+                   params => [parameter_set()],
+                   pass_access_token => boolean(),
+                   plugin_conf => map(),
+                   plugin_features => map(),
+                   plugin_timeout => infinity | integer(),
+                   plugin_version => undefined | binary(),
+                   queue => atom(),
                    _ => _
                  }.
 
@@ -329,11 +330,11 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
     Info3 = list_skipped_parameter_and_delete_config(Info2),
     IsValid = ValidConfParam and ValidCallParam,
     Update = #{enabled => IsValid,
-               devel_email => maps:get(developer_email, PluginConf, undefined)
+               devel_email => maps:get(developer_email, PluginConf, undefined),
+               plugin_features => maps:get(features, PluginConf, #{})
               },
     NewInfo = maps:merge(Info3, Update),
     {ok, QueueName} = start_runner_queue_if_needed(NewInfo),
-
     update_service(Id, maps:put(queue, QueueName, NewInfo));
 validate_params_and_update_db(Id, Info, {ok, ParamMap}) ->
     NeededKeys = [conf_params, request_params, version],
