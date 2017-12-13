@@ -123,6 +123,7 @@ setup_group(DbType) ->
                   parallel_runner => 1,
                   pass_access_token => false,
                   plugin_conf_config => #{},
+                  plugin_features => #{},
                   plugin_timeout => 10000}],
     ProviderList = [#{client_id => <<"1234">>,
                    client_secret => <<"secret">>,
