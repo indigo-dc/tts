@@ -464,6 +464,7 @@
                                   parallel_runner => ParaRunner,
                                   pass_access_token => PassAccToken,
                                   plugin_timeout => PluginTimeout,
+                                  plugin_features => #{},
                                   mail_on_error_to => Mail,
                                   connection => #{
                                     type => ConnType,
