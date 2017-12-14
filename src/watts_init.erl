@@ -365,15 +365,16 @@ add_openid_provider(State) ->
 %% This uses the oidcc library to handle the OpenID Connect provider.
 -spec add_openid_provider(Configs:: [map()], LocalEndpoint :: binary()) -> ok.
 add_openid_provider([#{id := Id,
-                       config_endpoint := ConfigEndpoint,
-                       disable_login := Disable} = Config0 | T],
+                       config_endpoint := ConfigEndpoint} = Config0 | T],
                     LocalEndpoint) ->
     try
         Priority = length(T),
-        Config = maps:put(priority, Priority,
-                          maps:remove(config_endpoint, Config0)),
+        {Secret, Disable} = get_secret_and_disable(Config0),
+        Update = #{ client_secret => Secret ,
+                    priority => Priority },
+        Config = maps:merge(maps:remove(config_endpoint, Config0), Update),
         {ok, _InternalId, _Pid} =
-        oidcc:add_openid_provider(ConfigEndpoint, LocalEndpoint, Config),
+            oidcc:add_openid_provider(ConfigEndpoint, LocalEndpoint, Config),
         lager:info("Init: added OpenId Connect provider ~p", [Id]),
         case Disable of
             true ->
@@ -388,6 +389,24 @@ add_openid_provider([#{id := Id,
     add_openid_provider(T, LocalEndpoint);
 add_openid_provider([], _) ->
     ok.
+
+
+%% @doc check if the secret needs to be fetched from passwordd and
+%% if so try it, if it fails disable provider.
+-spec get_secret_and_disable(map()) -> {binary(), boolean()}.
+get_secret_and_disable(#{client_secret_key := Key, disable_login := Disable,
+                         id := Id})
+  when is_binary(Key) ->
+    case watts_passwordc:get_password(Key) of
+        {ok, Secret} ->
+            {Secret, Disable};
+        {error, _} ->
+            warning("OpenId Connect Provider ~p: failed to get secret", [Id]),
+            {<<>>, true}
+    end;
+get_secret_and_disable(#{client_secret := Secret, disable_login := Disable}) ->
+    {Secret, Disable}.
+
 
 
 %% @doc waits for the configured provides to either fail or be ready.
