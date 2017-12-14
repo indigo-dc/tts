@@ -245,9 +245,9 @@ error_type_to_description(ErrorType)
 
 %% @doc create a loggable string from the output map
 -spec log_output(watts_plugin_runner:output()) -> string().
-log_output(#{cmd := Cmd, env := Env, std_out := StdOut, std_err := StdErr}) ->
-    String = "~n  cmd: ~p~n  env: ~p~n  out: ~p~n  err: ~p~n",
-    io_lib:format(String, [Cmd, Env, StdOut, StdErr]).
+log_output(#{cmd := Cmd, std_out := StdOut, std_err := StdErr}) ->
+    String = "~n  cmd: ~p~n  out: ~p~n  err: ~p~n",
+    io_lib:format(String, [Cmd, StdOut, StdErr]).
 
 
 %% @doc send out the error mail
