@@ -359,8 +359,12 @@
 needed.  Sometimes there are even multiple plugins for the same type of service,
 e.g. due to different local policies.</p>
 <p>The communication between WaTTS and the <em>plugin</em> is done by passing one argument
-to the script or sending it to stdin of the plugin and parsing the <code>stdout</code> of the script.</p>
+to the script or sending it to stdin of the plugin and parsing the <code>stdout</code> of the script.
+If it will be passed as parameter or sent via stdin is configured automatically at startup.
+See Listing Supported Parameter / Supported Features / stdin.</p>
 <h2 id="plugin-input">Plugin Input</h2>
+<p>If stdin is enabled the parameter will be sent via stdin and when done an EOF (end of file)
+will be sent.</p>
 <p>The parameter coming from the WaTTS is a <code>base64url</code> encoded <code>json</code> object.</p>
 <p>The decoded <code>json</code> object has the following format:</p>
 <pre><code>{
@@ -442,7 +446,9 @@ username/password for ssh">credential</a></td>
 </tbody>
 </table>
 <h2 id="listing-the-supported-parameter-action--parameter">Listing The Supported Parameter (action = parameter)</h2>
-<p>WaTTS requests the supported parameter of the <em>plugin</em> by setting the <code>action</code> to <code>parameter</code>.</p>
+<p>WaTTS requests the supported parameter of the <em>plugin</em> by setting the <code>action</code> to <code>parameter</code>.
+This is always passed as parameter on the command line, subsequent request will be sent via stdin,
+if supported by the plugin.</p>
 <p>The expected result is:</p>
 <pre><code>{
     &quot;result&quot;:&quot;ok&quot;,
@@ -460,6 +466,7 @@ username/password for ssh">credential</a></td>
         []
     ],
     &quot;developer_email&quot;:&quot;me@domain.com&quot;,
+    &quot;features&quot;: { &quot;stdin&quot; : True },
     &quot;version&quot;:&quot;the plugin version&quot;
 }
 </code></pre><p>The result MUST be OK and the version should describe the version of your <em>plugin</em> so e.g. errors
@@ -470,6 +477,12 @@ later debugging and helping the development of plugins.</p>
 <h3 id="email-of-the-developerteam-developeremail">Email of the developer/team (developer_email)</h3>
 <p>If this is present WaTTS expects it to be a vaild email address and, if configured,
 sends emails on invalid behaviour of the plugin to the developer.</p>
+<h3 id="supported-features-features">Supported features (features)</h3>
+<p>This is a JSON object containing keys with additional information.
+The supported keys and the meaning/format of their value are listed in the table below.
+| Key   | Description | Value (Default) |
+|----|----| --- |
+| stdin | Tells WaTTS if the plugin supports passing the parameter via stdin. | boolean (False) |</p>
 <h3 id="config-parameter-confparams">Config Parameter (conf_params)</h3>
 <p>Each config parameter consists of an <code>json</code> object with three key-value pairs:</p>
 <ul>
@@ -683,7 +696,7 @@ username/password for ssh">credential</a> state from its database.</p>
     <script>
         var gitbook = gitbook || [];
         gitbook.push(function() {
-            gitbook.page.hasChanged({"page":{"title":"Plugin Developer","level":"1.5.2","depth":2,"next":{"title":"Relying Service Provider (RSP) Guide","level":"1.6","depth":1,"path":"rsp.md","ref":"rsp.md","articles":[]},"previous":{"title":"WaTTS Developer","level":"1.5.1","depth":2,"path":"developer_watts.md","ref":"developer_watts.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer_plugin.md","mtime":"2017-11-30T10:27:56.276Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-12-05T06:08:19.334Z"},"basePath":".","book":{"language":""}});
+            gitbook.page.hasChanged({"page":{"title":"Plugin Developer","level":"1.5.2","depth":2,"next":{"title":"Relying Service Provider (RSP) Guide","level":"1.6","depth":1,"path":"rsp.md","ref":"rsp.md","articles":[]},"previous":{"title":"WaTTS Developer","level":"1.5.1","depth":2,"path":"developer_watts.md","ref":"developer_watts.md","articles":[]},"dir":"ltr"},"config":{"plugins":[],"root":"./gitbook","styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"pluginsConfig":{"highlight":{},"search":{},"lunr":{"maxIndexSize":1000000,"ignoreSpecialCharacters":false},"sharing":{"facebook":true,"twitter":true,"google":false,"weibo":false,"instapaper":false,"vk":false,"all":["facebook","google","twitter","weibo","instapaper"]},"fontsettings":{"theme":"white","family":"sans","size":2},"theme-default":{"styles":{"website":"styles/website.css","pdf":"styles/pdf.css","epub":"styles/epub.css","mobi":"styles/mobi.css","ebook":"styles/ebook.css","print":"styles/print.css"},"showLevel":false}},"theme":"default","pdf":{"pageNumbers":true,"fontSize":12,"fontFamily":"Arial","paperSize":"a4","chapterMark":"pagebreak","pageBreaksBefore":"/","margin":{"right":62,"left":62,"top":56,"bottom":56}},"structure":{"langs":"LANGS.md","readme":"README.md","glossary":"GLOSSARY.md","summary":"SUMMARY.md"},"variables":{},"gitbook":"*"},"file":{"path":"developer_plugin.md","mtime":"2017-12-14T09:22:14.951Z","type":"markdown"},"gitbook":{"version":"3.2.2","time":"2017-12-14T09:35:55.770Z"},"basePath":".","book":{"language":""}});
         });
     </script>
 </div>
