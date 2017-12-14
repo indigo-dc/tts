@@ -18,6 +18,7 @@
 %% limitations under the License.
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
+-include("watts.hrl").
 
 -export([get_list/0]).
 -export([get_list/1]).
@@ -334,7 +335,6 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
                                                version := Version} = PluginConf
                                         }) ->
     watts_init:info("service ~p: plugin version ~p", [Id, Version]),
-    ok = log_plugin_security(PluginConf, Id),
     Ensure = #{plugin_conf => #{},
                params => [],
                plugin_version => Version
@@ -342,11 +342,15 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
     Info0 = maps:merge(Info, Ensure),
     {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
     {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
+    InsecAllowed = ?CONFIG(allow_insecure_plugins),
+    Features = maps:get(features, PluginConf, #{}),
+    SecureOrAllowed = is_secure_plugin_or_allowed(Features, InsecAllowed, Id),
     Info3 = list_skipped_parameter_and_delete_config(Info2),
-    IsValid = ValidConfParam and ValidCallParam,
-    Update = #{enabled => IsValid,
+
+    Enabled = ValidConfParam and ValidCallParam and SecureOrAllowed,
+    Update = #{enabled => Enabled,
                devel_email => maps:get(developer_email, PluginConf, undefined),
-               plugin_features => maps:get(features, PluginConf, #{})
+               plugin_features => Features
               },
     NewInfo = maps:merge(Info3, Update),
     {ok, QueueName} = start_runner_queue_if_needed(NewInfo),
@@ -367,16 +371,21 @@ validate_params_and_update_db(Id, Info, {error, Result}) ->
     update_service(Id, maps:put(enabled, false, Info)).
 
 
-%% @doc log if the plugin supports stdin or not
--spec log_plugin_security(map(), binary()) -> ok.
-log_plugin_security(#{features := #{stdin := true}}, ServiceId) ->
+%% @doc check and log if a plugin supports stdin of if insecure plugins are
+%% allowed
+-spec is_secure_plugin_or_allowed(map(), boolean(), binary()) -> boolean().
+is_secure_plugin_or_allowed(#{stdin := true}, _, Id) ->
     Msg = "service ~p: plugin supports stdin will use secure channel",
-    watts_init:info(Msg, [ServiceId]),
-    ok;
-log_plugin_security(_, ServiceId) ->
+    watts_init:info(Msg, [Id]),
+    true;
+is_secure_plugin_or_allowed(_, true, Id) ->
     Msg = "service ~p: plugin does not support stdin, this plugin is insecure!",
-    watts_init:warning(Msg, [ServiceId]),
-    ok.
+    watts_init:warning(Msg, [Id]),
+    true;
+is_secure_plugin_or_allowed(_, _, Id) ->
+    Msg = "service ~p: plugin does not support stdin, it will be disabled",
+    watts_init:warning(Msg, [Id]),
+    false.
 
 
 
