@@ -137,6 +137,7 @@ setup_group(DbType) ->
     ?SETCONFIG(max_provider_wait, 1),
     ?SETCONFIG(service_list, ServiceList),
     ?SETCONFIG(provider_list, ProviderList),
+    ?SETCONFIG(allow_insecure_plugins, false),
     ?SETCONFIG(session_timeout, 90000),
     ?SETCONFIG(allow_dropping_credentials, true),
     ?SETCONFIG(redirection_enable, false),
