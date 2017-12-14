@@ -63,6 +63,11 @@ After upgrading WaTTs start it again
 ```
 watts start
 ```
+### v1.4.0 to v1.5.0
+A new configuration setting 'allow_insecure_plugins' is added, which defaults to
+'false'. If your WaTTS instance is using plugins that do not yet support parameter
+passing via stdin you need to add this to your config and set it to 'true'.
+
 ### v1.3.0 to v1.4.0
 Nothing special needs to be done.
 

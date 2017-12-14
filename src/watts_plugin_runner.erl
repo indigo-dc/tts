@@ -389,7 +389,7 @@ run_plugin(Cmd, Stdin, ssh, Connection, State) ->
     {ok, State#state{ cmd_output = output(CmdOutput) }};
 run_plugin(Cmd, Stdin, local, _Connection, State) ->
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
-    {ok, _Pid, Id} = exec:run(Cmd, [stdout, stderr, monitor,
+    {ok, _Pid, Id} = exec:run(Cmd, [stdin, stdout, stderr, monitor,
                                     {kill_timeout, 1}]),
     ok = maybe_local_stdin_send(Id, Stdin),
     CmdOutput =  #{process_id => Id, cmd => Cmd},
@@ -411,6 +411,7 @@ maybe_local_stdin_send(_, undefined) ->
     ok;
 maybe_local_stdin_send(Id, Stdin) ->
     ok = exec:send(Id, Stdin),
+    ok = exec:send(Id, eof),
     ok.
 
 
