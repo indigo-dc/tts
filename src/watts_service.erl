@@ -40,8 +40,6 @@
                    allow_same_state => boolean(),
                    authz => watts_service_authz:config(),
                    cmd => binary(),
-                   cmd_env_use => boolean(),
-                   cmd_env_var => string(),
                    connection => connection(),
                    cred_limit => infinite | integer(),
                    description => binary(),
@@ -282,19 +280,35 @@ fulfills_paramset(Params, [#{key := Key, mandatory := Mandatory} | ParamSet]) ->
     end.
 
 
-
 %% @doc add a service to the ets database, used during initialization
 -spec add(info()) -> {ok, binary()} | {error, invalid_config}.
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     AuthzConf0 = maps:get(authz, ServiceInfo, #{allow => [], forbid => []}),
     {ok, AuthzConf} = watts_service_authz:validate_config(ServiceId,
                                                           AuthzConf0),
-    Update = #{enabled => false, authz => AuthzConf,
-               devel_email => undefined},
+    Update = #{enabled => false,
+               authz => AuthzConf,
+               devel_email => undefined
+              },
+    maybe_warning_about_using_env(ServiceInfo),
     ok = watts_ets:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
     {ok, ServiceId};
 add(_ServiceMap)  ->
     {error, invalid_config}.
+
+
+
+%% @doc write a warning about not supporting environment anymore
+-spec maybe_warning_about_using_env(info()) -> ok.
+maybe_warning_about_using_env(#{cmd_env_use := true, id:= ServiceId}) ->
+    Msg = "service ~p environment setting, which is IGNORED!, will use"
+        " parameter, as the environment adds no security.",
+    watts_init:warning(Msg, [ServiceId]),
+    ok;
+maybe_warning_about_using_env(_) ->
+    ok.
+
+
 
 
 %% @doc update the parameter of a service by running the plugin
@@ -320,6 +334,7 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
                                                version := Version} = PluginConf
                                         }) ->
     watts_init:info("service ~p: plugin version ~p", [Id, Version]),
+    ok = log_plugin_security(PluginConf, Id),
     Ensure = #{plugin_conf => #{},
                params => [],
                plugin_version => Version
@@ -350,6 +365,19 @@ validate_params_and_update_db(Id, Info, {error, Result}) ->
     watts_init:error("service ~p: bad parameter response: ~p (from plugin)",
                 [Id, Result]),
     update_service(Id, maps:put(enabled, false, Info)).
+
+
+%% @doc log if the plugin supports stdin or not
+-spec log_plugin_security(map(), binary()) -> ok.
+log_plugin_security(#{features := #{stdin := true}}, ServiceId) ->
+    Msg = "service ~p: plugin supports stdin will use secure channel",
+    watts_init:info(Msg, [ServiceId]),
+    ok;
+log_plugin_security(_, ServiceId) ->
+    Msg = "service ~p: plugin does not support stdin, this plugin is insecure!",
+    watts_init:warning(Msg, [ServiceId]),
+    ok.
+
 
 
 
