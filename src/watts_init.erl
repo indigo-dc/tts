@@ -370,7 +370,8 @@ add_openid_provider([#{id := Id,
     try
         Priority = length(T),
         {Secret, Disable} = get_secret_and_disable(Config0),
-        Update = #{ client_secret => Secret ,
+        Update = #{ client_secret => Secret,
+                    disable_login => Disable,
                     priority => Priority },
         Config = maps:merge(maps:remove(config_endpoint, Config0), Update),
         {ok, _InternalId, _Pid} =
