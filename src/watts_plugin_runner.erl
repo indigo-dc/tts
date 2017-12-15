@@ -1,5 +1,5 @@
-%% @doc this module takes care of running a plugin in an environment and
-%% controlling and validating its results.
+%% @doc this module takes care of running a plugin and controlling and
+%% validating its results.
 %% It is implemented as a gen_server so that each run of a plugin has a
 %% corresponding process in the VM.
 -module(watts_plugin_runner).
@@ -326,7 +326,7 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
                    true -> true;
                    _    -> false
                end,
-    {CmdLine, CmdStdin} = create_cmd_and_env(Cmd, EncodedJson, UseStdin),
+    {CmdLine, CmdStdin} = create_cmd_and_stdin(Cmd, EncodedJson, UseStdin),
     % marcus: this is useful for logging!!
     lager:debug("runner ~p: the command line is (parameter in base64url): ~p. CmdStdin: ~p",
                 [self(), CmdLine, CmdStdin]),
@@ -344,13 +344,13 @@ parameter_update(_, ServiceInfo, #state{ params = Params }) ->
       params => Params}.
 
 
-%% @doc create the command to execute and the environment
--spec create_cmd_and_env(binary(), binary(), boolean())
+%% @doc create the command to execute and the stdin input
+-spec create_cmd_and_stdin(binary(), binary(), boolean())
                         -> {string(), undefined | binary()}.
-create_cmd_and_env(Cmd, EncJson, false) ->
+create_cmd_and_stdin(Cmd, EncJson, false) ->
     {binary_to_list(<< Cmd/binary, <<" ">>/binary, EncJson/binary >>),
      undefined};
-create_cmd_and_env(Cmd, EncJson, true) ->
+create_cmd_and_stdin(Cmd, EncJson, true) ->
     {binary_to_list(Cmd), EncJson}.
 
 
