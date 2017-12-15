@@ -269,8 +269,7 @@ enforce_security(State) ->
     ?SETCONFIG(hostname, Hostname),
     ok = force_config_permissions(),
     ok = error_if_running_as_root(),
-    ok = warning_on_insecure_plugins(),
-    NewState.
+    warning_on_insecure_plugins(NewState).
 
 %% @doc change the hostname to localhost if not configured well.
 %% It will change to localhost if neither configured to run as a
@@ -312,15 +311,15 @@ force_config_permissions() ->
     ok.
 
 %% @doc write a warning if insecure plugins are allowed
--spec warning_on_insecure_plugins() -> ok.
-warning_on_insecure_plugins() ->
+-spec warning_on_insecure_plugins(state()) -> state().
+warning_on_insecure_plugins(State) ->
     case ?CONFIG(allow_insecure_plugins) of
         true ->
-            warning("insecure plugins allowed");
+            log_warning("insecure plugins allowed", State);
         _ ->
-            info("insecure plugins disabled")
-    end,
-    ok.
+            lager:info("insecure plugins disabled"),
+            State
+    end.
 
 %% @doc start the databases needed to run WaTTS.
 %% The in ram database is started using watts_ets and the
@@ -1034,7 +1033,6 @@ message_to_state(Msg, #state{issues = Issues} = State) ->
                           [ C | M ]
                      end,
     Message = lists:foldr(EscapeTilde, [], lists:flatten(Msg)),
-    lager:info("changed message to: ~p", [Message]),
     State#state{issues = [Message | Issues]}.
 
 %% @doc get the name of the system, like debian
