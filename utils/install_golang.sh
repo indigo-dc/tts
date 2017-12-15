@@ -23,7 +23,7 @@ else
     echo "go is a symbolic link or a normal file"
     # go installed using a symbolic link
     GOBINDIR=`dirname $GO`
-    mv $GOBINDIR/go $GOBINDIR/go.old
+    sudo mv $GOBINDIR/go $GOBINDIR/go.old
 fi
 
 # delete maybe old go
@@ -40,7 +40,7 @@ sudo cp -r go /usr/local/go
 rm -rf go
 
 # link to newly installed go
-ln -s /usr/local/go/bin/go $GO
+sudo ln -s /usr/local/go/bin/go $GO
 
 echo -n "go version: "
 go version
