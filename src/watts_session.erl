@@ -355,7 +355,8 @@ handle_call({is_user_agent, UserAgent}, _From,
 handle_call({is_user_agent, _UserAgent}, _From, #state{max_age=MA}=State) ->
     {reply, false, State, MA};
 handle_call({is_same_ip, IP}, _From,
-            #state{ip=undefined, max_age=MA}=State) ->
+            #state{ip=undefined, max_age=MA, id=Id}=State) ->
+    lager:info("SESS~p remote IP: ~p", [Id, IP]),
     {reply, true, State#state{ip=IP}, MA};
 handle_call({is_same_ip, IP}, _From,
             #state{ip=IP, max_age=MA}=State) ->
