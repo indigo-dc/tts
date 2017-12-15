@@ -51,5 +51,7 @@ sudo cp -vr * $GODIR
 cd ..
 rm -rf go
 
+GOROOT=$GODIR
+export $GOROOT
 echo -n "go version: "
 go version
