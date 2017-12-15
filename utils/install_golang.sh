@@ -3,25 +3,30 @@ cd `dirname $0`
 UTILS_DIR=`pwd`
 GO=`which go`
 
+echo "GO = $GO"
+ls -al $GO
 if [ "x" == "x$GO" ]; then
     # go not installed
+    echo "go not installed"
     GODIR="/usr/local/go"
     mkdir -p $GODIR
     export PATH="/usr/local/go/bin:$PATH"
+
+elif [ -L $GO ]; then
+    echo "go is a symbolic link"
+    # go installed using a symbolic link
+    GOBINDIR=`dirname $GO`
+    cd $GOBINDIR
+    GO=`readlink -f go`
+    echo "go points to $GO"
+    GODIR=`dirname $GO`
+    GODIR=`cd $GODIR/.. && pwd`
 
 elif [ -f $GO ]; then
     # go installed using a normal file
     GODIR=`dirname $GO`
     GODIR=`cd $GODIR/.. && pwd`
-
-elif [ -L $GO ]; then
-    # go installed using a symbolic link
-    GO=`readlink -f $GO`
-    GODIR=`dirname $GO`
-    GODIR=`cd $GODIR/.. && pwd`
 fi
-
-echo "GO = $GO"
 echo "GODIR = $GODIR"
 
 cd $UTILS_DIR/..
