@@ -95,7 +95,9 @@ params_test() ->
         Unknown = <<"idk">>,
         ?assertEqual({error, not_found}, watts_service:update_params(Unknown)),
         ?assertEqual(ok, watts_service:update_params(Params1)),
-        ?assertEqual(ok, watts_service:update_params(Params2))
+        application:set_env(watts, allow_insecure_plugins, true),
+        ?assertEqual(ok, watts_service:update_params(Params2)),
+        application:unset_env(watts, allow_insecure_plugins)
     after
         ok = stop_meck(Meck)
     end,
@@ -215,6 +217,7 @@ start_meck() ->
                                                              mandatory => <<"true">>
                                                             }
                                                           ],[]],
+                                       features => #{stdin => true},
                                        version => <<"devel">>}
                                 };
                             <<"params2">> ->

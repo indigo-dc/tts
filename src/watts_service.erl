@@ -18,6 +18,7 @@
 %% limitations under the License.
 %%
 -author("Bas Wegh, Bas.Wegh<at>kit.edu").
+-include("watts.hrl").
 
 -export([get_list/0]).
 -export([get_list/1]).
@@ -37,22 +38,21 @@
 -export_type([info/0, limited_info/0, connection/0]).
 
 -type info() :: #{ id => binary(),
-                   description => binary(),
-                   cmd => binary(),
-                   cmd_env_use => boolean(),
-                   cmd_env_var => string(),
-                   cred_limit => infinite | integer(),
                    allow_same_state => boolean(),
-                   plugin_conf => map(),
-                   plugin_version => undefined | binary(),
-                   params => [parameter_set()],
-                   parallel_runner => infinite | integer(),
-                   pass_access_token => boolean(),
-                   plugin_timeout => infinity | integer(),
-                   connection => connection(),
                    authz => watts_service_authz:config(),
-                   queue => atom(),
+                   cmd => binary(),
+                   connection => connection(),
+                   cred_limit => infinite | integer(),
+                   description => binary(),
                    enabled => boolean(),
+                   parallel_runner => infinite | integer(),
+                   params => [parameter_set()],
+                   pass_access_token => boolean(),
+                   plugin_conf => map(),
+                   plugin_features => map(),
+                   plugin_timeout => infinity | integer(),
+                   plugin_version => undefined | binary(),
+                   queue => atom(),
                    _ => _
                  }.
 
@@ -281,19 +281,35 @@ fulfills_paramset(Params, [#{key := Key, mandatory := Mandatory} | ParamSet]) ->
     end.
 
 
-
 %% @doc add a service to the ets database, used during initialization
 -spec add(info()) -> {ok, binary()} | {error, invalid_config}.
 add(#{ id := ServiceId } = ServiceInfo) when is_binary(ServiceId) ->
     AuthzConf0 = maps:get(authz, ServiceInfo, #{allow => [], forbid => []}),
     {ok, AuthzConf} = watts_service_authz:validate_config(ServiceId,
                                                           AuthzConf0),
-    Update = #{enabled => false, authz => AuthzConf,
-               devel_email => undefined},
+    Update = #{enabled => false,
+               authz => AuthzConf,
+               devel_email => undefined
+              },
+    maybe_warning_about_using_env(ServiceInfo),
     ok = watts_ets:service_add(ServiceId, maps:merge(ServiceInfo, Update)),
     {ok, ServiceId};
 add(_ServiceMap)  ->
     {error, invalid_config}.
+
+
+
+%% @doc write a warning about not supporting environment anymore
+-spec maybe_warning_about_using_env(info()) -> ok.
+maybe_warning_about_using_env(#{cmd_env_use := true, id:= ServiceId}) ->
+    Msg = "service ~p environment setting, which is IGNORED!, will use"
+        " parameter, as the environment adds no security.",
+    watts_init:warning(Msg, [ServiceId]),
+    ok;
+maybe_warning_about_using_env(_) ->
+    ok.
+
+
 
 
 %% @doc update the parameter of a service by running the plugin
@@ -326,14 +342,18 @@ validate_params_and_update_db(Id, Info, {ok, #{conf_params := ConfParams,
     Info0 = maps:merge(Info, Ensure),
     {ValidConfParam, Info1}=validate_conf_parameter(ConfParams, Info0),
     {ValidCallParam, Info2}=validate_call_parameter_sets(RequestParams, Info1),
+    InsecAllowed = ?CONFIG(allow_insecure_plugins),
+    Features = maps:get(features, PluginConf, #{}),
+    SecureOrAllowed = is_secure_plugin_or_allowed(Features, InsecAllowed, Id),
     Info3 = list_skipped_parameter_and_delete_config(Info2),
-    IsValid = ValidConfParam and ValidCallParam,
-    Update = #{enabled => IsValid,
-               devel_email => maps:get(developer_email, PluginConf, undefined)
+
+    Enabled = ValidConfParam and ValidCallParam and SecureOrAllowed,
+    Update = #{enabled => Enabled,
+               devel_email => maps:get(developer_email, PluginConf, undefined),
+               plugin_features => Features
               },
     NewInfo = maps:merge(Info3, Update),
     {ok, QueueName} = start_runner_queue_if_needed(NewInfo),
-
     update_service(Id, maps:put(queue, QueueName, NewInfo));
 validate_params_and_update_db(Id, Info, {ok, ParamMap}) ->
     NeededKeys = [conf_params, request_params, version],
@@ -349,6 +369,24 @@ validate_params_and_update_db(Id, Info, {error, Result}) ->
     watts_init:error("service ~p: bad parameter response: ~p (from plugin)",
                 [Id, Result]),
     update_service(Id, maps:put(enabled, false, Info)).
+
+
+%% @doc check and log if a plugin supports stdin of if insecure plugins are
+%% allowed
+-spec is_secure_plugin_or_allowed(map(), boolean(), binary()) -> boolean().
+is_secure_plugin_or_allowed(#{stdin := true}, _, Id) ->
+    Msg = "service ~p: plugin supports stdin will use secure channel",
+    watts_init:info(Msg, [Id]),
+    true;
+is_secure_plugin_or_allowed(_, true, Id) ->
+    Msg = "service ~p: plugin does not support stdin, this plugin is insecure!",
+    watts_init:warning(Msg, [Id]),
+    true;
+is_secure_plugin_or_allowed(_, _, Id) ->
+    Msg = "service ~p: plugin does not support stdin, it will be disabled",
+    watts_init:warning(Msg, [Id]),
+    false.
+
 
 
 

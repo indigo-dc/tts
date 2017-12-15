@@ -269,6 +269,7 @@ enforce_security(State) ->
     ?SETCONFIG(hostname, Hostname),
     ok = force_config_permissions(),
     ok = error_if_running_as_root(),
+    ok = warning_on_insecure_plugins(),
     NewState.
 
 %% @doc change the hostname to localhost if not configured well.
@@ -302,10 +303,23 @@ maybe_root_halt(User, Uid) ->
     lager:info("Init: running as user ~p [~p]", [User, Uid]),
     ok.
 
+%% @doc ensure config permissions are set correct
+-spec force_config_permissions() -> ok.
 force_config_permissions() ->
     ConfigDir = watts_file_util:to_abs(?CONFIG(config_dir)),
     Cmd = io_lib:format("chmod -R o= ~s", [ConfigDir]),
     os:cmd(Cmd),
+    ok.
+
+%% @doc write a warning if insecure plugins are allowed
+-spec warning_on_insecure_plugins() -> ok.
+warning_on_insecure_plugins() ->
+    case ?CONFIG(allow_insecure_plugins) of
+        true ->
+            warning("insecure plugins allowed");
+        _ ->
+            info("insecure plugins disabled")
+    end,
     ok.
 
 %% @doc start the databases needed to run WaTTS.

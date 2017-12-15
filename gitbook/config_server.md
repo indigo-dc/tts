@@ -34,6 +34,7 @@ And for production use:
 | cert_file | Location of the certificate  | file | /etc/watts/watts.crt |
 | key_file | Path to the private key file | file | /etc/watts/watts.key |
 | dh_file | Path to the file containing the diffie hellman parameter. To generate it simply run `openssl dhparam -out watts_dh.pem 2048` | file | none |
+| allow_insecure_plugins | If insecure plugins, that means plugins that do not support stdin, should be allowed | boolean | false |
 | session_timeout | The duration for which a session at the web-app is valid during inactivity | duration | 15m |
 | session_max_duration | The maximum duration of a session at the web interface, even if active. After this time an additional Login is required | duration | 30m |
 | database_type | The type of database to user | 'sqlite', 'mnesia', 'eleveldb' | 'sqlite' |

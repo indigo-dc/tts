@@ -260,7 +260,8 @@ handle_result(ok,
               _Log, #{ action := parameter } )
   when is_list(ConfParams), is_list(ReqParams), is_binary(Version)  ->
     %% valid parameter response
-    ReturnedKeys = [conf_params, request_params, version, developer_email],
+    ReturnedKeys = [conf_params, request_params, version, developer_email,
+                    features],
     return(result, maps:with(ReturnedKeys, Result));
 handle_result(error, Result, Log, #{ action := parameter } ) ->
     %% invalid parameter response

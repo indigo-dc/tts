@@ -1,5 +1,5 @@
-%% @doc this module takes care of running a plugin in an environment and
-%% controlling and validating its results.
+%% @doc this module takes care of running a plugin and controlling and
+%% validating its results.
 %% It is implemented as a gen_server so that each run of a plugin has a
 %% corresponding process in the VM.
 -module(watts_plugin_runner).
@@ -49,7 +49,7 @@
           connection = undefined,
           con_type = undefined,
           cmd_line = undefined,
-          cmd_env = undefined :: undefined | env(),
+          cmd_stdin = undefined :: undefined | binary(),
           cmd_output = undefined :: undefined | output(),
           error = undefined
          }).
@@ -71,11 +71,9 @@
         {error, Reason::atom() | tuple(), Output :: output()} |
         {error, Reason::atom() | tuple()}.
 
--type env() ::[{string(), string()}].
-
--type output() :: #{ channel_id => any(), process_id => any(),
+-type output() :: #{ channel_id => any(),
+                     process_id => any(),
                      cmd => string() | undefined,
-                     env => env(),
                      std_out => [binary()],
                      std_err => [binary()],
                      exit_status => any()
@@ -231,11 +229,11 @@ code_change(_OldVsn, State, _Extra) ->
 run_plugin(State) ->
     {ok, NewState} = prepare_action(State),
     #state{ cmd_line = Cmd,
-            cmd_env = Env,
+            cmd_stdin = Stdin,
             connection = Connection,
             con_type = ConType
           } = NewState,
-    run_plugin(Cmd, Env, ConType, Connection, NewState).
+    run_plugin(Cmd, Stdin, ConType, Connection, NewState).
 
 
 %% @doc prepare the execution by creating the command line and connecting.
@@ -321,13 +319,18 @@ create_command_and_update_state(Cmd, UserInfo, ServiceInfo,
     ScriptParam = add_user_info_if_present(ScriptParam0, UserInfo,
                                            ServiceId, AddAccessToken),
     EncodedJson = base64url:encode(jsone:encode(ScriptParam)),
+    Features = maps:get(plugin_features, ServiceInfo),
     lager:debug("runner ~p: will execute ~p with parameter ~p",
                 [self(), Cmd, ScriptParam]),
-    EnvVar = get_env_var(ServiceInfo),
-    {CmdLine, Env} = create_cmd_and_env(Cmd, EncodedJson, EnvVar),
-    lager:debug("runner ~p: the command line is (parameter in base64url): ~p",
-                [self(), CmdLine]),
-    {ok, State#state{cmd_line=CmdLine, cmd_env = Env,
+    UseStdin = case maps:get(stdin, Features, false) of
+                   true -> true;
+                   _    -> false
+               end,
+    {CmdLine, CmdStdin} = create_cmd_and_stdin(Cmd, EncodedJson, UseStdin),
+    % marcus: this is useful for logging!!
+    lager:debug("runner ~p: the command line is (parameter in base64url): ~p. CmdStdin: ~p",
+                [self(), CmdLine, CmdStdin]),
+    {ok, State#state{cmd_line=CmdLine, cmd_stdin = CmdStdin,
                      connection = Connection, con_type = ConnType}}.
 
 
@@ -341,24 +344,14 @@ parameter_update(_, ServiceInfo, #state{ params = Params }) ->
       params => Params}.
 
 
-%% @doc return the environment variable
--spec get_env_var( watts_service:info() ) -> string() | undefined.
-get_env_var(#{cmd_env_use := true, cmd_env_var := Var}) when is_list(Var) ->
-    Var;
-get_env_var(_) ->
-    undefined.
-
-
-
-%% @doc create the command to execute and the environment
--spec create_cmd_and_env(binary(), binary(), undefined | string())
-                        -> {string(), env()}.
-create_cmd_and_env(Cmd, EncJson, undefined) ->
+%% @doc create the command to execute and the stdin input
+-spec create_cmd_and_stdin(binary(), binary(), boolean())
+                        -> {string(), undefined | binary()}.
+create_cmd_and_stdin(Cmd, EncJson, false) ->
     {binary_to_list(<< Cmd/binary, <<" ">>/binary, EncJson/binary >>),
-     []};
-create_cmd_and_env(Cmd, Json, VarName) ->
-    {binary_to_list(Cmd), [{VarName, binary_to_list(Json)}]}.
-
+     undefined};
+create_cmd_and_stdin(Cmd, EncJson, true) ->
+    {binary_to_list(Cmd), EncJson}.
 
 
 %% @doc add the information about the user to the parameter
@@ -385,22 +378,41 @@ add_user_info_if_present(ScriptParam, UserInfo, ServiceId, AddAccessToken) ->
 %% @doc run the plugin with its parameter.
 %% The results will be sent async to this process and are handled by the
 %% {@link handle_info/2} function.
--spec run_plugin(string(), env(), ssh | local, any(), state()) ->
+-spec run_plugin(string(), binary()| undefined, ssh | local, any(), state()) ->
                              {ok, state()}.
-run_plugin(Cmd, _Env, ssh, Connection, State) ->
+run_plugin(Cmd, Stdin, ssh, Connection, State) ->
     {ok, ChannelId} = ssh_connection:session_channel(Connection, infinity),
     lager:debug("runner ~p: executing ~p", [self(), Cmd]),
     success = ssh_connection:exec(Connection, ChannelId, Cmd, infinity),
+    ok = maybe_ssh_stdin_send(Connection, ChannelId, Stdin),
     CmdOutput =  #{channel_id => ChannelId, cmd => Cmd},
     {ok, State#state{ cmd_output = output(CmdOutput) }};
-run_plugin(Cmd, Env, local, _Connection, State) ->
-    lager:debug("runner ~p: executing ~p ~p", [self(), Cmd, Env]),
-    {ok, _Pid, Id} = exec:run(Cmd, [{env, Env}, stdout, stderr, monitor,
+run_plugin(Cmd, Stdin, local, _Connection, State) ->
+    lager:debug("runner ~p: executing ~p", [self(), Cmd]),
+    {ok, _Pid, Id} = exec:run(Cmd, [stdin, stdout, stderr, monitor,
                                     {kill_timeout, 1}]),
-    CmdOutput =  #{process_id => Id, cmd => Cmd, env => Env},
+    ok = maybe_local_stdin_send(Id, Stdin),
+    CmdOutput =  #{process_id => Id, cmd => Cmd},
     NewState = State#state{ cmd_output = output(CmdOutput)},
     {ok, NewState}.
 
+%% send the stdin data, if needed, else do nothing
+-spec maybe_ssh_stdin_send(any(), any(), undefined | binary()) -> ok.
+maybe_ssh_stdin_send(_, _, undefined) ->
+    ok;
+maybe_ssh_stdin_send(Connection, ChannelId, Stdin) ->
+    ok = ssh_connection:send(Connection, ChannelId, Stdin),
+    ok = ssh_connection:send_eof(Connection, ChannelId),
+    ok.
+
+%% send the stdin data, if needed, else do nothing
+-spec maybe_local_stdin_send(any(), undefined | binary()) -> ok.
+maybe_local_stdin_send(_, undefined) ->
+    ok;
+maybe_local_stdin_send(Id, Stdin) ->
+    ok = exec:send(Id, Stdin),
+    ok = exec:send(Id, eof),
+    ok.
 
 
 %% @doc send the result to the requesting process and stop this one.
@@ -542,7 +554,6 @@ output(Output) ->
     BasicOutput = #{channel_id => undefined,
                     process_id => undefined,
                     cmd => undefined,
-                    env => [],
                     std_out => [],
                     std_err => [],
                     exit_status => undefined},

@@ -5,8 +5,15 @@ e.g. due to different local policies.
 
 The communication between WaTTS and the *plugin* is done by passing one argument
 to the script or sending it to stdin of the plugin and parsing the `stdout` of the script.
+If it will be passed as parameter or sent via stdin is configured automatically at startup.
+See Listing Supported Parameter / Supported Features / stdin.
+
+
 
 ## Plugin Input
+If stdin is enabled the parameter will be sent via stdin and when done an EOF (end of file)
+will be sent.
+
 The parameter coming from the WaTTS is a `base64url` encoded `json` object.
 
 The decoded `json` object has the following format:
@@ -57,6 +64,8 @@ The items of the object are:
 
 ## Listing The Supported Parameter (action = parameter)
 WaTTS requests the supported parameter of the *plugin* by setting the `action` to `parameter`.
+This is always passed as parameter on the command line, subsequent request will be sent via stdin,
+if supported by the plugin.
 
 The expected result is:
 ```
@@ -76,6 +85,7 @@ The expected result is:
         []
     ],
     "developer_email":"me@domain.com",
+    "features": { "stdin" : True },
     "version":"the plugin version"
 }
 ```
@@ -89,6 +99,15 @@ later debugging and helping the development of plugins.
 ### Email of the developer/team (developer_email)
 If this is present WaTTS expects it to be a vaild email address and, if configured,
 sends emails on invalid behaviour of the plugin to the developer.
+
+
+### Supported features (features)
+This is a JSON object containing keys with additional information.
+The supported keys and the meaning/format of their value are listed in the table below.
+| Key   | Description | Value (Default) |
+|----|----| --- |
+| stdin | Tells WaTTS if the plugin supports passing the parameter via stdin. | boolean (False) |
+
 
 ### Config Parameter (conf_params)
 Each config parameter consists of an `json` object with three key-value pairs:
