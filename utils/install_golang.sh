@@ -21,11 +21,14 @@ elif [ -L $GO ]; then
     GODIR=`cd $GODIR/.. && pwd`
 fi
 
+echo "GO = $GO"
+echo "GODIR = $GODIR"
+
 cd $UTILS_DIR/..
 mkdir -p _build/tmp/go
 cd _build/tmp/go
 
-curl -O https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz
+wget --progress=bar https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz
 tar -xzf go1.8.3.linux-amd64.tar.gz
 cd go
 sudo cp -r * $GODIR
