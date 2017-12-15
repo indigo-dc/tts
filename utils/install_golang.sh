@@ -18,40 +18,29 @@ ls -al $GO
 if [ "x" == "x$GO" ]; then
     # go not installed
     echo "go not installed"
-    GODIR="/usr/local/go"
-    mkdir -p $GODIR
-    export PATH="/usr/local/go/bin:$PATH"
-
-elif [ -L $GO ]; then
-    echo "go is a symbolic link"
+    GO="/usr/local/bin/go"
+else
+    echo "go is a symbolic link or a normal file"
     # go installed using a symbolic link
     GOBINDIR=`dirname $GO`
-    cd $GOBINDIR
-    GO=`readlink -f go`
-    echo "go points to $GO"
-    GODIR=`dirname $GO`
-    GODIR=`cd $GODIR/.. && pwd`
-
-elif [ -f $GO ]; then
-    # go installed using a normal file
-    GODIR=`dirname $GO`
-    GODIR=`cd $GODIR/.. && pwd`
+    mv $GOBINDIR/go $GOBINDIR/go.old
 fi
-echo "GODIR = $GODIR"
-sudo rm -rf $GODIR/*
 
+# delete maybe old go
+mkdir -p /usr/local/
+sudo rm -rf /usr/local/go
 
+# download and unpack go
 cd $UTILS_DIR/..
 mkdir -p _build/tmp/go
 cd _build/tmp/go
-wget https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz
+wget -q https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz
 tar -xzf go1.8.3.linux-amd64.tar.gz
-cd go
-sudo cp -vr * $GODIR
-cd ..
+sudo cp -r go /usr/local/go
 rm -rf go
 
-GOROOT=$GODIR
-export $GOROOT
+# link to newly installed go
+ln -s /usr/local/go/bin/go $GO
+
 echo -n "go version: "
 go version
