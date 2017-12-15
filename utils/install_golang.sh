@@ -1,6 +1,12 @@
 #!/bin/bash
 cd `dirname $0`
 UTILS_DIR=`pwd`
+GO=`which go`
+
+if [ "x" != "x$GO" ] ; then
+    echo "go already installed"
+    exit 0
+fi
 
 cd $UTILS_DIR/..
 mkdir -p _build/tmp/go
