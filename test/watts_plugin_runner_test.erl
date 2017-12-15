@@ -152,40 +152,45 @@ request_parts_test() ->
     end,
     ok.
 
-%% plugin_api_test() ->
-%%     {ok, {_, ExecPid, _} = Meck} = start_meck(),
-%%     try
-%%         ServiceId = <<"local5">>,
-%%         {ok, UserInfo0} = watts_userinfo:new(),
-%%         {ok, UserInfo1} = watts_userinfo:update_iss_sub(<<"iss">>, <<"sub">>, UserInfo0),
-%%         {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
-%%         {ok, ReqPid} = watts_plugin_runner:start(),
-%%         ExecPid ! {pid, ReqPid},
+plugin_api_test() ->
+    {ok, {_, ExecPid, _} = Meck} = start_meck(),
+    try
+        ServiceId = <<"local5">>,
+        {ok, UserInfo0} = watts_userinfo:new(),
+        Iss = <<"testissuer">>,
+        Sub = <<"watts-provider">>,
+        {ok, UserInfo1} = watts_userinfo:update_iss_sub(Iss, Sub, UserInfo0),
+        {ok, UserInfo} = watts_userinfo:update_access_token(#{token => <<"at">>}, UserInfo1),
+        {ok, ReqPid} = watts_plugin_runner:start(),
+        ExecPid ! {pid, ReqPid},
 
-%%         ConfigReq = #{action => request,
-%%                       service_id => ServiceId,
-%%                       user_info => UserInfo,
-%%                       queue => undefined},
+        ConfigReq = #{action => request,
+                      service_id => ServiceId,
+                      user_info => UserInfo,
+                      queue => undefined},
 
-%%         {ok, Cred, _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
-%%         ok = test_util:wait_for_process_to_die(ReqPid,100),
-%%         %% the Cred contains the passed parameter to the plugin as state
-%%         State = maps:get(state, Cred),
-%%         Map = jsone:decode(base64url:decode(State), [{keys, attempt_atom}, {object_format, map}]),
-%%         io:format("map passed to plugin: ~p~n", [Map]),
-%%         ?assertEqual(true, is_map(Map)),
-%%         ?assertEqual(true, is_binary(maps:get(watts_version, Map))),
-%%         ?assertEqual(true, is_binary(maps:get(action, Map))),
-%%         ?assertEqual(true, is_map(maps:get(conf_params, Map))),
-%%         ?assertEqual(true, is_map(maps:get(params, Map))),
-%%         ?assertEqual(true, is_map(maps:get(user_info, Map))),
-%%         UsrInfo = maps:get(user_info, Map),
-%%         ?assertEqual(true, is_binary(maps:get(iss, UsrInfo))),
-%%         ?assertEqual(true, is_binary(maps:get(sub, UsrInfo)))
-%%     after
-%%         ok = stop_meck(Meck)
-%%     end,
-%%     ok.
+        {ok, Cred, _} = watts_plugin_runner:request_action(ConfigReq, ReqPid),
+        ok = test_util:wait_for_process_to_die(ReqPid,100),
+        %% the Cred contains the passed parameter to the plugin as state
+        State = maps:get(state, Cred),
+        Map = jsone:decode(base64url:decode(State), [{keys, attempt_atom}, {object_format, map}]),
+        io:format("map passed to plugin: ~p~n", [Map]),
+        ?assertEqual(true, is_map(Map)),
+        ?assertEqual(true, is_binary(maps:get(watts_version, Map))),
+        ?assertEqual(true, is_binary(maps:get(action, Map))),
+        ?assertEqual(true, <<"request">> == maps:get(action, Map)),
+        ?assertEqual(true, is_map(maps:get(conf_params, Map))),
+        ?assertEqual(true, is_map(maps:get(params, Map))),
+        ?assertEqual(true, is_map(maps:get(user_info, Map))),
+        UsrInfo = maps:get(user_info, Map),
+        ?assertEqual(true, is_binary(maps:get(iss, UsrInfo))),
+        ?assertEqual(true, Iss == maps:get(iss, UsrInfo)),
+        ?assertEqual(true, is_binary(maps:get(sub, UsrInfo))),
+        ?assertEqual(true, Sub == maps:get(sub, UsrInfo))
+    after
+        ok = stop_meck(Meck)
+    end,
+    ok.
 
 
 no_cmd_crash_test() ->
@@ -308,7 +313,7 @@ start_meck() ->
                    },
                    #{id => <<"local5">>,
                      plugin_timeout => 500,
-                     plugin_features => #{stdin => true},
+                     plugin_features => #{stdin => false},
                      cmd => <<"api">>,
                      connection => #{
                        host => undefined,
@@ -426,7 +431,8 @@ start_meck() ->
                         success
                  end,
     ErlexecRun = fun(CmdLine, _Params) ->
-                         [CmdBin | _] = binary:split(list_to_binary(CmdLine), <<" ">>),
+                         Parts = binary:split(list_to_binary(CmdLine), <<" ">>),
+                         [ CmdBin | _ ] = Parts,
                          Cmd = binary_to_list(CmdBin),
                          case Cmd of
                              "reqloc" ->
@@ -441,7 +447,8 @@ start_meck() ->
                                  ExecPid ! exec_parts_start,
                                  {ok, pid3, 345};
                              "api" ->
-                                 %% ExecPid ! {exec_return_input, list_to_binary(Data)},
+                                 [_ , Data] = Parts,
+                                 ExecPid ! {exec_return_input, Data},
                                  {ok, pid4, 456}
                          end
 
