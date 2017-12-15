@@ -16,19 +16,23 @@
           {datatype, string}
           ]}.
 
+%% @doc the key at passwordd for the client secret
+{mapping, "openid.$id.client_secret_key", "watts.provider_list.c", [
+          {datatype, string}
+          ]}.
 %% @doc the configuration endpoint of the OpenId Connect provider
-{mapping, "openid.$id.config_endpoint", "watts.provider_list.c", [
+{mapping, "openid.$id.config_endpoint", "watts.provider_list.d", [
           {datatype, string}
           ]}.
 
 
 %% @doc the scopes to request the OpenId Connect provider
-{mapping, "openid.$id.request_scopes", "watts.provider_list.d", [
+{mapping, "openid.$id.request_scopes", "watts.provider_list.e", [
           {datatype, string}
           ]}.
 
 %% @doc wether the provider won't be used for login
-{mapping, "openid.$id.disable_login", "watts.provider_list.e", [
+{mapping, "openid.$id.disable_login", "watts.provider_list.f", [
           {datatype, {enum, [true, false]}}
           ]}.
 
@@ -49,6 +53,11 @@
                                    Tokens = string:tokens("openid.$id.client_secret", "."),
                                    cuttlefish_variable:is_fuzzy_match(K, Tokens)
                            end, Conf),
+            SecretKeyList = lists:filter(
+                              fun({K, _V}) ->
+                                      Tokens = string:tokens("openid.$id.client_secret_key", "."),
+                                      cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                              end, Conf),
             ConfigList = lists:filter(
                            fun({K, _V}) ->
                                    Tokens = string:tokens("openid.$id.config_endpoint", "."),
@@ -67,6 +76,7 @@
             Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
             CIds = [ {Id, CId} || {[_, Id, _], CId} <- CIdList ],
             Secrets = [ {Id, Sec} || {[_, Id, _], Sec} <- SecretList ],
+            SecretKeys = [ {Id, SecKey} || {[_, Id, _], SecKey} <- SecretKeyList],
             Configs = [ {Id, Conf} || {[_, Id, _], Conf} <- ConfigList ],
             Scopes = [ {Id, Scpe} || {[_, Id, _], Scpe} <- ScopeList ],
             Disables = [ {Id, Hide} || {[_, Id, _], Hide} <- DisableList ],
@@ -96,6 +106,10 @@
                                      {Id, Sec} -> list_to_binary(Sec);
                                      _ -> undefined
                                  end,
+                        SecretKey = case lists:keyfind(Id, 1, SecretKeys) of
+                                     {Id, SecKey} -> list_to_binary(SecKey);
+                                     _ -> undefined
+                                 end,
                         Config = case lists:keyfind(Id, 1, Configs) of
                                      {Id, Cnfg} -> list_to_binary(Cnfg);
                                      _ -> undefined
@@ -116,7 +130,9 @@
                                           true;
                                       _ -> false
                                   end,
-                        case (ClientId == undefined) or (Secret == undefined) or
+                        case (ClientId == undefined) or
+                            ( (Secret == undefined)
+                              and (SecretKey == undefined) ) or
                             (Config == undefined) or (Scope == undefined) or
                             (Desc == undefined) of
                             true ->
@@ -129,6 +145,7 @@
                                      description => list_to_binary(Desc),
                                      client_id => ClientId,
                                      client_secret => Secret,
+                                     client_secret_key => SecretKey,
                                      config_endpoint => Config,
                                      request_scopes => Scope,
                                      disable_login => Disable

@@ -68,6 +68,7 @@ oidc.cert_depth = 5
 | description | A description of the Provider, shown at the login Screen | string |
 | client_id | The client id received at the registration | string |
 | client_secret | The client secret received at the registration | string |
+| client_secret_key | The key to request at passwordd for the password | string |
 | config_endpoint | The configuration endpoint of the provider, ensure you are using ssl | url |
 | request_scopes | the scopes to request | comma separated list |
 
