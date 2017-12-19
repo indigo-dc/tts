@@ -25,7 +25,6 @@
           {datatype, string}
           ]}.
 
-
 %% @doc the scopes to request the OpenId Connect provider
 {mapping, "openid.$id.request_scopes", "watts.provider_list.e", [
           {datatype, string}
@@ -34,6 +33,11 @@
 %% @doc wether the provider won't be used for login
 {mapping, "openid.$id.disable_login", "watts.provider_list.f", [
           {datatype, {enum, [true, false]}}
+          ]}.
+
+%% @doc a hint for the idp to use for login
+{mapping, "openid.$id.idphint", "watts.provider_list.g", [
+          {datatype, string}
           ]}.
 
 {translation, "watts.provider_list",
@@ -73,6 +77,12 @@
                                   Tokens = string:tokens("openid.$id.disable_login", "."),
                                   cuttlefish_variable:is_fuzzy_match(K, Tokens)
                           end, Conf),
+            IdpHintList = lists:filter(
+                          fun({K, _V}) ->
+                                  Tokens = string:tokens("openid.$id.idphint", "."),
+                                  cuttlefish_variable:is_fuzzy_match(K, Tokens)
+                          end, Conf),
+
             Descs = [ {Id, Desc} || {[_, Id, _], Desc} <- DescList ],
             CIds = [ {Id, CId} || {[_, Id, _], CId} <- CIdList ],
             Secrets = [ {Id, Sec} || {[_, Id, _], Sec} <- SecretList ],
@@ -80,6 +90,7 @@
             Configs = [ {Id, Conf} || {[_, Id, _], Conf} <- ConfigList ],
             Scopes = [ {Id, Scpe} || {[_, Id, _], Scpe} <- ScopeList ],
             Disables = [ {Id, Hide} || {[_, Id, _], Hide} <- DisableList ],
+            IdpHints = [ {Id, Hint} || {[_, Id, _], Hint} <- IdpHintList ],
 
             CreateSetting =
                 fun({Id, Desc}, Result) ->
@@ -130,6 +141,12 @@
                                           true;
                                       _ -> false
                                   end,
+
+                        IdpHint = case lists:keyfind(Id, 1, IdpHints) of
+                                      {Id, Hint} ->
+                                          Hint;
+                                      _ -> undefined
+                                  end,
                         case (ClientId == undefined) or
                             ( (Secret == undefined)
                               and (SecretKey == undefined) ) or
@@ -141,6 +158,12 @@
                             false ->
                                 ok
                         end,
+                        UrlExt = case IdpHint of
+                                     undefined ->
+                                         #{};
+                                     IdpHint ->
+                                         #{<<"idphint">> => IdpHint}
+                                 end,
                         Setting = #{ id => list_to_binary(Id),
                                      description => list_to_binary(Desc),
                                      client_id => ClientId,
@@ -148,7 +171,8 @@
                                      client_secret_key => SecretKey,
                                      config_endpoint => Config,
                                      request_scopes => Scope,
-                                     disable_login => Disable
+                                     disable_login => Disable,
+                                     static_extend_url => UrlExt
                                    },
                         [ Setting | Result]
                 end,
