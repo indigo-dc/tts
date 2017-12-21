@@ -128,7 +128,11 @@ update msg model =
 
                 cmd = case (List.length providerlist.provider, maybeProvider) of
                     (1, Just provider)  ->
-                        Navigation.load (model.redirectPath ++ "?provider=" ++ provider.id)
+                        case provider.ready of
+                            True ->
+                                Navigation.load (model.redirectPath ++ "?provider=" ++ provider.id)
+                            False ->
+                                Cmd.none
                     (_, _) ->
                         Cmd.none
             in
