@@ -356,39 +356,47 @@ add_openid_provider(State) ->
     ?SETCONFIG(local_endpoint, LocalEndpoint),
     lager:info("Init: using local endpoint ~p", [LocalEndpoint]),
     ProviderList = ?CONFIG(provider_list, []),
-    ok = add_openid_provider(ProviderList, LocalEndpoint),
+    {ok, NewProvList} = add_openid_provider(ProviderList, LocalEndpoint, []),
+    ?SETCONFIG(provider_list, NewProvList),
     NewState = wait_and_log_provider_results(State),
     NewState.
 
 %% @doc take one provider from the list and add it.
 %% This uses the oidcc library to handle the OpenID Connect provider.
--spec add_openid_provider(Configs:: [map()], LocalEndpoint :: binary()) -> ok.
+-spec add_openid_provider(Configs:: [map()], LocalEndpoint :: binary(), list())
+                         -> {ok, list()}.
 add_openid_provider([#{id := Id,
                        config_endpoint := ConfigEndpoint} = Config0 | T],
-                    LocalEndpoint) ->
-    try
-        Priority = length(T),
-        {Secret, Disable} = get_secret_and_disable(Config0),
-        Update = #{ client_secret => Secret,
-                    disable_login => Disable,
-                    priority => Priority },
-        Config = maps:merge(maps:remove(config_endpoint, Config0), Update),
-        {ok, _InternalId, _Pid} =
-            oidcc:add_openid_provider(ConfigEndpoint, LocalEndpoint, Config),
-        lager:info("Init: added OpenId Connect provider ~p", [Id]),
-        case Disable of
-            true ->
-                lager:info("Init: ~p will not be used for login", [Id]);
-            false ->
-                ok
-        end
-    catch Error:Reason ->
-            Msg = "Init: error occured OpenId Connect provider ~p: '~p' ~p",
-            lager:critical(Msg, [Id, Error, Reason])
-    end,
-    add_openid_provider(T, LocalEndpoint);
-add_openid_provider([], _) ->
-    ok.
+                    LocalEndpoint, ProvList) ->
+    UpdatedProvider =
+        try
+            Priority = length(T),
+            {Secret, Disable} = get_secret_and_disable(Config0),
+            Update = #{ client_secret => Secret,
+                        disable_login => Disable,
+                        priority => Priority },
+            Config = maps:merge(maps:remove(config_endpoint, Config0), Update),
+            {ok, _InternalId, _Pid} = oidcc:add_openid_provider(ConfigEndpoint,
+                                                                LocalEndpoint,
+                                                                Config),
+            lager:info("Init: added OpenId Connect provider ~p", [Id]),
+            case Disable of
+                true ->
+                    lager:info("Init: ~p will not be used for login", [Id]),
+                    maps:put(disable_login, true, Config0);
+                false ->
+                    maps:put(disable_login, false, Config0)
+            end
+        catch Error:Reason ->
+                Msg = "Init: error occured OpenId Connect provider ~p: '~p' ~p",
+                lager:critical(Msg, [Id, Error, Reason]),
+                maps:put(disable_login, true, Config0)
+        end,
+    KeysToRemove = [client_secret],
+    NewProvList = [ maps:without(KeysToRemove, UpdatedProvider) | ProvList ],
+    add_openid_provider(T, LocalEndpoint, NewProvList);
+add_openid_provider([], _, ProvList) ->
+    {ok, ProvList}.
 
 
 %% @doc check if the secret needs to be fetched from passwordd and
