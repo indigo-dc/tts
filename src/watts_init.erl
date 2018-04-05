@@ -589,7 +589,7 @@ start_web_interface(State) ->
                              "ECDHE-RSA-AES128-SHA",
                              "ECDHE-RSA-AES256-SHA",
                              "ECDHE-RSA-AES128-SHA256",
-                             "ECDHE-RSA-AES256-SHA384", 
+                             "ECDHE-RSA-AES256-SHA384",
                              "DHE-RSA-AES128-GCM-SHA256",
                              "DHE-RSA-AES128-SHA",
                              "DHE-RSA-AES256-SHA",
