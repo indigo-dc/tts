@@ -315,8 +315,11 @@ do_additional_login(Issuer, Subject0, Token0, SessPid) ->
     {ok, SessionId} = watts_session:get_id(SessPid),
     lager:info("SESS~p additional login as ~p at ~p",
                [SessionId, Subject0, Issuer]),
+    {ok, Redirection} = watts_session:get_redirection(SessPid),
+    ProviderHint = get_provider_hint(Redirection),
     try
-        Result = retrieve_information(Issuer, Subject0, Token0, SessPid),
+        Result = retrieve_information(Issuer, Subject0, Token0, SessPid,
+                                      ProviderHint),
         case Result of
             {ok, _Subject, IssuerId, Token} ->
                 ok = watts_session:add_additional_login(IssuerId, Token,
@@ -336,6 +339,13 @@ do_additional_login(Issuer, Subject0, Token0, SessPid) ->
                         [SessionId, Error, Reason, StackTrace]),
             return_session_info(SessPid)
     end.
+
+
+get_provider_hint(undefined) ->
+    undefined;
+get_provider_hint(#{provider := Provider}) ->
+    Provider.
+
 
 
 %% @doc close the given session
@@ -677,11 +687,17 @@ return_session_info(SessionPid) ->
     {ok, SessType} = watts_session:get_type(SessionPid),
     {ok, #{session_pid => SessionPid, session_type => SessType}}.
 
-%% @doc retrieve user information at the oidc provider
--spec retrieve_information(binary(), binary(), map(), pid())
-                          -> {ok, binary(), binary(), map()} | {error, atom()}.
+
+
 retrieve_information(Issuer, Subject, Token, Session) ->
-    {ok, ProviderPid} = oidcc:find_openid_provider(Issuer),
+    retrieve_information(Issuer, Subject, Token, Session, undefined).
+
+%% @doc retrieve user information at the oidc provider
+-spec retrieve_information(binary(), binary(), map(), pid(), binary()|undefined)
+                          -> {ok, binary(), binary(), map()} | {error, atom()}.
+retrieve_information(Issuer, Subject, Token, Session, ProviderHint) ->
+    {ok, ProviderPids} = oidcc:find_all_openid_provider(Issuer),
+    ProviderPid = find_needed_provider(ProviderPids, ProviderHint),
     {ok, #{id := IssuerId, issuer := Issuer} = Config} =
         oidcc:get_openid_provider_info(ProviderPid),
     UserInfoResult = oidcc:retrieve_user_info(Token, ProviderPid, Subject),
@@ -693,6 +709,22 @@ retrieve_information(Issuer, Subject, Token, Session) ->
                end,
     TokenInfo = introspect_token_if_needed(HasScope, Token, Config, Session),
     create_information_result(UserInfo, TokenInfo, Token, IssuerId).
+
+
+find_needed_provider([ProviderPid], _) ->
+    ProviderPid;
+find_needed_provider([ProviderPid | _], undefined) ->
+    ProviderPid;
+find_needed_provider(ProviderPids, Hint) ->
+    Filter = fun(Pid) ->
+                     {ok, #{id := Id}} = oidcc:get_openid_provider_info(Pid),
+                     Id == Hint
+             end,
+    [ProviderPid] =  lists:filter(Filter, ProviderPids),
+    ProviderPid.
+
+
+
 
 %% @doc extract user information out of the response from the oidc provider
 -spec extract_userinfo({ok, map()} | {error, any()})

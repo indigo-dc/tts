@@ -244,6 +244,13 @@ start_meck() ->
                                _ -> {error, not_found}
                            end
                    end,
+    FindAllProvider = fun(Issuer) ->
+                           case Issuer of
+                               ?ISSUER_URL -> {ok, [provider_pid]};
+                               ?ISSUER2_URL -> {ok, [<<"ID3">>]};
+                               _ -> {error, not_found}
+                           end
+                   end,
     NewSession = fun() ->
                          TestSession
                  end,
@@ -318,6 +325,7 @@ start_meck() ->
     ok = meck:expect(oidcc, retrieve_user_info, RetrieveUserInfo),
     ok = meck:expect(oidcc, get_openid_provider_info, ProviderInfo),
     ok = meck:expect(oidcc, find_openid_provider, FindProvider),
+    ok = meck:expect(oidcc, find_all_openid_provider, FindAllProvider),
     ok = meck:expect(watts_plugin, exists, Exists),
     ok = meck:expect(watts_plugin, get_cred_list, CredGetList),
     ok = meck:expect(watts_plugin, request, CredentialRequest),
