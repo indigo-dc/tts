@@ -29,7 +29,7 @@
   0},
  {<<"oidcc">>,
   {git,"https://github.com/indigo-dc/oidcc",
-       {ref,"266fd93f21742c3cda27b4f0354803ee5b21028c"}},
+       {ref,"79f5038d25ff39089e27ec0331eed8d55f9d4a18"}},
   0},
  {<<"oidcc_cowboy">>,{pkg,<<"oidcc_cowboy">>,<<"1.5.0">>},0},
  {<<"parse_trans">>,
