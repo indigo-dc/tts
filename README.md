@@ -12,7 +12,7 @@ And the best is that plugins for common services already exist. They can
 be used as examples to support additional services.
 
 Existing plugins are available for 
-- SSH
+- SSH, SSH-CA
 - S3 storage (commercial DDN appliance)
 - OpenNebula cloud middleware
 - X.509 online certificate authorities (CAs)
