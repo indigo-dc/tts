@@ -27,7 +27,7 @@
   {git,"https://github.com/bwegh/node_package.git",
        {ref,"f35585f0ba6fe98d8dad6a3889788eaa29f5a150"}},
   0},
- {<<"oidcc">>,{pkg,<<"oidcc">>,<<"1.7.0">>},0},
+ {<<"oidcc">>,{pkg,<<"oidcc">>,<<"1.8.0">>},0},
  {<<"oidcc_cowboy">>,{pkg,<<"oidcc_cowboy">>,<<"1.5.0">>},0},
  {<<"parse_trans">>,
   {git,"git://github.com/uwiger/parse_trans.git",
@@ -35,7 +35,7 @@
   1},
  {<<"proper">>,
   {git,"https://github.com/manopapad/proper.git",
-       {ref,"172d282c9b1f5f6d754227732973ab4e080bab5c"}},
+       {ref,"16f9f7cb181f41ffb882c4a31052275dfad16ee1"}},
   1},
  {<<"quickrand">>,
   {git,"https://github.com/okeuday/quickrand.git",
@@ -64,7 +64,7 @@
  {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
  {<<"jsone">>, <<"6ECFD2C91E16F48E1535743B57D01A42C65D7DD51A8B43E5723B1F79927169A8">>},
  {<<"lager">>, <<"614A8C8F67BF99B69EB264EA22121AD25511C055AAEC09B086773D5108C6767F">>},
- {<<"oidcc">>, <<"795BB529E176791AF3E9ED8D49A507972857B8947DDF33CAB39E6D7B77E28E26">>},
+ {<<"oidcc">>, <<"35A615B035F35C8F67B53E8A8813DDB7D67984E7388DE7CF05DA1604EE151895">>},
  {<<"oidcc_cowboy">>, <<"01B3925391A07E0AF4DDC1F777CE6FF33911B5AB4A71E1D3E04A8956D2131DDF">>},
  {<<"ranch">>, <<"E4965A144DC9FBE70E5C077C65E73C57165416A901BD02EA899CFD95AA890986">>}]}
 ].
