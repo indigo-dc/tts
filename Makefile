@@ -111,4 +111,7 @@ clean_package:
 	rm -rf package
 	rm -rf distdir
 
+distclean: clean clean_package
+	rm -rf _build
+
 include package.mk
