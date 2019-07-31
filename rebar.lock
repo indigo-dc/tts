@@ -25,7 +25,7 @@
   0},
  {<<"node_package">>,
   {git,"https://github.com/watts-kit/node_package.git",
-       {ref,"f7b676347183f3cc1913da15f2229f04da0671d5"}},
+       {ref,"21184402249863fe4fa09fd38638e7a2ba594681"}},
   0},
  {<<"oidcc">>,
   {git,"https://github.com/watts-kit/oidcc.git",
