@@ -111,4 +111,9 @@ clean_package:
 	rm -rf package
 	rm -rf distdir
 
+distclean: clean_package
+	#$(REBAR) do cover -r, clean -a
+	rm -rf _build
+	rm -rf _book
+
 include package.mk
